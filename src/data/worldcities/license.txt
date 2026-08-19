@@ -1,0 +1,6 @@
+The original dataset shipped with this exercise was the simplemaps.com "World
+Cities" basic database, distributed under CC BY 4.0 (https://simplemaps.com/data/world-cities).
+
+The data currently in cities.ts is NOT that dataset. It is a hand-built
+reconstruction created after the original file was lost, and carries no
+warranty of accuracy. Replace it with the upstream export when available.

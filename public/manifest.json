@@ -1,0 +1,9 @@
+{
+  "short_name": "YART",
+  "name": "Yet Another React Table (YART)",
+  "icons": [],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#f45d48",
+  "background_color": "#ffffff"
+}
