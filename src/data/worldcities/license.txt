@@ -1,0 +1,12 @@
+World Cities Database (basic), v1.91.3
+Source: simplemaps.com - https://simplemaps.com/data/world-cities
+License: Creative Commons Attribution 4.0 (CC BY 4.0)
+
+The basic database is free to use, including commercially, and requires
+attribution to simplemaps.com as the source. The upstream license document
+ships alongside this file as license.pdf.
+
+cities.ts is generated from the upstream worldcities.csv export. Only the
+fields the City type needs are kept: id, name, nameAscii, country,
+countryIso3, capital, population. The lat, lng, iso2, and admin_name columns
+are dropped.

@@ -1,0 +1,253 @@
+// set some css vars for color for easier maintenance
+:root {
+  --border-color: #333;
+  --border-light: #ddd;
+  --text-color: #000;
+  --text-muted: #666;
+  --background-light: #eee;
+  --background-light-hover: #ccc;
+  --accent-color: #0a8080; // accent
+  --error-color: #c00;
+}
+
+// the top-level parent container
+.container {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+// the search box
+.searchContainer {
+  margin-bottom: 20px;
+
+  .searchInput {
+    width: 45%;
+    position: relative;
+    margin: 0 auto;
+
+    // position the icon inside the search input
+    .searchIcon {
+      position: absolute;
+      left: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      font-size: 20px;
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box; // ignore border & padding to determine width
+      padding: 10px 10px 10px 45px;
+      border: 2px solid var(--border-color);
+      border-radius: 4px;
+      font-size: 16px;
+      outline: none;
+
+      &::placeholder {
+        color: var(--text-muted);
+      }
+
+      &:focus {
+        border-color: var(--accent-color);
+      }
+    }
+
+    &:focus-within .searchIcon {
+      // make the search icon match the input border color when focused
+      color: var(--accent-color);
+    }
+  }
+}
+
+// the table parent container
+.tableContainer {
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+// Refetching with results already on screen: dim in place rather than
+// unmounting the table, so typing in the search box does not flash.
+.refreshing {
+  opacity: 0.6;
+  transition: opacity 120ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refreshing {
+    transition: none;
+  }
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; // don't let table auto layout otherwise columns will shift when paginating
+
+  th {
+    background-color: var(--background-light);
+    border-bottom: 2px solid var(--border-color);
+
+    &:not(:last-child) {
+      border-right: 1px solid var(--border-color);
+    }
+  }
+
+  td {
+    border-bottom: 1px solid var(--border-color);
+
+    &:not(:last-child) {
+      border-right: 1px solid var(--border-color);
+    }
+  }
+
+  th,
+  td {
+    padding: 12px 16px;
+    font-size: 16px;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none; // last in row needs no border otherwise it will have thicker border due to the parent container border
+  }
+}
+
+.sortButton {
+  font-size: 16px;
+  font-weight: bold;
+  display: flex;
+  gap: 8px;
+}
+
+.table th {
+  &[style*="cursor: pointer"] {
+    &:hover .sortButton {
+      color: var(--accent-color);
+    }
+  }
+}
+
+// the pagination container
+.paginationContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  .pageSizeContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    select {
+      padding: 6px 12px;
+      font-size: 14px;
+    }
+  }
+
+  .navigationContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    // the next/prev/first/last buttons
+    .navButton {
+      background: var(--background-light);
+      border: 1px solid var(--border-light);
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      &:hover:not(:disabled) {
+        background: var(--background-light-hover);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    // Page n of m text
+    .pageInfo {
+      padding: 0 12px;
+    }
+  }
+}
+
+.loading,
+.error,
+.noResults {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 16px;
+}
+
+.error {
+  color: var(--error-color);
+}
+
+// Screen reader only content
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// responsive styles
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+  }
+
+  .searchContainer {
+    .searchInput {
+      width: 100%;
+    }
+  }
+
+  .tableContainer {
+    overflow-x: auto;
+    width: 0; // Force container to not expand
+    min-width: 100%; // But ensure it takes available space
+  }
+
+  .table {
+    table-layout: auto; // we set back to auto to force the horizontal scrollbars to appear, otherwise the browser will trying to squeeze everything into the viewport
+
+    th {
+      white-space: nowrap; // Prevent header text from wrapping to illustrate a wider horizontal scroll
+    }
+  }
+
+  .paginationContainer {
+    flex-direction: column;
+    align-items: stretch;
+
+    .pageSizeContainer {
+      justify-content: center;
+    }
+
+    .navigationContainer {
+      justify-content: center;
+
+      .pageInfo {
+        // don't show page info
+        display: none;
+      }
+    }
+  }
+}
