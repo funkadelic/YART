@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SortableTable } from "./SortableTable";
 import type { City } from "../api/getCities";
 
@@ -55,14 +56,14 @@ const mockCities: City[] = [
 const defaultProps = {
   data: mockCities,
   searchTerm: "",
-  onSearchChange: jest.fn(),
+  onSearchChange: vi.fn(),
   loading: false,
   error: null,
 };
 
 describe("SortableTable", () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe("Basic Rendering", () => {
@@ -98,7 +99,7 @@ describe("SortableTable", () => {
   describe("Search Functionality", () => {
     it("calls onSearchChange when typing in search input", async () => {
       const user = userEvent.setup();
-      const mockOnSearchChange = jest.fn();
+      const mockOnSearchChange = vi.fn();
 
       render(
         <SortableTable {...defaultProps} onSearchChange={mockOnSearchChange} />,
