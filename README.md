@@ -69,6 +69,10 @@ npm run dev
 
 Then open [http://localhost:5173/](http://localhost:5173/).
 
+The history contains a one-time commit that reformatted every file. Run
+`git config blame.ignoreRevsFile .git-blame-ignore-revs` once in your clone so
+`git blame` skips it and keeps pointing at the commit that wrote each line.
+
 ## Usage
 
 `<SortableTable>` owns sorting and pagination. It does not own the data. The
