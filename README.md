@@ -45,6 +45,21 @@ search, sort, and paginate a list of world cities without a table library.
 - [React Icons](https://react-icons.github.io/react-icons/)
 - [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/)
 
+### Build target
+
+The browser target follows the Baseline Widely available rule, taken on
+2026-08-20:
+
+- Chrome 111 and above
+- Edge 111 and above
+- Firefox 111 and above
+- Safari 16.4 and above
+
+The `browserslist` field in `package.json` names these versions explicitly
+instead of using a percentage or "not dead" query, so browser support data
+changes cannot move build output. Raising the baseline is a deliberate edit
+to that list and to the date above.
+
 ## Getting started
 
 ```sh
