@@ -22,7 +22,7 @@
     "@types/node": "22.20.1",
     "@types/react": "18.3.31",
     "@types/react-dom": "18.3.7",
-    "@vitejs/plugin-react": "4.3.4",
+    "@vitejs/plugin-react": "5.2.0",
     "autoprefixer": "10.5.4",
     "browserslist": "^4.24.3",
     "eslint": "9.39.5",
@@ -43,7 +43,7 @@
     "typescript": "5.7.2",
     "typescript-eslint": "8.67.0",
     "typescript-plugin-css-modules": "5.2.0",
-    "vite": "6.4.3"
+    "vite": "7.3.6"
   },
   "scripts": {
     "dev": "vite",
