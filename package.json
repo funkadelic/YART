@@ -52,6 +52,7 @@
     "lint": "eslint src",
     "lint:fix": "npm run lint -- --fix",
     "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "prepare": "husky"
