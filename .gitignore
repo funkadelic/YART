@@ -25,5 +25,7 @@ yarn-error.log*
 # build output
 /dist
 
-# local editor and agent settings
-.claude/settings.local.json
+# local editor and tooling directories, never committed
+/.claude/
+/.planning/
+/.gsd/
