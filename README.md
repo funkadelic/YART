@@ -122,13 +122,13 @@ function CityBrowser() {
 
 ### Props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `data` | `City[]` | Rows to display. Already filtered by the caller. |
-| `searchTerm` | `string` | Current value of the search box. The input is controlled, so this must be state the caller owns. |
-| `onSearchChange` | `(term: string) => void` | Called on every keystroke. Debouncing belongs to the caller, not the table. |
-| `loading` | `boolean` | Renders a loading message in place of the table. |
-| `error` | `Error \| null` | Renders the error message in place of the table. The search box stays visible so the user can correct the query. |
+| Prop             | Type                     | Description                                                                                                      |
+| ---------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `data`           | `City[]`                 | Rows to display. Already filtered by the caller.                                                                 |
+| `searchTerm`     | `string`                 | Current value of the search box. The input is controlled, so this must be state the caller owns.                 |
+| `onSearchChange` | `(term: string) => void` | Called on every keystroke. Debouncing belongs to the caller, not the table.                                      |
+| `loading`        | `boolean`                | Renders a loading message in place of the table.                                                                 |
+| `error`          | `Error \| null`          | Renders the error message in place of the table. The search box stays visible so the user can correct the query. |
 
 `loading` and `error` are mutually exclusive in practice: `error` wins if both
 are set.
@@ -250,12 +250,12 @@ reader gets the right answer.
 
 ## Scripts
 
-| Script | What it does |
-| --- | --- |
-| `npm run dev` | Start the dev server with hot reload |
-| `npm test` | Run the Jest suite |
-| `npm run lint` | Run ESLint (`lint:fix` to autofix) |
-| `npm run format` | Run Prettier |
+| Script           | What it does                         |
+| ---------------- | ------------------------------------ |
+| `npm run dev`    | Start the dev server with hot reload |
+| `npm test`       | Run the Jest suite                   |
+| `npm run lint`   | Run ESLint (`lint:fix` to autofix)   |
+| `npm run format` | Run Prettier                         |
 
 ## Notes and next steps
 

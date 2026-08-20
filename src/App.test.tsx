@@ -6,7 +6,9 @@ describe("App", () => {
   it("renders the city list once the initial search resolves", async () => {
     render(<App />);
 
-    expect(screen.getByRole("heading", { name: "City List" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "City List" }),
+    ).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getByRole("table")).toBeInTheDocument();
