@@ -80,6 +80,22 @@ async function rejectionMessage(payload: unknown): Promise<string> {
   throw new Error("The load resolved when it was expected to reject.");
 }
 
+/**
+ * The error a load rejected with, for the cases that assert more than a message.
+ * Resolving is itself a failure here, and it is reported as one rather than left
+ * to a later assertion on an undefined value.
+ */
+async function rejectionOf(load: () => Promise<unknown>): Promise<Error> {
+  try {
+    await load();
+  } catch (error) {
+    if (error instanceof Error) return error;
+    throw new Error(`The load rejected with a non-error: ${String(error)}`);
+  }
+
+  throw new Error("The load resolved when it was expected to reject.");
+}
+
 describe("loadCities payload validation", () => {
   it("rejects a payload that is not an object", async () => {
     expect(await rejectionMessage("the city data, honestly")).toBe(
@@ -212,6 +228,46 @@ describe("loadCities transport", () => {
     }
 
     expect(message).toBe("The city data could not be downloaded (status 500).");
+  });
+
+  it("rejects a request that never reaches the host with copy written for a reader", async () => {
+    // The text a failed request carries is the browser's own, it differs
+    // between browsers, and none of it tells the reader what to do. The
+    // authored message is written here as a literal rather than imported from
+    // the loader, so a rename cannot move both sides at once.
+    const transportFailure = new Error("Failed to fetch");
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(transportFailure);
+    const loadCities = await freshLoadCities();
+
+    const error = await rejectionOf(loadCities);
+
+    expect(error.message).toBe(
+      "The city data could not be downloaded. Check your connection and try again.",
+    );
+    expect(error.message).not.toContain("Failed to fetch");
+    // The reader sees the authored sentence, a developer still has the reason.
+    expect(error.cause).toBe(transportFailure);
+  });
+
+  it("rejects a success response carrying a page instead of the data file", async () => {
+    // What a static host returns for a file it cannot find: the application's
+    // own page, under a success status. The parser then reports a syntax error
+    // naming a character, which is no help to anyone reading the screen.
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        "<!doctype html><html><body>Yet Another React Table</body></html>",
+        { status: 200, headers: { "content-type": "text/html" } },
+      ),
+    );
+    const loadCities = await freshLoadCities();
+
+    const error = await rejectionOf(loadCities);
+
+    expect(error.message).toBe(
+      "The city data was downloaded but could not be read as JSON.",
+    );
+    expect(error.message).not.toContain("Unexpected token");
+    expect(error.cause).toBeInstanceOf(Error);
   });
 });
 
