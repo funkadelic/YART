@@ -186,7 +186,7 @@ describe("getCities dataset requests", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
 
-  it("costs two requests, not three, when two callers share a failed load and one retries", async () => {
+  it("issues one request for two callers that share a failed load, and one more for the retry", async () => {
     const failure = new Error("The connection dropped");
     fetchSpy.mockRejectedValue(failure);
 
@@ -200,8 +200,9 @@ describe("getCities dataset requests", () => {
     await expect(first).rejects.toThrow(failure.message);
     await expect(second).rejects.toThrow(failure.message);
 
-    // The retry is the second request. A rejection that cleared a cache entry
-    // it no longer owned would make the next call a third.
+    // The retry is the second request. The shared rejection cleared the cache
+    // entry, so the next call downloads again rather than re-awaiting a promise
+    // that has already failed.
     await expect(coldGetCities()).rejects.toThrow(failure.message);
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
