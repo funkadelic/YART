@@ -20,6 +20,8 @@ interface SortableTableProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   loading: boolean;
+  // False until the underlying collection has arrived at least once.
+  datasetReady: boolean;
   error: Error | null;
   // Optional so the table stays usable on its own, without a container to
   // re-run the request behind it.
@@ -71,6 +73,7 @@ export function SortableTable({
   searchTerm,
   onSearchChange,
   loading,
+  datasetReady,
   error,
   onRetry,
 }: SortableTableProps) {
@@ -208,10 +211,10 @@ export function SortableTable({
             </button>
           ) : null}
         </div>
-      ) : loading && data.length === 0 ? (
-        // Only replace the whole view on the first load, when there is no
-        // table on screen yet. Refetches keep the table mounted so it does not
-        // unmount and flash on every keystroke.
+      ) : loading && !datasetReady ? (
+        // The whole view is replaced only while the collection has never
+        // arrived. Once it has, a refetch keeps the table mounted so it does
+        // not unmount and flash on every keystroke.
         <div className={styles.loading}>Downloading the city data...</div>
       ) : (
         <>

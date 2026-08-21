@@ -58,6 +58,8 @@ const defaultProps = {
   searchTerm: "",
   onSearchChange: vi.fn(),
   loading: false,
+  // The honest default for a fixture that already carries rows.
+  datasetReady: true,
   error: null,
 };
 
@@ -132,7 +134,14 @@ describe("SortableTable", () => {
 
   describe("Loading and Error States", () => {
     it("shows loading state on the first load, when there is no data yet", () => {
-      render(<SortableTable {...defaultProps} data={[]} loading={true} />);
+      render(
+        <SortableTable
+          {...defaultProps}
+          data={[]}
+          loading={true}
+          datasetReady={false}
+        />,
+      );
 
       expect(
         screen.getByText("Downloading the city data..."),

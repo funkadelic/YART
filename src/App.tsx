@@ -12,6 +12,11 @@ const App = () => {
   const [cities, setCities] = useState<City[]>([]);
   const [error, setError] = useState<Error | null>(null);
   const [loading, setLoading] = useState(false);
+  // The loading flag is also true for a refetch that follows an empty result
+  // set, so on its own it cannot say whether the wait is a download or a
+  // search. This records the one fact it cannot carry: whether the collection
+  // has arrived at least once.
+  const [datasetReady, setDatasetReady] = useState(false);
   // The retry control below increments retryAttempt, and the effect lists it as
   // a dependency, which is what lets a failed load be run again without a page
   // reload.
@@ -38,6 +43,7 @@ const App = () => {
       .then((searchResult) => {
         if (ignore) return;
         setCities(searchResult);
+        setDatasetReady(true);
       })
       .catch((err: unknown) => {
         if (ignore) return;
@@ -79,6 +85,7 @@ const App = () => {
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
         loading={loading}
+        datasetReady={datasetReady}
         error={error}
         onRetry={handleRetry}
       />
