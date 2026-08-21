@@ -148,13 +148,13 @@ export function loadCities(): Promise<IndexedCity[]> {
 
   // Attached at store time and never deferred. Any delay leaves a window in
   // which a retry re-awaits the already-rejected promise and fails instantly
-  // for a reason the user cannot see. The identity check exists because two
-  // failed loads can be in flight when a retry happens before the first
-  // rejects, and without it the older rejection clears the newer attempt's
-  // entry and a third request goes out for nothing. The rejection still reaches
-  // callers, who hold the promise returned below rather than this derived one.
+  // for a reason the user cannot see. The clear is unconditional because the
+  // only path that stores a new entry runs after this handler has already
+  // cleared the old one, so a rejection can never reach an entry other than
+  // its own. The rejection still reaches callers, who hold the promise
+  // returned below rather than this derived one.
   pending.catch(() => {
-    if (cached === pending) cached = undefined;
+    cached = undefined;
   });
 
   cached = pending;
