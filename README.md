@@ -41,7 +41,7 @@ search, sort, and paginate a list of world cities without a table library.
 - [TypeScript](https://www.typescriptlang.org)
 - [React](https://reactjs.org)
 - [Vite](https://vitejs.dev/)
-- [Jest](https://jestjs.io) and [Testing Library](https://testing-library.com/)
+- [Vitest](https://vitest.dev) and [Testing Library](https://testing-library.com/)
 - [React Icons](https://react-icons.github.io/react-icons/)
 - [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/)
 
@@ -227,6 +227,7 @@ rather than internals:
 ```tsx
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { it, expect, vi } from "vitest";
 
 it("sorts by population descending on the second click", async () => {
   const user = userEvent.setup();
@@ -234,7 +235,7 @@ it("sorts by population descending on the second click", async () => {
     <SortableTable
       data={cities}
       searchTerm=""
-      onSearchChange={jest.fn()}
+      onSearchChange={vi.fn()}
       loading={false}
       error={null}
     />,
@@ -254,12 +255,17 @@ reader gets the right answer.
 
 ## Scripts
 
-| Script           | What it does                         |
-| ---------------- | ------------------------------------ |
-| `npm run dev`    | Start the dev server with hot reload |
-| `npm test`       | Run the Jest suite                   |
-| `npm run lint`   | Run ESLint (`lint:fix` to autofix)   |
-| `npm run format` | Run Prettier                         |
+| Script                 | What it does                                |
+| ---------------------- | ------------------------------------------- |
+| `npm run dev`          | Start the dev server with hot reload        |
+| `npm run build`        | Build the production bundle                 |
+| `npm run preview`      | Serve the built bundle locally              |
+| `npm test`             | Run the test suite once                     |
+| `npm run test:watch`   | Run the test suite in watch mode            |
+| `npm run typecheck`    | Check types without emitting output         |
+| `npm run lint`         | Run ESLint (`lint:fix` to autofix)          |
+| `npm run format`       | Run Prettier                                |
+| `npm run format:check` | Check formatting without rewriting anything |
 
 ## Notes and next steps
 
