@@ -140,6 +140,14 @@ const BINDS_CLOCK = /\badvanceTimers\b/;
 const DISABLES_DELAY = /\bdelay\s*:\s*null\b/;
 const DIRECT_USER_EVENT_CALL = /\buserEvent\.(?!setup\b)[A-Za-z]\w*\s*\(/;
 
+// The three things CC BY 4.0 obliges this repository to state, written out here
+// so the assertion below matches the committed copy exactly rather than a shape
+// that resembles it.
+const ATTRIBUTION_SOURCE_URL = "https://simplemaps.com/data/world-cities";
+const ATTRIBUTION_LICENSE_URL = "https://creativecommons.org/licenses/by/4.0/";
+const ATTRIBUTION_MODIFICATIONS =
+  "Modified: unused columns removed, rows ordered by population.";
+
 describe("toolchain baseline", () => {
   // The previous runner and its adapters were removed rather than ported.
   // Any one of them reappearing means a second, competing test toolchain is back.
@@ -290,6 +298,25 @@ describe("toolchain baseline", () => {
       );
       expect(source, `${name} configures a global fake clock`).not.toMatch(
         CONFIGURES_CLOCK,
+      );
+    }
+  });
+
+  // The footer carries this same attribution and has its own test. The README
+  // copy has nothing watching it, so a documentation rewrite could drop the
+  // source link, the licence link, or the record of what was changed, and the
+  // suite would stay green while the obligation lapsed in the place most readers
+  // meet this project first.
+  it("keeps the data attribution in the README", () => {
+    const readme = readFileSync(join(projectRoot, "README.md"), "utf8");
+
+    for (const required of [
+      ATTRIBUTION_SOURCE_URL,
+      ATTRIBUTION_LICENSE_URL,
+      ATTRIBUTION_MODIFICATIONS,
+    ]) {
+      expect(readme, `README.md no longer carries: ${required}`).toContain(
+        required,
       );
     }
   });

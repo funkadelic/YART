@@ -9,8 +9,8 @@ search, sort, and paginate a list of world cities without a table library.
 
 - Search cities by city name or country name
 - Empty state when a search matches nothing
-- Error state when a search fails (searching for `error` triggers one, so the
-  failure path can be exercised)
+- A failed dataset load renders inline, with a control to try the load again in
+  place of the table
 - Search is debounced by 150ms after the last keystroke, using a hand-rolled
   `useDebounce` hook rather than a utility library
 
@@ -59,6 +59,22 @@ The `browserslist` field in `package.json` names these versions explicitly
 instead of using a percentage or "not dead" query, so browser support data
 changes cannot move build output. Raising the baseline is a deliberate edit
 to that list and to the date above.
+
+## Data attribution
+
+City data from
+[simplemaps.com World Cities](https://simplemaps.com/data/world-cities),
+licensed [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Modified: unused columns removed, rows ordered by population.
+
+The upstream release is World Cities Database (basic) v1.91.3. The full terms
+ship with the data as `src/data/worldcities/license.txt` and
+`src/data/worldcities/license.pdf`.
+
+The committed asset is `src/data/worldcities/cities.json`, 50,250 rows produced
+by `npm run generate:cities` from the upstream CSV export. The provenance is
+therefore runnable rather than asserted: the script that made the file is in the
+repository next to it.
 
 ## Getting started
 
@@ -126,13 +142,14 @@ function CityBrowser() {
 
 ### Props
 
-| Prop             | Type                     | Description                                                                                                      |
-| ---------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `data`           | `City[]`                 | Rows to display. Already filtered by the caller.                                                                 |
-| `searchTerm`     | `string`                 | Current value of the search box. The input is controlled, so this must be state the caller owns.                 |
-| `onSearchChange` | `(term: string) => void` | Called on every keystroke. Debouncing belongs to the caller, not the table.                                      |
-| `loading`        | `boolean`                | Renders a loading message in place of the table.                                                                 |
-| `error`          | `Error \| null`          | Renders the error message in place of the table. The search box stays visible so the user can correct the query. |
+| Prop             | Type                     | Description                                                                                                                    |
+| ---------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `data`           | `City[]`                 | Rows to display. Already filtered by the caller.                                                                               |
+| `searchTerm`     | `string`                 | Current value of the search box. The input is controlled, so this must be state the caller owns.                               |
+| `onSearchChange` | `(term: string) => void` | Called on every keystroke. Debouncing belongs to the caller, not the table.                                                    |
+| `loading`        | `boolean`                | The first load renders a download message in place of the table. A later refetch leaves the table mounted.                     |
+| `error`          | `Error \| null`          | Renders the error message in place of the table. The search box stays visible so the user can correct the query.               |
+| `onRetry`        | `() => void`             | Optional. Called when the user activates the retry control in the error region. Omit it when the caller has no retry to offer. |
 
 `loading` and `error` are mutually exclusive in practice: `error` wins if both
 are set.
@@ -255,24 +272,27 @@ reader gets the right answer.
 
 ## Scripts
 
-| Script                 | What it does                                |
-| ---------------------- | ------------------------------------------- |
-| `npm run dev`          | Start the dev server with hot reload        |
-| `npm run build`        | Build the production bundle                 |
-| `npm run preview`      | Serve the built bundle locally              |
-| `npm test`             | Run the test suite once                     |
-| `npm run test:watch`   | Run the test suite in watch mode            |
-| `npm run typecheck`    | Check types without emitting output         |
-| `npm run lint`         | Run ESLint (`lint:fix` to autofix)          |
-| `npm run format`       | Run Prettier                                |
-| `npm run format:check` | Check formatting without rewriting anything |
+| Script                    | What it does                                                        |
+| ------------------------- | ------------------------------------------------------------------- |
+| `npm run dev`             | Start the dev server with hot reload                                |
+| `npm run build`           | Build the production bundle                                         |
+| `npm run preview`         | Serve the built bundle locally                                      |
+| `npm test`                | Run the test suite once                                             |
+| `npm run test:watch`      | Run the test suite in watch mode                                    |
+| `npm run typecheck`       | Check types without emitting output                                 |
+| `npm run lint`            | Run ESLint (`lint:fix` to autofix)                                  |
+| `npm run format`          | Run Prettier                                                        |
+| `npm run format:check`    | Check formatting without rewriting anything                         |
+| `npm run generate:cities` | Regenerate the committed dataset asset from the upstream CSV export |
 
 ## Notes and next steps
 
 This is a prototype, not production code. Things worth doing before it ships:
 
-- Sorting and filtering run over the full result set in the browser. That is
-  fine at this size, but a real dataset belongs behind a paginated, sorted API.
+- The dataset arrives as a separate content-hashed JSON asset rather than being
+  compiled into the bundle, but filtering and sorting still run over the whole
+  result set on the main thread. That is fine at this size. Past it, the work
+  belongs behind a paginated, sorted API rather than in the browser.
 - The component is typed to `City` and renders its cells by hand, so it is
   not yet reusable with another row shape. The fix is a generic
   `SortableTable<T>` taking a `columns` prop of
