@@ -16,11 +16,34 @@ updates:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
     # Grouped so a routine week is two pull requests to review rather than a dozen.
+    # Each group is held to minor and patch only. A grouped major is unreviewable: nine
+    # of them arrived as one pull request that could not install, because a single held
+    # back peer blocked the whole batch and took the other eight down with it. Majors
+    # still arrive, one pull request each, so one can be judged and merged without
+    # waiting on another.
     groups:
       prod-dependencies:
         dependency-type: production
+        update-types:
+          - minor
+          - patch
       dev-dependencies:
         dependency-type: development
+        update-types:
+          - minor
+          - patch
+    # Two majors are deliberate holds rather than open questions, so they are not
+    # reproposed every week. Vite 8 swaps the pipeline to Rolldown and Oxc, which is a
+    # rewrite this milestone does not need, and TypeScript 7 is the native port compiler,
+    # far too large to ride in on a dependency sweep. Minor and patch updates to both
+    # still arrive as normal.
+    ignore:
+      - dependency-name: vite
+        update-types:
+          - version-update:semver-major
+      - dependency-name: typescript
+        update-types:
+          - version-update:semver-major
 
   # Third-party actions used by the workflow are pinned to commit SHAs. A SHA pin is
   # only a live mitigation while something keeps it current, so the action references
