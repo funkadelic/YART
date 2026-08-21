@@ -124,13 +124,19 @@ describe("getCities", () => {
     expect(result).toHaveLength(0);
   });
 
-  it("rejects with the underlying failure when the request rejects", async () => {
+  it("rejects with copy written for a reader when the request never reaches the host", async () => {
     const failure = new Error("The connection was refused");
     vi.spyOn(globalThis, "fetch").mockRejectedValue(failure);
 
     const coldGetCities = await freshGetCities();
 
-    await expect(coldGetCities()).rejects.toThrow(failure.message);
+    // The injected text does not reach the seam: the loader replaces a
+    // transport failure with copy a reader can act on and keeps the original as
+    // the cause, which is asserted where the wrap lives rather than here. The
+    // same holds for every load-failure assertion below.
+    await expect(coldGetCities()).rejects.toThrow(
+      "The city data could not be downloaded. Check your connection and try again.",
+    );
   });
 
   it("rejects with a message naming the status when the response is not ok", async () => {
@@ -178,7 +184,9 @@ describe("getCities dataset requests", () => {
 
     const coldGetCities = await freshGetCities();
 
-    await expect(coldGetCities()).rejects.toThrow(failure.message);
+    await expect(coldGetCities()).rejects.toThrow(
+      "The city data could not be downloaded. Check your connection and try again.",
+    );
 
     const recovered = await coldGetCities();
 
@@ -197,13 +205,19 @@ describe("getCities dataset requests", () => {
     const first = coldGetCities();
     const second = coldGetCities();
 
-    await expect(first).rejects.toThrow(failure.message);
-    await expect(second).rejects.toThrow(failure.message);
+    await expect(first).rejects.toThrow(
+      "The city data could not be downloaded. Check your connection and try again.",
+    );
+    await expect(second).rejects.toThrow(
+      "The city data could not be downloaded. Check your connection and try again.",
+    );
 
     // The retry is the second request. The shared rejection cleared the cache
     // entry, so the next call downloads again rather than re-awaiting a promise
     // that has already failed.
-    await expect(coldGetCities()).rejects.toThrow(failure.message);
+    await expect(coldGetCities()).rejects.toThrow(
+      "The city data could not be downloaded. Check your connection and try again.",
+    );
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
   });
