@@ -15,6 +15,12 @@ jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
+    # A green run takes well under a minute, so this is roughly fifteen times the
+    # headroom a cold cache needs. The runner's own per-test timeout already catches
+    # a deadlock inside a test. This covers the hangs it cannot see, in shared setup
+    # or teardown or in the install itself, which would otherwise hold a machine for
+    # the six-hour platform default.
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
