@@ -7,10 +7,12 @@ import citiesUrl from "./cities.json?url";
  * simplemaps.com "World Cities" basic database, v1.91.3, distributed under
  * CC BY 4.0. See license.txt.
  *
- * The dataset ships as cities.json, produced from the upstream worldcities.csv
- * export by scripts/generate-cities.mjs. Only the columns the City type needs
- * are kept; lat, lng, iso2, and admin_name are dropped. Rows are ordered by
+ * The dataset ships as cities.json. Only the columns the City type needs are
+ * kept; lat, lng, iso2, and admin_name are dropped. Rows are ordered by
  * descending population so the default view leads with the largest cities.
+ *
+ * Provenance is recorded in license.txt and in the README rather than here, so
+ * there is one account of how the committed bytes came to exist.
  *
  * Upstream quirks preserved deliberately:
  * - 432 rows have no population and are recorded as 0.
