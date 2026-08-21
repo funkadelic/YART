@@ -252,6 +252,56 @@ describe("App", () => {
     expect(screen.queryByText(/^Error: /)).not.toBeInTheDocument();
   });
 
+  it("stops claiming a download once the dataset has arrived, even when the search that follows is empty", async () => {
+    stubDatasetFetch(CITY_FIXTURE_ENVELOPE);
+    const FreshApp = await freshApp();
+    vi.useFakeTimers();
+    // Bind the input helper to the controlled clock. Without this it waits on a
+    // clock the test has frozen and the run stalls instead of failing.
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+    render(<FreshApp />);
+
+    // The cold pole: nothing has arrived yet, so the claim is true here.
+    expect(
+      screen.getByText("Downloading the city data..."),
+    ).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS + SEAM_LATENCY_MS);
+    });
+    expect(screen.getByText("Tokyo")).toBeInTheDocument();
+
+    const searchInput = screen.getByRole("textbox", { name: "Search" });
+    await user.type(searchInput, "zzzz");
+
+    // The debounce window and the seam's latency are advanced separately. The
+    // seam schedules its delay only once the awaited load has settled, so a
+    // single combined advance can pass the deadline before the timer exists.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+    });
+    expect(screen.getByText("No cities found")).toBeInTheDocument();
+
+    // One more keystroke over an empty result set. A request is in flight with
+    // no rows behind it, which is the state a row count reads as a cold start.
+    await user.type(searchInput, "z");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
+    });
+
+    expect(screen.queryByText("Downloading the city data...")).toBeNull();
+    expect(screen.getByText("No cities found")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+    });
+  });
+
   it("recovers from a failed dataset load when the retry control is used", async () => {
     const fetchSpy = stubDatasetFetch(CITY_FIXTURE_ENVELOPE);
     fetchSpy.mockResolvedValueOnce(new Response("not found", { status: 404 }));
