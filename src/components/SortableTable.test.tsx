@@ -133,7 +133,7 @@ describe("SortableTable", () => {
   });
 
   describe("Loading and Error States", () => {
-    it("shows loading state on the first load, when there is no data yet", () => {
+    it("renders the download copy while the dataset has never arrived", () => {
       render(
         <SortableTable
           {...defaultProps}
@@ -147,6 +147,39 @@ describe("SortableTable", () => {
         screen.getByText("Downloading the city data..."),
       ).toBeInTheDocument();
       expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    });
+
+    it("renders no download copy while refetching over a dataset that has already arrived", () => {
+      // The user path this stands for: a search that returned nothing,
+      // followed by one more keystroke. Nothing is downloading, and a row
+      // count cannot tell that apart from a cold start.
+      render(
+        <SortableTable
+          {...defaultProps}
+          data={[]}
+          loading={true}
+          datasetReady={true}
+        />,
+      );
+
+      expect(screen.queryByText("Downloading the city data...")).toBeNull();
+      expect(screen.getByText("No cities found")).toBeInTheDocument();
+    });
+
+    it("renders no download copy before the first request starts", () => {
+      // The container's first paint, before the effect raises the loading
+      // flag. It is what makes the loading operand load-bearing rather than
+      // decorative.
+      render(
+        <SortableTable
+          {...defaultProps}
+          data={[]}
+          loading={false}
+          datasetReady={false}
+        />,
+      );
+
+      expect(screen.queryByText("Downloading the city data...")).toBeNull();
     });
 
     it("keeps the table mounted while refetching with results on screen", () => {
