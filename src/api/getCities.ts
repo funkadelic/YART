@@ -1,14 +1,9 @@
-import { cities } from "../data/worldcities/cities";
+import type { City } from "../data/worldcities/cities";
+import { loadCities } from "../data/worldcities/cities";
 
-export interface City {
-  id: number;
-  name: string;
-  nameAscii: string;
-  country: string;
-  countryIso3: string;
-  capital: string;
-  population: number;
-}
+// Re-exported so no consumer's import path changes: the definition moved, the
+// import site did not.
+export type { City };
 
 export interface GetCitiesParams {
   searchTerm?: string;
@@ -20,36 +15,26 @@ export interface GetCitiesParams {
 const LATENCY_MS = 200;
 
 /**
- * Searching for this term mimics a failed request.
+ * Fake API that returns cities matching a search term against city name, ascii
+ * name, or country name. The dataset itself is downloaded once and cached, so a
+ * failed download is what rejects here.
  */
-const ERROR_TERM = "error";
+export async function getCities({
+  searchTerm = "",
+}: GetCitiesParams = {}): Promise<City[]> {
+  const all = await loadCities();
 
-function matches(city: City, term: string): boolean {
-  const needle = term.trim().toLowerCase();
-  if (!needle) return true;
+  const needle = searchTerm.trim().toLowerCase();
+  const matched = needle
+    ? all.filter((city) => city.searchKey.includes(needle))
+    : all;
 
-  return (
-    city.name.toLowerCase().includes(needle) ||
-    city.nameAscii.toLowerCase().includes(needle) ||
-    city.country.toLowerCase().includes(needle)
-  );
-}
-
-/**
- * Fake API that returns cities matching a search term against city name or
- * country name. Searching for "error" rejects, so error states can be tested.
- */
-export function getCities({ searchTerm = "" }: GetCitiesParams = {}): Promise<
-  City[]
-> {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => {
-      if (searchTerm.trim().toLowerCase() === ERROR_TERM) {
-        reject(new Error("Something went wrong while fetching cities"));
-        return;
-      }
-
-      resolve(cities.filter((city) => matches(city, searchTerm)));
-    }, LATENCY_MS);
+  // The latency is applied to the filter rather than only to the download, so a
+  // cache-warm call still behaves like a network call and the container's
+  // debounce timing keeps its meaning.
+  await new Promise<void>((resolve) => {
+    setTimeout(resolve, LATENCY_MS);
   });
+
+  return matched;
 }
