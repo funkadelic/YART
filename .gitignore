@@ -29,3 +29,8 @@ yarn-error.log*
 /.claude/
 /.planning/
 /.gsd/
+
+# Upstream World Cities CSV export. It is the generator's input, not a build
+# artifact, and it is deliberately not committed: the committed dataset is
+# src/data/worldcities/cities.json.
+src/data/worldcities/worldcities.csv
