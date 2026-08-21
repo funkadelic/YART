@@ -138,13 +138,35 @@ export function loadCities(): Promise<IndexedCity[]> {
   if (cached) return cached;
 
   const pending = fetch(citiesUrl)
+    // The text a request carries when it never reaches the host is the
+    // browser's own, it differs between browsers, and none of it tells the
+    // reader what to do. It is replaced here and kept as the cause. This is
+    // attached to the request rather than to the chain below, so nothing
+    // thrown while reading the response can be reported as a transport
+    // failure.
+    .catch((reason: unknown) => {
+      throw new Error(
+        "The city data could not be downloaded. Check your connection and try again.",
+        { cause: reason },
+      );
+    })
     .then((response) => {
       if (!response.ok) {
         throw new Error(
           `The city data could not be downloaded (status ${response.status}).`,
         );
       }
-      return response.json();
+      // A static host that serves the application's own page for a file it
+      // cannot find answers with a success status and a body of HTML, so the
+      // parser reports a syntax error naming a character rather than anything
+      // the reader can act on. The status check stays ahead of this, so a
+      // status failure is never reported as a parse failure.
+      return response.json().catch((reason: unknown) => {
+        throw new Error(
+          "The city data was downloaded but could not be read as JSON.",
+          { cause: reason },
+        );
+      });
     })
     .then(parseCities);
 
