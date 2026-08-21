@@ -39,9 +39,9 @@ function matches(city: City, term: string): boolean {
  * Fake API that returns cities matching a search term against city name or
  * country name. Searching for "error" rejects, so error states can be tested.
  */
-export function getCities({
-  searchTerm = "",
-}: GetCitiesParams = {}): Promise<City[]> {
+export function getCities({ searchTerm = "" }: GetCitiesParams = {}): Promise<
+  City[]
+> {
   return new Promise((resolve, reject) => {
     setTimeout(() => {
       if (searchTerm.trim().toLowerCase() === ERROR_TERM) {

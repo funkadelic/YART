@@ -1,0 +1,13 @@
+# Generated city dataset. It is machine written and several megabytes wide, so walking
+# it would dominate every format run and every commit for no benefit.
+src/data/worldcities/cities.ts
+
+# Build output.
+dist
+
+# Coverage output.
+coverage
+
+# Written and owned by the package manager. A second formatter rewriting it would put
+# the two tools in conflict and make the gate flap.
+package-lock.json

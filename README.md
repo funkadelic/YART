@@ -41,9 +41,24 @@ search, sort, and paginate a list of world cities without a table library.
 - [TypeScript](https://www.typescriptlang.org)
 - [React](https://reactjs.org)
 - [Vite](https://vitejs.dev/)
-- [Jest](https://jestjs.io) and [Testing Library](https://testing-library.com/)
+- [Vitest](https://vitest.dev) and [Testing Library](https://testing-library.com/)
 - [React Icons](https://react-icons.github.io/react-icons/)
 - [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/)
+
+### Build target
+
+The browser target follows the Baseline Widely available rule, taken on
+2026-08-20:
+
+- Chrome 111 and above
+- Edge 111 and above
+- Firefox 111 and above
+- Safari 16.4 and above
+
+The `browserslist` field in `package.json` names these versions explicitly
+instead of using a percentage or "not dead" query, so browser support data
+changes cannot move build output. Raising the baseline is a deliberate edit
+to that list and to the date above.
 
 ## Getting started
 
@@ -53,6 +68,10 @@ npm run dev
 ```
 
 Then open [http://localhost:5173/](http://localhost:5173/).
+
+The history contains a one-time commit that reformatted every file. Run
+`git config blame.ignoreRevsFile .git-blame-ignore-revs` once in your clone so
+`git blame` skips it and keeps pointing at the commit that wrote each line.
 
 ## Usage
 
@@ -107,13 +126,13 @@ function CityBrowser() {
 
 ### Props
 
-| Prop | Type | Description |
-| --- | --- | --- |
-| `data` | `City[]` | Rows to display. Already filtered by the caller. |
-| `searchTerm` | `string` | Current value of the search box. The input is controlled, so this must be state the caller owns. |
-| `onSearchChange` | `(term: string) => void` | Called on every keystroke. Debouncing belongs to the caller, not the table. |
-| `loading` | `boolean` | Renders a loading message in place of the table. |
-| `error` | `Error \| null` | Renders the error message in place of the table. The search box stays visible so the user can correct the query. |
+| Prop             | Type                     | Description                                                                                                      |
+| ---------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `data`           | `City[]`                 | Rows to display. Already filtered by the caller.                                                                 |
+| `searchTerm`     | `string`                 | Current value of the search box. The input is controlled, so this must be state the caller owns.                 |
+| `onSearchChange` | `(term: string) => void` | Called on every keystroke. Debouncing belongs to the caller, not the table.                                      |
+| `loading`        | `boolean`                | Renders a loading message in place of the table.                                                                 |
+| `error`          | `Error \| null`          | Renders the error message in place of the table. The search box stays visible so the user can correct the query. |
 
 `loading` and `error` are mutually exclusive in practice: `error` wins if both
 are set.
@@ -208,6 +227,7 @@ rather than internals:
 ```tsx
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { it, expect, vi } from "vitest";
 
 it("sorts by population descending on the second click", async () => {
   const user = userEvent.setup();
@@ -215,7 +235,7 @@ it("sorts by population descending on the second click", async () => {
     <SortableTable
       data={cities}
       searchTerm=""
-      onSearchChange={jest.fn()}
+      onSearchChange={vi.fn()}
       loading={false}
       error={null}
     />,
@@ -235,12 +255,17 @@ reader gets the right answer.
 
 ## Scripts
 
-| Script | What it does |
-| --- | --- |
-| `npm run dev` | Start the dev server with hot reload |
-| `npm test` | Run the Jest suite |
-| `npm run lint` | Run ESLint (`lint:fix` to autofix) |
-| `npm run format` | Run Prettier |
+| Script                 | What it does                                |
+| ---------------------- | ------------------------------------------- |
+| `npm run dev`          | Start the dev server with hot reload        |
+| `npm run build`        | Build the production bundle                 |
+| `npm run preview`      | Serve the built bundle locally              |
+| `npm test`             | Run the test suite once                     |
+| `npm run test:watch`   | Run the test suite in watch mode            |
+| `npm run typecheck`    | Check types without emitting output         |
+| `npm run lint`         | Run ESLint (`lint:fix` to autofix)          |
+| `npm run format`       | Run Prettier                                |
+| `npm run format:check` | Check formatting without rewriting anything |
 
 ## Notes and next steps
 

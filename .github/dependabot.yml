@@ -1,0 +1,38 @@
+version: 2
+
+updates:
+  # Package manifest at the repository root. Every entry in it is an exact pin, so the
+  # versioning strategy is set explicitly: "increase" rewrites the pinned version in
+  # place, while the default would be free to widen a pin into a range and quietly
+  # reverse the convention the whole manifest follows.
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    # Generated subjects have to be Conventional Commits, same as hand written ones.
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+    # Grouped so a routine week is two pull requests to review rather than a dozen.
+    groups:
+      prod-dependencies:
+        dependency-type: production
+      dev-dependencies:
+        dependency-type: development
+
+  # Third-party actions used by the workflow are pinned to commit SHAs. A SHA pin is
+  # only a live mitigation while something keeps it current, so the action references
+  # are watched on the same weekly cadence and refreshed together.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(actions)"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
