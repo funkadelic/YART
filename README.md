@@ -107,6 +107,7 @@ function CityBrowser() {
   const [searchTerm, setSearchTerm] = useState("");
   const [cities, setCities] = useState<City[]>([]);
   const [loading, setLoading] = useState(false);
+  const [datasetReady, setDatasetReady] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
   // Wait 150ms after the last keystroke before hitting the API.
@@ -117,6 +118,7 @@ function CityBrowser() {
     setError(null);
     try {
       setCities(await getCities({ searchTerm: term }));
+      setDatasetReady(true);
     } catch (err) {
       setError(err instanceof Error ? err : new Error("Unexpected error"));
     } finally {
@@ -134,6 +136,7 @@ function CityBrowser() {
       searchTerm={searchTerm}
       onSearchChange={setSearchTerm}
       loading={loading}
+      datasetReady={datasetReady}
       error={error}
     />
   );
@@ -142,14 +145,15 @@ function CityBrowser() {
 
 ### Props
 
-| Prop             | Type                     | Description                                                                                                                    |
-| ---------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| `data`           | `City[]`                 | Rows to display. Already filtered by the caller.                                                                               |
-| `searchTerm`     | `string`                 | Current value of the search box. The input is controlled, so this must be state the caller owns.                               |
-| `onSearchChange` | `(term: string) => void` | Called on every keystroke. Debouncing belongs to the caller, not the table.                                                    |
-| `loading`        | `boolean`                | The first load renders a download message in place of the table. A later refetch leaves the table mounted.                     |
-| `error`          | `Error \| null`          | Renders the error message in place of the table. The search box stays visible so the user can correct the query.               |
-| `onRetry`        | `() => void`             | Optional. Called when the user activates the retry control in the error region. Omit it when the caller has no retry to offer. |
+| Prop             | Type                     | Description                                                                                                                                                                                  |
+| ---------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `data`           | `City[]`                 | Rows to display. Already filtered by the caller.                                                                                                                                             |
+| `searchTerm`     | `string`                 | Current value of the search box. The input is controlled, so this must be state the caller owns.                                                                                             |
+| `onSearchChange` | `(term: string) => void` | Called on every keystroke. Debouncing belongs to the caller, not the table.                                                                                                                  |
+| `loading`        | `boolean`                | True while a request is in flight. A refetch leaves the table mounted and marks it busy.                                                                                                     |
+| `datasetReady`   | `boolean`                | False until the dataset has arrived at least once. The download message renders only while `loading` is true and this is false, so a refetch that returns no rows does not claim a download. |
+| `error`          | `Error \| null`          | Renders the error message in place of the table. The search box stays visible so the user can correct the query.                                                                             |
+| `onRetry`        | `() => void`             | Optional. Called when the user activates the retry control in the error region. Omit it when the caller has no retry to offer.                                                               |
 
 `loading` and `error` are mutually exclusive in practice: `error` wins if both
 are set.
@@ -254,6 +258,7 @@ it("sorts by population descending on the second click", async () => {
       searchTerm=""
       onSearchChange={vi.fn()}
       loading={false}
+      datasetReady={true}
       error={null}
     />,
   );
