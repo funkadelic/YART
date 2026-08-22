@@ -576,6 +576,27 @@ describe("SortableTable", () => {
         }),
       ).not.toBeInTheDocument();
     });
+
+    it("restores the original page when the result set widens again", async () => {
+      // The clamp reads the position without rewriting it, which is what makes
+      // the narrowing recoverable: it shows the user a different page without
+      // moving them off the one they chose.
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <SortableTable {...defaultProps} data={fiftyRowData} />,
+      );
+
+      await user.click(screen.getByRole("button", { name: /Go to last page/ }));
+      expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
+
+      rerender(
+        <SortableTable {...defaultProps} data={fiftyRowData.slice(0, 25)} />,
+      );
+      expect(screen.getByText("Page 3 of 3")).toBeInTheDocument();
+
+      rerender(<SortableTable {...defaultProps} data={fiftyRowData} />);
+      expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
+    });
   });
 
   describe("Sorting with Pagination", () => {
