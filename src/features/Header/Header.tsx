@@ -1,4 +1,5 @@
 import styles from "./Header.module.css";
+import { ThemeControl } from "./ThemeControl";
 
 export function Header() {
   return (
@@ -18,6 +19,7 @@ export function Header() {
         />
       </svg>
       <span className={styles.title}>YART</span>
+      <ThemeControl />
     </header>
   );
 }
