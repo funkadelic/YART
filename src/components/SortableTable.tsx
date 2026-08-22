@@ -199,7 +199,11 @@ export function SortableTable({
 
       {/* P0: Error handling - show error message when search fails */}
       {error ? (
-        <div className={styles.error}>
+        // a11y: the failure arrives after the initial render, so without a live
+        // region a screen reader user is never told the load failed or that a
+        // way back is on offer. alert rather than status because the table it
+        // replaces is gone.
+        <div className={styles.error} role="alert">
           Error: {error.message}
           {/* A failed dataset load makes every search fail, so the way back
               belongs in the region that already reports it rather than in a
