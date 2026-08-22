@@ -3,8 +3,8 @@
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
-  background-color: #ffffff;
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-surface-raised);
 }
 
 .logo {
@@ -12,8 +12,20 @@
   height: 2rem;
 }
 
+/* The logo's two colours, applied from here rather than from presentation
+   attributes on the SVG. A custom property is not reliably readable from a
+   presentation attribute across engines, and the stylesheet is also where the
+   guard against stray colour literals can see them. */
+.logoMark {
+  fill: var(--color-brand);
+}
+
+.logoRule {
+  stroke: var(--color-brand-contrast);
+}
+
 .title {
   font-size: 1.125rem;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--color-text);
 }

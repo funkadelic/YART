@@ -43,15 +43,6 @@
   --color-brand: var(--brand-orange);
   --color-brand-contrast: var(--white);
 
-  --border-color: #333;
-  --border-light: #ddd;
-  --text-color: #000;
-  --text-muted: #666;
-  --background-light: #eee;
-  --background-light-hover: #ccc;
-  --accent-color: #076a6a;
-  --error-color: #c00;
-
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
