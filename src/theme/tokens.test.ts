@@ -71,6 +71,12 @@ const HEX_COLOR = /#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})(?![0-9a-z-])/i;
 // once no file declares one.
 const SCSS_VARIABLE = /^[ \t]*\$[\w-]+[ \t]*:/m;
 
+// Matched on the property itself, so outline-offset is not mistaken for a
+// suppression. Either value cancels the ring, and either one is more specific
+// than the global rule wherever a component writes it.
+const OUTLINE_SUPPRESSION =
+  /(?<![\w-])outline[ \t]*:[ \t]*(none|0(px)?)[ \t]*;/;
+
 const SKIPPED_DIRECTORIES = new Set(["node_modules", "dist", "coverage"]);
 
 /**
@@ -433,5 +439,39 @@ describe("colour in the module stylesheets", () => {
         `src/index.css still declares the retired token ${token}`,
       ).not.toMatch(new RegExp(`(?<![\\w-])${token}(?![\\w-])`));
     }
+  });
+});
+
+describe("the focus ring", () => {
+  it("is drawn once, globally, from the ring token", () => {
+    const rule = blocks.get(":focus-visible");
+
+    expect(
+      rule,
+      "src/index.css declares no unscoped :focus-visible rule, so every control is on its own for a focus indicator",
+    ).toBeDefined();
+    expect(
+      rule?.get("outline"),
+      "the global focus rule does not draw its outline from the ring token",
+    ).toContain("--color-focus-ring");
+  });
+
+  it("is suppressed by no stylesheet", () => {
+    const offenders: string[] = [];
+
+    // The global stylesheet is included alongside the modules: a suppression
+    // there would cancel the rule from the same file that declares it.
+    for (const file of [...moduleStylesheets, cssPath]) {
+      const source = stripComments(readFileSync(file, "utf8"));
+      const suppression = OUTLINE_SUPPRESSION.exec(source);
+
+      if (suppression) {
+        offenders.push(
+          `${relative(projectRoot, file)}: cancels the focus ring with ${suppression[0].trim()}`,
+        );
+      }
+    }
+
+    expect(offenders).toEqual([]);
   });
 });
