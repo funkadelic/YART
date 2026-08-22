@@ -12,3 +12,22 @@
   padding: 1.5rem;
   box-sizing: border-box;
 }
+
+.fallback {
+  padding: 2.5rem 1.25rem;
+  text-align: center;
+  color: var(--error-color);
+}
+
+/* Styled from the table's retry control so the one way back the fallback
+   offers does not read as unstyled browser chrome. */
+.fallbackButton {
+  display: block;
+  margin: 1rem auto 0;
+  padding: 6px 12px;
+  background: var(--background-light);
+  border: 1px solid var(--border-light);
+  font-size: 14px;
+  color: var(--text-color);
+  cursor: pointer;
+}
