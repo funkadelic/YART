@@ -7,13 +7,24 @@ import {
   MdChevronRight,
 } from "react-icons/md";
 import type { City } from "../api/getCities";
+import { compareRows } from "./compareRows";
 import styles from "./SortableTable.module.scss";
 
 interface Column {
   key: keyof City;
   label: string;
-  sortable: boolean;
 }
+
+// Every column sorts. A per-column opt-out was declared but never set, which
+// left two arms no input could reach; it belongs back here the day a caller
+// actually supplies a column that should not sort.
+const COLUMNS: Column[] = [
+  { key: "name", label: "City" },
+  { key: "country", label: "Country" },
+  { key: "capital", label: "Capital" },
+  { key: "countryIso3", label: "Country Code" },
+  { key: "population", label: "Population" },
+];
 
 interface SortableTableProps {
   data: City[];
@@ -35,38 +46,17 @@ interface SortState {
   direction: SortDirection;
 }
 
-interface SortButtonProps {
-  column: Column;
-  sortState: SortState;
-}
-
-function SortButton({ column, sortState }: SortButtonProps) {
-  const isActive = sortState.column === column.key;
-  const direction = isActive ? sortState.direction : null;
-
-  // helper method to get the correct aria label based on sort
-  const getAriaLabel = () => {
-    if (!direction) return `Sort by ${column.label} ascending`;
-    if (direction === "asc") return `Sort by ${column.label} descending`;
-    return `Clear ${column.label} sort`;
-  };
-
-  return (
-    <span className={styles.sortButton} aria-label={getAriaLabel()}>
-      {column.label}
-      {direction === "asc" && <FiChevronUp aria-hidden="true" />}
-      {direction === "desc" && <FiChevronDown aria-hidden="true" />}
-    </span>
-  );
-}
-
 /**
- * SortableTable component that implements P0, P2, and P3 requirements:
- * - Search by city/country name
- * - Basic sorting (ascending toggle)
- * - Pagination with dynamic page size selection (P2)
- * - First and last page navigation (P3)
- * - Error handling and empty states
+ * Renders a collection of cities as a searchable, sortable, paginated table.
+ *
+ * Searching is reported upward rather than carried out here: the container owns
+ * the term and the request behind it, and which fields a term matches is
+ * decided at the data layer. What this component owns is the view state, which
+ * is the sort column and direction, the page position, and the page size.
+ *
+ * Sorting cycles rather than toggling. A first press sorts ascending, a second
+ * descending, and a third returns the table to its unsorted order. The ordering
+ * itself is delegated to compareRows.
  */
 export function SortableTable({
   data,
@@ -77,57 +67,56 @@ export function SortableTable({
   error,
   onRetry,
 }: SortableTableProps) {
-  // P0: Basic sorting with three states: ascending, descending, no sort
   const [sortState, setSortState] = useState<SortState>({
     column: null,
     direction: null,
   });
 
-  // P0/P2: Pagination with dynamic page size
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10); // P2: Dynamic page size (default 10)
+  const [pageSize, setPageSize] = useState(10);
+  // A cleared sort and a sort that has never been applied render the same
+  // state, so the announcement needs to know which of the two it is looking at:
+  // the first render has to stay silent, the third press on a column does not.
+  const [hasSorted, setHasSorted] = useState(false);
 
-  // Table columns
-  const columns: Column[] = [
-    { key: "name", label: "City", sortable: true },
-    { key: "country", label: "Country", sortable: true },
-    { key: "capital", label: "Capital", sortable: true },
-    { key: "countryIso3", label: "Country Code", sortable: true },
-    { key: "population", label: "Population", sortable: true },
-  ];
+  // A new term is a different set of rows rather than a narrowing of the
+  // current one, so the position the user chose in the old set does not carry
+  // any meaning into it. Adjusting during render rather than in an effect keeps
+  // the stale page from being painted first.
+  const [lastSearchTerm, setLastSearchTerm] = useState(searchTerm);
+  if (searchTerm !== lastSearchTerm) {
+    setLastSearchTerm(searchTerm);
+    setCurrentPage(1);
+  }
 
-  // P0: Sort data based on current sort state
   const sortedData = useMemo(() => {
-    if (!sortState.column || !sortState.direction) return data;
+    const { column, direction } = sortState;
+    if (!column || !direction) return data;
 
-    return [...data].sort((a, b) => {
-      const aVal = a[sortState.column!];
-      const bVal = b[sortState.column!];
-      let comparison = 0;
-
-      // Handle string comparison (city/country names)
-      if (typeof aVal === "string" && typeof bVal === "string") {
-        comparison = aVal.localeCompare(bVal);
-      }
-      // Handle number comparison (population)
-      else if (typeof aVal === "number" && typeof bVal === "number") {
-        comparison = aVal - bVal;
-      }
-
-      // Apply sort direction
-      return sortState.direction === "desc" ? -comparison : comparison;
-    });
+    // The resolved collection is module-cached and shared by every reader, so
+    // it is treated as immutable and the sort runs over a copy.
+    return [...data].sort((a, b) => compareRows(a, b, column, direction));
   }, [data, sortState]);
 
-  // P0/P2: Paginate sorted data with dynamic page size
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    return sortedData.slice(startIndex, startIndex + pageSize);
+  const { paginatedData, totalPages, effectivePage } = useMemo(() => {
+    // Floored at one so an empty result set still counts as a single page.
+    // Zero would be a page count nothing can be on, and callers outside the
+    // navigation's own visibility guard have no protection from it.
+    const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
+    // Clamped for reading only. The position held in state is deliberately
+    // left alone, so a result set that widens again restores the user where
+    // they were rather than stranding them on whatever the narrowed set
+    // allowed, and so a position arriving from outside survives a fetch that
+    // has not resolved yet.
+    const effectivePage = Math.min(Math.max(currentPage, 1), totalPages);
+    const startIndex = (effectivePage - 1) * pageSize;
+    return {
+      paginatedData: sortedData.slice(startIndex, startIndex + pageSize),
+      totalPages,
+      effectivePage,
+    };
   }, [sortedData, currentPage, pageSize]);
 
-  const totalPages = Math.ceil(sortedData.length / pageSize);
-
-  // P0: Cycle through sort states: none -> asc -> desc -> none
   const handleSort = (column: keyof City) => {
     setSortState((prevState) => {
       if (prevState.column !== column) {
@@ -144,25 +133,22 @@ export function SortableTable({
         }
       }
     });
+    setHasSorted(true);
     setCurrentPage(1); // Reset to first page when sorting changes
   };
 
-  // P0: Navigate between pages
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  // P3: Navigate to first page
   const handleFirstPage = () => {
     setCurrentPage(1);
   };
 
-  // P3: Navigate to last page
   const handleLastPage = () => {
     setCurrentPage(totalPages);
   };
 
-  // P2: Handle page size changes
   const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newPageSize = parseInt(e.target.value, 10);
     setPageSize(newPageSize);
@@ -174,20 +160,41 @@ export function SortableTable({
     onSearchChange(e.target.value);
   };
 
+  // The announcements name what is on screen, and what is on screen is the
+  // column label. sortState.column is the field name, which is not the name of
+  // anything the reader can see.
+  const activeLabel = COLUMNS.find(
+    (column) => column.key === sortState.column,
+  )?.label;
+
   return (
     <div className={styles.container}>
       {/* a11y: Live region for announcing sort changes */}
       <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
-        {sortState.direction && sortState.column
-          ? `Table sorted by ${sortState.column} in ${sortState.direction === "asc" ? "ascending" : "descending"} order`
-          : ""}
+        {sortState.direction && activeLabel
+          ? `Table sorted by ${activeLabel} in ${sortState.direction === "asc" ? "ascending" : "descending"} order`
+          : hasSorted
+            ? "Table sort cleared"
+            : ""}
       </div>
-      {/* P0: Search input - searches both city and country names */}
+      {/* a11y: mounted unconditionally rather than inside the branch that
+          renders the table. A live region created with its message already in
+          it announces nothing, which would drop the first row count on a cold
+          start and again after a successful retry. The empty result gets a
+          sentence of its own for the same reason in reverse: emptying a region
+          is not an announcement either, so a search matching no rows would be
+          indistinguishable from a request that never came back. */}
+      <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
+        {error || loading || !datasetReady
+          ? ""
+          : sortedData.length === 0
+            ? "No cities found for that search"
+            : `Showing ${paginatedData.length} cities out of ${sortedData.length} total results`}
+      </div>
       <div className={styles.searchContainer}>
         <div className={styles.searchInput}>
           <FiSearch className={styles.searchIcon} />
           <input
-            role="textbox"
             aria-label="Search"
             type="text"
             placeholder="Search for a city"
@@ -197,7 +204,6 @@ export function SortableTable({
         </div>
       </div>
 
-      {/* P0: Error handling - show error message when search fails */}
       {error ? (
         // a11y: the failure arrives after the initial render, so without a live
         // region a screen reader user is never told the load failed or that a
@@ -219,25 +225,19 @@ export function SortableTable({
             </button>
           ) : null}
         </div>
-      ) : loading && !datasetReady ? (
-        // The whole view is replaced only while the collection has never
-        // arrived. Once it has, a refetch keeps the table mounted so it does
-        // not unmount and flash on every keystroke.
+      ) : !datasetReady ? (
+        // The whole view is replaced until the collection has arrived once,
+        // the first paint before the request even starts included: the empty
+        // result copy would otherwise claim a search had been made and matched
+        // nothing. Once the collection has arrived, a refetch keeps the table
+        // mounted so it does not unmount and flash on every keystroke.
         <div className={styles.loading}>Downloading the city data...</div>
       ) : (
         <>
-          {/* a11y: Live region for announcing data updates */}
-          <div aria-live="polite" aria-atomic="false" className={styles.srOnly}>
-            {!loading && paginatedData.length > 0
-              ? `Showing ${paginatedData.length} cities out of ${sortedData.length} total results`
-              : ""}
-          </div>
-          {/* P0: Empty state - show message when no results found */}
           {paginatedData.length === 0 ? (
             <div className={styles.noResults}>No cities found</div>
           ) : (
             <>
-              {/* P0: Sortable table - click headers to sort ascending */}
               <div
                 className={`${styles.tableContainer} ${loading ? styles.refreshing : ""}`}
                 aria-busy={loading}
@@ -246,12 +246,12 @@ export function SortableTable({
                   <caption className={styles.srOnly}>
                     City data with {sortedData.length} entries, currently{" "}
                     {sortState.direction
-                      ? `sorted by ${sortState.column} ${sortState.direction}ending`
+                      ? `sorted by ${activeLabel} ${sortState.direction}ending`
                       : "not sorted"}
                   </caption>
                   <thead>
                     <tr>
-                      {columns.map((column) => {
+                      {COLUMNS.map((column) => {
                         const isActive = sortState.column === column.key;
                         const sortDirection = isActive
                           ? sortState.direction
@@ -260,50 +260,38 @@ export function SortableTable({
                         return (
                           <th
                             key={column.key}
-                            onClick={
-                              column.sortable
-                                ? () => handleSort(column.key)
-                                : undefined
-                            }
-                            onKeyDown={
-                              column.sortable
-                                ? (e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                      e.preventDefault();
-                                      handleSort(column.key);
-                                    }
-                                  }
-                                : undefined
-                            }
-                            tabIndex={column.sortable ? 0 : undefined}
+                            scope="col"
                             aria-sort={
-                              column.sortable
-                                ? sortDirection === "asc"
-                                  ? "ascending"
-                                  : sortDirection === "desc"
-                                    ? "descending"
-                                    : "none"
-                                : undefined
-                            }
-                            role={
-                              column.sortable
-                                ? "columnheader button"
-                                : "columnheader"
-                            }
-                            style={
-                              column.sortable
-                                ? { cursor: "pointer" }
-                                : undefined
+                              sortDirection === "asc"
+                                ? "ascending"
+                                : sortDirection === "desc"
+                                  ? "descending"
+                                  : "none"
                             }
                           >
-                            {column.sortable ? (
-                              <SortButton
-                                column={column}
-                                sortState={sortState}
-                              />
-                            ) : (
-                              column.label
-                            )}
+                            {
+                              // a11y: the accessible name is the column label
+                              // alone, so the control keeps one identity across
+                              // presses. The sort state is carried by the
+                              // header cell's own attribute, where the
+                              // specification puts it, and announced by the
+                              // live region above. The button handles Enter and
+                              // Space itself; a manual key handler alongside it
+                              // would fire twice.
+                              <button
+                                type="button"
+                                className={styles.sortButton}
+                                onClick={() => handleSort(column.key)}
+                              >
+                                {column.label}
+                                {sortDirection === "asc" && (
+                                  <FiChevronUp aria-hidden="true" />
+                                )}
+                                {sortDirection === "desc" && (
+                                  <FiChevronDown aria-hidden="true" />
+                                )}
+                              </button>
+                            }
                           </th>
                         );
                       })}
@@ -323,9 +311,7 @@ export function SortableTable({
                 </table>
               </div>
 
-              {/* P2: Pagination with dynamic page size selection */}
               <div className={styles.paginationContainer}>
-                {/* P2: Page size selector */}
                 <div className={styles.pageSizeContainer}>
                   <label htmlFor="pageSize">Per page:</label>
                   <select
@@ -340,59 +326,64 @@ export function SortableTable({
                   </select>
                 </div>
 
-                {/* P0/P3: Pagination navigation (only show if multiple pages) */}
                 {totalPages > 1 && (
                   <nav
                     aria-label="Table pagination navigation"
                     className={styles.navigationContainer}
                   >
-                    {/* P3: First page button */}
                     <button
                       onClick={handleFirstPage}
-                      disabled={currentPage === 1}
+                      disabled={effectivePage === 1}
                       title="Go to first page"
-                      aria-label={`Go to first page of ${totalPages} pages`}
+                      // a11y: named by the action alone, as the sort headers
+                      // are. A name carrying the position changes under focus,
+                      // which re-announces the whole control on every press;
+                      // the live region below is what reports where the user
+                      // landed.
+                      aria-label="Go to first page"
                       className={styles.navButton}
                     >
                       <MdFirstPage aria-hidden="true" />
                     </button>
 
-                    {/* P0: Previous page button */}
                     <button
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
+                      onClick={() => handlePageChange(effectivePage - 1)}
+                      disabled={effectivePage === 1}
                       title="Go to previous page"
-                      aria-label={`Go to previous page, currently on page ${currentPage} of ${totalPages}`}
+                      aria-label="Go to previous page"
                       className={styles.navButton}
                     >
                       <MdChevronLeft aria-hidden="true" />
                     </button>
 
+                    {/* a11y: aria-atomic because React mutates only the page
+                        number inside this label. Without it the announcement
+                        is the bare number, and since the controls are named by
+                        their action alone this region is the only thing that
+                        reports where the user landed. */}
                     <span
                       className={styles.pageInfo}
-                      aria-current="page"
                       aria-live="polite"
+                      aria-atomic="true"
                     >
-                      Page {currentPage} of {totalPages}
+                      Page {effectivePage} of {totalPages}
                     </span>
 
-                    {/* P0: Next page button */}
                     <button
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages}
+                      onClick={() => handlePageChange(effectivePage + 1)}
+                      disabled={effectivePage === totalPages}
                       title="Go to next page"
-                      aria-label={`Go to next page, currently on page ${currentPage} of ${totalPages}`}
+                      aria-label="Go to next page"
                       className={styles.navButton}
                     >
                       <MdChevronRight aria-hidden="true" />
                     </button>
 
-                    {/* P3: Last page button */}
                     <button
                       onClick={handleLastPage}
-                      disabled={currentPage === totalPages}
+                      disabled={effectivePage === totalPages}
                       title="Go to last page"
-                      aria-label={`Go to last page, page ${totalPages} of ${totalPages}`}
+                      aria-label="Go to last page"
                       className={styles.navButton}
                     >
                       <MdLastPage aria-hidden="true" />

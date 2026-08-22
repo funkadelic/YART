@@ -166,11 +166,11 @@ describe("SortableTable", () => {
       expect(screen.getByText("No cities found")).toBeInTheDocument();
     });
 
-    it("renders no download copy before the first request starts", () => {
+    it("does not claim an empty search before the first request starts", () => {
       // The container's first paint, before the effect raises the loading
-      // flag. It is what makes the loading operand load-bearing rather than
-      // decorative.
-      render(
+      // flag. Nothing has arrived and nothing has been searched for, so the
+      // empty-result copy would be a statement about a search that never ran.
+      const { container } = render(
         <SortableTable
           {...defaultProps}
           data={[]}
@@ -179,7 +179,13 @@ describe("SortableTable", () => {
         />,
       );
 
-      expect(screen.queryByText("Downloading the city data...")).toBeNull();
+      expect(screen.queryByText("No cities found")).toBeNull();
+      expect(
+        screen.getByText("Downloading the city data..."),
+      ).toBeInTheDocument();
+      expect(container.textContent).not.toContain(
+        "No cities found for that search",
+      );
     });
 
     it("keeps the table mounted while refetching with results on screen", () => {
@@ -265,8 +271,7 @@ describe("SortableTable", () => {
       const user = userEvent.setup();
       render(<SortableTable {...defaultProps} />);
 
-      const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      await user.click(cityHeader);
+      await user.click(screen.getByRole("button", { name: "City" }));
 
       const rows = screen.getAllByRole("row");
       const firstDataRow = rows[1]; // Skip header row
@@ -277,10 +282,7 @@ describe("SortableTable", () => {
       const user = userEvent.setup();
       render(<SortableTable {...defaultProps} />);
 
-      const populationHeader = screen.getByRole("columnheader", {
-        name: /Population/,
-      });
-      await user.click(populationHeader);
+      await user.click(screen.getByRole("button", { name: "Population" }));
 
       const rows = screen.getAllByRole("row");
       const firstDataRow = rows[1];
@@ -291,18 +293,20 @@ describe("SortableTable", () => {
       const user = userEvent.setup();
       render(<SortableTable {...defaultProps} />);
 
+      // The activation lives on the button, the state lives on the cell.
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
+      const citySortButton = screen.getByRole("button", { name: "City" });
 
-      // First click: ascending - should show up arrow
-      await user.click(cityHeader);
+      // First activation: ascending - should show up arrow
+      await user.click(citySortButton);
       expect(cityHeader).toHaveAttribute("aria-sort", "ascending");
 
-      // Second click: descending - should show down arrow
-      await user.click(cityHeader);
+      // Second activation: descending - should show down arrow
+      await user.click(citySortButton);
       expect(cityHeader).toHaveAttribute("aria-sort", "descending");
 
-      // Third click: no sort
-      await user.click(cityHeader);
+      // Third activation: no sort
+      await user.click(citySortButton);
       expect(cityHeader).toHaveAttribute("aria-sort", "none");
     });
 
@@ -311,13 +315,14 @@ describe("SortableTable", () => {
       render(<SortableTable {...defaultProps} />);
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      await user.click(cityHeader);
+      await user.click(screen.getByRole("button", { name: "City" }));
 
       expect(cityHeader).toHaveAttribute("aria-sort", "ascending");
 
-      // Other columns should not be sorted - use exact match
+      // Other columns should not be sorted. Anchored, because "Country Code"
+      // is also a column and an unanchored pattern matches both.
       const countryHeader = screen.getByRole("columnheader", {
-        name: "Sort by Country ascending",
+        name: /^Country$/,
       });
       expect(countryHeader).toHaveAttribute("aria-sort", "none");
     });
@@ -328,14 +333,14 @@ describe("SortableTable", () => {
 
       // Sort by city first
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      await user.click(cityHeader);
+      await user.click(screen.getByRole("button", { name: "City" }));
       expect(cityHeader).toHaveAttribute("aria-sort", "ascending");
 
       // Sort by country
       const countryHeader = screen.getByRole("columnheader", {
-        name: "Sort by Country ascending",
+        name: /^Country$/,
       });
-      await user.click(countryHeader);
+      await user.click(screen.getByRole("button", { name: "Country" }));
 
       // Should have sort on country column, not city
       expect(countryHeader).toHaveAttribute("aria-sort", "ascending");
@@ -345,6 +350,22 @@ describe("SortableTable", () => {
 
   describe("Pagination", () => {
     const largeMockData = Array.from({ length: 25 }, (_, i) => ({
+      id: i + 1,
+      name: `City ${i + 1}`,
+      nameAscii: `City ${i + 1}`,
+      country: `Country ${i + 1}`,
+      countryIso3: `C${i.toString().padStart(2, "0")}`,
+      capital: i % 2 === 0 ? "primary" : "admin",
+      population: 1000000 + i * 100000,
+    }));
+
+    /*
+     * Fifty rows rather than the twenty-five the neighbouring cases use. At the
+     * default page size of ten that is five pages, which is what the narrowing
+     * regression case needs: a page position deep enough that shrinking the set
+     * leaves it well past the end. Twenty-five rows reach only page three.
+     */
+    const fiftyRowData = Array.from({ length: 50 }, (_, i) => ({
       id: i + 1,
       name: `City ${i + 1}`,
       nameAscii: `City ${i + 1}`,
@@ -488,6 +509,120 @@ describe("SortableTable", () => {
       // Should still be on page 1 (or still have pagination)
       expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
     });
+
+    it("keeps rendering rows when the result set narrows under the current page", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <SortableTable {...defaultProps} data={fiftyRowData} />,
+      );
+
+      await user.click(screen.getByRole("button", { name: /Go to last page/ }));
+      expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
+
+      // Rerendering the mounted instance is what reproduces the trap. A fresh
+      // render would start on page one and never reach the state where the
+      // navigation has vanished and no control on screen offers a way back.
+      rerender(
+        <SortableTable {...defaultProps} data={fiftyRowData.slice(0, 3)} />,
+      );
+
+      expect(screen.queryByText("No cities found")).not.toBeInTheDocument();
+      expect(screen.getAllByRole("row")).toHaveLength(4);
+    });
+
+    it("shows no pagination navigation at exactly one page of rows", () => {
+      render(
+        <SortableTable {...defaultProps} data={fiftyRowData.slice(0, 10)} />,
+      );
+
+      // Header row plus all ten data rows.
+      expect(screen.getAllByRole("row")).toHaveLength(11);
+      expect(
+        screen.queryByRole("navigation", {
+          name: "Table pagination navigation",
+        }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows pagination navigation reporting two pages at one row past a page", () => {
+      render(
+        <SortableTable {...defaultProps} data={fiftyRowData.slice(0, 11)} />,
+      );
+
+      expect(
+        screen.getByRole("navigation", {
+          name: "Table pagination navigation",
+        }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+    });
+
+    // This case is a guard rather than a proof, and the assertions in it pass
+    // against the unfixed code too. The page count is rendered inside the
+    // navigation, the navigation is hidden below two pages, and both sit inside
+    // the branch taken only when rows exist, so a page count of zero was never
+    // reachable in the rendered output either before or after the arithmetic
+    // was corrected. What this case catches is a future change that lets an
+    // empty result set reach the navigation at all.
+    it("renders the empty state and no navigation when the result set narrows to nothing", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <SortableTable {...defaultProps} data={fiftyRowData} />,
+      );
+
+      await user.click(screen.getByRole("button", { name: /Go to last page/ }));
+
+      rerender(<SortableTable {...defaultProps} data={[]} />);
+
+      expect(screen.getByText("No cities found")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("navigation", {
+          name: "Table pagination navigation",
+        }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("restores the original page when the result set widens again", async () => {
+      // The clamp reads the position without rewriting it, which is what makes
+      // the narrowing recoverable: it shows the user a different page without
+      // moving them off the one they chose.
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <SortableTable {...defaultProps} data={fiftyRowData} />,
+      );
+
+      await user.click(screen.getByRole("button", { name: /Go to last page/ }));
+      expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
+
+      rerender(
+        <SortableTable {...defaultProps} data={fiftyRowData.slice(0, 25)} />,
+      );
+      expect(screen.getByText("Page 3 of 3")).toBeInTheDocument();
+
+      rerender(<SortableTable {...defaultProps} data={fiftyRowData} />);
+      expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
+    });
+
+    it("returns to the first page when the search term changes", async () => {
+      // A different term is a different set of rows, so the position chosen in
+      // the old set carries no meaning into it.
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <SortableTable {...defaultProps} data={fiftyRowData} />,
+      );
+
+      await user.click(screen.getByRole("button", { name: "Go to last page" }));
+      expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
+
+      rerender(
+        <SortableTable
+          {...defaultProps}
+          data={fiftyRowData}
+          searchTerm="city"
+        />,
+      );
+      expect(screen.getByText("Page 1 of 5")).toBeInTheDocument();
+    });
   });
 
   describe("Sorting with Pagination", () => {
@@ -513,8 +648,7 @@ describe("SortableTable", () => {
       expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
 
       // Sort by city
-      const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      await user.click(cityHeader);
+      await user.click(screen.getByRole("button", { name: "City" }));
 
       // Should reset to page 1
       expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
@@ -525,8 +659,7 @@ describe("SortableTable", () => {
       render(<SortableTable {...defaultProps} data={largeMockData} />);
 
       // Sort by city (ascending)
-      const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      await user.click(cityHeader);
+      await user.click(screen.getByRole("button", { name: "City" }));
 
       // Get first city on page 1
       const rows = screen.getAllByRole("row");
@@ -560,37 +693,139 @@ describe("SortableTable", () => {
       render(<SortableTable {...defaultProps} />);
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      await user.click(cityHeader);
+      const citySortButton = screen.getByRole("button", { name: "City" });
+      await user.click(citySortButton);
 
       expect(cityHeader).toHaveAttribute("aria-sort", "ascending");
 
-      await user.click(cityHeader);
+      await user.click(citySortButton);
       expect(cityHeader).toHaveAttribute("aria-sort", "descending");
     });
 
-    it("supports keyboard navigation on headers", async () => {
+    it("advances one sort state per enter press on the sort button", async () => {
       const user = userEvent.setup();
       render(<SortableTable {...defaultProps} />);
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      cityHeader.focus();
+      screen.getByRole("button", { name: "City" }).focus();
 
+      // One press, one state. A manual key handler retained alongside the
+      // native button would fire twice here and land on descending.
       await user.keyboard("{Enter}");
       expect(cityHeader).toHaveAttribute("aria-sort", "ascending");
     });
 
-    it("sorts when the space key is pressed on a header", async () => {
+    it("advances one sort state per space press on the sort button", async () => {
       const user = userEvent.setup();
       render(<SortableTable {...defaultProps} />);
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      cityHeader.focus();
+      screen.getByRole("button", { name: "City" }).focus();
 
+      // Two presses, two states. A doubled activation would skip descending
+      // and land back on none, which is what makes this the single-fire
+      // assertion rather than a keyboard-reachability one.
       await user.keyboard(" ");
       expect(cityHeader).toHaveAttribute("aria-sort", "ascending");
 
       await user.keyboard(" ");
       expect(cityHeader).toHaveAttribute("aria-sort", "descending");
+    });
+
+    it("keeps the sort button named by its column label alone", async () => {
+      const user = userEvent.setup();
+      render(<SortableTable {...defaultProps} />);
+
+      const citySortButton = screen.getByRole("button", { name: "City" });
+
+      await user.click(citySortButton);
+      await user.click(citySortButton);
+
+      // Same control, same name, two activations later. A name that restated
+      // the next action would have changed identity twice by now.
+      expect(screen.getByRole("button", { name: "City" })).toBe(citySortButton);
+    });
+
+    it("marks no rendered element as the current page", () => {
+      const pagedData = Array.from({ length: 25 }, (_, i) => ({
+        id: i + 1,
+        name: `City ${i + 1}`,
+        nameAscii: `City ${i + 1}`,
+        country: `Country ${i + 1}`,
+        countryIso3: `C${i.toString().padStart(2, "0")}`,
+        capital: i % 2 === 0 ? "primary" : "admin",
+        population: 1000000 + i * 100000,
+      }));
+
+      const { rerender, container } = render(
+        <SortableTable {...defaultProps} data={pagedData} />,
+      );
+
+      // Matched on the exact attribute name rather than on a substring of the
+      // serialized markup, so a differently cased or partly matching
+      // attribute cannot satisfy the assertion.
+      expect(container.querySelectorAll("[aria-current]")).toHaveLength(0);
+
+      // And again in the single-page state, where the navigation carrying it
+      // is absent altogether.
+      rerender(<SortableTable {...defaultProps} />);
+      expect(container.querySelectorAll("[aria-current]")).toHaveLength(0);
+    });
+
+    it("announces the sort change in the polite region", async () => {
+      const user = userEvent.setup();
+      const { container } = render(<SortableTable {...defaultProps} />);
+
+      const announcer = container.querySelector(
+        '[aria-live="polite"][aria-atomic="true"]',
+      );
+      expect(announcer).toBeEmptyDOMElement();
+
+      await user.click(screen.getByRole("button", { name: "City" }));
+
+      // The control no longer renames itself to say what just happened, so
+      // this region is what carries it.
+      expect(announcer).toHaveTextContent(
+        "Table sorted by City in ascending order",
+      );
+
+      // The label rather than the field name: countryIso3 is not the name of
+      // anything on screen, and it is not a string a screen reader renders.
+      await user.click(screen.getByRole("button", { name: "Country Code" }));
+      expect(announcer).toHaveTextContent(
+        "Table sorted by Country Code in ascending order",
+      );
+    });
+
+    it("announces the cleared sort, and stays silent until one is applied", async () => {
+      const user = userEvent.setup();
+      const { container } = render(<SortableTable {...defaultProps} />);
+
+      const announcer = container.querySelector(
+        '[aria-live="polite"][aria-atomic="true"]',
+      );
+      expect(announcer).toBeEmptyDOMElement();
+
+      const header = screen.getByRole("button", { name: "City" });
+      await user.click(header);
+      await user.click(header);
+      await user.click(header);
+
+      // Emptying the region would announce nothing, so the third press has to
+      // say that it removed the sort.
+      expect(announcer).toHaveTextContent("Table sort cleared");
+    });
+
+    it("announces a search that matches no rows", () => {
+      const { container, rerender } = render(
+        <SortableTable {...defaultProps} />,
+      );
+
+      rerender(<SortableTable {...defaultProps} data={[]} searchTerm="zzzz" />);
+
+      const regions = container.querySelectorAll('[aria-live="polite"]');
+      const announced = Array.from(regions).map((region) => region.textContent);
+      expect(announced).toContain("No cities found for that search");
     });
 
     it("has table caption for screen readers", () => {
@@ -615,14 +850,68 @@ describe("SortableTable", () => {
 
       render(<SortableTable {...defaultProps} data={largeMockData} />);
 
+      // Named by the action alone. A name carrying the position would change
+      // under focus on every press, which re-announces the whole control.
       expect(
-        screen.getByRole("button", { name: /Go to first page of 3 pages/ }),
+        screen.getByRole("button", { name: "Go to first page" }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", {
-          name: /Go to next page, currently on page 1 of 3/,
-        }),
+        screen.getByRole("button", { name: "Go to next page" }),
       ).toBeInTheDocument();
+    });
+
+    it("announces the whole page position rather than the bare number", async () => {
+      // The controls are named by their action alone, so this region is the
+      // only thing reporting where the user landed. React mutates just the
+      // number inside it, and without aria-atomic that lone text node is the
+      // entire announcement.
+      const user = userEvent.setup();
+      const pagedData = Array.from({ length: 25 }, (_, i) => ({
+        id: i + 1,
+        name: `City ${i + 1}`,
+        nameAscii: `City ${i + 1}`,
+        country: `Country ${i + 1}`,
+        countryIso3: `C${i.toString().padStart(2, "0")}`,
+        capital: i % 2 === 0 ? "primary" : "admin",
+        population: 1000000 + i * 100000,
+      }));
+      render(<SortableTable {...defaultProps} data={pagedData} />);
+
+      const pageInfo = screen.getByText(/Page \d+ of \d+/);
+      expect(pageInfo).toHaveAttribute("aria-live", "polite");
+      expect(pageInfo).toHaveAttribute("aria-atomic", "true");
+
+      await user.click(screen.getByRole("button", { name: "Go to next page" }));
+      expect(screen.getByText(/Page \d+ of \d+/)).toHaveTextContent(
+        "Page 2 of 3",
+      );
+    });
+
+    it("has the results region already mounted before the first rows arrive", () => {
+      // A live region created with its message already inside it announces
+      // nothing. Mounting it empty ahead of the data is what makes the first
+      // row count, on a cold start and again after a retry, an addition to an
+      // existing region rather than a new region with content.
+      const { container, rerender } = render(
+        <SortableTable
+          {...defaultProps}
+          data={[]}
+          loading={true}
+          datasetReady={false}
+        />,
+      );
+
+      // The sort region is declared first and the results region second; the
+      // page-position region is not rendered in this state. Both are empty
+      // here, which is the point, so they are told apart by position.
+      const regions = container.querySelectorAll('[aria-live="polite"]');
+      expect(regions).toHaveLength(2);
+      const resultsRegion = regions[1];
+      expect(resultsRegion).toBeEmptyDOMElement();
+
+      rerender(<SortableTable {...defaultProps} />);
+
+      expect(resultsRegion).toHaveTextContent(/^Showing \d+ cities out of \d+/);
     });
 
     it("has live regions for dynamic updates", () => {
