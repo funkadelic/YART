@@ -115,18 +115,31 @@
   }
 }
 
+// The control that fires the sort. It is a real button, so it arrives carrying
+// the browser's own font, background, border and padding, and none of the
+// header cell's colour. Reset all five or it renders as raw chrome inside the
+// header. The hover state is selected through this class rather than through an
+// inline attribute on the cell: an attribute selector goes on silently matching
+// nothing the moment the attribute it names is removed.
 .sortButton {
+  font: inherit;
   font-size: 16px;
   font-weight: bold;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
   display: flex;
   gap: 8px;
-}
+  cursor: pointer;
 
-.table th {
-  &[style*="cursor: pointer"] {
-    &:hover .sortButton {
-      color: var(--accent-color);
-    }
+  &:hover {
+    color: var(--accent-color);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
   }
 }
 
