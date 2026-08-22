@@ -35,31 +35,6 @@ interface SortState {
   direction: SortDirection;
 }
 
-interface SortButtonProps {
-  column: Column;
-  sortState: SortState;
-}
-
-function SortButton({ column, sortState }: SortButtonProps) {
-  const isActive = sortState.column === column.key;
-  const direction = isActive ? sortState.direction : null;
-
-  // helper method to get the correct aria label based on sort
-  const getAriaLabel = () => {
-    if (!direction) return `Sort by ${column.label} ascending`;
-    if (direction === "asc") return `Sort by ${column.label} descending`;
-    return `Clear ${column.label} sort`;
-  };
-
-  return (
-    <span className={styles.sortButton} aria-label={getAriaLabel()}>
-      {column.label}
-      {direction === "asc" && <FiChevronUp aria-hidden="true" />}
-      {direction === "desc" && <FiChevronDown aria-hidden="true" />}
-    </span>
-  );
-}
-
 /**
  * SortableTable component that implements P0, P2, and P3 requirements:
  * - Search by city/country name
@@ -199,7 +174,6 @@ export function SortableTable({
         <div className={styles.searchInput}>
           <FiSearch className={styles.searchIcon} />
           <input
-            role="textbox"
             aria-label="Search"
             type="text"
             placeholder="Search for a city"
@@ -272,22 +246,7 @@ export function SortableTable({
                         return (
                           <th
                             key={column.key}
-                            onClick={
-                              column.sortable
-                                ? () => handleSort(column.key)
-                                : undefined
-                            }
-                            onKeyDown={
-                              column.sortable
-                                ? (e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                      e.preventDefault();
-                                      handleSort(column.key);
-                                    }
-                                  }
-                                : undefined
-                            }
-                            tabIndex={column.sortable ? 0 : undefined}
+                            scope="col"
                             aria-sort={
                               column.sortable
                                 ? sortDirection === "asc"
@@ -297,22 +256,29 @@ export function SortableTable({
                                     : "none"
                                 : undefined
                             }
-                            role={
-                              column.sortable
-                                ? "columnheader button"
-                                : "columnheader"
-                            }
-                            style={
-                              column.sortable
-                                ? { cursor: "pointer" }
-                                : undefined
-                            }
                           >
                             {column.sortable ? (
-                              <SortButton
-                                column={column}
-                                sortState={sortState}
-                              />
+                              // a11y: the accessible name is the column label
+                              // alone, so the control keeps one identity across
+                              // presses. The sort state is carried by the
+                              // header cell's own attribute, where the
+                              // specification puts it, and announced by the
+                              // live region above. The button handles Enter and
+                              // Space itself; a manual key handler alongside it
+                              // would fire twice.
+                              <button
+                                type="button"
+                                className={styles.sortButton}
+                                onClick={() => handleSort(column.key)}
+                              >
+                                {column.label}
+                                {sortDirection === "asc" && (
+                                  <FiChevronUp aria-hidden="true" />
+                                )}
+                                {sortDirection === "desc" && (
+                                  <FiChevronDown aria-hidden="true" />
+                                )}
+                              </button>
                             ) : (
                               column.label
                             )}
@@ -380,11 +346,7 @@ export function SortableTable({
                       <MdChevronLeft aria-hidden="true" />
                     </button>
 
-                    <span
-                      className={styles.pageInfo}
-                      aria-current="page"
-                      aria-live="polite"
-                    >
+                    <span className={styles.pageInfo} aria-live="polite">
                       Page {effectivePage} of {totalPages}
                     </span>
 
