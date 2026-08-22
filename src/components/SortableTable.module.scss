@@ -32,13 +32,16 @@
       border: 2px solid var(--color-border);
       border-radius: 4px;
       font-size: 16px;
-      outline: none;
 
       &::placeholder {
         color: var(--color-text-muted);
       }
 
-      &:focus {
+      // Paired with the global focus ring rather than replacing it: the border
+      // colour is the affordance, the ring is the indicator. Keyed to the same
+      // state the ring is, so it answers the keyboard rather than firing on
+      // every mouse click the way a plain focus selector would.
+      &:focus-visible {
         border-color: var(--color-accent);
       }
     }
@@ -124,11 +127,6 @@
   &:hover {
     color: var(--color-accent);
   }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
-  }
 }
 
 // the pagination container
@@ -212,11 +210,6 @@
 
   &:hover {
     background: var(--color-surface-hover);
-  }
-
-  &:focus-visible {
-    outline: 2px solid var(--color-accent);
-    outline-offset: 2px;
   }
 }
 

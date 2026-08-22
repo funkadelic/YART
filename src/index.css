@@ -72,6 +72,16 @@
   --color-focus-ring: var(--teal-300);
 }
 
+/* a11y: one focus indicator for the whole app, unscoped and global rather than
+   restated per component, so a control added later is covered by default rather
+   than by whoever remembers. Declared here rather than in a module stylesheet
+   because a selector with no local class has nothing for the module transform
+   to scope, and its handling there is not a thing to depend on. */
+:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
 * {
   box-sizing: border-box;
 }
