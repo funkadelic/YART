@@ -265,8 +265,7 @@ describe("SortableTable", () => {
       const user = userEvent.setup();
       render(<SortableTable {...defaultProps} />);
 
-      const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      await user.click(cityHeader);
+      await user.click(screen.getByRole("button", { name: "City" }));
 
       const rows = screen.getAllByRole("row");
       const firstDataRow = rows[1]; // Skip header row
@@ -277,10 +276,7 @@ describe("SortableTable", () => {
       const user = userEvent.setup();
       render(<SortableTable {...defaultProps} />);
 
-      const populationHeader = screen.getByRole("columnheader", {
-        name: /Population/,
-      });
-      await user.click(populationHeader);
+      await user.click(screen.getByRole("button", { name: "Population" }));
 
       const rows = screen.getAllByRole("row");
       const firstDataRow = rows[1];
@@ -291,18 +287,20 @@ describe("SortableTable", () => {
       const user = userEvent.setup();
       render(<SortableTable {...defaultProps} />);
 
+      // The activation lives on the button, the state lives on the cell.
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
+      const citySortButton = screen.getByRole("button", { name: "City" });
 
-      // First click: ascending - should show up arrow
-      await user.click(cityHeader);
+      // First activation: ascending - should show up arrow
+      await user.click(citySortButton);
       expect(cityHeader).toHaveAttribute("aria-sort", "ascending");
 
-      // Second click: descending - should show down arrow
-      await user.click(cityHeader);
+      // Second activation: descending - should show down arrow
+      await user.click(citySortButton);
       expect(cityHeader).toHaveAttribute("aria-sort", "descending");
 
-      // Third click: no sort
-      await user.click(cityHeader);
+      // Third activation: no sort
+      await user.click(citySortButton);
       expect(cityHeader).toHaveAttribute("aria-sort", "none");
     });
 
@@ -311,13 +309,14 @@ describe("SortableTable", () => {
       render(<SortableTable {...defaultProps} />);
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      await user.click(cityHeader);
+      await user.click(screen.getByRole("button", { name: "City" }));
 
       expect(cityHeader).toHaveAttribute("aria-sort", "ascending");
 
-      // Other columns should not be sorted - use exact match
+      // Other columns should not be sorted. Anchored, because "Country Code"
+      // is also a column and an unanchored pattern matches both.
       const countryHeader = screen.getByRole("columnheader", {
-        name: "Sort by Country ascending",
+        name: /^Country$/,
       });
       expect(countryHeader).toHaveAttribute("aria-sort", "none");
     });
@@ -328,14 +327,14 @@ describe("SortableTable", () => {
 
       // Sort by city first
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      await user.click(cityHeader);
+      await user.click(screen.getByRole("button", { name: "City" }));
       expect(cityHeader).toHaveAttribute("aria-sort", "ascending");
 
       // Sort by country
       const countryHeader = screen.getByRole("columnheader", {
-        name: "Sort by Country ascending",
+        name: /^Country$/,
       });
-      await user.click(countryHeader);
+      await user.click(screen.getByRole("button", { name: "Country" }));
 
       // Should have sort on country column, not city
       expect(countryHeader).toHaveAttribute("aria-sort", "ascending");
@@ -622,8 +621,7 @@ describe("SortableTable", () => {
       expect(screen.getByText("Page 2 of 3")).toBeInTheDocument();
 
       // Sort by city
-      const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      await user.click(cityHeader);
+      await user.click(screen.getByRole("button", { name: "City" }));
 
       // Should reset to page 1
       expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
@@ -634,8 +632,7 @@ describe("SortableTable", () => {
       render(<SortableTable {...defaultProps} data={largeMockData} />);
 
       // Sort by city (ascending)
-      const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      await user.click(cityHeader);
+      await user.click(screen.getByRole("button", { name: "City" }));
 
       // Get first city on page 1
       const rows = screen.getAllByRole("row");
@@ -669,37 +666,101 @@ describe("SortableTable", () => {
       render(<SortableTable {...defaultProps} />);
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      await user.click(cityHeader);
+      const citySortButton = screen.getByRole("button", { name: "City" });
+      await user.click(citySortButton);
 
       expect(cityHeader).toHaveAttribute("aria-sort", "ascending");
 
-      await user.click(cityHeader);
+      await user.click(citySortButton);
       expect(cityHeader).toHaveAttribute("aria-sort", "descending");
     });
 
-    it("supports keyboard navigation on headers", async () => {
+    it("advances one sort state per enter press on the sort button", async () => {
       const user = userEvent.setup();
       render(<SortableTable {...defaultProps} />);
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      cityHeader.focus();
+      screen.getByRole("button", { name: "City" }).focus();
 
+      // One press, one state. A manual key handler retained alongside the
+      // native button would fire twice here and land on descending.
       await user.keyboard("{Enter}");
       expect(cityHeader).toHaveAttribute("aria-sort", "ascending");
     });
 
-    it("sorts when the space key is pressed on a header", async () => {
+    it("advances one sort state per space press on the sort button", async () => {
       const user = userEvent.setup();
       render(<SortableTable {...defaultProps} />);
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      cityHeader.focus();
+      screen.getByRole("button", { name: "City" }).focus();
 
+      // Two presses, two states. A doubled activation would skip descending
+      // and land back on none, which is what makes this the single-fire
+      // assertion rather than a keyboard-reachability one.
       await user.keyboard(" ");
       expect(cityHeader).toHaveAttribute("aria-sort", "ascending");
 
       await user.keyboard(" ");
       expect(cityHeader).toHaveAttribute("aria-sort", "descending");
+    });
+
+    it("keeps the sort button named by its column label alone", async () => {
+      const user = userEvent.setup();
+      render(<SortableTable {...defaultProps} />);
+
+      const citySortButton = screen.getByRole("button", { name: "City" });
+
+      await user.click(citySortButton);
+      await user.click(citySortButton);
+
+      // Same control, same name, two activations later. A name that restated
+      // the next action would have changed identity twice by now.
+      expect(screen.getByRole("button", { name: "City" })).toBe(citySortButton);
+    });
+
+    it("marks no rendered element as the current page", () => {
+      const pagedData = Array.from({ length: 25 }, (_, i) => ({
+        id: i + 1,
+        name: `City ${i + 1}`,
+        nameAscii: `City ${i + 1}`,
+        country: `Country ${i + 1}`,
+        countryIso3: `C${i.toString().padStart(2, "0")}`,
+        capital: i % 2 === 0 ? "primary" : "admin",
+        population: 1000000 + i * 100000,
+      }));
+
+      const { rerender, container } = render(
+        <SortableTable {...defaultProps} data={pagedData} />,
+      );
+
+      // Matched on the exact attribute name rather than on a substring of the
+      // serialized markup, so a differently cased or partly matching
+      // attribute cannot satisfy the assertion.
+      expect(container.querySelectorAll("[aria-current]")).toHaveLength(0);
+
+      // And again in the single-page state, where the navigation carrying it
+      // is absent altogether.
+      rerender(<SortableTable {...defaultProps} />);
+      expect(container.querySelectorAll("[aria-current]")).toHaveLength(0);
+    });
+
+    it("announces the sort change in the polite region", async () => {
+      const user = userEvent.setup();
+      const { container } = render(<SortableTable {...defaultProps} />);
+
+      const announcer = container.querySelector(
+        '[aria-live="polite"][aria-atomic="true"]',
+      );
+      expect(announcer).toBeEmptyDOMElement();
+
+      await user.click(screen.getByRole("button", { name: "City" }));
+
+      // The control no longer renames itself to say what just happened, so
+      // this region is what carries it.
+      expect(announcer).toHaveTextContent(
+        "Table sorted by name in ascending order",
+      );
     });
 
     it("has table caption for screen readers", () => {
