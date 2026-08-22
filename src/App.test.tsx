@@ -252,6 +252,53 @@ describe("App", () => {
     expect(screen.queryByText(/^Error: /)).not.toBeInTheDocument();
   });
 
+  it("keeps the newer result when an earlier search rejects last", async () => {
+    // The mirror of the case above on the failure path. Without the guard in the
+    // catch arm, a rejection belonging to a search the user has already moved
+    // past paints an error over rows that are on screen and correct.
+    const laterRows: City[] = [
+      {
+        id: 11,
+        name: "Paris",
+        nameAscii: "Paris",
+        country: "France",
+        countryIso3: "FRA",
+        capital: "primary",
+        population: 11060000,
+      },
+    ];
+
+    let failEarlier: (reason: Error) => void = () => {};
+    const earlier = new Promise<City[]>((_resolve, reject) => {
+      failEarlier = reject;
+    });
+
+    getCitiesSeam.mockImplementationOnce(() => earlier);
+    getCitiesSeam.mockImplementationOnce(() => Promise.resolve(laterRows));
+
+    // This case runs on the real clock, so the inter-keystroke delay is dropped
+    // rather than bound. A file that fakes the clock anywhere has to declare one
+    // or the other at every input session, which the toolchain guard enforces.
+    const user = userEvent.setup({ delay: null });
+
+    render(<App />);
+
+    await user.type(screen.getByRole("textbox", { name: "Search" }), "p");
+
+    expect(await screen.findByText("Paris")).toBeInTheDocument();
+
+    await act(async () => {
+      failEarlier(new Error("The city service is unreachable"));
+      // The container's own catch arm settles this rejection. Awaiting it here
+      // only orders the assertions after it, so the await is swallowed rather
+      // than allowed to fail the case it is sequencing.
+      await earlier.catch(() => {});
+    });
+
+    expect(screen.queryByText(/^Error: /)).not.toBeInTheDocument();
+    expect(screen.getByText("Paris")).toBeInTheDocument();
+  });
+
   it("stops claiming a download once the dataset has arrived, even when the search that follows is empty", async () => {
     stubDatasetFetch(CITY_FIXTURE_ENVELOPE);
     const FreshApp = await freshApp();
