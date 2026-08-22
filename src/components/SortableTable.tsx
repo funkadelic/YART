@@ -45,12 +45,16 @@ interface SortState {
 }
 
 /**
- * SortableTable component that implements P0, P2, and P3 requirements:
- * - Search by city/country name
- * - Basic sorting (ascending toggle)
- * - Pagination with dynamic page size selection (P2)
- * - First and last page navigation (P3)
- * - Error handling and empty states
+ * Renders a collection of cities as a searchable, sortable, paginated table.
+ *
+ * Searching is reported upward rather than carried out here: the container owns
+ * the term and the request behind it, and which fields a term matches is
+ * decided at the data layer. What this component owns is the view state, which
+ * is the sort column and direction, the page position, and the page size.
+ *
+ * Sorting cycles rather than toggling. A first press sorts ascending, a second
+ * descending, and a third returns the table to its unsorted order. The ordering
+ * itself is delegated to compareRows.
  */
 export function SortableTable({
   data,
@@ -61,17 +65,14 @@ export function SortableTable({
   error,
   onRetry,
 }: SortableTableProps) {
-  // P0: Basic sorting with three states: ascending, descending, no sort
   const [sortState, setSortState] = useState<SortState>({
     column: null,
     direction: null,
   });
 
-  // P0/P2: Pagination with dynamic page size
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10); // P2: Dynamic page size (default 10)
+  const [pageSize, setPageSize] = useState(10);
 
-  // P0: Sort data based on current sort state
   const sortedData = useMemo(() => {
     const { column, direction } = sortState;
     if (!column || !direction) return data;
@@ -81,7 +82,6 @@ export function SortableTable({
     return [...data].sort((a, b) => compareRows(a, b, column, direction));
   }, [data, sortState]);
 
-  // P0/P2: Paginate sorted data with dynamic page size
   const { paginatedData, totalPages, effectivePage } = useMemo(() => {
     // Floored at one so an empty result set still counts as a single page.
     // Zero would be a page count nothing can be on, and callers outside the
@@ -101,7 +101,6 @@ export function SortableTable({
     };
   }, [sortedData, currentPage, pageSize]);
 
-  // P0: Cycle through sort states: none -> asc -> desc -> none
   const handleSort = (column: keyof City) => {
     setSortState((prevState) => {
       if (prevState.column !== column) {
@@ -121,22 +120,18 @@ export function SortableTable({
     setCurrentPage(1); // Reset to first page when sorting changes
   };
 
-  // P0: Navigate between pages
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
   };
 
-  // P3: Navigate to first page
   const handleFirstPage = () => {
     setCurrentPage(1);
   };
 
-  // P3: Navigate to last page
   const handleLastPage = () => {
     setCurrentPage(totalPages);
   };
 
-  // P2: Handle page size changes
   const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newPageSize = parseInt(e.target.value, 10);
     setPageSize(newPageSize);
@@ -156,7 +151,6 @@ export function SortableTable({
           ? `Table sorted by ${sortState.column} in ${sortState.direction === "asc" ? "ascending" : "descending"} order`
           : ""}
       </div>
-      {/* P0: Search input - searches both city and country names */}
       <div className={styles.searchContainer}>
         <div className={styles.searchInput}>
           <FiSearch className={styles.searchIcon} />
@@ -170,7 +164,6 @@ export function SortableTable({
         </div>
       </div>
 
-      {/* P0: Error handling - show error message when search fails */}
       {error ? (
         // a11y: the failure arrives after the initial render, so without a live
         // region a screen reader user is never told the load failed or that a
@@ -205,12 +198,10 @@ export function SortableTable({
               ? `Showing ${paginatedData.length} cities out of ${sortedData.length} total results`
               : ""}
           </div>
-          {/* P0: Empty state - show message when no results found */}
           {paginatedData.length === 0 ? (
             <div className={styles.noResults}>No cities found</div>
           ) : (
             <>
-              {/* P0: Sortable table - click headers to sort ascending */}
               <div
                 className={`${styles.tableContainer} ${loading ? styles.refreshing : ""}`}
                 aria-busy={loading}
@@ -288,9 +279,7 @@ export function SortableTable({
                 </table>
               </div>
 
-              {/* P2: Pagination with dynamic page size selection */}
               <div className={styles.paginationContainer}>
-                {/* P2: Page size selector */}
                 <div className={styles.pageSizeContainer}>
                   <label htmlFor="pageSize">Per page:</label>
                   <select
@@ -305,13 +294,11 @@ export function SortableTable({
                   </select>
                 </div>
 
-                {/* P0/P3: Pagination navigation (only show if multiple pages) */}
                 {totalPages > 1 && (
                   <nav
                     aria-label="Table pagination navigation"
                     className={styles.navigationContainer}
                   >
-                    {/* P3: First page button */}
                     <button
                       onClick={handleFirstPage}
                       disabled={effectivePage === 1}
@@ -322,7 +309,6 @@ export function SortableTable({
                       <MdFirstPage aria-hidden="true" />
                     </button>
 
-                    {/* P0: Previous page button */}
                     <button
                       onClick={() => handlePageChange(effectivePage - 1)}
                       disabled={effectivePage === 1}
@@ -337,7 +323,6 @@ export function SortableTable({
                       Page {effectivePage} of {totalPages}
                     </span>
 
-                    {/* P0: Next page button */}
                     <button
                       onClick={() => handlePageChange(effectivePage + 1)}
                       disabled={effectivePage === totalPages}
@@ -348,7 +333,6 @@ export function SortableTable({
                       <MdChevronRight aria-hidden="true" />
                     </button>
 
-                    {/* P3: Last page button */}
                     <button
                       onClick={handleLastPage}
                       disabled={effectivePage === totalPages}

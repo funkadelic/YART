@@ -22,10 +22,8 @@ const App = () => {
   // reload.
   const [retryAttempt, setRetryAttempt] = useState(0);
 
-  // P1: Debounce search term with 150ms delay
   const debouncedSearchTerm = useDebounce(searchTerm, 150);
 
-  // P1: Search only triggers after 150ms delay (debounced)
   useEffect(() => {
     // The asynchronous work sits directly in the effect rather than behind a
     // memoized callback, because that is what lets this one variable guard
