@@ -524,6 +524,58 @@ describe("SortableTable", () => {
       expect(screen.queryByText("No cities found")).not.toBeInTheDocument();
       expect(screen.getAllByRole("row")).toHaveLength(4);
     });
+
+    it("shows no pagination navigation at exactly one page of rows", () => {
+      render(
+        <SortableTable {...defaultProps} data={fiftyRowData.slice(0, 10)} />,
+      );
+
+      // Header row plus all ten data rows.
+      expect(screen.getAllByRole("row")).toHaveLength(11);
+      expect(
+        screen.queryByRole("navigation", {
+          name: "Table pagination navigation",
+        }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("shows pagination navigation reporting two pages at one row past a page", () => {
+      render(
+        <SortableTable {...defaultProps} data={fiftyRowData.slice(0, 11)} />,
+      );
+
+      expect(
+        screen.getByRole("navigation", {
+          name: "Table pagination navigation",
+        }),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+    });
+
+    // This case is a guard rather than a proof, and the assertions in it pass
+    // against the unfixed code too. The page count is rendered inside the
+    // navigation, the navigation is hidden below two pages, and both sit inside
+    // the branch taken only when rows exist, so a page count of zero was never
+    // reachable in the rendered output either before or after the arithmetic
+    // was corrected. What this case catches is a future change that lets an
+    // empty result set reach the navigation at all.
+    it("renders the empty state and no navigation when the result set narrows to nothing", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <SortableTable {...defaultProps} data={fiftyRowData} />,
+      );
+
+      await user.click(screen.getByRole("button", { name: /Go to last page/ }));
+
+      rerender(<SortableTable {...defaultProps} data={[]} />);
+
+      expect(screen.getByText("No cities found")).toBeInTheDocument();
+      expect(
+        screen.queryByRole("navigation", {
+          name: "Table pagination navigation",
+        }),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("Sorting with Pagination", () => {
