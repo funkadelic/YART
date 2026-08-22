@@ -596,6 +596,27 @@ describe("SortableTable", () => {
       rerender(<SortableTable {...defaultProps} data={fiftyRowData} />);
       expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
     });
+
+    it("returns to the first page when the search term changes", async () => {
+      // A different term is a different set of rows, so the position chosen in
+      // the old set carries no meaning into it.
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <SortableTable {...defaultProps} data={fiftyRowData} />,
+      );
+
+      await user.click(screen.getByRole("button", { name: "Go to last page" }));
+      expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
+
+      rerender(
+        <SortableTable
+          {...defaultProps}
+          data={fiftyRowData}
+          searchTerm="city"
+        />,
+      );
+      expect(screen.getByText("Page 1 of 5")).toBeInTheDocument();
+    });
   });
 
   describe("Sorting with Pagination", () => {
@@ -759,8 +780,46 @@ describe("SortableTable", () => {
       // The control no longer renames itself to say what just happened, so
       // this region is what carries it.
       expect(announcer).toHaveTextContent(
-        "Table sorted by name in ascending order",
+        "Table sorted by City in ascending order",
       );
+
+      // The label rather than the field name: countryIso3 is not the name of
+      // anything on screen, and it is not a string a screen reader renders.
+      await user.click(screen.getByRole("button", { name: "Country Code" }));
+      expect(announcer).toHaveTextContent(
+        "Table sorted by Country Code in ascending order",
+      );
+    });
+
+    it("announces the cleared sort, and stays silent until one is applied", async () => {
+      const user = userEvent.setup();
+      const { container } = render(<SortableTable {...defaultProps} />);
+
+      const announcer = container.querySelector(
+        '[aria-live="polite"][aria-atomic="true"]',
+      );
+      expect(announcer).toBeEmptyDOMElement();
+
+      const header = screen.getByRole("button", { name: "City" });
+      await user.click(header);
+      await user.click(header);
+      await user.click(header);
+
+      // Emptying the region would announce nothing, so the third press has to
+      // say that it removed the sort.
+      expect(announcer).toHaveTextContent("Table sort cleared");
+    });
+
+    it("announces a search that matches no rows", () => {
+      const { container, rerender } = render(
+        <SortableTable {...defaultProps} />,
+      );
+
+      rerender(<SortableTable {...defaultProps} data={[]} searchTerm="zzzz" />);
+
+      const regions = container.querySelectorAll('[aria-live="polite"]');
+      const announced = Array.from(regions).map((region) => region.textContent);
+      expect(announced).toContain("No cities found for that search");
     });
 
     it("has table caption for screen readers", () => {
@@ -785,13 +844,13 @@ describe("SortableTable", () => {
 
       render(<SortableTable {...defaultProps} data={largeMockData} />);
 
+      // Named by the action alone. A name carrying the position would change
+      // under focus on every press, which re-announces the whole control.
       expect(
-        screen.getByRole("button", { name: /Go to first page of 3 pages/ }),
+        screen.getByRole("button", { name: "Go to first page" }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", {
-          name: /Go to next page, currently on page 1 of 3/,
-        }),
+        screen.getByRole("button", { name: "Go to next page" }),
       ).toBeInTheDocument();
     });
 

@@ -1,15 +1,3 @@
-// set some css vars for color for easier maintenance
-:root {
-  --border-color: #333;
-  --border-light: #ddd;
-  --text-color: #000;
-  --text-muted: #666;
-  --background-light: #eee;
-  --background-light-hover: #ccc;
-  --accent-color: #0a8080; // accent
-  --error-color: #c00;
-}
-
 // the top-level parent container
 .container {
   width: 100%;
@@ -283,8 +271,17 @@
       justify-content: center;
 
       .pageInfo {
-        // don't show page info
-        display: none;
+        // Reclaim the horizontal space without taking the announcement with
+        // it: display: none drops the region out of the accessibility tree, so
+        // no page change would be announced at all below this width.
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
       }
     }
   }

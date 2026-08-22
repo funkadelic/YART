@@ -72,6 +72,20 @@ export function SortableTable({
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  // A cleared sort and a sort that has never been applied render the same
+  // state, so the announcement needs to know which of the two it is looking at:
+  // the first render has to stay silent, the third press on a column does not.
+  const [hasSorted, setHasSorted] = useState(false);
+
+  // A new term is a different set of rows rather than a narrowing of the
+  // current one, so the position the user chose in the old set does not carry
+  // any meaning into it. Adjusting during render rather than in an effect keeps
+  // the stale page from being painted first.
+  const [lastSearchTerm, setLastSearchTerm] = useState(searchTerm);
+  if (searchTerm !== lastSearchTerm) {
+    setLastSearchTerm(searchTerm);
+    setCurrentPage(1);
+  }
 
   const sortedData = useMemo(() => {
     const { column, direction } = sortState;
@@ -117,6 +131,7 @@ export function SortableTable({
         }
       }
     });
+    setHasSorted(true);
     setCurrentPage(1); // Reset to first page when sorting changes
   };
 
@@ -143,13 +158,22 @@ export function SortableTable({
     onSearchChange(e.target.value);
   };
 
+  // The announcements name what is on screen, and what is on screen is the
+  // column label. sortState.column is the field name, which is not the name of
+  // anything the reader can see.
+  const activeLabel = COLUMNS.find(
+    (column) => column.key === sortState.column,
+  )?.label;
+
   return (
     <div className={styles.container}>
       {/* a11y: Live region for announcing sort changes */}
       <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
-        {sortState.direction && sortState.column
-          ? `Table sorted by ${sortState.column} in ${sortState.direction === "asc" ? "ascending" : "descending"} order`
-          : ""}
+        {sortState.direction && activeLabel
+          ? `Table sorted by ${activeLabel} in ${sortState.direction === "asc" ? "ascending" : "descending"} order`
+          : hasSorted
+            ? "Table sort cleared"
+            : ""}
       </div>
       <div className={styles.searchContainer}>
         <div className={styles.searchInput}>
@@ -193,10 +217,18 @@ export function SortableTable({
       ) : (
         <>
           {/* a11y: Live region for announcing data updates */}
-          <div aria-live="polite" aria-atomic="false" className={styles.srOnly}>
-            {!loading && paginatedData.length > 0
-              ? `Showing ${paginatedData.length} cities out of ${sortedData.length} total results`
-              : ""}
+          {/* a11y: the empty result gets a sentence of its own rather than an
+              empty string. Emptying a live region announces nothing, so a
+              search that matches no rows would otherwise be indistinguishable
+              from a request that never came back, and the visible replacement
+              below sits outside every live region. aria-atomic so the whole
+              sentence is re-read rather than only the part that changed. */}
+          <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
+            {loading
+              ? ""
+              : sortedData.length === 0
+                ? "No cities found for that search"
+                : `Showing ${paginatedData.length} cities out of ${sortedData.length} total results`}
           </div>
           {paginatedData.length === 0 ? (
             <div className={styles.noResults}>No cities found</div>
@@ -210,7 +242,7 @@ export function SortableTable({
                   <caption className={styles.srOnly}>
                     City data with {sortedData.length} entries, currently{" "}
                     {sortState.direction
-                      ? `sorted by ${sortState.column} ${sortState.direction}ending`
+                      ? `sorted by ${activeLabel} ${sortState.direction}ending`
                       : "not sorted"}
                   </caption>
                   <thead>
@@ -303,7 +335,12 @@ export function SortableTable({
                       onClick={handleFirstPage}
                       disabled={effectivePage === 1}
                       title="Go to first page"
-                      aria-label={`Go to first page of ${totalPages} pages`}
+                      // a11y: named by the action alone, as the sort headers
+                      // are. A name carrying the position changes under focus,
+                      // which re-announces the whole control on every press;
+                      // the live region below is what reports where the user
+                      // landed.
+                      aria-label="Go to first page"
                       className={styles.navButton}
                     >
                       <MdFirstPage aria-hidden="true" />
@@ -313,7 +350,7 @@ export function SortableTable({
                       onClick={() => handlePageChange(effectivePage - 1)}
                       disabled={effectivePage === 1}
                       title="Go to previous page"
-                      aria-label={`Go to previous page, currently on page ${effectivePage} of ${totalPages}`}
+                      aria-label="Go to previous page"
                       className={styles.navButton}
                     >
                       <MdChevronLeft aria-hidden="true" />
@@ -327,7 +364,7 @@ export function SortableTable({
                       onClick={() => handlePageChange(effectivePage + 1)}
                       disabled={effectivePage === totalPages}
                       title="Go to next page"
-                      aria-label={`Go to next page, currently on page ${effectivePage} of ${totalPages}`}
+                      aria-label="Go to next page"
                       className={styles.navButton}
                     >
                       <MdChevronRight aria-hidden="true" />
@@ -337,7 +374,7 @@ export function SortableTable({
                       onClick={handleLastPage}
                       disabled={effectivePage === totalPages}
                       title="Go to last page"
-                      aria-label={`Go to last page, page ${totalPages} of ${totalPages}`}
+                      aria-label="Go to last page"
                       className={styles.navButton}
                     >
                       <MdLastPage aria-hidden="true" />
