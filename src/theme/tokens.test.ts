@@ -9,8 +9,8 @@
 // colour. Resolving the indirection here is the only way to assert on the values
 // that actually reach a screen.
 
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
+import { join, relative } from "node:path";
 import postcss from "postcss";
 import { describe, expect, it } from "vitest";
 
@@ -47,6 +47,64 @@ const THEME_INVARIANT_TOKENS = ["--color-brand", "--color-brand-contrast"];
 const BARE_INDIRECTION = /^var\(\s*(--[\w-]+)\s*\)$/;
 
 const IS_COLOR_TOKEN = /^--color-/;
+
+// The flat tier the semantic tokens replaced. Named here so a stylesheet that
+// reaches for one of them goes red rather than resolving to nothing and
+// rendering an element with no colour at all.
+const RETIRED_TOKENS = [
+  "--border-color",
+  "--border-light",
+  "--text-color",
+  "--text-muted",
+  "--background-light",
+  "--background-light-hover",
+  "--accent-color",
+  "--error-color",
+];
+
+// The four hex lengths CSS accepts, and nothing longer, so an identifier that
+// merely starts with hex digits is not mistaken for a colour.
+const HEX_COLOR = /#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})(?![0-9a-z-])/i;
+
+// Anchored to the start of a line, which is where a declaration sits. An
+// interpolation or a reference mid-value is a use, and there is nothing to use
+// once no file declares one.
+const SCSS_VARIABLE = /^[ \t]*\$[\w-]+[ \t]*:/m;
+
+const SKIPPED_DIRECTORIES = new Set(["node_modules", "dist", "coverage"]);
+
+/**
+ * Source with comments blanked out, so a construct named in prose is never
+ * mistaken for one the file actually performs. Copied from the toolchain guard,
+ * which needs the same distinction for the same reason.
+ */
+function stripComments(source: string): string {
+  return source
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+}
+
+/**
+ * Every module stylesheet under src/, found by walking rather than by a list, so
+ * a stylesheet added by a later component is covered the day it lands instead of
+ * the day someone remembers to add it here.
+ */
+function findModuleStylesheets(directory: string): string[] {
+  const found: string[] = [];
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      if (SKIPPED_DIRECTORIES.has(entry.name)) continue;
+      found.push(...findModuleStylesheets(join(directory, entry.name)));
+    } else if (/\.module\.(css|scss)$/.test(entry.name)) {
+      found.push(join(directory, entry.name));
+    }
+  }
+
+  return found;
+}
+
+const moduleStylesheets = findModuleStylesheets(join(projectRoot, "src"));
 
 /** Every declaration in the file, keyed by selector then by property. */
 function readBlocks(): Map<string, Map<string, string>> {
@@ -323,5 +381,57 @@ describe("the theme script in index.html", () => {
       blocking[0].body,
       `the theme script does not mention the storage key ${THEME_STORAGE_KEY}`,
     ).toContain(THEME_STORAGE_KEY);
+  });
+});
+
+// A string check rather than a parse: the CSS parser throws outright on the
+// inline comments in the table's stylesheet, and a guard written against the one
+// module file that happens to have none would look like it worked.
+describe("colour in the module stylesheets", () => {
+  it("finds the module stylesheets by walking rather than by a list", () => {
+    expect(
+      moduleStylesheets.length,
+      "no module stylesheet was found under src/, so every assertion below is vacuous",
+    ).toBeGreaterThan(0);
+  });
+
+  it("leaves no colour literal, SCSS variable or retired token in any of them", () => {
+    const offenders: string[] = [];
+
+    for (const file of moduleStylesheets) {
+      // Stripped first, so a hex value quoted in an explanation is judged as
+      // prose and a declaration is judged as a declaration.
+      const source = stripComments(readFileSync(file, "utf8"));
+      const name = relative(projectRoot, file);
+
+      const literal = HEX_COLOR.exec(source);
+      if (literal) {
+        offenders.push(`${name}: holds the colour literal ${literal[0]}`);
+      }
+
+      const variable = SCSS_VARIABLE.exec(source);
+      if (variable) {
+        offenders.push(`${name}: declares ${variable[0].trim()}`);
+      }
+
+      for (const token of RETIRED_TOKENS) {
+        if (new RegExp(`(?<![\\w-])${token}(?![\\w-])`).test(source)) {
+          offenders.push(`${name}: still names the retired token ${token}`);
+        }
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("leaves no retired token declared in the global stylesheet", () => {
+    const source = stripComments(readFileSync(cssPath, "utf8"));
+
+    for (const token of RETIRED_TOKENS) {
+      expect(
+        source,
+        `src/index.css still declares the retired token ${token}`,
+      ).not.toMatch(new RegExp(`(?<![\\w-])${token}(?![\\w-])`));
+    }
   });
 });
