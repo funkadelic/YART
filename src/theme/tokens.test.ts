@@ -83,6 +83,17 @@ const SCSS_VARIABLE = /^[ \t]*\$[\w-]+[ \t]*:/m;
 const OUTLINE_SUPPRESSION =
   /(?<![\w-])outline[ \t]*:[ \t]*(none|0(px)?)[ \t]*;/;
 
+// A border or an outline is a line rather than a length on the spacing scale,
+// and one authored in rem would thicken as the reader's type grew. Anything
+// wider than this is spacing, and spacing arrives through a token.
+const PX_HAIRLINE_MAXIMUM = 2;
+const PX_LENGTH = /(\d+(?:\.\d+)?)px/g;
+
+// The corner radius, and nothing beside it. Asserted as a count rather than
+// skipped, so the exemption cannot quietly become the global file's licence to
+// hold a second px length.
+const GLOBAL_PX_ALLOWANCE = 1;
+
 const SKIPPED_DIRECTORIES = new Set(["node_modules", "dist", "coverage"]);
 
 /**
@@ -97,18 +108,42 @@ function stripComments(source: string): string {
 }
 
 /**
- * Every module stylesheet under src/, found by walking rather than by a list, so
- * a stylesheet added by a later component is covered the day it lands instead of
- * the day someone remembers to add it here.
+ * Source with the condition of every media at-rule blanked out. A breakpoint is
+ * a viewport measurement, not a step on the spacing scale, and one expressed in
+ * rem would move with the reader's type, which is the opposite of what a layout
+ * breakpoint is for.
  */
-function findModuleStylesheets(directory: string): string[] {
+function stripMediaConditions(source: string): string {
+  return source.replace(/@media[^{]*/g, "@media ");
+}
+
+/**
+ * The px lengths in a stylesheet that are wide enough to be spacing, judged on
+ * the file with its comments and its breakpoints removed first, so a retired
+ * value quoted in an explanation is read as prose and a breakpoint is read as a
+ * breakpoint.
+ */
+function spacingPixels(source: string): string[] {
+  return [...stripMediaConditions(stripComments(source)).matchAll(PX_LENGTH)]
+    .filter(([, magnitude]) => Number(magnitude) > PX_HAIRLINE_MAXIMUM)
+    .map(([length]) => length);
+}
+
+/**
+ * Every stylesheet under src/, found by walking rather than by a list, so a
+ * stylesheet added by a later component is covered the day it lands instead of
+ * the day someone remembers to add it here. Every extension rather than the
+ * module ones alone, because a shared partial and a global file are the two
+ * places a rule would otherwise be free to break.
+ */
+function findStylesheets(directory: string): string[] {
   const found: string[] = [];
 
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     if (entry.isDirectory()) {
       if (SKIPPED_DIRECTORIES.has(entry.name)) continue;
-      found.push(...findModuleStylesheets(join(directory, entry.name)));
-    } else if (/\.module\.(css|scss)$/.test(entry.name)) {
+      found.push(...findStylesheets(join(directory, entry.name)));
+    } else if (/\.(css|scss)$/.test(entry.name)) {
       found.push(join(directory, entry.name));
     }
   }
@@ -116,7 +151,12 @@ function findModuleStylesheets(directory: string): string[] {
   return found;
 }
 
-const moduleStylesheets = findModuleStylesheets(join(projectRoot, "src"));
+const stylesheets = findStylesheets(join(projectRoot, "src"));
+
+// The global file declares the hex primitives every other file reaches for
+// through a token, so it is the one exemption from the colour half of the guard
+// and from nothing else.
+const componentStylesheets = stylesheets.filter((file) => file !== cssPath);
 
 /** Every declaration in the file, keyed by selector then by property. */
 function readBlocks(): Map<string, Map<string, string>> {
@@ -466,18 +506,18 @@ describe("the theme script in index.html", () => {
 // A string check rather than a parse: the CSS parser throws outright on the
 // inline comments in the table's stylesheet, and a guard written against the one
 // module file that happens to have none would look like it worked.
-describe("colour in the module stylesheets", () => {
-  it("finds the module stylesheets by walking rather than by a list", () => {
+describe("colour in the component stylesheets", () => {
+  it("finds the stylesheets by walking rather than by a list", () => {
     expect(
-      moduleStylesheets.length,
-      "no module stylesheet was found under src/, so every assertion below is vacuous",
+      componentStylesheets.length,
+      "no stylesheet was found under src/ beside the global one, so every assertion below is vacuous",
     ).toBeGreaterThan(0);
   });
 
   it("leaves no colour literal, SCSS variable or retired token in any of them", () => {
     const offenders: string[] = [];
 
-    for (const file of moduleStylesheets) {
+    for (const file of componentStylesheets) {
       // Stripped first, so a hex value quoted in an explanation is judged as
       // prose and a declaration is judged as a declaration.
       const source = stripComments(readFileSync(file, "utf8"));
@@ -515,6 +555,36 @@ describe("colour in the module stylesheets", () => {
   });
 });
 
+// The counterpart to the colour guard, and the reason the walk above takes
+// every stylesheet rather than the module ones: the rule this keeps is that
+// spacing and type are authored in rem through a token, so the layout follows
+// the reader's browser font-size setting. A stylesheet written after this file
+// inherits the rule by being walked, without anyone restating it.
+describe("length in the stylesheets", () => {
+  it("leaves no px spacing in any component stylesheet", () => {
+    const offenders: string[] = [];
+
+    for (const file of componentStylesheets) {
+      for (const length of spacingPixels(readFileSync(file, "utf8"))) {
+        offenders.push(
+          `${relative(projectRoot, file)}: holds ${length}, which is spacing and belongs to a token`,
+        );
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  it("allows the global stylesheet the corner radius and nothing beside it", () => {
+    const found = spacingPixels(readFileSync(cssPath, "utf8"));
+
+    expect(
+      found,
+      `src/index.css holds ${String(found.length)} px lengths above a hairline rather than the radius alone: ${found.join(", ")}`,
+    ).toHaveLength(GLOBAL_PX_ALLOWANCE);
+  });
+});
+
 describe("the focus ring", () => {
   it("is drawn once, globally, from the ring token", () => {
     const rule = blocks.get(":focus-visible");
@@ -532,9 +602,9 @@ describe("the focus ring", () => {
   it("is suppressed by no stylesheet", () => {
     const offenders: string[] = [];
 
-    // The global stylesheet is included alongside the modules: a suppression
-    // there would cancel the rule from the same file that declares it.
-    for (const file of [...moduleStylesheets, cssPath]) {
+    // The global stylesheet is walked alongside the rest: a suppression there
+    // would cancel the rule from the same file that declares it.
+    for (const file of stylesheets) {
       const source = stripComments(readFileSync(file, "utf8"));
       const suppression = OUTLINE_SUPPRESSION.exec(source);
 

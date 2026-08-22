@@ -1,15 +1,15 @@
 .header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
   border-bottom: 1px solid var(--color-border);
   background-color: var(--color-surface-raised);
 }
 
 .logo {
-  width: 2rem;
-  height: 2rem;
+  width: var(--space-8);
+  height: var(--space-8);
 }
 
 /* The logo's two colours, applied from here rather than from presentation
@@ -25,7 +25,7 @@
 }
 
 .title {
-  font-size: 1.125rem;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   color: var(--color-text);
 }
