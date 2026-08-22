@@ -3,6 +3,42 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Stamps the theme onto the document element before first paint, so no
+      wrong-theme frame is ever shown. Blocking and classic on purpose: a
+      type="module" attribute, a defer or an async would each defer this past
+      paint, and each would fail silently.
+
+      The resolve rule below is duplicated from src/theme/resolveTheme.ts. That
+      module cannot be imported from here, because anything importable runs too
+      late. A change to one needs the same change to the other, and nothing
+      asserts that they agree.
+    -->
+    <script>
+      (function () {
+        var theme = "light";
+        try {
+          var stored = localStorage.getItem("yart-theme");
+          if (stored === "light" || stored === "dark") {
+            theme = stored;
+          } else if (
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+          ) {
+            theme = "dark";
+          }
+        } catch (error) {
+          // Reading storage throws outright, rather than returning null, when
+          // site data is blocked. Absent matchMedia throws too. Either way the
+          // light default already stands, and the page stays tokenized instead
+          // of losing the attribute along with the script.
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+        // The stylesheet's color-scheme has not arrived yet, so without this the
+        // user agent paints its canvas and scrollbars from the operating system
+        // for that window rather than from the resolved choice.
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
     <title>Yet Another React Table (YART)</title>
   </head>
   <body>

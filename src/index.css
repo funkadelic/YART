@@ -3,6 +3,46 @@
    to be imported first. The layout's error fallback is below the table in the
    tree but above it in the DOM, and it needs these. */
 :root {
+  /* Primitives. Tailwind v3 default ramp steps, copied verbatim, plus the two
+     brand values the logo already carried. A component stylesheet never names
+     one of these directly; only the semantic tier below does. */
+  --gray-50: #f9fafb;
+  --gray-100: #f3f4f6;
+  --gray-400: #9ca3af;
+  --gray-500: #6b7280;
+  --gray-600: #4b5563;
+  --gray-700: #374151;
+  --gray-800: #1f2937;
+  --gray-900: #111827;
+  --white: #ffffff;
+  --teal-300: #5eead4;
+  --teal-400: #2dd4bf;
+  --teal-700: #0f766e;
+  --red-400: #f87171;
+  --red-700: #b91c1c;
+  --brand-orange: #f45d48;
+
+  /* Declared alongside the tokens it belongs with, so a theme switch moves the
+     native control and scrollbar appearance in the same place it moves the
+     colours. A concrete single value, never "light dark": the pair would let
+     native chrome follow the operating system after the user chose otherwise. */
+  color-scheme: light;
+
+  /* Semantic tier, light theme. Every declaration here is a bare var() onto a
+     primitive with no fallback argument. A raw colour or a fallback would let a
+     broken indirection ship a working page, so the token test rejects both. */
+  --color-surface: var(--gray-50);
+  --color-surface-raised: var(--white);
+  --color-surface-hover: var(--gray-100);
+  --color-text: var(--gray-800);
+  --color-text-muted: var(--gray-600);
+  --color-border: var(--gray-500);
+  --color-accent: var(--teal-700);
+  --color-error: var(--red-700);
+  --color-focus-ring: var(--teal-700);
+  --color-brand: var(--brand-orange);
+  --color-brand-contrast: var(--white);
+
   --border-color: #333;
   --border-light: #ddd;
   --text-color: #000;
@@ -16,8 +56,29 @@
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
   line-height: 1.5;
-  color: #1f2937;
-  background-color: #f9fafb;
+  color: var(--color-text);
+  background-color: var(--color-surface);
+}
+
+/* Dark theme. Semantic overrides only: the primitives are declared once above
+   and inherit. The selector is attribute qualified so specificity is what makes
+   it win, rather than where it happens to sit in the file.
+
+   --color-brand and --color-brand-contrast are deliberately absent. The logo is
+   the same two colours in both themes, and the partner assertion in the token
+   test names exactly those two as its exemption for that reason. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-surface: var(--gray-900);
+  --color-surface-raised: var(--gray-800);
+  --color-surface-hover: var(--gray-700);
+  --color-text: var(--gray-100);
+  --color-text-muted: var(--gray-400);
+  --color-border: var(--gray-400);
+  --color-accent: var(--teal-400);
+  --color-error: var(--red-400);
+  --color-focus-ring: var(--teal-300);
 }
 
 * {
