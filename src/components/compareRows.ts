@@ -21,6 +21,21 @@ function isBlank(value: unknown): boolean {
 }
 
 /**
+ * Where a value's type sits in the ordering. Grouping by type before comparing
+ * within it is what keeps the comparison transitive once the rows stop being
+ * uniformly typed: numbers order among themselves, everything else collates as
+ * text, and the two groups never have to be compared by a rule that disagrees
+ * with the rule used inside them.
+ */
+const TYPE_RANK = { number: 0, string: 1, other: 2 } as const;
+
+function rank(value: unknown): number {
+  if (typeof value === "number") return TYPE_RANK.number;
+  if (typeof value === "string") return TYPE_RANK.string;
+  return TYPE_RANK.other;
+}
+
+/**
  * Orders two rows by one column.
  *
  * The three rules below compose in an order that is load-bearing, so read them
@@ -32,11 +47,14 @@ function isBlank(value: unknown): boolean {
  * a screen of empty cells and reads as a broken table.
  *
  * The typed comparison runs second, and its result is the only thing the
- * direction flip touches. Pairings the two fast paths do not recognise still
- * get a defined order rather than zero. The parse boundary guarantees each
- * field's type today, so the dataset cannot reach those arms; they are here for
- * the point at which the table becomes generic over its row type and that
- * guarantee stops covering the input.
+ * direction flip touches. Type is the primary key there, so which rule decides
+ * a pair is settled by the column rather than by the pair: without that, a
+ * numeric pair and a stringified pair can each be decided by a different rule
+ * and produce a cycle, which is an ordering the sort is free to resolve however
+ * it likes. The parse boundary guarantees each field's type today, so the
+ * dataset cannot reach the mixed arms; they are here for the point at which the
+ * table becomes generic over its row type and that guarantee stops covering the
+ * input.
  *
  * The row-id tiebreak runs last and is never flipped, which keeps it one rule a
  * reader can state in a line instead of a rule with an exception. It is also
@@ -61,10 +79,12 @@ export function compareRows(
 
   let comparison = 0;
   if (!aBlank) {
-    if (typeof aValue === "string" && typeof bValue === "string") {
-      comparison = COLLATOR.compare(aValue, bValue);
-    } else if (typeof aValue === "number" && typeof bValue === "number") {
-      comparison = aValue - bValue;
+    const aRank = rank(aValue);
+    const bRank = rank(bValue);
+    if (aRank !== bRank) {
+      comparison = aRank - bRank;
+    } else if (aRank === TYPE_RANK.number) {
+      comparison = (aValue as number) - (bValue as number);
     } else {
       comparison = COLLATOR.compare(String(aValue), String(bValue));
     }

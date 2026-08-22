@@ -102,6 +102,33 @@ describe("compareRows", () => {
     expect(Math.sign(backward)).toBe(-Math.sign(forward));
   });
 
+  it("orders a mixed-type column without a cycle", () => {
+    // Deciding a numeric pair by subtraction and a stringified pair by
+    // collation is enough to produce 9 < 10 < "5" < 9, which the sort is free
+    // to resolve however it likes. Ranking by type first is what rules it out.
+    const nine = rowWithCapital(1, 9);
+    const ten = rowWithCapital(2, 10);
+    const five = rowWithCapital(3, "5");
+    const rows = [nine, ten, five];
+
+    for (const pair of [
+      [nine, ten],
+      [ten, five],
+      [nine, five],
+    ] as const) {
+      const forward = compareRows(pair[0], pair[1], "capital", "asc");
+      const backward = compareRows(pair[1], pair[0], "capital", "asc");
+      expect(Math.sign(backward)).toBe(-Math.sign(forward));
+    }
+
+    // Transitive: the two numbers order among themselves and both land ahead
+    // of the text, whichever order the rows arrive in.
+    const expected = [1, 2, 3];
+    expect(sortedIds(rows, "capital", "asc")).toEqual(expected);
+    expect(sortedIds([five, nine, ten], "capital", "asc")).toEqual(expected);
+    expect(sortedIds([ten, five, nine], "capital", "asc")).toEqual(expected);
+  });
+
   it("treats null and undefined as blank on either side", () => {
     const absent = rowWithCapital(1, null);
     const missing = rowWithCapital(2, undefined);
