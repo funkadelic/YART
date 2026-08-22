@@ -41,6 +41,12 @@ const NON_TEXT_CONTRAST_MINIMUM = 3;
 // being one.
 const THEME_INVARIANT_TOKENS = ["--color-brand", "--color-brand-contrast"];
 
+// The tier that carries no theme at all: spacing, type and the radius. These are
+// held out of the colour assertions by their prefix rather than by an entry in
+// the exemption list above, which is what lets that list stay at the two logo
+// colours no matter how far the scale grows.
+const INVARIANT_TOKEN_PREFIXES = ["--space-", "--font-size-", "--radius-"];
+
 // Only the exact bare form. A fallback argument such as var(--x, #abc) would let
 // a missing primitive ship a working colour with the chain silently broken, so
 // the resolver never gets the chance to report it.
@@ -223,6 +229,11 @@ const PAIRS: Array<[string, string, number]> = [
   ["--color-accent", "--color-surface-raised", TEXT_CONTRAST_MINIMUM],
   ["--color-error", "--color-surface", TEXT_CONTRAST_MINIMUM],
   ["--color-error", "--color-surface-raised", TEXT_CONTRAST_MINIMUM],
+  // The selected segment of the theme control: the surface colour laid on the
+  // accent, which is the one pairing in the app that reads a background token as
+  // a foreground. Measured here rather than by hand, so a later accent change
+  // cannot quietly take the control's label below the text threshold.
+  ["--color-surface", "--color-accent", TEXT_CONTRAST_MINIMUM],
   ["--color-border", "--color-surface", NON_TEXT_CONTRAST_MINIMUM],
   ["--color-border", "--color-surface-raised", NON_TEXT_CONTRAST_MINIMUM],
   ["--color-border", "--color-surface-hover", NON_TEXT_CONTRAST_MINIMUM],
@@ -268,6 +279,68 @@ describe("token layering", () => {
         inDark,
         `${token} is exempt from the partner rule but the dark block overrides it anyway`,
       ).not.toContain(token);
+    }
+  });
+
+  it("holds that exemption at exactly the two logo colours", () => {
+    // Asserted rather than trusted. Nothing else in the suite notices a third
+    // name arriving, and the whole point of naming the list was that growing it
+    // has to be a deliberate, visible edit.
+    expect(
+      THEME_INVARIANT_TOKENS.length,
+      "the partner-rule exemption has grown past the two logo colours",
+    ).toBe(2);
+  });
+
+  it("declares the theme-invariant tier once, in the light block alone", () => {
+    for (const prefix of INVARIANT_TOKEN_PREFIXES) {
+      const declared = [...lightBlock.keys()].filter((property) =>
+        property.startsWith(prefix),
+      );
+
+      expect(
+        declared.length,
+        `:root declares no ${prefix} token, so that half of the scale does not exist`,
+      ).toBeGreaterThan(0);
+
+      for (const token of declared) {
+        expect(
+          darkOverrides.has(token),
+          `${token} carries no theme and must not be overridden per theme`,
+        ).toBe(false);
+      }
+    }
+  });
+
+  it("authors spacing and type in rem and the radius in px", () => {
+    // The unit is the accessibility property, not a style preference: a layout
+    // authored in rem follows the reader's browser font-size setting, while a
+    // corner radius that grew with it would only distort.
+    for (const [property, value] of lightBlock) {
+      if (
+        property.startsWith("--space-") ||
+        property.startsWith("--font-size-")
+      )
+        expect(value, `${property} is not a rem length`).toMatch(
+          /^\d*\.?\d+rem$/,
+        );
+      if (property.startsWith("--radius-"))
+        expect(value, `${property} is not a px length`).toMatch(/^\d+px$/);
+    }
+  });
+
+  it("keeps the theme-invariant tier out of the contrast pair set", () => {
+    // A spacing token has no colour to measure, so a pair naming one would
+    // throw on resolve at best and widen a colour gate to a length at worst.
+    for (const [foreground, background] of PAIRS) {
+      for (const token of [foreground, background]) {
+        for (const prefix of INVARIANT_TOKEN_PREFIXES) {
+          expect(
+            token.startsWith(prefix),
+            `${token} carries no theme and cannot be one side of a contrast pair`,
+          ).toBe(false);
+        }
+      }
     }
   });
 
