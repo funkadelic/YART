@@ -120,12 +120,24 @@ export function SortableTable({
   }, [data, sortState]);
 
   // P0/P2: Paginate sorted data with dynamic page size
-  const paginatedData = useMemo(() => {
-    const startIndex = (currentPage - 1) * pageSize;
-    return sortedData.slice(startIndex, startIndex + pageSize);
+  const { paginatedData, totalPages, effectivePage } = useMemo(() => {
+    // Floored at one so an empty result set still counts as a single page.
+    // Zero would be a page count nothing can be on, and callers outside the
+    // navigation's own visibility guard have no protection from it.
+    const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
+    // Clamped for reading only. The position held in state is deliberately
+    // left alone, so a result set that widens again restores the user where
+    // they were rather than stranding them on whatever the narrowed set
+    // allowed, and so a position arriving from outside survives a fetch that
+    // has not resolved yet.
+    const effectivePage = Math.min(Math.max(currentPage, 1), totalPages);
+    const startIndex = (effectivePage - 1) * pageSize;
+    return {
+      paginatedData: sortedData.slice(startIndex, startIndex + pageSize),
+      totalPages,
+      effectivePage,
+    };
   }, [sortedData, currentPage, pageSize]);
-
-  const totalPages = Math.ceil(sortedData.length / pageSize);
 
   // P0: Cycle through sort states: none -> asc -> desc -> none
   const handleSort = (column: keyof City) => {
@@ -349,7 +361,7 @@ export function SortableTable({
                     {/* P3: First page button */}
                     <button
                       onClick={handleFirstPage}
-                      disabled={currentPage === 1}
+                      disabled={effectivePage === 1}
                       title="Go to first page"
                       aria-label={`Go to first page of ${totalPages} pages`}
                       className={styles.navButton}
@@ -359,10 +371,10 @@ export function SortableTable({
 
                     {/* P0: Previous page button */}
                     <button
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
+                      onClick={() => handlePageChange(effectivePage - 1)}
+                      disabled={effectivePage === 1}
                       title="Go to previous page"
-                      aria-label={`Go to previous page, currently on page ${currentPage} of ${totalPages}`}
+                      aria-label={`Go to previous page, currently on page ${effectivePage} of ${totalPages}`}
                       className={styles.navButton}
                     >
                       <MdChevronLeft aria-hidden="true" />
@@ -373,15 +385,15 @@ export function SortableTable({
                       aria-current="page"
                       aria-live="polite"
                     >
-                      Page {currentPage} of {totalPages}
+                      Page {effectivePage} of {totalPages}
                     </span>
 
                     {/* P0: Next page button */}
                     <button
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === totalPages}
+                      onClick={() => handlePageChange(effectivePage + 1)}
+                      disabled={effectivePage === totalPages}
                       title="Go to next page"
-                      aria-label={`Go to next page, currently on page ${currentPage} of ${totalPages}`}
+                      aria-label={`Go to next page, currently on page ${effectivePage} of ${totalPages}`}
                       className={styles.navButton}
                     >
                       <MdChevronRight aria-hidden="true" />
@@ -390,7 +402,7 @@ export function SortableTable({
                     {/* P3: Last page button */}
                     <button
                       onClick={handleLastPage}
-                      disabled={currentPage === totalPages}
+                      disabled={effectivePage === totalPages}
                       title="Go to last page"
                       aria-label={`Go to last page, page ${totalPages} of ${totalPages}`}
                       className={styles.navButton}
