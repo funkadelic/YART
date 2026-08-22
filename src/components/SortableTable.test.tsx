@@ -166,11 +166,11 @@ describe("SortableTable", () => {
       expect(screen.getByText("No cities found")).toBeInTheDocument();
     });
 
-    it("renders no download copy before the first request starts", () => {
+    it("does not claim an empty search before the first request starts", () => {
       // The container's first paint, before the effect raises the loading
-      // flag. It is what makes the loading operand load-bearing rather than
-      // decorative.
-      render(
+      // flag. Nothing has arrived and nothing has been searched for, so the
+      // empty-result copy would be a statement about a search that never ran.
+      const { container } = render(
         <SortableTable
           {...defaultProps}
           data={[]}
@@ -179,7 +179,13 @@ describe("SortableTable", () => {
         />,
       );
 
-      expect(screen.queryByText("Downloading the city data...")).toBeNull();
+      expect(screen.queryByText("No cities found")).toBeNull();
+      expect(
+        screen.getByText("Downloading the city data..."),
+      ).toBeInTheDocument();
+      expect(container.textContent).not.toContain(
+        "No cities found for that search",
+      );
     });
 
     it("keeps the table mounted while refetching with results on screen", () => {
@@ -852,6 +858,60 @@ describe("SortableTable", () => {
       expect(
         screen.getByRole("button", { name: "Go to next page" }),
       ).toBeInTheDocument();
+    });
+
+    it("announces the whole page position rather than the bare number", async () => {
+      // The controls are named by their action alone, so this region is the
+      // only thing reporting where the user landed. React mutates just the
+      // number inside it, and without aria-atomic that lone text node is the
+      // entire announcement.
+      const user = userEvent.setup();
+      const pagedData = Array.from({ length: 25 }, (_, i) => ({
+        id: i + 1,
+        name: `City ${i + 1}`,
+        nameAscii: `City ${i + 1}`,
+        country: `Country ${i + 1}`,
+        countryIso3: `C${i.toString().padStart(2, "0")}`,
+        capital: i % 2 === 0 ? "primary" : "admin",
+        population: 1000000 + i * 100000,
+      }));
+      render(<SortableTable {...defaultProps} data={pagedData} />);
+
+      const pageInfo = screen.getByText(/Page \d+ of \d+/);
+      expect(pageInfo).toHaveAttribute("aria-live", "polite");
+      expect(pageInfo).toHaveAttribute("aria-atomic", "true");
+
+      await user.click(screen.getByRole("button", { name: "Go to next page" }));
+      expect(screen.getByText(/Page \d+ of \d+/)).toHaveTextContent(
+        "Page 2 of 3",
+      );
+    });
+
+    it("has the results region already mounted before the first rows arrive", () => {
+      // A live region created with its message already inside it announces
+      // nothing. Mounting it empty ahead of the data is what makes the first
+      // row count, on a cold start and again after a retry, an addition to an
+      // existing region rather than a new region with content.
+      const { container, rerender } = render(
+        <SortableTable
+          {...defaultProps}
+          data={[]}
+          loading={true}
+          datasetReady={false}
+        />,
+      );
+
+      // The sort region is declared first and the results region second; the
+      // page-position region is not rendered in this state. Both are empty
+      // here, which is the point, so they are told apart by position.
+      const regions = container.querySelectorAll('[aria-live="polite"]');
+      expect(regions).toHaveLength(2);
+      const resultsRegion = regions[1];
+      expect(resultsRegion).toBeEmptyDOMElement();
+
+      rerender(<SortableTable {...defaultProps} />);
+
+      expect(resultsRegion).toHaveTextContent(/^Showing \d+ cities out of \d+/);
     });
 
     it("has live regions for dynamic updates", () => {

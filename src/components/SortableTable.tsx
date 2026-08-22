@@ -13,15 +13,17 @@ import styles from "./SortableTable.module.scss";
 interface Column {
   key: keyof City;
   label: string;
-  sortable: boolean;
 }
 
+// Every column sorts. A per-column opt-out was declared but never set, which
+// left two arms no input could reach; it belongs back here the day a caller
+// actually supplies a column that should not sort.
 const COLUMNS: Column[] = [
-  { key: "name", label: "City", sortable: true },
-  { key: "country", label: "Country", sortable: true },
-  { key: "capital", label: "Capital", sortable: true },
-  { key: "countryIso3", label: "Country Code", sortable: true },
-  { key: "population", label: "Population", sortable: true },
+  { key: "name", label: "City" },
+  { key: "country", label: "Country" },
+  { key: "capital", label: "Capital" },
+  { key: "countryIso3", label: "Country Code" },
+  { key: "population", label: "Population" },
 ];
 
 interface SortableTableProps {
@@ -175,6 +177,20 @@ export function SortableTable({
             ? "Table sort cleared"
             : ""}
       </div>
+      {/* a11y: mounted unconditionally rather than inside the branch that
+          renders the table. A live region created with its message already in
+          it announces nothing, which would drop the first row count on a cold
+          start and again after a successful retry. The empty result gets a
+          sentence of its own for the same reason in reverse: emptying a region
+          is not an announcement either, so a search matching no rows would be
+          indistinguishable from a request that never came back. */}
+      <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
+        {error || loading || !datasetReady
+          ? ""
+          : sortedData.length === 0
+            ? "No cities found for that search"
+            : `Showing ${paginatedData.length} cities out of ${sortedData.length} total results`}
+      </div>
       <div className={styles.searchContainer}>
         <div className={styles.searchInput}>
           <FiSearch className={styles.searchIcon} />
@@ -209,27 +225,15 @@ export function SortableTable({
             </button>
           ) : null}
         </div>
-      ) : loading && !datasetReady ? (
-        // The whole view is replaced only while the collection has never
-        // arrived. Once it has, a refetch keeps the table mounted so it does
-        // not unmount and flash on every keystroke.
+      ) : !datasetReady ? (
+        // The whole view is replaced until the collection has arrived once,
+        // the first paint before the request even starts included: the empty
+        // result copy would otherwise claim a search had been made and matched
+        // nothing. Once the collection has arrived, a refetch keeps the table
+        // mounted so it does not unmount and flash on every keystroke.
         <div className={styles.loading}>Downloading the city data...</div>
       ) : (
         <>
-          {/* a11y: Live region for announcing data updates */}
-          {/* a11y: the empty result gets a sentence of its own rather than an
-              empty string. Emptying a live region announces nothing, so a
-              search that matches no rows would otherwise be indistinguishable
-              from a request that never came back, and the visible replacement
-              below sits outside every live region. aria-atomic so the whole
-              sentence is re-read rather than only the part that changed. */}
-          <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
-            {loading
-              ? ""
-              : sortedData.length === 0
-                ? "No cities found for that search"
-                : `Showing ${paginatedData.length} cities out of ${sortedData.length} total results`}
-          </div>
           {paginatedData.length === 0 ? (
             <div className={styles.noResults}>No cities found</div>
           ) : (
@@ -258,16 +262,14 @@ export function SortableTable({
                             key={column.key}
                             scope="col"
                             aria-sort={
-                              column.sortable
-                                ? sortDirection === "asc"
-                                  ? "ascending"
-                                  : sortDirection === "desc"
-                                    ? "descending"
-                                    : "none"
-                                : undefined
+                              sortDirection === "asc"
+                                ? "ascending"
+                                : sortDirection === "desc"
+                                  ? "descending"
+                                  : "none"
                             }
                           >
-                            {column.sortable ? (
+                            {
                               // a11y: the accessible name is the column label
                               // alone, so the control keeps one identity across
                               // presses. The sort state is carried by the
@@ -289,9 +291,7 @@ export function SortableTable({
                                   <FiChevronDown aria-hidden="true" />
                                 )}
                               </button>
-                            ) : (
-                              column.label
-                            )}
+                            }
                           </th>
                         );
                       })}
@@ -356,7 +356,16 @@ export function SortableTable({
                       <MdChevronLeft aria-hidden="true" />
                     </button>
 
-                    <span className={styles.pageInfo} aria-live="polite">
+                    {/* a11y: aria-atomic because React mutates only the page
+                        number inside this label. Without it the announcement
+                        is the bare number, and since the controls are named by
+                        their action alone this region is the only thing that
+                        reports where the user landed. */}
+                    <span
+                      className={styles.pageInfo}
+                      aria-live="polite"
+                      aria-atomic="true"
+                    >
                       Page {effectivePage} of {totalPages}
                     </span>
 
