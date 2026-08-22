@@ -9,6 +9,9 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+// Imported rather than taken from the global, so this file is clean under the
+// browser-globals lint config the rest of the repo uses.
+import process from "node:process";
 
 // Resolved from this file's own location rather than from the working directory,
 // which is wherever npm happened to be invoked and is not necessarily the project
@@ -173,22 +176,42 @@ export function parseWorldCitiesCsv(text) {
   // every real id is at least 1004003059.
   let syntheticId = 0;
 
+  // Number() turns anything unparseable into NaN, and NaN survives every gate
+  // downstream: typeof NaN is "number", so the asset test's per-row typecheck
+  // and the parse boundary in cities.ts both wave it through, and the table
+  // renders the string "NaN". Rejecting here is the only place it can be
+  // caught, so a corrupt upstream export fails the generator instead of
+  // shipping.
+  const numericOrThrow = (raw, field, at) => {
+    const value = Number(raw);
+    if (!Number.isFinite(value)) {
+      throw new Error(
+        `CSV row ${at} has a ${field} that is not a number: ${JSON.stringify(raw)}`,
+      );
+    }
+    return value;
+  };
+
   const rows = records
     .slice(1)
     .filter((record) => record.length > 1)
-    .map((record) => {
+    .map((record, index) => {
       const values = columnAt.map((at) => record[at] ?? "");
       const [rawId, city, cityAscii, country, iso3, capital, rawPopulation] =
         values;
 
       return [
-        rawId.trim() === "" ? (syntheticId += 1) : Number(rawId.trim()),
+        rawId.trim() === ""
+          ? (syntheticId += 1)
+          : numericOrThrow(rawId.trim(), "id", index + 2),
         city,
         cityAscii === "" ? city : cityAscii,
         country,
         iso3,
         capital,
-        rawPopulation.trim() === "" ? 0 : Number(rawPopulation.trim()),
+        rawPopulation.trim() === ""
+          ? 0
+          : numericOrThrow(rawPopulation.trim(), "population", index + 2),
       ];
     });
 
