@@ -7,6 +7,7 @@ import {
   MdChevronRight,
 } from "react-icons/md";
 import type { City } from "../api/getCities";
+import { compareRows } from "./compareRows";
 import styles from "./SortableTable.module.scss";
 
 interface Column {
@@ -14,6 +15,14 @@ interface Column {
   label: string;
   sortable: boolean;
 }
+
+const COLUMNS: Column[] = [
+  { key: "name", label: "City", sortable: true },
+  { key: "country", label: "Country", sortable: true },
+  { key: "capital", label: "Capital", sortable: true },
+  { key: "countryIso3", label: "Country Code", sortable: true },
+  { key: "population", label: "Population", sortable: true },
+];
 
 interface SortableTableProps {
   data: City[];
@@ -62,36 +71,14 @@ export function SortableTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10); // P2: Dynamic page size (default 10)
 
-  // Table columns
-  const columns: Column[] = [
-    { key: "name", label: "City", sortable: true },
-    { key: "country", label: "Country", sortable: true },
-    { key: "capital", label: "Capital", sortable: true },
-    { key: "countryIso3", label: "Country Code", sortable: true },
-    { key: "population", label: "Population", sortable: true },
-  ];
-
   // P0: Sort data based on current sort state
   const sortedData = useMemo(() => {
-    if (!sortState.column || !sortState.direction) return data;
+    const { column, direction } = sortState;
+    if (!column || !direction) return data;
 
-    return [...data].sort((a, b) => {
-      const aVal = a[sortState.column!];
-      const bVal = b[sortState.column!];
-      let comparison = 0;
-
-      // Handle string comparison (city/country names)
-      if (typeof aVal === "string" && typeof bVal === "string") {
-        comparison = aVal.localeCompare(bVal);
-      }
-      // Handle number comparison (population)
-      else if (typeof aVal === "number" && typeof bVal === "number") {
-        comparison = aVal - bVal;
-      }
-
-      // Apply sort direction
-      return sortState.direction === "desc" ? -comparison : comparison;
-    });
+    // The resolved collection is module-cached and shared by every reader, so
+    // it is treated as immutable and the sort runs over a copy.
+    return [...data].sort((a, b) => compareRows(a, b, column, direction));
   }, [data, sortState]);
 
   // P0/P2: Paginate sorted data with dynamic page size
@@ -237,7 +224,7 @@ export function SortableTable({
                   </caption>
                   <thead>
                     <tr>
-                      {columns.map((column) => {
+                      {COLUMNS.map((column) => {
                         const isActive = sortState.column === column.key;
                         const sortDirection = isActive
                           ? sortState.direction
