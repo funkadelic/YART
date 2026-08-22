@@ -141,6 +141,7 @@ function CityBrowser() {
       loading={loading}
       datasetReady={datasetReady}
       error={error}
+      onRetry={() => runSearch(debouncedSearchTerm)}
     />
   );
 }
@@ -155,7 +156,7 @@ function CityBrowser() {
 | `onSearchChange` | `(term: string) => void` | Called on every keystroke. Debouncing belongs to the caller, not the table.                                                                                                                  |
 | `loading`        | `boolean`                | True while a request is in flight. A refetch leaves the table mounted and marks it busy.                                                                                                     |
 | `datasetReady`   | `boolean`                | False until the dataset has arrived at least once. The download message renders only while `loading` is true and this is false, so a refetch that returns no rows does not claim a download. |
-| `error`          | `Error \| null`          | Renders the error message in place of the table. The search box stays visible so the user can correct the query.                                                                             |
+| `error`          | `Error \| null`          | Renders the error message in place of the table, in a live region so it is announced. A failed dataset download cannot be corrected by editing the query, so pass `onRetry` alongside it.    |
 | `onRetry`        | `() => void`             | Optional. Called when the user activates the retry control in the error region. Omit it when the caller has no retry to offer.                                                               |
 
 `loading` and `error` are mutually exclusive in practice: `error` wins if both
