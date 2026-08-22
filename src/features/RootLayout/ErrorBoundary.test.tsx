@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ErrorBoundary } from "./ErrorBoundary";
+import { RootLayout } from "./RootLayout";
+import { SortableTable } from "../../components/SortableTable";
 
 const THROWN_MESSAGE = "a render threw this";
 
@@ -117,5 +119,80 @@ describe("ErrorBoundary", () => {
     expect(screen.getByRole("button", { name: "Show it again" })).toBeEnabled();
     expect(screen.queryByText("the child rendered")).not.toBeInTheDocument();
     expect(consoleError).toHaveBeenCalled();
+  });
+});
+
+describe("ErrorBoundary mounted in the layout", () => {
+  it("keeps the banner and the attribution footer on screen while the fallback shows", () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    render(
+      <RootLayout>
+        <ThrowingChild />
+      </RootLayout>,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      /could not be displayed/i,
+    );
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+    expect(screen.getByText("YART")).toBeInTheDocument();
+    expect(screen.getByRole("contentinfo")).toHaveTextContent(
+      /simplemaps.com World Cities/,
+    );
+    expect(consoleError).toHaveBeenCalled();
+  });
+
+  it("shows the fallback as the only alert region when a render throws", () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+
+    render(
+      <RootLayout>
+        <ThrowingChild />
+      </RootLayout>,
+    );
+
+    // The boundary returns either the fallback or its children and never both,
+    // so the subtree holding the table's inline error region is unmounted here.
+    // D-09 asked for that to be asserted rather than assumed.
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
+    expect(
+      screen.queryByRole("button", { name: "Try again" }),
+    ).not.toBeInTheDocument();
+    expect(consoleError).toHaveBeenCalled();
+  });
+
+  it("shows the inline asynchronous error region as the only alert region when a request rejects", () => {
+    render(
+      <RootLayout>
+        <SortableTable
+          data={[]}
+          searchTerm=""
+          onSearchChange={() => {}}
+          loading={false}
+          datasetReady={false}
+          error={new Error("The city data could not be read.")}
+          onRetry={() => {}}
+        />
+      </RootLayout>,
+    );
+
+    const alerts = screen.getAllByRole("alert");
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0]).toHaveTextContent("The city data could not be read.");
+    expect(
+      screen.getByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/could not be displayed/i),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Show it again" }),
+    ).not.toBeInTheDocument();
   });
 });
