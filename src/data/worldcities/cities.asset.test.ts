@@ -67,8 +67,10 @@ const ZERO_POPULATION_ROWS = 432;
 
 // The envelope's own lines: the opening brace, the version, the columns, the
 // rows key, the closing bracket, and the closing brace. Every remaining line
-// holds exactly one row.
-const ENVELOPE_LINE_ALLOWANCE = 10;
+// holds exactly one row, so the count is exact rather than a bound. A range
+// here would let rows merge onto one line without failing, which is the one
+// thing this constant exists to catch.
+const ENVELOPE_NEWLINE_COUNT = 6;
 
 describe("committed city dataset", () => {
   it("declares the expected envelope and column order", () => {
@@ -182,7 +184,6 @@ describe("committed city dataset", () => {
   it("stores one row per line", () => {
     const lines = (rawAsset.match(/\n/g) ?? []).length;
 
-    expect(lines).toBeGreaterThanOrEqual(rows.length);
-    expect(lines - rows.length).toBeLessThanOrEqual(ENVELOPE_LINE_ALLOWANCE);
+    expect(lines).toBe(rows.length + ENVELOPE_NEWLINE_COUNT);
   });
 });

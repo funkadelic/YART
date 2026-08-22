@@ -110,7 +110,13 @@ it(
         `${datasets[0]} carries no content hash, so a corrected dataset would keep the same URL`,
       ).toMatch(HASHED_JSON_ASSET);
     } finally {
-      process.env.NODE_ENV = previousNodeEnv;
+      // Assigning undefined would store the string "undefined" rather than
+      // clearing the variable, so an absent NODE_ENV has to be deleted.
+      if (previousNodeEnv === undefined) {
+        delete process.env.NODE_ENV;
+      } else {
+        process.env.NODE_ENV = previousNodeEnv;
+      }
       rmSync(outDir, { recursive: true, force: true });
     }
   },
