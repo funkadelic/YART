@@ -1,13 +1,34 @@
 import "@testing-library/jest-dom/vitest";
 import { configure } from "@testing-library/dom";
 import { cleanup } from "@testing-library/react";
-import { afterEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
+
+import { CITY_FIXTURE_ENVELOPE } from "./src/test/cityFixture";
+import { stubDatasetFetch } from "./src/test/fetchStub";
 
 // Testing Library only registers its own cleanup when a global afterEach exists.
 // Test globals are imported explicitly rather than injected, so that registration
 // never happens and the rendered DOM has to be torn down here instead. Without
 // this, renders accumulate across tests and duplicate-element errors follow.
 afterEach(cleanup);
+
+// The DOM environment supplies no fetch, so the global is Node's own
+// implementation, which requires an absolute URL and rejects the root-relative
+// path the dataset URL resolves to under this runner. An unstubbed dataset load
+// therefore fails with a URL parse error rather than a network error, and a test
+// can pass because a load failed for the wrong reason. Installing the stub here
+// means no test reaches the real network by accident; a test that wants a
+// failure overrides it deliberately.
+beforeEach(() => {
+  stubDatasetFetch(CITY_FIXTURE_ENVELOPE);
+});
+
+// Without this, a stub installed by one test is still in place for the next one,
+// so a case that never asked for a dataset failure inherits one.
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 const actEnvironment = globalThis as typeof globalThis & {
   IS_REACT_ACT_ENVIRONMENT?: boolean;

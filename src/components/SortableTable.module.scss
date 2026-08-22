@@ -194,6 +194,31 @@
   color: var(--error-color);
 }
 
+// The way back out of a failed load. Styled in the same idiom as .navButton so
+// the one control the error region offers does not read as unstyled browser
+// chrome next to the rest of the table. Its own line rather than inline after
+// the message, so the space between the two does not depend on where the
+// message happens to wrap.
+.retryButton {
+  display: block;
+  margin: 16px auto 0;
+  background: var(--background-light);
+  border: 1px solid var(--border-light);
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-color);
+
+  &:hover {
+    background: var(--background-light-hover);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+  }
+}
+
 // Screen reader only content
 .srOnly {
   position: absolute;

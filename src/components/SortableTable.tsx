@@ -20,7 +20,12 @@ interface SortableTableProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
   loading: boolean;
+  // False until the underlying collection has arrived at least once.
+  datasetReady: boolean;
   error: Error | null;
+  // Optional so the table stays usable on its own, without a container to
+  // re-run the request behind it.
+  onRetry?: () => void;
 }
 
 type SortDirection = "asc" | "desc" | null;
@@ -68,7 +73,9 @@ export function SortableTable({
   searchTerm,
   onSearchChange,
   loading,
+  datasetReady,
   error,
+  onRetry,
 }: SortableTableProps) {
   // P0: Basic sorting with three states: ascending, descending, no sort
   const [sortState, setSortState] = useState<SortState>({
@@ -192,12 +199,31 @@ export function SortableTable({
 
       {/* P0: Error handling - show error message when search fails */}
       {error ? (
-        <div className={styles.error}>Error: {error.message}</div>
-      ) : loading && data.length === 0 ? (
-        // Only replace the whole view on the first load, when there is no
-        // table on screen yet. Refetches keep the table mounted so it does not
-        // unmount and flash on every keystroke.
-        <div className={styles.loading}>Loading...</div>
+        // a11y: the failure arrives after the initial render, so without a live
+        // region a screen reader user is never told the load failed or that a
+        // way back is on offer. alert rather than status because the table it
+        // replaces is gone.
+        <div className={styles.error} role="alert">
+          Error: {error.message}
+          {/* A failed dataset load makes every search fail, so the way back
+              belongs in the region that already reports it rather than in a
+              second error surface. A native button carries the role, the
+              focus, and the keyboard activation on its own. */}
+          {onRetry ? (
+            <button
+              type="button"
+              className={styles.retryButton}
+              onClick={onRetry}
+            >
+              Try again
+            </button>
+          ) : null}
+        </div>
+      ) : loading && !datasetReady ? (
+        // The whole view is replaced only while the collection has never
+        // arrived. Once it has, a refetch keeps the table mounted so it does
+        // not unmount and flash on every keystroke.
+        <div className={styles.loading}>Downloading the city data...</div>
       ) : (
         <>
           {/* a11y: Live region for announcing data updates */}

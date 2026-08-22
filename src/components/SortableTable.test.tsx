@@ -58,6 +58,8 @@ const defaultProps = {
   searchTerm: "",
   onSearchChange: vi.fn(),
   loading: false,
+  // The honest default for a fixture that already carries rows.
+  datasetReady: true,
   error: null,
 };
 
@@ -131,11 +133,53 @@ describe("SortableTable", () => {
   });
 
   describe("Loading and Error States", () => {
-    it("shows loading state on the first load, when there is no data yet", () => {
-      render(<SortableTable {...defaultProps} data={[]} loading={true} />);
+    it("renders the download copy while the dataset has never arrived", () => {
+      render(
+        <SortableTable
+          {...defaultProps}
+          data={[]}
+          loading={true}
+          datasetReady={false}
+        />,
+      );
 
-      expect(screen.getByText("Loading...")).toBeInTheDocument();
+      expect(
+        screen.getByText("Downloading the city data..."),
+      ).toBeInTheDocument();
       expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    });
+
+    it("renders no download copy while refetching over a dataset that has already arrived", () => {
+      // The user path this stands for: a search that returned nothing,
+      // followed by one more keystroke. Nothing is downloading, and a row
+      // count cannot tell that apart from a cold start.
+      render(
+        <SortableTable
+          {...defaultProps}
+          data={[]}
+          loading={true}
+          datasetReady={true}
+        />,
+      );
+
+      expect(screen.queryByText("Downloading the city data...")).toBeNull();
+      expect(screen.getByText("No cities found")).toBeInTheDocument();
+    });
+
+    it("renders no download copy before the first request starts", () => {
+      // The container's first paint, before the effect raises the loading
+      // flag. It is what makes the loading operand load-bearing rather than
+      // decorative.
+      render(
+        <SortableTable
+          {...defaultProps}
+          data={[]}
+          loading={false}
+          datasetReady={false}
+        />,
+      );
+
+      expect(screen.queryByText("Downloading the city data...")).toBeNull();
     });
 
     it("keeps the table mounted while refetching with results on screen", () => {
@@ -147,7 +191,9 @@ describe("SortableTable", () => {
       // Same DOM node, so the table is dimmed in place instead of unmounting
       // and flashing on every keystroke.
       expect(screen.getByRole("table")).toBe(tableBeforeRefetch);
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("Downloading the city data..."),
+      ).not.toBeInTheDocument();
       expect(screen.getByRole("table").closest("[aria-busy]")).toHaveAttribute(
         "aria-busy",
         "true",
@@ -168,6 +214,49 @@ describe("SortableTable", () => {
       render(<SortableTable {...defaultProps} data={[]} />);
 
       expect(screen.getByText("No cities found")).toBeInTheDocument();
+    });
+
+    it("keeps the download copy off screen while refetching with rows on show", () => {
+      render(<SortableTable {...defaultProps} loading={true} />);
+
+      // The refetch path. Replacing the view here is what would unmount the
+      // table on every keystroke.
+      expect(
+        screen.queryByText("Downloading the city data..."),
+      ).not.toBeInTheDocument();
+      expect(screen.getByRole("table")).toBeInTheDocument();
+    });
+
+    it("offers a retry control in the error region when a handler is given", async () => {
+      const user = userEvent.setup();
+      const onRetry = vi.fn();
+      const error = new Error("The city data could not be downloaded.");
+
+      render(
+        <SortableTable
+          {...defaultProps}
+          data={[]}
+          error={error}
+          onRetry={onRetry}
+        />,
+      );
+
+      await user.click(screen.getByRole("button", { name: "Try again" }));
+
+      expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+
+    it("offers no retry control when no handler is given", () => {
+      const error = new Error("The city data could not be downloaded.");
+
+      render(<SortableTable {...defaultProps} data={[]} error={error} />);
+
+      expect(
+        screen.getByText("Error: The city data could not be downloaded."),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Try again" }),
+      ).not.toBeInTheDocument();
     });
   });
 

@@ -1,6 +1,6 @@
 # Generated city dataset. It is machine written and several megabytes wide, so walking
 # it would dominate every format run and every commit for no benefit.
-src/data/worldcities/cities.ts
+src/data/worldcities/cities.json
 
 # Build output.
 dist
