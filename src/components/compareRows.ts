@@ -15,9 +15,16 @@ const COLLATOR = new Intl.Collator();
  * dataset records hundreds of cities with no population as 0, and those rows
  * belong at the small end of a population sort rather than at the far end with
  * the empty strings.
+ *
+ * NaN is blank. It is a number by typeof, so without this it reaches the
+ * subtraction and returns NaN, which is neither negative, positive, nor zero:
+ * the direction flip leaves it NaN, the row-id tiebreak never runs, and the
+ * order of a set holding one comes out different for different arrival orders.
  */
 function isBlank(value: unknown): boolean {
-  return value === "" || value === null || value === undefined;
+  return (
+    value === "" || value === null || value === undefined || Number.isNaN(value)
+  );
 }
 
 /**

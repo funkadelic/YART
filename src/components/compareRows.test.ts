@@ -129,6 +129,50 @@ describe("compareRows", () => {
     expect(sortedIds([ten, five, nine], "capital", "asc")).toEqual(expected);
   });
 
+  it("ranks a non-primitive after every number and every string", () => {
+    // The third rank. Without a case here the transitivity claim is checked
+    // over two of the three groups the comparator declares.
+    const number = rowWithCapital(1, 9);
+    const text = rowWithCapital(2, "primary");
+    const object = rowWithCapital(3, { toString: () => "zzz" });
+
+    expect(sortedIds([object, text, number], "capital", "asc")).toEqual([
+      1, 2, 3,
+    ]);
+    expect(sortedIds([text, object, number], "capital", "asc")).toEqual([
+      1, 2, 3,
+    ]);
+    expect(sortedIds([number, object, text], "capital", "asc")).toEqual([
+      1, 2, 3,
+    ]);
+  });
+
+  it("orders a non-finite number as blank rather than returning NaN", () => {
+    // NaN is a number by typeof, so it reaches the subtraction and comes back
+    // NaN: neither negative, positive, nor zero. The direction flip leaves it
+    // NaN, the row-id tiebreak never runs, and the sort resolves it however it
+    // likes, which showed up as three orders for three arrival orders.
+    const notANumber = rowWithCapital(1, NaN);
+    const small = rowWithCapital(2, 5);
+    const large = rowWithCapital(3, 10);
+    const rows = [notANumber, small, large];
+
+    expect(compareRows(notANumber, small, "capital", "asc")).toBeGreaterThan(0);
+    expect(compareRows(notANumber, small, "capital", "desc")).toBeGreaterThan(
+      0,
+    );
+
+    // Blank last, both directions, and the same order whichever way the rows
+    // arrive.
+    expect(sortedIds(rows, "capital", "asc")).toEqual([2, 3, 1]);
+    expect(sortedIds([large, notANumber, small], "capital", "asc")).toEqual([
+      2, 3, 1,
+    ]);
+    expect(sortedIds([small, large, notANumber], "capital", "asc")).toEqual([
+      2, 3, 1,
+    ]);
+  });
+
   it("treats null and undefined as blank on either side", () => {
     const absent = rowWithCapital(1, null);
     const missing = rowWithCapital(2, undefined);
