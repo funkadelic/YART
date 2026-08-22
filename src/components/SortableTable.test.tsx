@@ -354,6 +354,22 @@ describe("SortableTable", () => {
       population: 1000000 + i * 100000,
     }));
 
+    /*
+     * Fifty rows rather than the twenty-five the neighbouring cases use. At the
+     * default page size of ten that is five pages, which is what the narrowing
+     * regression case needs: a page position deep enough that shrinking the set
+     * leaves it well past the end. Twenty-five rows reach only page three.
+     */
+    const fiftyRowData = Array.from({ length: 50 }, (_, i) => ({
+      id: i + 1,
+      name: `City ${i + 1}`,
+      nameAscii: `City ${i + 1}`,
+      country: `Country ${i + 1}`,
+      countryIso3: `C${i.toString().padStart(2, "0")}`,
+      capital: i % 2 === 0 ? "primary" : "admin",
+      population: 1000000 + i * 100000,
+    }));
+
     it("shows pagination controls when data exceeds page size", () => {
       render(<SortableTable {...defaultProps} data={largeMockData} />);
 
@@ -487,6 +503,26 @@ describe("SortableTable", () => {
 
       // Should still be on page 1 (or still have pagination)
       expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
+    });
+
+    it("keeps rendering rows when the result set narrows under the current page", async () => {
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <SortableTable {...defaultProps} data={fiftyRowData} />,
+      );
+
+      await user.click(screen.getByRole("button", { name: /Go to last page/ }));
+      expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
+
+      // Rerendering the mounted instance is what reproduces the trap. A fresh
+      // render would start on page one and never reach the state where the
+      // navigation has vanished and no control on screen offers a way back.
+      rerender(
+        <SortableTable {...defaultProps} data={fiftyRowData.slice(0, 3)} />,
+      );
+
+      expect(screen.queryByText("No cities found")).not.toBeInTheDocument();
+      expect(screen.getAllByRole("row")).toHaveLength(4);
     });
   });
 
