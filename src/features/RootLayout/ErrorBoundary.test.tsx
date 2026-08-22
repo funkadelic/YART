@@ -159,7 +159,8 @@ describe("ErrorBoundary mounted in the layout", () => {
 
     // The boundary returns either the fallback or its children and never both,
     // so the subtree holding the table's inline error region is unmounted here.
-    // D-09 asked for that to be asserted rather than assumed.
+    // Asserted rather than assumed, because the two error surfaces are
+    // maintained independently and nothing else pins them mutually exclusive.
     expect(screen.getAllByRole("alert")).toHaveLength(1);
     expect(
       screen.queryByRole("button", { name: "Try again" }),
