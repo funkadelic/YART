@@ -206,7 +206,11 @@ export function SortableTable({
               second error surface. A native button carries the role, the
               focus, and the keyboard activation on its own. */}
           {onRetry ? (
-            <button type="button" onClick={onRetry}>
+            <button
+              type="button"
+              className={styles.retryButton}
+              onClick={onRetry}
+            >
               Try again
             </button>
           ) : null}
