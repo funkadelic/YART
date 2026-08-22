@@ -91,7 +91,13 @@ export function compareRows(
     if (aRank !== bRank) {
       comparison = aRank - bRank;
     } else if (aRank === TYPE_RANK.number) {
-      comparison = (aValue as number) - (bValue as number);
+      // Compared rather than subtracted. Two infinities of the same sign
+      // subtract to NaN, which would skip the row-id tiebreak below and leave
+      // the order up to the sort, and a subtraction of two large magnitudes
+      // reports a difference where a direction is all that is wanted.
+      const aNumber = aValue as number;
+      const bNumber = bValue as number;
+      comparison = aNumber === bNumber ? 0 : aNumber < bNumber ? -1 : 1;
     } else {
       comparison = COLLATOR.compare(String(aValue), String(bValue));
     }

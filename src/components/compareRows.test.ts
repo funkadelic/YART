@@ -173,6 +173,29 @@ describe("compareRows", () => {
     ]);
   });
 
+  it("orders two infinities of the same sign by row id", () => {
+    // Subtracting them gives NaN, which skips the tiebreak and leaves the
+    // order to the sort. They are equal as far as an ordering is concerned,
+    // so the tiebreak is what should decide them.
+    const first = rowWithCapital(1, Infinity);
+    const second = rowWithCapital(2, Infinity);
+    const negativeFirst = rowWithCapital(3, -Infinity);
+    const negativeSecond = rowWithCapital(4, -Infinity);
+    const finite = rowWithCapital(5, 5);
+
+    expect(compareRows(first, second, "capital", "asc")).toBe(-1);
+    expect(compareRows(first, second, "capital", "desc")).toBe(-1);
+    expect(compareRows(negativeFirst, negativeSecond, "capital", "asc")).toBe(
+      -1,
+    );
+
+    // And the ordinary ordering against a finite value still holds.
+    expect(compareRows(first, finite, "capital", "asc")).toBeGreaterThan(0);
+    expect(compareRows(negativeFirst, finite, "capital", "asc")).toBeLessThan(
+      0,
+    );
+  });
+
   it("treats null and undefined as blank on either side", () => {
     const absent = rowWithCapital(1, null);
     const missing = rowWithCapital(2, undefined);
