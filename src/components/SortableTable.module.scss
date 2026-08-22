@@ -221,16 +221,23 @@
 }
 
 // Screen reader only content
-.srOnly {
+// Off screen but still in the accessibility tree. display: none and
+// visibility: hidden both remove an element from it, which is the difference
+// that matters for the live regions and the page position below.
+@mixin visually-hidden {
   position: absolute;
   width: 1px;
   height: 1px;
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+.srOnly {
+  @include visually-hidden;
 }
 
 // responsive styles
@@ -274,14 +281,7 @@
         // Reclaim the horizontal space without taking the announcement with
         // it: display: none drops the region out of the accessibility tree, so
         // no page change would be announced at all below this width.
-        position: absolute;
-        width: 1px;
-        height: 1px;
-        padding: 0;
-        margin: -1px;
-        overflow: hidden;
-        clip: rect(0, 0, 0, 0);
-        white-space: nowrap;
+        @include visually-hidden;
       }
     }
   }
