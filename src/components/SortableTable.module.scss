@@ -5,12 +5,12 @@
   width: 100%;
   box-sizing: border-box;
   margin: 0 auto;
-  padding: 20px;
+  padding: var(--space-5);
 }
 
 // the search box
 .searchContainer {
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 
   .searchInput {
     width: 45%;
@@ -18,22 +18,28 @@
     margin: 0 auto;
 
     // position the icon inside the search input
+    //
+    // This offset and the input's left padding below were both off the scale,
+    // and are snapped onto it as a pair rather than one at a time: each moves by
+    // a hair, in opposite directions, and it is the pair that keeps the icon
+    // centred in the inset the padding reserves for it.
     .searchIcon {
       position: absolute;
-      left: 15px;
+      left: var(--space-4);
       top: 50%;
       transform: translateY(-50%);
       color: var(--color-text-muted);
-      font-size: 20px;
+      font-size: var(--font-size-xl);
     }
 
     input {
       width: 100%;
       box-sizing: border-box; // ignore border & padding to determine width
-      padding: 10px 10px 10px 45px;
+      padding: var(--space-2-5) var(--space-2-5) var(--space-2-5)
+        var(--space-11);
       border: 2px solid var(--color-border);
-      border-radius: 4px;
-      font-size: 16px;
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-base);
 
       &::placeholder {
         color: var(--color-text-muted);
@@ -58,8 +64,8 @@
 // the table parent container
 .tableContainer {
   border: 2px solid var(--color-border);
-  border-radius: 4px;
-  margin-bottom: 20px;
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-5);
 }
 
 // Refetching with results already on screen: dim in place rather than
@@ -99,8 +105,8 @@
 
   th,
   td {
-    padding: 12px 16px;
-    font-size: 16px;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--font-size-base);
   }
 
   tbody tr:last-child td {
@@ -116,14 +122,14 @@
 // nothing the moment the attribute it names is removed.
 .sortButton {
   font: inherit;
-  font-size: 16px;
+  font-size: var(--font-size-base);
   font-weight: bold;
   color: inherit;
   background: none;
   border: 0;
   padding: 0;
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
   cursor: pointer;
 
   &:hover {
@@ -137,34 +143,34 @@
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: var(--space-4);
 
   .pageSizeContainer {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
 
     select {
-      padding: 6px 12px;
-      font-size: 14px;
+      padding: var(--space-1-5) var(--space-3);
+      font-size: var(--font-size-sm);
     }
   }
 
   .navigationContainer {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-2);
 
     // the next/prev/first/last buttons
     .navButton {
       background: var(--color-surface-raised);
       border: 1px solid var(--color-border);
-      padding: 6px 12px;
+      padding: var(--space-1-5) var(--space-3);
       cursor: pointer;
-      font-size: 14px;
+      font-size: var(--font-size-sm);
       display: flex;
       align-items: center;
-      gap: 4px;
+      gap: var(--space-1);
 
       &:hover:not(:disabled) {
         background: var(--color-surface-hover);
@@ -178,7 +184,7 @@
 
     // Page n of m text
     .pageInfo {
-      padding: 0 12px;
+      padding: 0 var(--space-3);
     }
   }
 }
@@ -187,8 +193,8 @@
 .error,
 .noResults {
   text-align: center;
-  padding: 40px 20px;
-  font-size: 16px;
+  padding: var(--space-10) var(--space-5);
+  font-size: var(--font-size-base);
 }
 
 .error {
@@ -202,12 +208,12 @@
 // message happens to wrap.
 .retryButton {
   display: block;
-  margin: 16px auto 0;
+  margin: var(--space-4) auto 0;
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
-  padding: 6px 12px;
+  padding: var(--space-1-5) var(--space-3);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-size-sm);
   color: var(--color-text);
 
   &:hover {
@@ -225,7 +231,7 @@
 // responsive styles
 @media (max-width: 768px) {
   .container {
-    padding: 10px;
+    padding: var(--space-2-5);
   }
 
   .searchContainer {
