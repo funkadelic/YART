@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { mediaListenerCount, setPrefersDark } from "../../vitest.setup";
+import { mediaListenerCount, setPrefersDark } from "../test/matchMediaStub";
 import { THEME_STORAGE_KEY } from "../theme/resolveTheme";
 import { useTheme } from "./useTheme";
 
@@ -122,9 +122,8 @@ describe("useTheme", () => {
 
   describe("stamping the document element", () => {
     it("resolves the system choice to light when the operating system prefers light", () => {
-      const { result } = renderTheme();
+      renderTheme();
 
-      expect(result.current.resolved).toBe("light");
       expect(stampedTheme()).toBe("light");
       expect(stampedColorScheme()).toBe("light");
     });
@@ -132,9 +131,8 @@ describe("useTheme", () => {
     it("resolves the system choice to dark when the operating system prefers dark", () => {
       setPrefersDark(true);
 
-      const { result } = renderTheme();
+      renderTheme();
 
-      expect(result.current.resolved).toBe("dark");
       expect(stampedTheme()).toBe("dark");
       expect(stampedColorScheme()).toBe("dark");
     });
@@ -177,11 +175,85 @@ describe("useTheme", () => {
     it("treats an absent matchMedia as a light preference and subscribes to nothing", () => {
       vi.stubGlobal("matchMedia", undefined);
 
-      const { result } = renderTheme();
+      renderTheme();
 
-      expect(result.current.resolved).toBe("light");
       expect(stampedTheme()).toBe("light");
       expect(mediaListenerCount()).toBe(0);
+    });
+
+    it("re-reads the preference as it subscribes, so a change during the render is not lost", () => {
+      let reads = 0;
+
+      // Light for the render that seeds the state, dark by the time the effect
+      // commits. That is the window a real change lands in against no listener,
+      // and reproducing it needs a preference that moves on its own rather than
+      // one a test moves, because a test can only move it between commits.
+      vi.stubGlobal("matchMedia", (media: string) => ({
+        media,
+        get matches() {
+          reads += 1;
+          return reads > 1;
+        },
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      }));
+
+      renderTheme();
+
+      expect(stampedTheme()).toBe("dark");
+    });
+  });
+
+  describe("the other tabs", () => {
+    it("follows a choice written by another document", () => {
+      renderTheme();
+      expect(stampedTheme()).toBe("light");
+
+      act(() => {
+        localStorage.setItem(THEME_STORAGE_KEY, "dark");
+        window.dispatchEvent(
+          new StorageEvent("storage", { key: THEME_STORAGE_KEY }),
+        );
+      });
+
+      expect(stampedTheme()).toBe("dark");
+      expect(stampedColorScheme()).toBe("dark");
+    });
+
+    it("re-reads the store rather than trusting the value the event carries", () => {
+      localStorage.setItem(THEME_STORAGE_KEY, "dark");
+      const { result } = renderTheme();
+
+      act(() => {
+        localStorage.removeItem(THEME_STORAGE_KEY);
+        window.dispatchEvent(
+          new StorageEvent("storage", {
+            key: THEME_STORAGE_KEY,
+            newValue: "light",
+          }),
+        );
+      });
+
+      expect(result.current.choice).toBe("system");
+    });
+
+    it("ignores a write to any other key", () => {
+      localStorage.setItem(THEME_STORAGE_KEY, "dark");
+      const { result } = renderTheme();
+
+      act(() => {
+        window.dispatchEvent(new StorageEvent("storage", { key: "unrelated" }));
+      });
+
+      expect(result.current.choice).toBe("dark");
+    });
+
+    it("releases its listener on unmount", () => {
+      const listeners = vi.spyOn(window, "removeEventListener");
+
+      renderTheme().unmount();
+
+      expect(listeners).toHaveBeenCalledWith("storage", expect.any(Function));
     });
   });
 });

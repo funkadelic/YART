@@ -33,12 +33,21 @@ function readStoredChoice(): ThemeChoice {
 }
 
 /**
+ * Whether this environment can answer a media query at all. Asked in one place
+ * rather than two: the reader below and the subscription below that have to
+ * agree, or the hook subscribes to something it will not read.
+ */
+function supportsMediaQueries(): boolean {
+  return typeof window.matchMedia === "function";
+}
+
+/**
  * The operating system's current preference. An environment with no media query
  * support prefers light, which is the same answer the resolver gives for a
  * missing choice, so nothing downstream has a third case to handle.
  */
 function readPrefersDark(): boolean {
-  if (typeof window.matchMedia !== "function") {
+  if (!supportsMediaQueries()) {
     return false;
   }
 
@@ -47,8 +56,14 @@ function readPrefersDark(): boolean {
 
 /**
  * Owns the theme: the stored choice, the write-through when it changes, the
- * concrete theme stamped on the document element, and the operating system
- * subscription that keeps the system choice current.
+ * concrete theme stamped on the document element, and the two subscriptions that
+ * keep it current, one to the operating system and one to the other tabs.
+ *
+ * Single instance by construction. The choice is per caller, the document
+ * element the effect stamps it onto is not, so a second caller gets its own
+ * choice and the two effects race on every render, leaving the loser showing a
+ * control that disagrees with the painted page. Lift this behind a provider
+ * mounted once before the second caller exists.
  *
  * The rule that turns a choice plus a preference into a theme is written a
  * second time, as a literal, inside the blocking inline script in index.html.
@@ -61,7 +76,7 @@ export function useTheme() {
   const [prefersDark, setPrefersDark] = useState<boolean>(readPrefersDark);
 
   useEffect(() => {
-    if (typeof window.matchMedia !== "function") {
+    if (!supportsMediaQueries()) {
       return;
     }
 
@@ -73,8 +88,31 @@ export function useTheme() {
 
     query.addEventListener("change", handlePreferenceChange);
 
+    // The preference can move between the render that seeded the state and this
+    // commit, and StrictMode's mount, unmount, remount opens the same window a
+    // second time. A change landing in either one fires against no listener, so
+    // it has to be read again here or it is lost until the next change.
+    setPrefersDark(query.matches);
+
     return () => {
       query.removeEventListener("change", handlePreferenceChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      // This key only, and only a write from another document: the event does
+      // not fire in the tab that made it, which is why the setter below does
+      // not have to guard against reacting to itself.
+      if (event.key === THEME_STORAGE_KEY) {
+        setChoiceState(readStoredChoice());
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
 
@@ -103,5 +141,5 @@ export function useTheme() {
     }
   }, []);
 
-  return { choice, setChoice, resolved };
+  return { choice, setChoice };
 }
