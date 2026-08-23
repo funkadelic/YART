@@ -1,8 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { setPrefersDark } from "../../../vitest.setup";
+import { setPrefersDark } from "../../test/matchMediaStub";
 import { THEME_STORAGE_KEY } from "../../theme/resolveTheme";
 import { Header } from "./Header";
 import { ThemeControl } from "./ThemeControl";
@@ -125,6 +125,34 @@ describe("ThemeControl", () => {
     }
     expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
     expect(checkedOptionCount()).toBe(1);
+  });
+
+  it("keeps two mounted controls out of each other's radio group", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <ThemeControl />
+        <ThemeControl />
+      </>,
+    );
+
+    const [first, second] = screen.getAllByRole("radiogroup");
+    const ids = screen
+      .getAllByRole("radio")
+      .map((radio) => radio.getAttribute("id"));
+
+    // Duplicate ids are invalid HTML, and the label binding is what breaks
+    // first: htmlFor finds the first matching input, so clicking the second
+    // control's label would check the first control's radio.
+    expect(new Set(ids).size).toBe(ids.length);
+
+    await user.click(within(second).getByRole("radio", { name: "Dark" }));
+
+    expect(within(second).getByRole("radio", { name: "Dark" })).toBeChecked();
+    expect(
+      within(first).getByRole("radio", { name: "Dark" }),
+    ).not.toBeChecked();
+    expect(within(first).getByRole("radio", { name: "System" })).toBeChecked();
   });
 
   it("is mounted in the header, so the page it themes is the page it sits on", () => {

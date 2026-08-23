@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useId } from "react";
 
 import { useTheme } from "../../hooks/useTheme";
 import type { ThemeChoice } from "../../theme/resolveTheme";
@@ -31,6 +31,12 @@ const OPTIONS: { value: ThemeChoice; label: string }[] = [
 export function ThemeControl() {
   const { choice, setChoice } = useTheme();
 
+  // The id and the radio name are both document-global, so writing either as a
+  // constant makes a second mounted control produce duplicate ids and put all
+  // six radios in one group, where every label binds to the first matching
+  // input. Generated per instance, the two controls cannot reach each other.
+  const groupName = useId();
+
   return (
     <div className={styles.control} role="radiogroup" aria-label="Theme">
       {OPTIONS.map((option) => (
@@ -38,13 +44,16 @@ export function ThemeControl() {
           <input
             className={styles.input}
             type="radio"
-            id={`theme-${option.value}`}
-            name="theme"
+            id={`${groupName}-${option.value}`}
+            name={groupName}
             value={option.value}
             checked={choice === option.value}
             onChange={() => setChoice(option.value)}
           />
-          <label className={styles.label} htmlFor={`theme-${option.value}`}>
+          <label
+            className={styles.label}
+            htmlFor={`${groupName}-${option.value}`}
+          >
             {option.label}
           </label>
         </Fragment>
