@@ -121,7 +121,7 @@ export function useTheme() {
   useEffect(() => {
     // Both halves, because the inline script sets both before first paint and
     // the one left unmaintained goes stale the first time the user chooses.
-    document.documentElement.setAttribute("data-theme", resolved);
+    document.documentElement.dataset.theme = resolved;
     document.documentElement.style.colorScheme = resolved;
   }, [resolved]);
 
