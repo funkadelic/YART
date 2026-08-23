@@ -27,6 +27,15 @@ search, sort, and paginate a list of world cities without a table library.
 - Previous and next navigation, plus jumps to the first and last page
 - Page size changes reset to the first page
 
+### Theme
+
+- Light, dark, and system, chosen from a three-way control in the header
+- System follows the operating system setting and changes with it, with no
+  reload
+- An explicit choice survives a reload and follows into the other open tabs
+- The theme is resolved before the first paint, so no wrong-theme frame is ever
+  shown
+
 ### Accessibility
 
 - Column headers carry a descriptive label for the action the next click will
@@ -35,6 +44,11 @@ search, sort, and paginate a list of world cities without a table library.
   carries the meaning
 - Live regions announce sort changes and result counts
 - The table scrolls horizontally on narrow viewports instead of overflowing
+- The theme control is three native radios, so the arrow keys move between them
+  and the whole group is a single tab stop
+- Every foreground and background pair is checked against the WCAG contrast
+  ratio in both themes, computed from the shipped stylesheet rather than from a
+  copy of it
 
 ## Stack
 
@@ -224,22 +238,63 @@ skipped. The pagination controls hide entirely when there is only one page.
 
 ### Theming
 
-Colors are CSS custom properties declared in
-`src/components/SortableTable.module.scss`, so a theme is an override rather
-than a stylesheet fork:
+Colors, spacing, type sizes, and the corner radius are CSS custom properties
+declared in `src/index.css`, in three tiers.
+
+The first tier is the raw palette, named for what it is rather than for where
+it is used: `--gray-800`, `--teal-400`, `--red-700`. Nothing outside that file
+refers to it.
+
+The second tier is the same in every theme, so it is declared once and never
+overridden: `--space-1` through `--space-11`, `--font-size-sm` through
+`--font-size-2xl`, and `--radius-sm`.
+
+The third tier is semantic, and it is the only one components name:
 
 ```css
 :root {
-  --accent-color: #6b46c1;
-  --error-color: #b91c1c;
-  --border-color: #333;
-  --border-light: #ddd;
-  --text-color: #000;
-  --text-muted: #666;
-  --background-light: #eee;
-  --background-light-hover: #ccc;
+  --color-surface: var(--gray-50);
+  --color-surface-raised: var(--white);
+  --color-surface-hover: var(--gray-100);
+  --color-text: var(--gray-800);
+  --color-text-muted: var(--gray-600);
+  --color-border: var(--gray-500);
+  --color-accent: var(--teal-700);
+  --color-error: var(--red-700);
+  --color-focus-ring: var(--teal-700);
+  --color-brand: var(--brand-orange);
+  --color-brand-contrast: var(--white);
 }
 ```
+
+A theme is a re-pointing of that third tier, so no component stylesheet changes
+when one is added:
+
+```css
+:root[data-theme="dark"] {
+  --color-surface: var(--gray-900);
+  --color-text: var(--gray-100);
+  --color-accent: var(--teal-400);
+}
+```
+
+`--color-brand` and `--color-brand-contrast` are missing from the dark block on
+purpose. The logo is the same in both themes, so leaving them out is what keeps
+them that way.
+
+Component stylesheets hold no color of their own. A hex literal, an `rgb()` or
+`hsl()` call, a named color such as `red`, or an SCSS `$variable` in any
+stylesheet under `src/` fails the suite, as does any spacing length not
+authored in rem. A hairline border and the one corner radius in
+`src/index.css` are the exceptions. The guard is `src/theme/tokens.test.ts`,
+and it walks every stylesheet it finds rather than a list, so a stylesheet
+added later inherits the rule without anyone remembering to add it.
+
+Which theme is active is an attribute on the document element. A small blocking
+script in `index.html` writes it before any module loads, which is why a reload
+shows no wrong-theme frame. The running app applies the same rule from
+`src/theme/resolveTheme.ts`; the two are duplicated deliberately, because the
+script runs too early to import anything.
 
 Everything else is scoped through CSS modules, so class names cannot collide
 with the rest of an app.
