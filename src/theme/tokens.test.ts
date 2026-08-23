@@ -92,13 +92,14 @@ const SCSS_VARIABLE = /^[ \t]*\$[\w-]+[ \t]*:/gm;
 // value runs to the next delimiter rather than to a required semicolon: the
 // last declaration in a block needs none, and !important sits between the two.
 const OUTLINE_DECLARATION =
-  /(?<![\w-])outline(?:-style|-width)?[ \t]*:([^;}]*)/g;
+  /(?<![\w-])outline(?:-style|-width|-color)?[ \t]*:([^;}]*)/g;
 
 // A zero width, an absent style or an invisible colour each cancel the ring.
 // The zero is matched only as a whole number, so a 0.125rem ring reads as a
-// ring rather than as the absence of one.
+// ring rather than as the absence of one. Its unit is optional and spelled out,
+// because a bare 0 and a 0 carrying any length unit are the same width.
 const RING_CANCELLING_VALUE =
-  /(?<![\w.-])(none|0(px)?|transparent)(?![\w.%-])/i;
+  /(?<![\w.-])(none|0(px|rem|em)?|transparent)(?![\w.%-])/i;
 
 // A border or an outline is a line rather than a length on the spacing scale,
 // and one authored in rem would thicken as the reader's type grew. Anything
@@ -754,6 +755,8 @@ describe("the reach of the guards", () => {
       "a { color: var(--color-text); outline: none }",
       "outline: 0 solid transparent;",
       "outline-width: 0;",
+      "outline-width: 0rem;",
+      "outline-color: transparent;",
     ]) {
       expect(
         focusRingSuppressions(declaration),
