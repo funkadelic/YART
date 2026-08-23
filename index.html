@@ -3,6 +3,57 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--
+      Stamps the theme onto the document element before first paint, so no
+      wrong-theme frame is ever shown. Blocking and classic on purpose: a
+      type="module" attribute, a defer or an async would each defer this past
+      paint, and each would fail silently.
+
+      The resolve rule below is duplicated from src/theme/resolveTheme.ts. That
+      module cannot be imported from here, because anything importable runs too
+      late. A change to one needs the same change to the other, and nothing
+      asserts that they agree.
+
+      Being inline, this script needs a Content-Security-Policy that allows it
+      before it can run under one. The app ships as a static bundle with no
+      server of its own, so there is no policy here to set; whoever sets one on
+      the host has to add this script's sha256 to script-src, or the script is
+      dropped and the wrong-theme flash it exists to prevent comes back with no
+      error to report it.
+    -->
+    <script>
+      (function () {
+        var theme = null;
+        try {
+          var stored = localStorage.getItem("yart-theme");
+          if (stored === "light" || stored === "dark") {
+            theme = stored;
+          }
+        } catch (error) {
+          // Reading storage throws outright, rather than returning null, when
+          // site data is blocked. That says nothing about the operating system
+          // preference, so it is read below in its own try rather than being
+          // skipped along with the store.
+        }
+        if (theme === null) {
+          try {
+            theme = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+          } catch (error) {
+            // No matchMedia at all: light, which is what the resolver answers
+            // for the same absence, and the page stays tokenized instead of
+            // losing the attribute along with the script.
+            theme = "light";
+          }
+        }
+        document.documentElement.setAttribute("data-theme", theme);
+        // The stylesheet's color-scheme has not arrived yet, so without this the
+        // user agent paints its canvas and scrollbars from the operating system
+        // for that window rather than from the resolved choice.
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
     <title>Yet Another React Table (YART)</title>
   </head>
   <body>

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, vi } from "vitest";
 
 import { CITY_FIXTURE_ENVELOPE } from "./src/test/cityFixture";
 import { stubDatasetFetch } from "./src/test/fetchStub";
+import { installMatchMediaStub } from "./src/test/matchMediaStub";
 
 // Testing Library only registers its own cleanup when a global afterEach exists.
 // Test globals are imported explicitly rather than injected, so that registration
@@ -21,13 +22,35 @@ afterEach(cleanup);
 // failure overrides it deliberately.
 beforeEach(() => {
   stubDatasetFetch(CITY_FIXTURE_ENVELOPE);
+  installMatchMediaStub();
 });
 
 // Without this, a stub installed by one test is still in place for the next one,
 // so a case that never asked for a dataset failure inherits one.
+//
+// The theme reset is here for the same class of leak from a different source:
+// cleanup unmounts React trees and nothing else, and the environment gives one
+// document and one storage per test file, so a case that means to exercise the
+// no-stored-choice default silently exercises whatever the previous case stamped
+// on the document element, and passes for the wrong reason.
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+
+  // Three suites in this repository declare the node environment so they can read
+  // shipped files, and this setup file runs for them too. There is no document to
+  // reset there, and an unguarded reference is a ReferenceError that fails every
+  // one of their cases.
+  if (typeof document !== "undefined") {
+    document.documentElement.removeAttribute("data-theme");
+    document.documentElement.style.removeProperty("color-scheme");
+  }
+
+  try {
+    localStorage.clear();
+  } catch {
+    // Storage can be unavailable outright; there is then nothing to clear.
+  }
 });
 
 const actEnvironment = globalThis as typeof globalThis & {

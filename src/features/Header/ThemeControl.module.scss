@@ -1,0 +1,49 @@
+@use "../../styles/visually-hidden" as *;
+
+.control {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+// Off screen but still in the accessibility tree and still focusable: the input
+// carries the semantics and the keyboard behaviour, its sibling label carries
+// the appearance.
+.input {
+  @include visually-hidden;
+}
+
+.label {
+  padding: var(--space-1) var(--space-2-5);
+  border-left: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background-color: var(--color-surface-raised);
+  cursor: pointer;
+}
+
+.label:first-of-type {
+  border-left: 0;
+}
+
+.label:hover {
+  background-color: var(--color-surface-hover);
+}
+
+// The surface colour rather than the brand contrast one, because the accent is
+// a dark teal in light and a light teal in dark, and only a foreground that
+// flips with the theme clears the text threshold in both.
+.input:checked + .label {
+  color: var(--color-surface);
+  background-color: var(--color-accent);
+}
+
+// a11y: the input is off screen, so the ring the global rule draws on it is
+// invisible. Forwarded to the visible label, restating the same outline, so the
+// one control this adds is not the one control with no focus indicator.
+.input:focus-visible + .label {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}

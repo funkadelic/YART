@@ -1,4 +1,5 @@
 import styles from "./Header.module.css";
+import { ThemeControl } from "./ThemeControl";
 
 export function Header() {
   return (
@@ -9,15 +10,16 @@ export function Header() {
         aria-hidden="true"
         focusable="false"
       >
-        <rect width="32" height="32" rx="6" fill="#f45d48" />
+        <rect className={styles.logoMark} width="32" height="32" rx="6" />
         <path
+          className={styles.logoRule}
           d="M8 11h16M8 16h16M8 21h10"
-          stroke="#ffffff"
           strokeWidth="2.5"
           strokeLinecap="round"
         />
       </svg>
       <span className={styles.title}>YART</span>
+      <ThemeControl />
     </header>
   );
 }
