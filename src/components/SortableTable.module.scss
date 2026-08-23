@@ -17,8 +17,7 @@
     position: relative;
     margin: 0 auto;
 
-    // position the icon inside the search input
-    //
+    // Position the icon inside the search input.
     // This offset and the input's left padding below were both off the scale,
     // and are snapped onto it as a pair rather than one at a time: each moves by
     // a hair, in opposite directions, and it is the pair that keeps the icon
@@ -229,7 +228,7 @@
 }
 
 // responsive styles
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .container {
     padding: var(--space-2-5);
   }
