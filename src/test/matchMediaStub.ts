@@ -10,36 +10,17 @@ import { PREFERS_DARK_QUERY } from "../theme/resolveTheme";
  * without knowing anything about theming. This module owns the preference the
  * stub reports and the listeners currently subscribed to it, so a test can move
  * the preference and read back whether a mounted consumer followed.
+ *
+ * The stub carries only the three members the hook touches. The global is
+ * installed through a helper that takes an unknown value, so consumers still
+ * typecheck against the DOM's own declaration and a member nothing calls would
+ * be answering to nobody.
  */
 
-/** What the stub hands a change listener. The hook reads `matches` and nothing else. */
-interface MediaPreferenceEvent {
-  readonly matches: boolean;
-  readonly media: string;
-}
-
-type MediaPreferenceListener = (event: MediaPreferenceEvent) => void;
-
-/**
- * The shape the stub returns. Declared here rather than borrowed from the DOM
- * library because the real interface's event listener methods are overloaded and
- * an object literal cannot satisfy both arms without a cast. Nothing typechecks
- * against this but the stub itself: the global is installed through a helper that
- * takes an unknown value, so consumers still see the DOM's own declaration.
- */
-interface MediaQueryListStub {
-  readonly media: string;
-  readonly matches: boolean;
-  onchange: null;
-  addEventListener: (type: string, listener: MediaPreferenceListener) => void;
-  removeEventListener: (
-    type: string,
-    listener: MediaPreferenceListener,
-  ) => void;
-  addListener: () => void;
-  removeListener: () => void;
-  dispatchEvent: () => boolean;
-}
+type MediaPreferenceListener = (event: {
+  matches: boolean;
+  media: string;
+}) => void;
 
 let prefersDark = false;
 const mediaListeners = new Set<MediaPreferenceListener>();
@@ -75,22 +56,21 @@ export function installMatchMediaStub(): void {
   prefersDark = false;
   mediaListeners.clear();
 
-  vi.stubGlobal("matchMedia", (query: string): MediaQueryListStub => {
+  vi.stubGlobal("matchMedia", (query: string) => {
     return {
       media: query,
       get matches() {
         return query === PREFERS_DARK_QUERY && prefersDark;
       },
-      onchange: null,
-      addEventListener: (_type, listener) => {
+      addEventListener: (_type: string, listener: MediaPreferenceListener) => {
         mediaListeners.add(listener);
       },
-      removeEventListener: (_type, listener) => {
+      removeEventListener: (
+        _type: string,
+        listener: MediaPreferenceListener,
+      ) => {
         mediaListeners.delete(listener);
       },
-      addListener: () => {},
-      removeListener: () => {},
-      dispatchEvent: () => false,
     };
   });
 }
