@@ -8,6 +8,7 @@ import {
 } from "react-icons/md";
 import type { City } from "../api/getCities";
 import { sortRows } from "./DataTable/sortRows";
+import { paginate } from "./paginate";
 import {
   cityColumns,
   type CityColumnId,
@@ -87,24 +88,10 @@ export function SortableTable({
     return sortRows(data, active, direction, cityRowId);
   }, [data, sortState]);
 
-  const { paginatedData, totalPages, effectivePage } = useMemo(() => {
-    // Floored at one so an empty result set still counts as a single page.
-    // Zero would be a page count nothing can be on, and callers outside the
-    // navigation's own visibility guard have no protection from it.
-    const totalPages = Math.max(1, Math.ceil(sortedData.length / pageSize));
-    // Clamped for reading only. The position held in state is deliberately
-    // left alone, so a result set that widens again restores the user where
-    // they were rather than stranding them on whatever the narrowed set
-    // allowed, and so a position arriving from outside survives a fetch that
-    // has not resolved yet.
-    const effectivePage = Math.min(Math.max(currentPage, 1), totalPages);
-    const startIndex = (effectivePage - 1) * pageSize;
-    return {
-      paginatedData: sortedData.slice(startIndex, startIndex + pageSize),
-      totalPages,
-      effectivePage,
-    };
-  }, [sortedData, currentPage, pageSize]);
+  const { paginatedData, totalPages, effectivePage } = useMemo(
+    () => paginate(sortedData, currentPage, pageSize),
+    [sortedData, currentPage, pageSize],
+  );
 
   const handleSort = (column: CityColumnId) => {
     setSortState((prevState) => {
