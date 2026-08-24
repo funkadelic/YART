@@ -46,6 +46,33 @@ function rank(value: unknown): number {
 }
 
 /**
+ * Orders two values that are both present, before any direction is applied.
+ *
+ * Type is the primary key, so which rule decides a pair is settled by the pair's
+ * types rather than by the values: without that, a numeric pair and a
+ * stringified pair can each be decided by a different rule and produce a cycle.
+ */
+function compareRanked(aValue: unknown, bValue: unknown): number {
+  const aRank = rank(aValue);
+  const bRank = rank(bValue);
+  if (aRank !== bRank) return aRank - bRank;
+
+  if (aRank === TYPE_RANK.number) {
+    // Compared rather than subtracted. Two infinities of the same sign subtract
+    // to NaN, which would skip the identity tiebreak the sort module applies
+    // after this returns and leave the order up to the sort, and a subtraction
+    // of two large magnitudes reports a difference where a direction is all
+    // that is wanted.
+    const aNumber = aValue as number;
+    const bNumber = bValue as number;
+    if (aNumber === bNumber) return 0;
+    return aNumber < bNumber ? -1 : 1;
+  }
+
+  return COLLATOR.compare(String(aValue), String(bValue));
+}
+
+/**
  * Orders two already-widened values.
  *
  * The three rules below compose in an order that is load-bearing, so read them
@@ -81,25 +108,9 @@ export function compareValues(
   const bBlank = isBlank(bValue);
   if (aBlank !== bBlank) return aBlank ? 1 : -1;
 
-  let comparison = 0;
-  if (!aBlank) {
-    const aRank = rank(aValue);
-    const bRank = rank(bValue);
-    if (aRank !== bRank) {
-      comparison = aRank - bRank;
-    } else if (aRank === TYPE_RANK.number) {
-      // Compared rather than subtracted. Two infinities of the same sign
-      // subtract to NaN, which would skip the identity tiebreak the sort module
-      // applies after this returns and leave the order up to the sort, and a
-      // subtraction of two large magnitudes
-      // reports a difference where a direction is all that is wanted.
-      const aNumber = aValue as number;
-      const bNumber = bValue as number;
-      comparison = aNumber === bNumber ? 0 : aNumber < bNumber ? -1 : 1;
-    } else {
-      comparison = COLLATOR.compare(String(aValue), String(bValue));
-    }
-  }
+  // Both blank compares equal: the arm above has already answered every pair
+  // where only one of them is.
+  const comparison = aBlank ? 0 : compareRanked(aValue, bValue);
 
   // Returned ahead of the flip so an equal pair comes back as a positive zero
   // in both directions. Negating zero gives negative zero, which every ordering
