@@ -34,6 +34,11 @@ function isBlank(value: unknown): boolean {
  */
 const TYPE_RANK = { number: 0, string: 1, other: 2 } as const;
 
+/**
+ * Places one value in the ordering above, dispatching on its runtime type
+ * because the rows reach here already widened and a declared type is not
+ * available to dispatch on.
+ */
 function rank(value: unknown): number {
   if (typeof value === "number") return TYPE_RANK.number;
   if (typeof value === "string") return TYPE_RANK.string;

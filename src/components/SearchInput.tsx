@@ -26,6 +26,10 @@ export function SearchInput({
   onChange,
   placeholder,
 }: SearchInputProps) {
+  /**
+   * Reports every keystroke upward. Debouncing belongs to whoever owns the
+   * request, not to the control.
+   */
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
   };

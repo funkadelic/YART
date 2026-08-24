@@ -35,14 +35,21 @@ export function Pagination({
   // each other's select.
   const pageSizeId = useId();
 
+  /**
+   * Turns the select's string value into the number the arithmetic divides by.
+   * The option list is fixed at four values, so nothing out of range or
+   * non-numeric can reach the arithmetic through this control.
+   */
   const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onPageSizeChange(Number.parseInt(e.target.value, 10));
   };
 
+  /** Jumps to the first page. */
   const handleFirstPage = () => {
     onPageChange(1);
   };
 
+  /** Jumps to the last page that exists for the current row count. */
   const handleLastPage = () => {
     onPageChange(totalPages);
   };

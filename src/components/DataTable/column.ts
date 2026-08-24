@@ -62,8 +62,12 @@ export interface ColumnOptions<T, V> {
  * string.
  */
 export function columns<T>() {
-  // One place where the accessor is fused into the renderer and the comparator,
-  // so the two public methods below differ only in how they read a value.
+  /**
+   * The one place where the accessor is fused into the renderer and the
+   * comparator, so the two public methods below differ only in how they read a
+   * value. Supplying neither leaves the value stringified for display and
+   * ordered by the shared comparator.
+   */
   function build<Id extends string, V>(
     id: Id,
     read: (row: T) => V,
