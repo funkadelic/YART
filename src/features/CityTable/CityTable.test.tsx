@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CityTable } from "./CityTable";
@@ -55,7 +55,6 @@ const mockCities: City[] = [
 
 const defaultProps = {
   data: mockCities,
-  searchTerm: "",
   onSearchChange: vi.fn(),
   loading: false,
   // The honest default for a fixture that already carries rows.
@@ -99,7 +98,7 @@ describe("CityTable", () => {
   });
 
   describe("Search Functionality", () => {
-    it("calls onSearchChange when typing in search input", async () => {
+    it("reports the term upward once typing has paused, not once per keystroke", async () => {
       const user = userEvent.setup();
       const mockOnSearchChange = vi.fn();
 
@@ -108,16 +107,25 @@ describe("CityTable", () => {
       );
 
       const searchInput = screen.getByRole("textbox", { name: "Search" });
-      await user.type(searchInput, "T");
+      await user.type(searchInput, "Tok");
 
-      // Should be called when typing
-      expect(mockOnSearchChange).toHaveBeenCalledWith("T");
+      // The commit waits for the pause, so three keystrokes settle into one
+      // call carrying the whole word rather than three carrying prefixes.
+      await waitFor(() => {
+        expect(mockOnSearchChange).toHaveBeenCalledWith("Tok");
+      });
+      expect(mockOnSearchChange).toHaveBeenCalledTimes(1);
     });
 
-    it("displays search term in input", () => {
-      render(<CityTable {...defaultProps} searchTerm="Tokyo" />);
+    it("displays what has been typed into the search input", async () => {
+      const user = userEvent.setup();
+      render(<CityTable {...defaultProps} />);
 
       const searchInput = screen.getByRole("textbox", { name: "Search" });
+      await user.type(searchInput, "Tokyo");
+
+      // The box repaints on every keystroke, so it shows the term before the
+      // table has been asked for it.
       expect(searchInput).toHaveValue("Tokyo");
     });
 
@@ -599,19 +607,19 @@ describe("CityTable", () => {
 
     it("returns to the first page when the search term changes", async () => {
       // A different term is a different set of rows, so the position chosen in
-      // the old set carries no meaning into it.
+      // the old set carries no meaning into it. Driven by typing, because that
+      // is the path a reader takes to a new term.
       const user = userEvent.setup();
-      const { rerender } = render(
-        <CityTable {...defaultProps} data={fiftyRowData} />,
-      );
+      render(<CityTable {...defaultProps} data={fiftyRowData} />);
 
       await user.click(screen.getByRole("button", { name: "Go to last page" }));
       expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
 
-      rerender(
-        <CityTable {...defaultProps} data={fiftyRowData} searchTerm="city" />,
-      );
-      expect(screen.getByText("Page 1 of 5")).toBeInTheDocument();
+      await user.type(screen.getByRole("textbox", { name: "Search" }), "city");
+
+      await waitFor(() => {
+        expect(screen.getByText("Page 1 of 5")).toBeInTheDocument();
+      });
     });
   });
 
@@ -809,7 +817,7 @@ describe("CityTable", () => {
     it("announces a search that matches no rows", () => {
       const { container, rerender } = render(<CityTable {...defaultProps} />);
 
-      rerender(<CityTable {...defaultProps} data={[]} searchTerm="zzzz" />);
+      rerender(<CityTable {...defaultProps} data={[]} />);
 
       const regions = container.querySelectorAll('[aria-live="polite"]');
       const announced = Array.from(regions).map((region) => region.textContent);

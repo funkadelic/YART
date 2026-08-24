@@ -20,7 +20,6 @@ const PAGED_CITIES: City[] = Array.from({ length: 50 }, (_, index) => ({
 
 const defaultProps = {
   data: PAGED_CITIES,
-  searchTerm: "",
   onSearchChange: vi.fn(),
   loading: false,
   // The honest default for a fixture that already carries rows.

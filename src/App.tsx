@@ -1,7 +1,6 @@
 import { useEffect, useCallback, useReducer, useState } from "react";
 
 import { getCities } from "./api/getCities";
-import { useDebounce } from "./hooks/useDebounce";
 import { INITIAL_APP_STATE, applyAppAction } from "./appState";
 
 import { RootLayout } from "./features/RootLayout";
@@ -11,8 +10,6 @@ const App = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [{ cities, error, loading, datasetReady, retryAttempt }, dispatch] =
     useReducer(applyAppAction, INITIAL_APP_STATE);
-
-  const debouncedSearchTerm = useDebounce(searchTerm, 150);
 
   useEffect(() => {
     // The asynchronous work sits directly in the effect rather than behind a
@@ -26,7 +23,7 @@ const App = () => {
     // leave the old error on screen beside the new load.
     dispatch({ type: "attempt" });
 
-    getCities({ searchTerm: debouncedSearchTerm })
+    getCities({ searchTerm })
       .then((searchResult) => {
         if (ignore) return;
         dispatch({ type: "resolved", cities: searchResult });
@@ -50,9 +47,12 @@ const App = () => {
     return () => {
       ignore = true;
     };
-  }, [debouncedSearchTerm, retryAttempt]);
+  }, [searchTerm, retryAttempt]);
 
-  // Memoize the search change handler to prevent re-renders
+  // Receives the term the search box has settled on rather than every
+  // keystroke: the debounce lives with the box now, so what arrives here is
+  // already the term worth issuing a request for. Memoized because the child
+  // holds on to it, and an empty dependency array is what makes that hold safe.
   const handleSearchChange = useCallback((term: string) => {
     setSearchTerm(term);
   }, []);
@@ -71,7 +71,6 @@ const App = () => {
       <h1>City List</h1>
       <CityTable
         data={cities}
-        searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
         loading={loading}
         datasetReady={datasetReady}
