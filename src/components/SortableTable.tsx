@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { FiSearch, FiChevronUp, FiChevronDown } from "react-icons/fi";
 import {
   MdFirstPage,
@@ -7,12 +7,12 @@ import {
   MdChevronRight,
 } from "react-icons/md";
 import type { City } from "../api/getCities";
-import { sortRows } from "./DataTable/sortRows";
-import { paginate } from "./paginate";
 import {
   cityColumns,
   type CityColumnId,
 } from "../features/CityTable/cityColumns";
+import { useSortedRows } from "../hooks/useSortedRows";
+import { usePaginatedRows } from "../hooks/usePaginatedRows";
 import styles from "./SortableTable.module.scss";
 
 // Row identity, as text, because that is what the sort module's tiebreak
@@ -82,15 +82,18 @@ export function SortableTable({
     setCurrentPage(1);
   }
 
-  const sortedData = useMemo(() => {
-    const { column, direction } = sortState;
-    const active = cityColumns.find((candidate) => candidate.id === column);
-    return sortRows(data, active, direction, cityRowId);
-  }, [data, sortState]);
+  const sortedData = useSortedRows(
+    data,
+    cityColumns,
+    sortState.column,
+    sortState.direction,
+    cityRowId,
+  );
 
-  const { paginatedData, totalPages, effectivePage } = useMemo(
-    () => paginate(sortedData, currentPage, pageSize),
-    [sortedData, currentPage, pageSize],
+  const { paginatedData, totalPages, effectivePage } = usePaginatedRows(
+    sortedData,
+    currentPage,
+    pageSize,
   );
 
   const handleSort = (column: CityColumnId) => {
