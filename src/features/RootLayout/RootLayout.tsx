@@ -6,7 +6,7 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import styles from "./RootLayout.module.css";
 
 interface RootLayoutProps {
-  children: ReactNode;
+  readonly children: ReactNode;
 }
 
 export function RootLayout({ children }: RootLayoutProps) {

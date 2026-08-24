@@ -11,6 +11,21 @@ interface TableHeadProps<T, Id extends string> {
 }
 
 /**
+ * The header cell's sort state, in the three values the attribute accepts.
+ *
+ * Every column carries one: a sortable column that is not the active one
+ * reports "none" rather than omitting the attribute, so assistive technology
+ * describes it as sortable-but-unsorted instead of not sortable at all.
+ */
+function ariaSort(
+  direction: "asc" | "desc" | null,
+): "ascending" | "descending" | "none" {
+  if (direction === "asc") return "ascending";
+  if (direction === "desc") return "descending";
+  return "none";
+}
+
+/**
  * The header row: one cell per column, each carrying the control that cycles
  * the sort and the state the cycle is currently in.
  *
@@ -37,13 +52,7 @@ export function TableHead<T, Id extends string>({
               key={column.id}
               scope="col"
               style={{ width: column.width }}
-              aria-sort={
-                columnDirection === "asc"
-                  ? "ascending"
-                  : columnDirection === "desc"
-                    ? "descending"
-                    : "none"
-              }
+              aria-sort={ariaSort(columnDirection)}
             >
               {
                 // a11y: the accessible name is the column label alone, so the
