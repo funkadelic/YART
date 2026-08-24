@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_TABLE_STATE,
+  PAGE_SIZE_OPTIONS,
   applyTableAction,
   type TableAction,
   type TableState,
@@ -145,5 +146,12 @@ describe("DEFAULT_TABLE_STATE", () => {
       query: "",
       hasSorted: false,
     });
+  });
+
+  // The one thing that has to hold for the rule that keeps defaults out of the
+  // address and the select's own rendered value to agree, and the first thing
+  // that breaks if the default or the offered list is edited alone.
+  it("starts at a size the table actually offers", () => {
+    expect(PAGE_SIZE_OPTIONS).toContain(DEFAULT_TABLE_STATE.pageSize);
   });
 });

@@ -45,6 +45,21 @@ export const DEFAULT_TABLE_STATE: TableState<never> = {
 };
 
 /**
+ * The page sizes the table offers, in the order it offers them.
+ *
+ * One owner because this list is two things at once: the surface a reader picks
+ * from, and the rule that decides whether a size arriving from outside the
+ * application is one the table can represent. Two independent copies of a list
+ * with no mechanism keeping them in step is a failure mode this project has
+ * already filed once, and it costs one line here to avoid.
+ *
+ * Not narrowed with a const assertion: the membership test reads an arbitrary
+ * number, so a union of the four literals would be a type the caller cannot
+ * hand a value to.
+ */
+export const PAGE_SIZE_OPTIONS: readonly number[] = [10, 25, 50, 100];
+
+/**
  * The fields an action changes, before the page reset is applied over them.
  * Split out so the reset below can be written once for all three actions that
  * trigger it rather than repeated inside each of their branches.

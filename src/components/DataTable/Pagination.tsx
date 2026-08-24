@@ -6,6 +6,7 @@ import {
   MdChevronRight,
 } from "react-icons/md";
 
+import { PAGE_SIZE_OPTIONS } from "./tableState";
 import styles from "./Pagination.module.scss";
 
 interface PaginationProps {
@@ -66,10 +67,11 @@ export function Pagination({
           value={pageSize}
           onChange={handlePageSizeChange}
         >
-          <option value={10}>10</option>
-          <option value={25}>25</option>
-          <option value={50}>50</option>
-          <option value={100}>100</option>
+          {PAGE_SIZE_OPTIONS.map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
         </select>
       </div>
 
