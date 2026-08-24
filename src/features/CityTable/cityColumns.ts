@@ -27,6 +27,26 @@ export const cityColumns = [
 export type CityColumnId = (typeof cityColumns)[number]["id"];
 
 /**
+ * The width every city id is padded to before it is handed over as a row
+ * identity. Ten because the dataset's ids are geoname ids, which the generator
+ * emits at ten digits, and the two rows the parse boundary numbers itself. A
+ * dataset whose ids outgrow this pads to no effect and the identities start
+ * ordering as text again, which is a visible reordering rather than a crash, so
+ * the constant is stated here rather than inlined.
+ */
+const ID_WIDTH = 10;
+
+/**
+ * A row's identity, as text, because that is what the table's tiebreak
+ * compares. Padded so identities that order as text order as the numbers they
+ * are: unpadded, "2" follows "1934976309" and the two lowest ids land at the
+ * end of every group of rows whose sorted column values are equal. City ids are
+ * unique by construction at the parse boundary, and padding preserves that.
+ */
+export const cityRowId = (city: City) =>
+  String(city.id).padStart(ID_WIDTH, "0");
+
+/**
  * Every string the shared table renders that names what its rows are. The table
  * itself carries none of them, which is what lets it show something other than
  * cities without a single edit.

@@ -12,6 +12,9 @@ import type { Column } from "./column";
  * rule a reader can state in a line rather than a rule with an exception. It is
  * also what makes sorting the same set twice produce the same order, rather
  * than whichever order the rows happened to arrive in.
+ *
+ * What that tiebreak decides, and what the caller owes it, is on
+ * compareIdentities below.
  */
 export function sortRows<T, Id extends string>(
   rows: readonly T[],
@@ -27,14 +30,24 @@ export function sortRows<T, Id extends string>(
     const comparison = column.compare(a, b, direction);
     if (comparison !== 0) return comparison;
 
-    // Identities order as text, so an identity of "100" comes before "99".
-    // That is accepted rather than overlooked: this line only ever decides a
-    // pair whose column values already compare equal, so no ordering a reader
-    // can see is affected, and the alternative is a second ordering rule that
-    // has to be held and tested alongside the one above.
-    const aId = getRowId(a);
-    const bId = getRowId(b);
-    if (aId === bId) return 0;
-    return aId < bId ? -1 : 1;
+    return compareIdentities(getRowId(a), getRowId(b));
   });
+}
+
+/**
+ * Orders two row identities, ascending and never flipped by the direction.
+ *
+ * Identities order as text, so an identity of "100" comes before "99". That is
+ * a real ordering a reader can see, not a detail below the surface: it decides
+ * every pair whose column values compare equal, and a column with many equal
+ * values leaves most of the table to this rule. Supplying identities that sort
+ * as text the way their subjects sort is therefore the caller's job, and the
+ * caller is the only one who knows what a row's identity means.
+ *
+ * Exported so a caller reproducing the table's order compares identities the
+ * way the table does, rather than restating the rule and drifting from it.
+ */
+export function compareIdentities(aId: string, bId: string): number {
+  if (aId === bId) return 0;
+  return aId < bId ? -1 : 1;
 }

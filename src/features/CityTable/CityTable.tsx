@@ -8,12 +8,13 @@ import {
   type TableState,
 } from "../../components/DataTable/tableState";
 import { SearchInput } from "../../components/SearchInput";
-import { cityColumns, cityTableLabels, type CityColumnId } from "./cityColumns";
+import {
+  cityColumns,
+  cityRowId,
+  cityTableLabels,
+  type CityColumnId,
+} from "./cityColumns";
 import styles from "./CityTable.module.scss";
-
-// Row identity, as text, because that is what the sort module's tiebreak
-// compares. City ids are unique by construction at the parse boundary.
-const cityRowId = (city: City) => String(city.id);
 
 interface CityTableProps {
   data: City[];

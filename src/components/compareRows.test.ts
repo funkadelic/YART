@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import type { City } from "../api/getCities";
+import { cityRowId } from "../features/CityTable/cityColumns";
 import { CITY_FIXTURE } from "../test/cityFixture";
+import { compareIdentities } from "./DataTable/sortRows";
 import { compareValues } from "./compareRows";
 
 const BLANK_CAPITAL = CITY_FIXTURE.filter((city) => city.capital === "");
@@ -32,15 +34,18 @@ function rowWithCapital(id: number, capital: unknown): City {
 }
 
 /**
- * The comparator no longer sees a row, so the ascending identity tiebreak it
- * used to apply is applied here instead, exactly as the sort module applies it
- * in the application. Every expected order below is therefore the same order
- * this file asserted before the tiebreak moved.
+ * The comparator no longer sees a row, so the identity tiebreak it used to
+ * apply is applied here instead. Both halves are the shipping functions rather
+ * than a local restatement of them: a restatement passes while the product
+ * orders rows differently, which is the failure this composition exists to make
+ * impossible. Every expected order below is the order the application produces.
  */
 function byColumn(column: keyof City, direction: "asc" | "desc") {
   return (a: City, b: City): number => {
     const comparison = compareValues(a[column], b[column], direction);
-    return comparison !== 0 ? comparison : a.id - b.id;
+    return comparison !== 0
+      ? comparison
+      : compareIdentities(cityRowId(a), cityRowId(b));
   };
 }
 
@@ -264,5 +269,59 @@ describe("compareValues", () => {
         );
       }
     }
+  });
+});
+
+describe("the city row identity", () => {
+  /**
+   * The two rows the parse boundary numbers itself, against a row carrying a
+   * geoname id. Both are shorter than every other id in the dataset, and as raw
+   * text a shorter id orders by its first digit rather than its magnitude. The
+   * case is written from the ids alone rather than from fixture rows, because
+   * the fixture carries no short id and so cannot fail this on its own.
+   */
+  const SHORT_IDS = [1, 2];
+  const asRow = (id: number) => ({ ...CITY_FIXTURE[0], id });
+
+  it("orders as the number does, so the lowest ids do not sort last", () => {
+    const geonameId = CITY_FIXTURE[0].id;
+
+    for (const short of SHORT_IDS) {
+      expect(short).toBeLessThan(geonameId);
+
+      expect(
+        compareIdentities(cityRowId(asRow(short)), cityRowId(asRow(geonameId))),
+      ).toBeLessThan(0);
+    }
+  });
+
+  it("has a case that fails without the padding", () => {
+    const geonameId = CITY_FIXTURE[0].id;
+
+    // Not every short id inverts: geoname ids begin with 1, so raw "1" is a
+    // prefix of one and still sorts first. Id 2 is the one that moves, and one
+    // inverted pair is all it takes to reorder every group of tied rows around
+    // it. Asserted so a fixture whose ids stopped beginning with 1 would report
+    // that this case had gone quiet rather than passing on nothing.
+    const inverts = SHORT_IDS.filter(
+      (short) => String(short) > String(geonameId),
+    );
+
+    expect(inverts).toEqual([2]);
+
+    for (const short of inverts) {
+      expect(
+        compareIdentities(cityRowId(asRow(short)), cityRowId(asRow(geonameId))),
+      ).toBeLessThan(0);
+    }
+  });
+
+  it("stays unique across the ids it pads", () => {
+    const rows = [...SHORT_IDS, CITY_FIXTURE[0].id].map((id) => ({
+      ...CITY_FIXTURE[0],
+      id,
+    }));
+
+    expect(new Set(rows.map(cityRowId)).size).toBe(rows.length);
   });
 });
