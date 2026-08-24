@@ -81,4 +81,58 @@ describe("CityTable and the address", () => {
     // equal to it, so the traversal costs no second write.
     expect(window.location.search).toBe("?page=3");
   });
+
+  // The empty branch in the shared table asks how many rows the slice produced,
+  // not how many rows there are, so a position that reaches the slice without
+  // passing through the clamp renders the no-results copy over rows that exist.
+  // The clamp is what stops that, and it corrects the read alone: the position
+  // the reader was handed stays where they can see it, so a set that widens
+  // again puts them back and a position arriving before its rows do is not
+  // corrected against no rows at all.
+  it("shows the last page that exists for a position past the end, and leaves that position in the address", () => {
+    openAt("?page=999");
+
+    render(<CityTable {...defaultProps} />);
+
+    expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
+    expect(screen.getByText("City 50")).toBeInTheDocument();
+    expect(screen.queryByText("No cities found")).not.toBeInTheDocument();
+    expect(window.location.search).toBe("?page=999");
+  });
+
+  // What makes one Back press leave the site rather than walking the reader
+  // back through positions they never asked to record.
+  it("adds no history entry for any amount of paging", async () => {
+    const user = userEvent.setup({ delay: null });
+
+    render(<CityTable {...defaultProps} />);
+
+    const entriesBefore = window.history.length;
+
+    await user.click(screen.getByRole("button", { name: "Go to next page" }));
+    await user.click(screen.getByRole("button", { name: "Go to last page" }));
+    await user.click(
+      screen.getByRole("button", { name: "Go to previous page" }),
+    );
+    await user.selectOptions(screen.getByLabelText("Per page:"), "25");
+
+    expect(window.history.length).toBe(entriesBefore);
+  });
+
+  // The case a suite that only ever sets parameters never reaches: an empty
+  // query has to be written as the path, because the empty string resolves to
+  // the address it was given and leaves the stale query in place.
+  it("clears the query completely when the reader returns to the first page", async () => {
+    const user = userEvent.setup({ delay: null });
+
+    render(<CityTable {...defaultProps} />);
+
+    await user.click(screen.getByRole("button", { name: "Go to last page" }));
+    expect(window.location.search).toBe("?page=5");
+
+    await user.click(screen.getByRole("button", { name: "Go to first page" }));
+
+    expect(screen.getByText("Page 1 of 5")).toBeInTheDocument();
+    expect(window.location.search).toBe("");
+  });
 });
