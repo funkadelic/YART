@@ -36,7 +36,7 @@ export function Pagination({
   const pageSizeId = useId();
 
   const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onPageSizeChange(parseInt(e.target.value, 10));
+    onPageSizeChange(Number.parseInt(e.target.value, 10));
   };
 
   const handleFirstPage = () => {
@@ -72,6 +72,7 @@ export function Pagination({
           className={styles.navigationContainer}
         >
           <button
+            type="button"
             onClick={handleFirstPage}
             disabled={page === 1}
             title="Go to first page"
@@ -86,6 +87,7 @@ export function Pagination({
           </button>
 
           <button
+            type="button"
             onClick={() => onPageChange(page - 1)}
             disabled={page === 1}
             title="Go to previous page"
@@ -108,6 +110,7 @@ export function Pagination({
           </span>
 
           <button
+            type="button"
             onClick={() => onPageChange(page + 1)}
             disabled={page === totalPages}
             title="Go to next page"
@@ -118,6 +121,7 @@ export function Pagination({
           </button>
 
           <button
+            type="button"
             onClick={handleLastPage}
             disabled={page === totalPages}
             title="Go to last page"
