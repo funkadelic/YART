@@ -1,26 +1,16 @@
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useReducer, useState } from "react";
 
-import type { City } from "./api/getCities";
 import { getCities } from "./api/getCities";
 import { useDebounce } from "./hooks/useDebounce";
+import { INITIAL_APP_STATE, applyAppAction } from "./appState";
 
 import { RootLayout } from "./features/RootLayout";
 import { CityTable } from "./features/CityTable";
 
 const App = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [cities, setCities] = useState<City[]>([]);
-  const [error, setError] = useState<Error | null>(null);
-  const [loading, setLoading] = useState(false);
-  // The loading flag is also true for a refetch that follows an empty result
-  // set, so on its own it cannot say whether the wait is a download or a
-  // search. This records the one fact it cannot carry: whether the collection
-  // has arrived at least once.
-  const [datasetReady, setDatasetReady] = useState(false);
-  // The retry control below increments retryAttempt, and the effect lists it as
-  // a dependency, which is what lets a failed load be run again without a page
-  // reload.
-  const [retryAttempt, setRetryAttempt] = useState(0);
+  const [{ cities, error, loading, datasetReady, retryAttempt }, dispatch] =
+    useReducer(applyAppAction, INITIAL_APP_STATE);
 
   const debouncedSearchTerm = useDebounce(searchTerm, 150);
 
@@ -34,26 +24,27 @@ const App = () => {
 
     // Clear the last failure as the new attempt starts, so a retry does not
     // leave the old error on screen beside the new load.
-    setError(null);
-    setLoading(true);
+    dispatch({ type: "attempt" });
 
     getCities({ searchTerm: debouncedSearchTerm })
       .then((searchResult) => {
         if (ignore) return;
-        setCities(searchResult);
-        setDatasetReady(true);
+        dispatch({ type: "resolved", cities: searchResult });
       })
       .catch((err: unknown) => {
         if (ignore) return;
         if (err instanceof Error) {
-          setError(err);
+          dispatch({ type: "failed", error: err });
         } else {
-          setError(new Error("An unexpected error occurred"));
+          dispatch({
+            type: "failed",
+            error: new Error("An unexpected error occurred"),
+          });
         }
       })
       .finally(() => {
         if (ignore) return;
-        setLoading(false); // always set loading to false for either try or catch
+        dispatch({ type: "settled" }); // always lower loading for either try or catch
       });
 
     return () => {
@@ -72,7 +63,7 @@ const App = () => {
   // deployment behind a spinner and re-downloads several megabytes of city data
   // with nobody watching.
   const handleRetry = useCallback(() => {
-    setRetryAttempt((previousAttempt) => previousAttempt + 1);
+    dispatch({ type: "retry" });
   }, []);
 
   return (
