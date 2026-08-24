@@ -11,6 +11,11 @@ import {
   cityColumns,
   type CityColumnId,
 } from "../features/CityTable/cityColumns";
+import {
+  DEFAULT_TABLE_STATE,
+  applyTableAction,
+  type TableState,
+} from "./DataTable/tableState";
 import { useSortedRows } from "../hooks/useSortedRows";
 import { usePaginatedRows } from "../hooks/usePaginatedRows";
 import styles from "./SortableTable.module.scss";
@@ -30,13 +35,6 @@ interface SortableTableProps {
   // Optional so the table stays usable on its own, without a container to
   // re-run the request behind it.
   onRetry?: () => void;
-}
-
-type SortDirection = "asc" | "desc" | null;
-
-interface SortState {
-  column: CityColumnId | null;
-  direction: SortDirection;
 }
 
 /**
@@ -60,78 +58,59 @@ export function SortableTable({
   error,
   onRetry,
 }: SortableTableProps) {
-  const [sortState, setSortState] = useState<SortState>({
-    column: null,
-    direction: null,
-  });
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  // A cleared sort and a sort that has never been applied render the same
-  // state, so the announcement needs to know which of the two it is looking at:
-  // the first render has to stay silent, the third press on a column does not.
-  const [hasSorted, setHasSorted] = useState(false);
+  // Initialised with the term already in place, so the first render is the
+  // table the container asked for rather than one that resets itself on mount.
+  const [tableState, setTableState] = useState<TableState<CityColumnId>>(
+    () => ({ ...DEFAULT_TABLE_STATE, query: searchTerm }),
+  );
 
   // A new term is a different set of rows rather than a narrowing of the
   // current one, so the position the user chose in the old set does not carry
   // any meaning into it. Adjusting during render rather than in an effect keeps
   // the stale page from being painted first.
-  const [lastSearchTerm, setLastSearchTerm] = useState(searchTerm);
-  if (searchTerm !== lastSearchTerm) {
-    setLastSearchTerm(searchTerm);
-    setCurrentPage(1);
+  if (searchTerm !== tableState.query) {
+    setTableState(
+      applyTableAction(tableState, { type: "query", query: searchTerm }),
+    );
   }
 
   const sortedData = useSortedRows(
     data,
     cityColumns,
-    sortState.column,
-    sortState.direction,
+    tableState.sortColumnId,
+    tableState.sortDirection,
     cityRowId,
   );
 
   const { paginatedData, totalPages, effectivePage } = usePaginatedRows(
     sortedData,
-    currentPage,
-    pageSize,
+    tableState.page,
+    tableState.pageSize,
   );
 
-  const handleSort = (column: CityColumnId) => {
-    setSortState((prevState) => {
-      if (prevState.column !== column) {
-        // New column: start with ascending
-        return { column, direction: "asc" };
-      } else {
-        // Same column: cycle through states
-        if (prevState.direction === "asc") {
-          return { column, direction: "desc" };
-        } else if (prevState.direction === "desc") {
-          return { column: null, direction: null };
-        } else {
-          return { column, direction: "asc" };
-        }
-      }
-    });
-    setHasSorted(true);
-    setCurrentPage(1); // Reset to first page when sorting changes
+  const handleSort = (columnId: CityColumnId) => {
+    setTableState((state) =>
+      applyTableAction(state, { type: "sort", columnId }),
+    );
   };
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+    setTableState((state) => applyTableAction(state, { type: "page", page }));
   };
 
   const handleFirstPage = () => {
-    setCurrentPage(1);
+    handlePageChange(1);
   };
 
   const handleLastPage = () => {
-    setCurrentPage(totalPages);
+    handlePageChange(totalPages);
   };
 
   const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newPageSize = parseInt(e.target.value, 10);
-    setPageSize(newPageSize);
-    setCurrentPage(1); // Reset to first page when page size changes
+    const pageSize = parseInt(e.target.value, 10);
+    setTableState((state) =>
+      applyTableAction(state, { type: "pageSize", pageSize }),
+    );
   };
 
   // Handle search input changes
@@ -140,19 +119,19 @@ export function SortableTable({
   };
 
   // The announcements name what is on screen, and what is on screen is the
-  // column label. sortState.column is the field name, which is not the name of
+  // column label. tableState.sortColumnId is the field name, which is not the name of
   // anything the reader can see.
   const activeLabel = cityColumns.find(
-    (column) => column.id === sortState.column,
+    (column) => column.id === tableState.sortColumnId,
   )?.label;
 
   return (
     <div className={styles.container}>
       {/* a11y: Live region for announcing sort changes */}
       <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
-        {sortState.direction && activeLabel
-          ? `Table sorted by ${activeLabel} in ${sortState.direction === "asc" ? "ascending" : "descending"} order`
-          : hasSorted
+        {tableState.sortDirection && activeLabel
+          ? `Table sorted by ${activeLabel} in ${tableState.sortDirection === "asc" ? "ascending" : "descending"} order`
+          : tableState.hasSorted
             ? "Table sort cleared"
             : ""}
       </div>
@@ -224,16 +203,16 @@ export function SortableTable({
                 <table className={styles.table}>
                   <caption className={styles.srOnly}>
                     City data with {sortedData.length} entries, currently{" "}
-                    {sortState.direction
-                      ? `sorted by ${activeLabel} ${sortState.direction}ending`
+                    {tableState.sortDirection
+                      ? `sorted by ${activeLabel} ${tableState.sortDirection}ending`
                       : "not sorted"}
                   </caption>
                   <thead>
                     <tr>
                       {cityColumns.map((column) => {
-                        const isActive = sortState.column === column.id;
+                        const isActive = tableState.sortColumnId === column.id;
                         const sortDirection = isActive
-                          ? sortState.direction
+                          ? tableState.sortDirection
                           : null;
 
                         return (
@@ -293,7 +272,7 @@ export function SortableTable({
                   <label htmlFor="pageSize">Per page:</label>
                   <select
                     id="pageSize"
-                    value={pageSize}
+                    value={tableState.pageSize}
                     onChange={handlePageSizeChange}
                   >
                     <option value={10}>10</option>
