@@ -1,9 +1,28 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 
 import { CityTable } from "./CityTable";
+import App from "../../App";
+import { getCities } from "../../api/getCities";
 import type { City } from "../../api/getCities";
+
+// One case in this file renders the whole application rather than this feature,
+// because the property it asserts belongs to the address rather than to either
+// component: a link carrying a term has to produce exactly one request, and
+// that is only observable where the request is issued. The factory delegates to
+// the real module, so nothing else in the file changes behaviour.
+vi.mock("../../api/getCities", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../api/getCities")>();
+  return { ...actual, getCities: vi.fn(actual.getCities) };
+});
+
+/**
+ * How long typing has to pause before the term is committed. The same window
+ * the feature applies, restated here because a test that reached in for the
+ * constant would pass for any window at all.
+ */
+const SEARCH_DEBOUNCE_MS = 150;
 
 // Fifty rows rather than the handful the neighbouring suite renders. At the
 // default page size that is five pages, which is the smallest set a position
@@ -31,6 +50,13 @@ const defaultProps = {
 const openAt = (search: string) => {
   window.history.replaceState(null, "", search);
 };
+
+// A restore rather than a guard: a file that installs a controlled clock in one
+// block and never puts the real one back leaks the frozen clock into whatever
+// runs next, and a restore that only runs on the happy path is not a restore.
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("CityTable and the address", () => {
   it("paints the page named in the address on the first render", () => {
@@ -265,5 +291,128 @@ describe("CityTable and the address", () => {
     await user.click(screen.getByRole("button", { name: "Go to next page" }));
 
     expect(window.location.search).toBe("?page=2&utm_source=x&dir=sideways");
+  });
+});
+
+describe("CityTable, the address, and the search term", () => {
+  it("paints all five values on the first render for a link that carries all four keys", () => {
+    openAt("?q=City&sort=-population&page=2&size=25");
+
+    render(<CityTable {...defaultProps} />);
+
+    expect(screen.getByRole("textbox", { name: "Search" })).toHaveValue("City");
+    expect(
+      screen.getByRole("columnheader", { name: /Population/ }),
+    ).toHaveAttribute("aria-sort", "descending");
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+    expect(screen.getByLabelText("Per page:")).toHaveValue("25");
+    // Already canonical, so the arriving link is left exactly as it was.
+    expect(window.location.search).toBe(
+      "?q=City&sort=-population&page=2&size=25",
+    );
+  });
+
+  it("issues one request, for the term the link carries, on a cold start", () => {
+    openAt("?q=tokyo&sort=-population&page=2&size=25");
+
+    const seam = vi.mocked(getCities);
+    // Never settles, so the request is counted without a resolution landing
+    // outside the render this case drives. What is asserted is which request
+    // went out, not what came back.
+    seam.mockReturnValue(new Promise<City[]>(() => {}));
+
+    render(<App />);
+
+    expect(seam).toHaveBeenCalledTimes(1);
+    expect(seam).toHaveBeenCalledWith({ searchTerm: "tokyo" });
+  });
+
+  it("restores the box, reports the term upward, and applies the other values in the same update", () => {
+    const onSearchChange = vi.fn();
+
+    render(<CityTable {...defaultProps} onSearchChange={onSearchChange} />);
+
+    openAt("?q=kyoto&sort=-population&page=2&size=25");
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(screen.getByRole("textbox", { name: "Search" })).toHaveValue(
+      "kyoto",
+    );
+    expect(onSearchChange).toHaveBeenCalledTimes(1);
+    expect(onSearchChange).toHaveBeenCalledWith("kyoto");
+    expect(
+      screen.getByRole("columnheader", { name: /Population/ }),
+    ).toHaveAttribute("aria-sort", "descending");
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+    expect(screen.getByLabelText("Per page:")).toHaveValue("25");
+  });
+
+  // A link stating the defaults out loud is the same view as a link stating
+  // nothing, so the write that follows has to leave nothing behind: all four
+  // keys removed, and the address back to a bare path.
+  it("leaves no query at all for a link whose every value is the default", () => {
+    openAt("?q=&sort=&page=1&size=10");
+
+    render(<CityTable {...defaultProps} />);
+
+    expect(screen.getByRole("textbox", { name: "Search" })).toHaveValue("");
+    expect(screen.getByText("Page 1 of 5")).toBeInTheDocument();
+    expect(window.location.search).toBe("");
+  });
+});
+
+// The clock is installed here and nowhere else in this file: the cases above
+// run on a real one, and the two below are about when a write happens rather
+// than what it says, which is not observable without owning the clock.
+describe("CityTable and the debounced address write", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  it("writes the address once and reports upward once, after typing pauses", async () => {
+    const user = userEvent.setup({ delay: null });
+    const onSearchChange = vi.fn();
+    const replaceState = vi.spyOn(window.history, "replaceState");
+
+    render(<CityTable {...defaultProps} onSearchChange={onSearchChange} />);
+
+    await user.type(screen.getByRole("textbox", { name: "Search" }), "tokyo");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS - 1);
+    });
+    expect(replaceState).not.toHaveBeenCalled();
+    expect(onSearchChange).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    expect(replaceState).toHaveBeenCalledTimes(1);
+    expect(onSearchChange).toHaveBeenCalledTimes(1);
+    expect(onSearchChange).toHaveBeenCalledWith("tokyo");
+    expect(window.location.search).toBe("?q=tokyo");
+  });
+
+  it("writes nothing further when the reader pauses again without typing", async () => {
+    const user = userEvent.setup({ delay: null });
+    const replaceState = vi.spyOn(window.history, "replaceState");
+
+    render(<CityTable {...defaultProps} />);
+
+    await user.type(screen.getByRole("textbox", { name: "Search" }), "tokyo");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+    });
+    expect(replaceState).toHaveBeenCalledTimes(1);
+
+    // The state is unchanged, so the serialized address equals the one already
+    // in the bar and the guard ahead of the write is what stops a second one.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+    });
+
+    expect(replaceState).toHaveBeenCalledTimes(1);
   });
 });
