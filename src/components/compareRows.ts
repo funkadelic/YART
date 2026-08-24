@@ -1,5 +1,3 @@
-import type { City } from "../api/getCities";
-
 /**
  * One collator for the module's lifetime. Building one inside the comparison
  * would build roughly eight hundred thousand of them for a single sort of the
@@ -36,6 +34,11 @@ function isBlank(value: unknown): boolean {
  */
 const TYPE_RANK = { number: 0, string: 1, other: 2 } as const;
 
+/**
+ * Places one value in the ordering above, dispatching on its runtime type
+ * because the rows reach here already widened and a declared type is not
+ * available to dispatch on.
+ */
 function rank(value: unknown): number {
   if (typeof value === "number") return TYPE_RANK.number;
   if (typeof value === "string") return TYPE_RANK.string;
@@ -43,7 +46,7 @@ function rank(value: unknown): number {
 }
 
 /**
- * Orders two rows by one column.
+ * Orders two already-widened values.
  *
  * The three rules below compose in an order that is load-bearing, so read them
  * as a sequence rather than as a set.
@@ -63,23 +66,17 @@ function rank(value: unknown): number {
  * table becomes generic over its row type and that guarantee stops covering the
  * input.
  *
- * The row-id tiebreak runs last and is never flipped, which keeps it one rule a
- * reader can state in a line instead of a rule with an exception. It is also
- * what makes sorting the same set twice produce the same order, rather than
- * whichever order the rows happened to arrive in.
+ * The row-identity tiebreak that used to run last is no longer here. It ran on
+ * a field of the row, and this function no longer sees a row: identity is a
+ * table-level prop, not a fact a column can know about itself. It now runs in
+ * the sort module, after this function returns and never flipped, so the rule
+ * itself is unchanged.
  */
-export function compareRows(
-  a: City,
-  b: City,
-  column: keyof City,
+export function compareValues(
+  aValue: unknown,
+  bValue: unknown,
   direction: "asc" | "desc",
 ): number {
-  // Widened rather than asserted. City declares no nullable field and no field
-  // that is sometimes text and sometimes a number, so against the declared
-  // types the defensive arms below are branches the compiler would reject.
-  const aValue: unknown = a[column];
-  const bValue: unknown = b[column];
-
   const aBlank = isBlank(aValue);
   const bBlank = isBlank(bValue);
   if (aBlank !== bBlank) return aBlank ? 1 : -1;
@@ -92,8 +89,9 @@ export function compareRows(
       comparison = aRank - bRank;
     } else if (aRank === TYPE_RANK.number) {
       // Compared rather than subtracted. Two infinities of the same sign
-      // subtract to NaN, which would skip the row-id tiebreak below and leave
-      // the order up to the sort, and a subtraction of two large magnitudes
+      // subtract to NaN, which would skip the identity tiebreak the sort module
+      // applies after this returns and leave the order up to the sort, and a
+      // subtraction of two large magnitudes
       // reports a difference where a direction is all that is wanted.
       const aNumber = aValue as number;
       const bNumber = bValue as number;
@@ -103,6 +101,10 @@ export function compareRows(
     }
   }
 
-  const directed = direction === "desc" ? -comparison : comparison;
-  return directed !== 0 ? directed : a.id - b.id;
+  // Returned ahead of the flip so an equal pair comes back as a positive zero
+  // in both directions. Negating zero gives negative zero, which every ordering
+  // rule downstream reads as a tie but which an equality check does not: the
+  // pair would compare equal ascending and not equal descending.
+  if (comparison === 0) return 0;
+  return direction === "desc" ? -comparison : comparison;
 }

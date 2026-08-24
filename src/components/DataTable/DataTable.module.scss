@@ -1,0 +1,111 @@
+@use "../../styles/visually-hidden" as *;
+
+// the table parent container
+.tableContainer {
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  margin-bottom: var(--space-5);
+}
+
+// Refetching with results already on screen: dim in place rather than
+// unmounting the table, so typing in the search box does not flash.
+.refreshing {
+  opacity: 0.6;
+  transition: opacity 120ms ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .refreshing {
+    transition: none;
+  }
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; // don't let table auto layout otherwise columns will shift when paginating
+
+  th {
+    background-color: var(--color-surface-raised);
+    border-bottom: 2px solid var(--color-border);
+
+    &:not(:last-child) {
+      border-right: 1px solid var(--color-border);
+    }
+  }
+
+  td {
+    border-bottom: 1px solid var(--color-border);
+
+    &:not(:last-child) {
+      border-right: 1px solid var(--color-border);
+    }
+  }
+
+  th,
+  td {
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--font-size-base);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none; // last in row needs no border otherwise it will have thicker border due to the parent container border
+  }
+}
+
+.loading,
+.error,
+.noResults {
+  text-align: center;
+  padding: var(--space-10) var(--space-5);
+  font-size: var(--font-size-base);
+}
+
+.error {
+  color: var(--color-error);
+}
+
+// The way back out of a failed load. Styled in the same idiom as the page
+// buttons, which now live in their own module, so the one control the error
+// region offers does not read as unstyled browser chrome next to the rest of
+// the table. Its own line rather than inline after
+// the message, so the space between the two does not depend on where the
+// message happens to wrap.
+.retryButton {
+  display: block;
+  margin: var(--space-4) auto 0;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border);
+  padding: var(--space-1-5) var(--space-3);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+
+  &:hover {
+    background: var(--color-surface-hover);
+  }
+}
+
+// Screen reader only content, from the shared partial: the theme control in the
+// header hides its radio inputs the same way, and one definition is what keeps
+// the two from drifting.
+.srOnly {
+  @include visually-hidden;
+}
+
+// responsive styles
+@media (width <= 768px) {
+  .tableContainer {
+    overflow-x: auto;
+    width: 0; // Force container to not expand
+    min-width: 100%; // But ensure it takes available space
+  }
+
+  .table {
+    table-layout: auto; // we set back to auto to force the horizontal scrollbars to appear, otherwise the browser will trying to squeeze everything into the viewport
+
+    th {
+      white-space: nowrap; // Prevent header text from wrapping to illustrate a wider horizontal scroll
+    }
+  }
+}

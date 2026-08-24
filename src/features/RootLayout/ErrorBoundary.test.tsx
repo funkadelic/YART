@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ErrorBoundary } from "./ErrorBoundary";
 import { RootLayout } from "./RootLayout";
-import { SortableTable } from "../../components/SortableTable";
+import { CityTable } from "../CityTable";
 
 const THROWN_MESSAGE = "a render threw this";
 
@@ -171,7 +171,7 @@ describe("ErrorBoundary mounted in the layout", () => {
   it("shows the inline asynchronous error region as the only alert region when a request rejects", () => {
     render(
       <RootLayout>
-        <SortableTable
+        <CityTable
           data={[]}
           searchTerm=""
           onSearchChange={() => {}}

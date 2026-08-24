@@ -17,7 +17,19 @@ export default defineConfig({
       // report covers only files a test happened to import, so deleting the last
       // test that touched a module would raise the percentage.
       include: ["src/**/*.{ts,tsx}"],
-      exclude: ["src/**/*.test.{ts,tsx}", "src/test/**", "src/**/*.d.ts"],
+      exclude: [
+        "src/**/*.test.{ts,tsx}",
+        "src/test/**",
+        "src/**/*.d.ts",
+        // The type-level assertion file. Its claims are settled by the compiler
+        // and it ships to nobody, but the two columns it asserts about are real
+        // values built by the real factory, which is what makes the claims
+        // testable rather than restatements of themselves. Nothing loads them,
+        // so the file reports zero and no test could honestly raise it. Its
+        // sibling under features/ needs no entry: that one holds types only and
+        // compiles away to nothing.
+        "src/components/DataTable/columnTypes.ts",
+      ],
     },
   },
 });

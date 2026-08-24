@@ -107,54 +107,100 @@ The history contains a one-time commit that reformatted every file. Run
 
 ## Usage
 
-`<SortableTable>` owns sorting and pagination, not the data. The parent
-fetches, filters, and hands down a plain array, so the component stays
-indifferent to where rows come from, a local array today or a paginated
-endpoint later.
+The table comes in two pieces. `DataTable<T, Id>` renders any collection and
+holds nothing: sort, page, page size and the committed query all arrive in one
+object and leave as callbacks describing what the user did. A container decides
+what the next object is and supplies the columns, the row identity and every
+string that names what the rows are.
+
+`CityTable` is that container for this app. Writing another one is how the table
+renders something other than cities.
+
+Start with the columns. `columns<T>()` is curried because TypeScript infers all
+of a call's type arguments or none of them: the row type is the one thing you
+know and the compiler cannot guess, so you supply it once and the column id and
+value type are inferred per call.
 
 ```tsx
-import { useCallback, useEffect, useState } from "react";
+import { columns } from "./components/DataTable/column";
 
-import { getCities, type City } from "./api/getCities";
-import { useDebounce } from "./hooks/useDebounce";
-import { SortableTable } from "./components/SortableTable";
+const col = columns<City>();
 
-function CityBrowser() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [cities, setCities] = useState<City[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [datasetReady, setDatasetReady] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+// Module scope, not a component body. Rebuilding the array on every render
+// hands the table a new one on every keystroke and defeats the memos below it.
+export const cityColumns = [
+  col.key("name", { label: "City" }),
+  col.key("country", { label: "Country" }),
+  col.key("population", {
+    label: "Population",
+    renderCell: (value) => value.toLocaleString(),
+  }),
+];
 
-  // Wait 150ms after the last keystroke before hitting the API.
-  const debouncedSearchTerm = useDebounce(searchTerm, 150);
+// The literal union of the ids above, with no assertion written anywhere.
+export type CityColumnId = (typeof cityColumns)[number]["id"];
+```
 
-  const runSearch = useCallback(async (term: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      setCities(await getCities({ searchTerm: term }));
-      setDatasetReady(true);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error("Unexpected error"));
-    } finally {
-      setLoading(false);
-    }
+Every string that names what the rows are comes from the same place, for the
+same reason: a shared component carrying one collection's nouns would be shared
+in name only.
+
+```tsx
+export const cityTableLabels: DataTableLabels = {
+  loading: "Downloading the city data...",
+  empty: "No cities found",
+  emptyAnnouncement: "No cities found for that search",
+  results: (shown, total) =>
+    `Showing ${shown} cities out of ${total} total results`,
+  caption: (total, sortSummary) =>
+    `City data with ${total} entries, currently ${sortSummary}`,
+};
+```
+
+Then hold the state and hand it down:
+
+```tsx
+import { useCallback, useState } from "react";
+
+import { DataTable } from "./components/DataTable/DataTable";
+import {
+  DEFAULT_TABLE_STATE,
+  applyTableAction,
+  type TableState,
+} from "./components/DataTable/tableState";
+
+function CityTable({ data, loading, datasetReady, error, onRetry }: Props) {
+  const [state, setState] =
+    useState<TableState<CityColumnId>>(DEFAULT_TABLE_STATE);
+
+  // The functional updater keeps these dependency arrays empty, so the
+  // callbacks hold one identity for the life of the table.
+  const handleSort = useCallback((columnId: CityColumnId) => {
+    setState((s) => applyTableAction(s, { type: "sort", columnId }));
   }, []);
 
-  useEffect(() => {
-    runSearch(debouncedSearchTerm);
-  }, [runSearch, debouncedSearchTerm]);
+  const handlePageChange = useCallback((page: number) => {
+    setState((s) => applyTableAction(s, { type: "page", page }));
+  }, []);
+
+  const handlePageSizeChange = useCallback((pageSize: number) => {
+    setState((s) => applyTableAction(s, { type: "pageSize", pageSize }));
+  }, []);
 
   return (
-    <SortableTable
-      data={cities}
-      searchTerm={searchTerm}
-      onSearchChange={setSearchTerm}
+    <DataTable
+      rows={data}
+      columns={cityColumns}
+      getRowId={(city) => String(city.id).padStart(10, "0")}
+      state={state}
+      onSortChange={handleSort}
+      onPageChange={handlePageChange}
+      onPageSizeChange={handlePageSizeChange}
       loading={loading}
       datasetReady={datasetReady}
       error={error}
-      onRetry={() => runSearch(debouncedSearchTerm)}
+      onRetry={onRetry}
+      labels={cityTableLabels}
     />
   );
 }
@@ -162,24 +208,44 @@ function CityBrowser() {
 
 ### Props
 
-| Prop             | Type                     | Description                                                                                                                                                                                  |
-| ---------------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `data`           | `City[]`                 | Rows to display. Already filtered by the caller.                                                                                                                                             |
-| `searchTerm`     | `string`                 | Current value of the search box. The input is controlled, so this must be state the caller owns.                                                                                             |
-| `onSearchChange` | `(term: string) => void` | Called on every keystroke. Debouncing belongs to the caller, not the table.                                                                                                                  |
-| `loading`        | `boolean`                | True while a request is in flight. A refetch leaves the table mounted and marks it busy.                                                                                                     |
-| `datasetReady`   | `boolean`                | False until the dataset has arrived at least once. The download message renders only while `loading` is true and this is false, so a refetch that returns no rows does not claim a download. |
-| `error`          | `Error \| null`          | Renders the error message in place of the table, in a live region so it is announced. A failed dataset download cannot be corrected by editing the query, so pass `onRetry` alongside it.    |
-| `onRetry`        | `() => void`             | Optional. Called when the user activates the retry control in the error region. Omit it when the caller has no retry to offer.                                                               |
+| Prop               | Type                         | Description                                                                                                                                                                                     |
+| ------------------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rows`             | `readonly T[]`               | Rows to display. Already filtered by the caller.                                                                                                                                                |
+| `columns`          | `readonly Column<T, Id>[]`   | Built with `columns<T>()`. The id union is inferred from this array alone.                                                                                                                      |
+| `getRowId`         | `(row: T) => string`         | Must be injective. See below.                                                                                                                                                                   |
+| `state`            | `TableState<Id>`             | Sort column and direction, page, page size, committed query, and whether a sort has ever been applied.                                                                                          |
+| `onSortChange`     | `(columnId: Id) => void`     | A header was activated. Feed it to `applyTableAction` to get the next state.                                                                                                                    |
+| `onPageChange`     | `(page: number) => void`     | A pagination control was activated.                                                                                                                                                             |
+| `onPageSizeChange` | `(pageSize: number) => void` | The page size select changed.                                                                                                                                                                   |
+| `loading`          | `boolean`                    | True while a request is in flight. A refetch leaves the table mounted and marks it busy.                                                                                                        |
+| `datasetReady`     | `boolean`                    | False until the collection has arrived at least once. The download message renders only while `loading` is true and this is false, so a refetch that returns no rows does not claim a download. |
+| `error`            | `Error \| null`              | Renders the error message in place of the table, in a live region so it is announced. Pass `onRetry` alongside it when the failure is not something editing the query can correct.              |
+| `onRetry`          | `() => void`                 | Optional. Called when the user activates the retry control. Omit it when the caller has no retry to offer.                                                                                      |
+| `labels`           | `DataTableLabels`            | Every rendered string that names what the rows are: `loading`, `empty`, `emptyAnnouncement`, and the `results` and `caption` functions that weave counts into a sentence.                       |
 
 If both `loading` and `error` are set, `error` wins.
 
+Every column is sortable. There is no per-column opt out, because the previous
+one existed to keep a hand-written `<tbody>` in step with the header array, and
+neither is hand-written now.
+
+### Why `getRowId` must be injective
+
+It does two jobs: it keys the rows for reconciliation, and it breaks ties
+between equal values in the sort. Two rows sharing an id lose their identity and
+their ordering in the same stroke.
+
+It returns a string, and the tiebreak compares that string as text, so an id
+that is really a number has to be padded to sort as one. Unpadded, `"2"` follows
+`"1934976309"` and the two lowest ids land at the end of every group of rows
+whose sorted values are equal. `cityRowId` pads to ten digits for that reason.
+
 ### Why the caller debounces
 
-The table calls `onSearchChange` on every keystroke and renders whatever `data`
-it is given. That split means the debounce interval, the request, and the
-retry policy are all decisions the caller makes. Swapping the 150ms delay for
-300ms, or replacing the fake API with a real endpoint, touches no table code.
+`SearchInput` calls `onChange` on every keystroke and `DataTable` renders
+whatever `rows` it is given. That split leaves the debounce interval, the
+request and the retry policy to the caller. Swapping the 150ms delay for 300ms,
+or replacing the simulated API with a real endpoint, touches no table code.
 
 The `useDebounce` hook is standalone and works with any value:
 
@@ -191,36 +257,59 @@ const debouncedFilters = useDebounce(filters, 300);
 
 ### Columns
 
-Columns are defined in an array near the top of `SortableTable`:
+Columns are built with `columns<T>()`, which returns two methods. `key` names a
+field on the row and reads it; `accessor` computes a value the row does not
+carry:
 
 ```tsx
-const columns: Column[] = [
-  { key: "name", label: "City", sortable: true },
-  { key: "country", label: "Country", sortable: true },
-  { key: "capital", label: "Capital", sortable: true },
-  { key: "countryIso3", label: "Country Code", sortable: true },
-  { key: "population", label: "Population", sortable: true },
-];
+const col = columns<Part>();
+
+col.key("name", { label: "Part" });
+col.accessor("total", (row) => row.qty * row.unitPrice, { label: "Total" });
 ```
 
-`key` must be a key of `City`, `label` is the header text, and
-`sortable: false` renders a plain header with no click target, no keyboard
-handler, and no `aria-sort`.
+`key` is constrained to the row type's own string keys, so a misspelled field is a
+compile error rather than a column of `undefined`. `accessor` takes any id,
+because its value is computed and answers to no field.
 
-Adding or reordering a column means editing two places: this array and the
-`<tbody>` cells, which are written out by hand so each one can format its own
-value, for example `city.population.toLocaleString()`. Fix that before reusing
-this elsewhere. See [Notes and next steps](#notes-and-next-steps).
+Both accept `renderCell` and `compare`. Each is handed the column's value
+already read, so neither has to know where it came from:
+
+```tsx
+col.key("population", {
+  label: "Population",
+  renderCell: (value) => value.toLocaleString(),
+  compare: (a, b, direction) => (direction === "asc" ? a - b : b - a),
+});
+```
+
+Omit `renderCell` and the value is stringified. Omit `compare` and the shared
+comparator runs.
+
+Adding or reordering a column is one edit to the array. The header and the cells
+both come from the descriptor, so there is no second place to keep in step.
 
 ### Sort comparison
 
-Sorting branches on the runtime type of the cell: strings go through
-`localeCompare`, numbers subtract. Anything else keeps its original order.
-Dates or custom orderings need a case added in the `sortedData` memo.
+The shared comparator takes the direction rather than being flipped by its
+caller, which is what lets blanks sort last in both directions. Negating a
+direction-free comparator instead puts every blank first on descending, and on
+real data that is a first page of empty cells.
+
+It dispatches on the runtime type of the value: numbers compare as numbers,
+everything else through a single module-scope `Intl.Collator`. There is one
+collator, built once, because constructing one per comparison is the expensive
+part.
+
+Rows whose values compare equal are then ordered by `getRowId`, so the result is
+total: the same rows in the same order however they arrived.
+
+Dates or a custom ordering belong in a column's own `compare`, not in the shared
+one.
 
 ### Page size options
 
-The page size select is populated from a hardcoded list, with 10 as the
+The page size select is populated from a fixed list of four, with 10 as the
 default:
 
 ```tsx
@@ -230,71 +319,16 @@ default:
 <option value={100}>100</option>
 ```
 
-Changing the page size or the sort resets to page 1, so no rows are silently
-skipped. The pagination controls hide entirely when there is only one page.
+Changing the page size, the sort, or the query returns to page 1, so no rows are
+silently skipped. `applyTableAction` applies that reset once for all three
+rather than in each of their branches. The pagination controls hide entirely
+when there is only one page.
 
-### Theming
-
-Colors, spacing, type sizes, and the corner radius are CSS custom properties
-declared in `src/index.css`, in three tiers.
-
-The first tier is the raw palette, named for what it is rather than for where
-it is used: `--gray-800`, `--teal-400`, `--red-700`. Nothing outside that file
-refers to it.
-
-The second tier is the same in every theme, so it is declared once and never
-overridden: `--space-1` through `--space-11`, `--font-size-sm` through
-`--font-size-2xl`, and `--radius-sm`.
-
-The third tier is semantic, and it is the only one components name:
-
-```css
-:root {
-  --color-surface: var(--gray-50);
-  --color-surface-raised: var(--white);
-  --color-surface-hover: var(--gray-100);
-  --color-text: var(--gray-800);
-  --color-text-muted: var(--gray-600);
-  --color-border: var(--gray-500);
-  --color-accent: var(--teal-700);
-  --color-error: var(--red-700);
-  --color-focus-ring: var(--teal-700);
-  --color-brand: var(--brand-orange);
-  --color-brand-contrast: var(--white);
-}
-```
-
-A theme is a re-pointing of that third tier, so no component stylesheet changes
-when one is added:
-
-```css
-:root[data-theme="dark"] {
-  --color-surface: var(--gray-900);
-  --color-text: var(--gray-100);
-  --color-accent: var(--teal-400);
-}
-```
-
-`--color-brand` and `--color-brand-contrast` are missing from the dark block on
-purpose. The logo is the same in both themes, so leaving them out is what keeps
-them that way.
-
-Component stylesheets hold no color of their own. A hex literal, an `rgb()` or
-`hsl()` call, a named color such as `red`, or an SCSS `$variable` in any
-stylesheet under `src/` fails the suite, as does any spacing length not
-authored in rem. A hairline border and the one corner radius in
-`src/index.css` are the exceptions. The guard is `src/theme/tokens.test.ts`,
-and it walks every stylesheet it finds rather than a list, so a stylesheet
-added later inherits the rule without anyone remembering to add it.
-
-Which theme is active is an attribute on the document element. A small blocking
-script in `index.html` writes it before any module loads, which is why a reload
-shows no wrong-theme frame. The running app applies the same rule from
-`src/theme/resolveTheme.ts`; the two are duplicated deliberately, because the
-script runs too early to import anything.
-
-Everything else is scoped through CSS modules, so class names cannot collide
-with the rest of an app.
+The page position is clamped where it is read, not where it is stored. A result
+set that narrows renders the last available page; one that widens again restores
+the user to where they were. Nothing writes a corrected page back into state,
+which is what lets a position arrive from outside, from a click today or a
+restored address later.
 
 ## Testing
 
@@ -304,24 +338,18 @@ rather than internals:
 ```tsx
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { it, expect, vi } from "vitest";
+import { it, expect } from "vitest";
 
-it("sorts by population descending on the second click", async () => {
+it("sorts by population descending on the second activation", async () => {
   const user = userEvent.setup();
-  render(
-    <SortableTable
-      data={cities}
-      searchTerm=""
-      onSearchChange={vi.fn()}
-      loading={false}
-      datasetReady={true}
-      error={null}
-    />,
-  );
+  render(<CityTable {...defaultProps} />);
 
-  const header = screen.getByText("Population").closest("th")!;
-  await user.click(header); // ascending
-  await user.click(header); // descending
+  // The activation lives on the button, the state lives on the cell.
+  const header = screen.getByRole("columnheader", { name: /Population/ });
+  const sortButton = screen.getByRole("button", { name: "Population" });
+
+  await user.click(sortButton); // ascending
+  await user.click(sortButton); // descending
 
   expect(header).toHaveAttribute("aria-sort", "descending");
 });
@@ -347,17 +375,18 @@ so a passing test is evidence the announcement is right.
 
 ## Notes and next steps
 
-This is a prototype, not production code. Things worth doing before it ships:
+This is a prototype, not production code. Things worth doing before it
+ships:
 
 - The dataset arrives as a separate content-hashed JSON asset rather than being
   compiled into the bundle, but filtering and sorting still run over the whole
   result set on the main thread. That is fine at this size. Past it, the work
   belongs behind a paginated, sorted API rather than in the browser.
-- The component is typed to `City` and renders its cells by hand, so it is
-  not yet reusable with another row shape. The fix is a generic
-  `SortableTable<T>` taking a `columns` prop of
-  `{ key, label, sortable, render? }`, which would collapse the header array
-  and the `<tbody>` cells into one declaration.
+- Every row renders, so a page size of 100 is 100 rows in the DOM and there is
+  no way to ask for all 50,250. Virtualization would fix both.
 - Sorting multiple columns at once is not implemented.
 - Sort and page state live in component state, so they are lost on reload and
-  cannot be linked to. Moving them into the URL would fix both.
+  cannot be linked to. `TableState` is one object for that reason: a serializer
+  writes all of it at once and a restored address writes all of it back at once,
+  and five separate writes are five chances to tear. Moving it into the URL is the next
+  thing on this list.
