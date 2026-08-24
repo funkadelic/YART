@@ -1,0 +1,133 @@
+import { useId } from "react";
+import {
+  MdFirstPage,
+  MdLastPage,
+  MdChevronLeft,
+  MdChevronRight,
+} from "react-icons/md";
+
+import styles from "./Pagination.module.scss";
+
+interface PaginationProps {
+  page: number;
+  totalPages: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
+}
+
+/**
+ * The page-size control and the page navigation.
+ *
+ * It knows the page position and nothing else about the table's view state, so
+ * a change to how sorting is held cannot reach it. The select's value is parsed
+ * to a number here, at the only place that sees the event, so the callback
+ * never receives a string.
+ */
+export function Pagination({
+  page,
+  totalPages,
+  pageSize,
+  onPageChange,
+  onPageSizeChange,
+}: PaginationProps) {
+  // Derived rather than a fixed string, so two tables on one page do not label
+  // each other's select.
+  const pageSizeId = useId();
+
+  const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    onPageSizeChange(parseInt(e.target.value, 10));
+  };
+
+  const handleFirstPage = () => {
+    onPageChange(1);
+  };
+
+  const handleLastPage = () => {
+    onPageChange(totalPages);
+  };
+
+  return (
+    <div className={styles.paginationContainer}>
+      <div className={styles.pageSizeContainer}>
+        <label htmlFor={pageSizeId}>Per page:</label>
+        {/* Fixed at four values, which is also what keeps the page size a
+            number from a known set: nothing outside this list can reach the
+            arithmetic through this control. */}
+        <select
+          id={pageSizeId}
+          value={pageSize}
+          onChange={handlePageSizeChange}
+        >
+          <option value={10}>10</option>
+          <option value={25}>25</option>
+          <option value={50}>50</option>
+          <option value={100}>100</option>
+        </select>
+      </div>
+
+      {totalPages > 1 && (
+        <nav
+          aria-label="Table pagination navigation"
+          className={styles.navigationContainer}
+        >
+          <button
+            onClick={handleFirstPage}
+            disabled={page === 1}
+            title="Go to first page"
+            // a11y: named by the action alone, as the sort headers are. A name
+            // carrying the position changes under focus, which re-announces the
+            // whole control on every press; the live region below is what
+            // reports where the user landed.
+            aria-label="Go to first page"
+            className={styles.navButton}
+          >
+            <MdFirstPage aria-hidden="true" />
+          </button>
+
+          <button
+            onClick={() => onPageChange(page - 1)}
+            disabled={page === 1}
+            title="Go to previous page"
+            aria-label="Go to previous page"
+            className={styles.navButton}
+          >
+            <MdChevronLeft aria-hidden="true" />
+          </button>
+
+          {/* a11y: aria-atomic because React mutates only the page number
+              inside this label. Without it the announcement is the bare number,
+              and since the controls are named by their action alone this region
+              is the only thing that reports where the user landed. */}
+          <span
+            className={styles.pageInfo}
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            Page {page} of {totalPages}
+          </span>
+
+          <button
+            onClick={() => onPageChange(page + 1)}
+            disabled={page === totalPages}
+            title="Go to next page"
+            aria-label="Go to next page"
+            className={styles.navButton}
+          >
+            <MdChevronRight aria-hidden="true" />
+          </button>
+
+          <button
+            onClick={handleLastPage}
+            disabled={page === totalPages}
+            title="Go to last page"
+            aria-label="Go to last page"
+            className={styles.navButton}
+          >
+            <MdLastPage aria-hidden="true" />
+          </button>
+        </nav>
+      )}
+    </div>
+  );
+}

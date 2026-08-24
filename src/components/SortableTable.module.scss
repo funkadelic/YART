@@ -61,58 +61,6 @@
   }
 }
 
-// the pagination container
-.paginationContainer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-4);
-
-  .pageSizeContainer {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-
-    select {
-      padding: var(--space-1-5) var(--space-3);
-      font-size: var(--font-size-sm);
-    }
-  }
-
-  .navigationContainer {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-
-    // the next/prev/first/last buttons
-    .navButton {
-      background: var(--color-surface-raised);
-      border: 1px solid var(--color-border);
-      padding: var(--space-1-5) var(--space-3);
-      cursor: pointer;
-      font-size: var(--font-size-sm);
-      display: flex;
-      align-items: center;
-      gap: var(--space-1);
-
-      &:hover:not(:disabled) {
-        background: var(--color-surface-hover);
-      }
-
-      &:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-    }
-
-    // Page n of m text
-    .pageInfo {
-      padding: 0 var(--space-3);
-    }
-  }
-}
-
 .loading,
 .error,
 .noResults {
@@ -125,9 +73,10 @@
   color: var(--color-error);
 }
 
-// The way back out of a failed load. Styled in the same idiom as .navButton so
-// the one control the error region offers does not read as unstyled browser
-// chrome next to the rest of the table. Its own line rather than inline after
+// The way back out of a failed load. Styled in the same idiom as the page
+// buttons, which now live in their own module, so the one control the error
+// region offers does not read as unstyled browser chrome next to the rest of
+// the table. Its own line rather than inline after
 // the message, so the space between the two does not depend on where the
 // message happens to wrap.
 .retryButton {
@@ -169,26 +118,6 @@
 
     th {
       white-space: nowrap; // Prevent header text from wrapping to illustrate a wider horizontal scroll
-    }
-  }
-
-  .paginationContainer {
-    flex-direction: column;
-    align-items: stretch;
-
-    .pageSizeContainer {
-      justify-content: center;
-    }
-
-    .navigationContainer {
-      justify-content: center;
-
-      .pageInfo {
-        // Reclaim the horizontal space without taking the announcement with
-        // it: display: none drops the region out of the accessibility tree, so
-        // no page change would be announced at all below this width.
-        @include visually-hidden;
-      }
     }
   }
 }

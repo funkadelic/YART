@@ -1,10 +1,4 @@
 import { useState } from "react";
-import {
-  MdFirstPage,
-  MdLastPage,
-  MdChevronLeft,
-  MdChevronRight,
-} from "react-icons/md";
 import type { City } from "../api/getCities";
 import {
   cityColumns,
@@ -17,6 +11,7 @@ import {
 } from "./DataTable/tableState";
 import { TableHead } from "./DataTable/TableHead";
 import { TableBody } from "./DataTable/TableBody";
+import { Pagination } from "./DataTable/Pagination";
 import { useSortedRows } from "../hooks/useSortedRows";
 import { usePaginatedRows } from "../hooks/usePaginatedRows";
 import { SearchInput } from "./SearchInput";
@@ -100,16 +95,7 @@ export function SortableTable({
     setTableState((state) => applyTableAction(state, { type: "page", page }));
   };
 
-  const handleFirstPage = () => {
-    handlePageChange(1);
-  };
-
-  const handleLastPage = () => {
-    handlePageChange(totalPages);
-  };
-
-  const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const pageSize = parseInt(e.target.value, 10);
+  const handlePageSizeChange = (pageSize: number) => {
     setTableState((state) =>
       applyTableAction(state, { type: "pageSize", pageSize }),
     );
@@ -211,86 +197,13 @@ export function SortableTable({
                 </table>
               </div>
 
-              <div className={styles.paginationContainer}>
-                <div className={styles.pageSizeContainer}>
-                  <label htmlFor="pageSize">Per page:</label>
-                  <select
-                    id="pageSize"
-                    value={tableState.pageSize}
-                    onChange={handlePageSizeChange}
-                  >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                </div>
-
-                {totalPages > 1 && (
-                  <nav
-                    aria-label="Table pagination navigation"
-                    className={styles.navigationContainer}
-                  >
-                    <button
-                      onClick={handleFirstPage}
-                      disabled={effectivePage === 1}
-                      title="Go to first page"
-                      // a11y: named by the action alone, as the sort headers
-                      // are. A name carrying the position changes under focus,
-                      // which re-announces the whole control on every press;
-                      // the live region below is what reports where the user
-                      // landed.
-                      aria-label="Go to first page"
-                      className={styles.navButton}
-                    >
-                      <MdFirstPage aria-hidden="true" />
-                    </button>
-
-                    <button
-                      onClick={() => handlePageChange(effectivePage - 1)}
-                      disabled={effectivePage === 1}
-                      title="Go to previous page"
-                      aria-label="Go to previous page"
-                      className={styles.navButton}
-                    >
-                      <MdChevronLeft aria-hidden="true" />
-                    </button>
-
-                    {/* a11y: aria-atomic because React mutates only the page
-                        number inside this label. Without it the announcement
-                        is the bare number, and since the controls are named by
-                        their action alone this region is the only thing that
-                        reports where the user landed. */}
-                    <span
-                      className={styles.pageInfo}
-                      aria-live="polite"
-                      aria-atomic="true"
-                    >
-                      Page {effectivePage} of {totalPages}
-                    </span>
-
-                    <button
-                      onClick={() => handlePageChange(effectivePage + 1)}
-                      disabled={effectivePage === totalPages}
-                      title="Go to next page"
-                      aria-label="Go to next page"
-                      className={styles.navButton}
-                    >
-                      <MdChevronRight aria-hidden="true" />
-                    </button>
-
-                    <button
-                      onClick={handleLastPage}
-                      disabled={effectivePage === totalPages}
-                      title="Go to last page"
-                      aria-label="Go to last page"
-                      className={styles.navButton}
-                    >
-                      <MdLastPage aria-hidden="true" />
-                    </button>
-                  </nav>
-                )}
-              </div>
+              <Pagination
+                page={effectivePage}
+                totalPages={totalPages}
+                pageSize={tableState.pageSize}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
             </>
           )}
         </>

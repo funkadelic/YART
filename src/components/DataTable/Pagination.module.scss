@@ -1,0 +1,76 @@
+@use "../../styles/visually-hidden" as *;
+
+// the pagination container
+.paginationContainer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+
+  .pageSizeContainer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+
+    select {
+      padding: var(--space-1-5) var(--space-3);
+      font-size: var(--font-size-sm);
+    }
+  }
+
+  .navigationContainer {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+
+    // the next/prev/first/last buttons
+    .navButton {
+      background: var(--color-surface-raised);
+      border: 1px solid var(--color-border);
+      padding: var(--space-1-5) var(--space-3);
+      cursor: pointer;
+      font-size: var(--font-size-sm);
+      display: flex;
+      align-items: center;
+      gap: var(--space-1);
+
+      &:hover:not(:disabled) {
+        background: var(--color-surface-hover);
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+
+    // Page n of m text
+    .pageInfo {
+      padding: 0 var(--space-3);
+    }
+  }
+}
+
+// responsive styles
+@media (width <= 768px) {
+  .paginationContainer {
+    flex-direction: column;
+    align-items: stretch;
+
+    .pageSizeContainer {
+      justify-content: center;
+    }
+
+    .navigationContainer {
+      justify-content: center;
+
+      .pageInfo {
+        // Reclaim the horizontal space without taking the announcement with
+        // it: display: none drops the region out of the accessibility tree, so
+        // no page change would be announced at all below this width.
+        @include visually-hidden;
+      }
+    }
+  }
+}
