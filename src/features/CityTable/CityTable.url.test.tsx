@@ -135,4 +135,136 @@ describe("CityTable and the address", () => {
     expect(screen.getByText("Page 1 of 5")).toBeInTheDocument();
     expect(window.location.search).toBe("");
   });
+
+  it("paints the sort named in the address on the first render", () => {
+    openAt("?sort=-population");
+
+    render(<CityTable {...defaultProps} />);
+
+    // The header cell's own attribute rather than the row order, because that
+    // is where the state lives and what a screen reader reads: matching row
+    // order would also pass for a table that happened to arrive sorted.
+    expect(
+      screen.getByRole("columnheader", { name: /Population/ }),
+    ).toHaveAttribute("aria-sort", "descending");
+    expect(screen.getByText("City 50")).toBeInTheDocument();
+  });
+
+  it("writes the sort token as the reader cycles a column, and removes the key when the sort clears", async () => {
+    const user = userEvent.setup({ delay: null });
+
+    render(<CityTable {...defaultProps} />);
+
+    const header = screen.getByRole("button", { name: "Population" });
+
+    await user.click(header);
+    expect(window.location.search).toBe("?sort=population");
+
+    await user.click(header);
+    expect(window.location.search).toBe("?sort=-population");
+
+    // Removed outright rather than written empty: an unsorted table is the
+    // default, and the address states nothing it does not have to.
+    await user.click(header);
+    expect(window.location.search).toBe("");
+  });
+
+  it("paints an offered page size named in the address, and shows it in the select", () => {
+    openAt("?size=25");
+
+    render(<CityTable {...defaultProps} />);
+
+    expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
+    expect(screen.getByLabelText("Per page:")).toHaveValue("25");
+  });
+
+  it("falls back to the default for a size the table does not offer, leaving the select on one of its own options", () => {
+    openAt("?size=7");
+
+    render(<CityTable {...defaultProps} />);
+
+    const select = screen.getByLabelText<HTMLSelectElement>("Per page:");
+    const offered = Array.from(select.options).map((option) => option.value);
+
+    expect(screen.getByText("Page 1 of 5")).toBeInTheDocument();
+    expect(offered).toContain(select.value);
+  });
+
+  it("re-hydrates the sort, the position, and the page size together on one back navigation", () => {
+    render(<CityTable {...defaultProps} />);
+
+    openAt("?sort=-population&page=2&size=25");
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    // All three in one update, which is what holding the view state as one
+    // object buys: three separate writes would be three chances to paint a
+    // position against a page size it was not chosen for.
+    expect(
+      screen.getByRole("columnheader", { name: /Population/ }),
+    ).toHaveAttribute("aria-sort", "descending");
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+    expect(screen.getByLabelText("Per page:")).toHaveValue("25");
+    expect(screen.getByText("City 1")).toBeInTheDocument();
+  });
+
+  // The pair below is one rule read from both sides. A restored sort is still a
+  // first render, so announcing it tells a reader who has just followed a link
+  // that something happened when nothing did. A traversal after a real press is
+  // the opposite case: that reader did sort, and the region is the only thing
+  // that reports where the traversal put them.
+  it("stays silent when a back navigation restores a sort the reader never applied", () => {
+    const { container } = render(<CityTable {...defaultProps} />);
+
+    const announcer = container.querySelector(
+      '[aria-live="polite"][aria-atomic="true"]',
+    );
+    expect(announcer).toBeEmptyDOMElement();
+
+    openAt("?sort=-population");
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(announcer).toBeEmptyDOMElement();
+  });
+
+  it("still announces when a back navigation follows a sort the reader did apply", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { container } = render(<CityTable {...defaultProps} />);
+
+    const announcer = container.querySelector(
+      '[aria-live="polite"][aria-atomic="true"]',
+    );
+
+    await user.click(screen.getByRole("button", { name: "City" }));
+    expect(announcer).toHaveTextContent(
+      "Table sorted by City in ascending order",
+    );
+
+    openAt("?sort=-population");
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(announcer).toHaveTextContent(
+      "Table sorted by Population in descending order",
+    );
+  });
+
+  it("carries a tracking parameter and an unrecognized key through a write, behind the keys it owns", async () => {
+    const user = userEvent.setup({ delay: null });
+
+    // dir is not a key this schema owns: the column and the direction ride one
+    // signed token, so an incoming direction is a stranger's parameter rather
+    // than an invalid value, and preserving it is the rule working.
+    openAt("?utm_source=x&dir=sideways");
+
+    render(<CityTable {...defaultProps} />);
+
+    await user.click(screen.getByRole("button", { name: "Go to next page" }));
+
+    expect(window.location.search).toBe("?page=2&utm_source=x&dir=sideways");
+  });
 });
