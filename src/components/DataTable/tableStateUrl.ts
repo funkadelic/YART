@@ -1,4 +1,22 @@
-import { DEFAULT_TABLE_STATE, type TableState } from "./tableState";
+import {
+  DEFAULT_TABLE_STATE,
+  PAGE_SIZE_OPTIONS,
+  type TableState,
+} from "./tableState";
+
+/**
+ * What a descending sort is written with, ahead of the column id.
+ *
+ * One key rather than a column and a direction, and not to shorten the link:
+ * the two fields are coupled in the state, where the direction is null exactly
+ * when the column is, so a single token makes the invalid pair unrepresentable
+ * rather than merely rejected and the parser needs no cross-field rule at all.
+ *
+ * A hyphen rather than a colon-separated form, which has the same validation
+ * property but is percent-encoded in some of the paths a link travels, so the
+ * pasted address reads worse for no gain.
+ */
+const SORT_DESCENDING_PREFIX = "-";
 
 /**
  * One parameter this schema owns: the key it answers to, how a raw value is
@@ -34,6 +52,30 @@ interface UrlParamEntry {
  */
 const PARAM_SCHEMA: readonly UrlParamEntry[] = [
   {
+    key: "sort",
+    // The remainder after the prefix is checked by locating it among the ids the
+    // caller supplied, comparing values rather than indexing anything. Located
+    // with find rather than tested and then asserted, so the result arrives
+    // already typed as one of those ids and nothing here has to claim a type
+    // for a string that came out of the address.
+    parse: (raw, validColumnIds) => {
+      const descending = raw.startsWith(SORT_DESCENDING_PREFIX);
+      const id = descending ? raw.slice(SORT_DESCENDING_PREFIX.length) : raw;
+      const sortColumnId = validColumnIds.find((candidate) => candidate === id);
+      if (sortColumnId === undefined) return undefined;
+
+      return {
+        sortColumnId,
+        sortDirection: descending ? "desc" : "asc",
+      };
+    },
+    serialize: (state) =>
+      state.sortColumnId === null
+        ? null
+        : (state.sortDirection === "desc" ? SORT_DESCENDING_PREFIX : "") +
+          state.sortColumnId,
+  },
+  {
     key: "page",
     // Coerced whole rather than with the radix parser, which truncates in two
     // opposite directions: it reads exponent notation as a single digit and a
@@ -54,6 +96,23 @@ const PARAM_SCHEMA: readonly UrlParamEntry[] = [
     },
     serialize: (state) =>
       state.page === DEFAULT_TABLE_STATE.page ? null : String(state.page),
+  },
+  {
+    key: "size",
+    // Accepted only when it is a size the table offers, because the table's own
+    // select cannot represent one that is not among its options: accepting an
+    // arbitrary size would render a control whose value is not in its own list.
+    // Membership in that list already implies a whole number, so there is no
+    // second predicate to write. Coerced whole for the same reason the position
+    // above is.
+    parse: (raw) => {
+      const pageSize = Number(raw);
+      return PAGE_SIZE_OPTIONS.includes(pageSize) ? { pageSize } : undefined;
+    },
+    serialize: (state) =>
+      state.pageSize === DEFAULT_TABLE_STATE.pageSize
+        ? null
+        : String(state.pageSize),
   },
 ];
 
