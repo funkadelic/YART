@@ -12,6 +12,7 @@ import {
   serializeTableState,
 } from "../../components/DataTable/tableStateUrl";
 import { SearchInput } from "../../components/SearchInput";
+import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 import {
   CITY_COLUMN_IDS,
   cityColumns,
@@ -21,9 +22,17 @@ import {
 } from "./cityColumns";
 import styles from "./CityTable.module.scss";
 
+/**
+ * How long typing has to pause before the term is committed. The window is the
+ * one the container applied before this component took the search box over, so
+ * the move retunes nothing.
+ */
+const SEARCH_DEBOUNCE_MS = 150;
+
 interface CityTableProps {
   readonly data: City[];
-  readonly searchTerm: string;
+  // Receives the committed term, meaning one call per pause in typing rather
+  // than one per keystroke.
   readonly onSearchChange: (term: string) => void;
   readonly loading: boolean;
   // False until the underlying collection has arrived at least once.
@@ -40,47 +49,45 @@ interface CityTableProps {
  *
  * Everything this application knows about cities that the table has to render
  * is assembled here, which is what leaves the shared component free of it.
- * Searching is reported upward rather than carried out here: the container
- * above owns the term and the request behind it, and which fields a term
- * matches is decided at the data layer.
+ * The search box belongs to this component: it holds what is being typed and
+ * the term that typing settles on, and it reports the settled term upward so
+ * the container can issue the request behind it. Which fields a term matches is
+ * still decided at the data layer.
  */
 export function CityTable({
   data,
-  searchTerm,
   onSearchChange,
   loading,
   datasetReady,
   error,
   onRetry,
 }: CityTableProps) {
-  // Initialized with the term the container asked for and whatever the address
-  // carries, so the first render is already the restored view: a link naming a
-  // page never paints the first one for a frame on the way there. Reading it
-  // here rather than in an effect is what buys that, and the initializer is
-  // pure, so the development-mode double invoke costs one extra parse.
+  // Initialized from whatever the address carries, so the first render is
+  // already the restored view: a link naming a page never paints the first one
+  // for a frame on the way there. Reading it here rather than in an effect is
+  // what buys that, and the initializer is pure, so the development-mode double
+  // invoke costs one extra parse.
   //
   // This component holds the view state rather than receiving it the way the
-  // shared table does. About forty renders in the accessibility regression
-  // suite drive sorting and paging by clicking this component, so hoisting the
-  // state would put a stateful wrapper under all of them and the suite would
-  // start asserting against the wrapper instead of against the application.
+  // shared table does, and the reason is measured rather than stylistic. About
+  // forty renders in the integration suite drive sorting and paging by clicking
+  // this component, and that suite is the accessibility regression record
+  // carried forward from an earlier phase. Hoisting the state would put a
+  // stateful wrapper under every one of them, at which point the suite asserts
+  // against the wrapper rather than against the application. Four test edits
+  // against roughly forty is the whole of the argument.
   const [tableState, setTableState] = useState<TableState<CityColumnId>>(
     () => ({
       ...DEFAULT_TABLE_STATE,
-      query: searchTerm,
       ...parseTableState(window.location.search, CITY_COLUMN_IDS),
     }),
   );
 
-  // A new term is a different set of rows rather than a narrowing of the
-  // current one, so the position the user chose in the old set does not carry
-  // any meaning into it. Adjusting during render rather than in an effect keeps
-  // the stale page from being painted first.
-  if (searchTerm !== tableState.query) {
-    setTableState(
-      applyTableAction(tableState, { type: "query", query: searchTerm }),
-    );
-  }
+  // What is currently in the box, which is not yet what the table has been
+  // asked for. Seeded from the committed term so a restored view paints the
+  // term that produced it, and declared next to the state it settles into so a
+  // reader meets the pair together.
+  const [searchInput, setSearchInput] = useState(tableState.query);
 
   // The only place in this application that writes the address, and it replaces
   // rather than pushes, so one Back press leaves the site instead of stepping
@@ -154,11 +161,45 @@ export function CityTable({
     );
   }, []);
 
+  // These two carry dependencies where the three above carry none, so their
+  // identity is an argument rather than a guarantee: the only thing either
+  // depends on is the parent's callback, and that callback is itself memoized
+  // with an empty array, so in practice the pair is as stable as the three.
+  //
+  // Committing is the single point a pause in typing reaches. It moves the view
+  // state, which returns the reader to the first page because a new term is a
+  // different set of rows rather than a narrowing of the current one, and it
+  // reports the term upward so the request behind it is reissued.
+  const commitSearch = useCallback(
+    (term: string) => {
+      setTableState((state) =>
+        applyTableAction(state, { type: "query", query: term }),
+      );
+      onSearchChange(term);
+    },
+    [onSearchChange],
+  );
+
+  const scheduleSearchCommit = useDebouncedCallback(
+    commitSearch,
+    SEARCH_DEBOUNCE_MS,
+  );
+
+  // The box repaints on every keystroke while the commit waits for the pause,
+  // so typing stays responsive and the table is asked once for what was typed.
+  const handleSearchChange = useCallback(
+    (term: string) => {
+      setSearchInput(term);
+      scheduleSearchCommit(term);
+    },
+    [scheduleSearchCommit],
+  );
+
   return (
     <div className={styles.container}>
       <SearchInput
-        value={searchTerm}
-        onChange={onSearchChange}
+        value={searchInput}
+        onChange={handleSearchChange}
         placeholder="Search for a city"
       />
       <DataTable
