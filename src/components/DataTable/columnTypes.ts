@@ -8,6 +8,7 @@
 // this file, and that is the whole of it.
 
 import { columns } from "./column";
+import type { DataTableProps } from "./DataTable";
 
 /**
  * True only when two types are identical, rather than merely assignable to one
@@ -68,4 +69,53 @@ export type AssertWidgetIdIsNotAny = Expect<Not<IsAny<WidgetColumnId>>>;
 
 export type AssertWidgetIdIsNotString = Expect<
   Not<Equal<WidgetColumnId, string>>
+>;
+
+/**
+ * Whether a key is required rather than optional, decided by asking whether an
+ * object with no properties at all satisfies the one-key slice. It does when
+ * the key is optional and it does not when the key is required, which is the
+ * only difference the two shapes have left once everything else is picked away.
+ */
+export type IsRequired<T, K extends keyof T> =
+  Record<never, never> extends Pick<T, K> ? false : true;
+
+/**
+ * The table's own prop type, instantiated against the row type above rather
+ * than the one this application happens to have, so nothing asserted below
+ * touches a domain type.
+ */
+type WidgetTableProps = DataTableProps<Widget, WidgetColumnId>;
+
+/**
+ * The identity function is required. Omitting it is what silently drops the
+ * sort tiebreak and the row keys together, so the table must not compile
+ * without one.
+ */
+export type AssertRowIdCannotBeOmitted = Expect<
+  IsRequired<WidgetTableProps, "getRowId">
+>;
+
+/**
+ * The whole prop bag, not just the ids in it. A prop type that collapsed would
+ * accept every one of the assertions above and below without complaint.
+ */
+export type AssertTablePropsAreNotAny = Expect<Not<IsAny<WidgetTableProps>>>;
+
+/**
+ * The id union reaches the prop that carries the columns, so the array a caller
+ * passes is what fixes the id everywhere else on the surface.
+ */
+export type AssertColumnPropCarriesIds = Expect<
+  Equal<WidgetTableProps["columns"][number]["id"], WidgetColumnId>
+>;
+
+/**
+ * The same union arrives at the state prop, which is where a misspelt id is
+ * reported. Without the no-inference wrapper on that prop the compiler would
+ * take a candidate from it too, and this would still hold while a wrong id
+ * quietly joined the union at the call site.
+ */
+export type AssertStatePropCarriesIds = Expect<
+  Equal<WidgetTableProps["state"]["sortColumnId"], WidgetColumnId | null>
 >;
