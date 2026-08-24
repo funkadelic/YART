@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { FiSearch, FiChevronUp, FiChevronDown } from "react-icons/fi";
+import { FiChevronUp, FiChevronDown } from "react-icons/fi";
 import {
   MdFirstPage,
   MdLastPage,
@@ -18,6 +18,7 @@ import {
 } from "./DataTable/tableState";
 import { useSortedRows } from "../hooks/useSortedRows";
 import { usePaginatedRows } from "../hooks/usePaginatedRows";
+import { SearchInput } from "./SearchInput";
 import styles from "./SortableTable.module.scss";
 
 // Row identity, as text, because that is what the sort module's tiebreak
@@ -113,11 +114,6 @@ export function SortableTable({
     );
   };
 
-  // Handle search input changes
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    onSearchChange(e.target.value);
-  };
-
   // The announcements name what is on screen, and what is on screen is the
   // column label. tableState.sortColumnId is the field name, which is not the name of
   // anything the reader can see.
@@ -149,18 +145,11 @@ export function SortableTable({
             ? "No cities found for that search"
             : `Showing ${paginatedData.length} cities out of ${sortedData.length} total results`}
       </div>
-      <div className={styles.searchContainer}>
-        <div className={styles.searchInput}>
-          <FiSearch className={styles.searchIcon} />
-          <input
-            aria-label="Search"
-            type="text"
-            placeholder="Search for a city"
-            value={searchTerm}
-            onChange={handleSearchChange}
-          />
-        </div>
-      </div>
+      <SearchInput
+        value={searchTerm}
+        onChange={onSearchChange}
+        placeholder="Search for a city"
+      />
 
       {error ? (
         // a11y: the failure arrives after the initial render, so without a live

@@ -1,0 +1,60 @@
+// the search box
+.searchContainer {
+  margin-bottom: var(--space-5);
+
+  .searchInput {
+    width: 45%;
+    position: relative;
+    margin: 0 auto;
+
+    // Position the icon inside the search input.
+    // This offset and the input's left padding below were both off the scale,
+    // and are snapped onto it as a pair rather than one at a time: each moves by
+    // a hair, in opposite directions, and it is the pair that keeps the icon
+    // centred in the inset the padding reserves for it.
+    .searchIcon {
+      position: absolute;
+      left: var(--space-4);
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--color-text-muted);
+      font-size: var(--font-size-xl);
+    }
+
+    input {
+      width: 100%;
+      box-sizing: border-box; // ignore border & padding to determine width
+      padding: var(--space-2-5) var(--space-2-5) var(--space-2-5)
+        var(--space-11);
+      border: 2px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      font-size: var(--font-size-base);
+
+      &::placeholder {
+        color: var(--color-text-muted);
+      }
+
+      // Paired with the global focus ring rather than replacing it: the border
+      // colour is the affordance, the ring is the indicator. Keyed to the same
+      // state the ring is, so it answers the keyboard rather than firing on
+      // every mouse click the way a plain focus selector would.
+      &:focus-visible {
+        border-color: var(--color-accent);
+      }
+    }
+
+    &:focus-within .searchIcon {
+      // make the search icon match the input border color when focused
+      color: var(--color-accent);
+    }
+  }
+}
+
+// responsive styles
+@media (width <= 768px) {
+  .searchContainer {
+    .searchInput {
+      width: 100%;
+    }
+  }
+}
