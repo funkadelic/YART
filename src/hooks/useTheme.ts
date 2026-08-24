@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import {
   PREFERS_DARK_QUERY,
@@ -55,6 +55,31 @@ function readPrefersDark(): boolean {
 }
 
 /**
+ * Subscribes to the operating system's preference, returning the unsubscribe.
+ *
+ * Paired with the reader above through useSyncExternalStore rather than through
+ * an effect that seeds state and then re-reads it. The preference can move
+ * between the render that would seed it and the commit that would subscribe,
+ * and StrictMode's mount, unmount, remount opens that window a second time; the
+ * hook closes both by reading the store itself after subscribing.
+ *
+ * An environment with no media query support subscribes to nothing and keeps
+ * the reader's answer, so the two cannot disagree about whether a query exists.
+ */
+function subscribePrefersDark(onStoreChange: () => void): () => void {
+  if (!supportsMediaQueries()) {
+    return () => {};
+  }
+
+  const query = window.matchMedia(PREFERS_DARK_QUERY);
+  query.addEventListener("change", onStoreChange);
+
+  return () => {
+    query.removeEventListener("change", onStoreChange);
+  };
+}
+
+/**
  * Owns the theme: the stored choice, the write-through when it changes, the
  * concrete theme stamped on the document element, and the two subscriptions that
  * keep it current, one to the operating system and one to the other tabs.
@@ -73,31 +98,10 @@ function readPrefersDark(): boolean {
  */
 export function useTheme() {
   const [choice, setChoiceState] = useState<ThemeChoice>(readStoredChoice);
-  const [prefersDark, setPrefersDark] = useState<boolean>(readPrefersDark);
-
-  useEffect(() => {
-    if (!supportsMediaQueries()) {
-      return;
-    }
-
-    const query = window.matchMedia(PREFERS_DARK_QUERY);
-
-    const handlePreferenceChange = (event: MediaQueryListEvent) => {
-      setPrefersDark(event.matches);
-    };
-
-    query.addEventListener("change", handlePreferenceChange);
-
-    // The preference can move between the render that seeded the state and this
-    // commit, and StrictMode's mount, unmount, remount opens the same window a
-    // second time. A change landing in either one fires against no listener, so
-    // it has to be read again here or it is lost until the next change.
-    setPrefersDark(query.matches);
-
-    return () => {
-      query.removeEventListener("change", handlePreferenceChange);
-    };
-  }, []);
+  const prefersDark = useSyncExternalStore(
+    subscribePrefersDark,
+    readPrefersDark,
+  );
 
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
