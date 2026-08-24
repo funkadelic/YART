@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_TABLE_STATE, type TableState } from "./tableState";
-import { parseTableState, serializeTableState } from "./tableStateUrl";
+import {
+  parseSearchTerm,
+  parseTableState,
+  serializeTableState,
+} from "./tableStateUrl";
 
 // A made-up pair of ids rather than the city columns: the module takes the
 // valid ids as an argument precisely so it never learns what a row is, and
@@ -54,6 +58,42 @@ describe("parseTableState", () => {
 
   it("reads an empty query as no restored fields at all", () => {
     expect(parseTableState("", WIDGET_COLUMN_IDS)).toEqual({});
+  });
+
+  it("reads a search term out of the query", () => {
+    expect(parseTableState("?q=tokyo", WIDGET_COLUMN_IDS)).toEqual({
+      query: "tokyo",
+    });
+  });
+
+  // The term is the one owned key with no rule to fail, so a stated empty term
+  // is read rather than rejected. It happens to be the default, which is why
+  // the view a reader sees is the same either way.
+  it("reads a stated empty term as the empty term, which is also the default", () => {
+    const restored = parseTableState("?q=", WIDGET_COLUMN_IDS);
+
+    expect(restored).toEqual({ query: "" });
+    expect({ ...DEFAULT_TABLE_STATE, ...restored }).toEqual(
+      DEFAULT_TABLE_STATE,
+    );
+  });
+
+  // Both spellings of a space are what the query serializer produces and
+  // accepts, and getting either of them wrong is the reason nothing here is
+  // hand rolled.
+  it("reads either spelling of a space in a term as one space", () => {
+    expect(parseTableState("?q=new%20york", WIDGET_COLUMN_IDS)).toEqual({
+      query: "new york",
+    });
+    expect(parseTableState("?q=new+york", WIDGET_COLUMN_IDS)).toEqual({
+      query: "new york",
+    });
+  });
+
+  it("reads a term carrying the query string's own punctuation back intact", () => {
+    expect(parseTableState("?q=a%26b%3Dc%23d", WIDGET_COLUMN_IDS)).toEqual({
+      query: "a&b=c#d",
+    });
   });
 
   for (const [label, search] of REJECTED_PAGES) {
@@ -189,6 +229,27 @@ describe("serializeTableState", () => {
     );
   });
 
+  it("writes nothing at all for an empty term, which is what an empty box means", () => {
+    expect(serializeTableState(stateWith({ query: "" }), "")).toBe("");
+  });
+
+  it("writes a term carrying a space so that it reads back as one space", () => {
+    const written = serializeTableState(stateWith({ query: "new york" }), "");
+
+    expect(parseTableState(written, WIDGET_COLUMN_IDS)).toEqual({
+      query: "new york",
+    });
+  });
+
+  it("writes a term carrying the query string's own punctuation so that it reads back intact", () => {
+    const written = serializeTableState(stateWith({ query: "a&b=c#d" }), "");
+
+    expect(written).toBe("?q=a%26b%3Dc%23d");
+    expect(parseTableState(written, WIDGET_COLUMN_IDS)).toEqual({
+      query: "a&b=c#d",
+    });
+  });
+
   // Canonical order is the schema table's own order, which is what makes two
   // equivalent views produce one string. An order that followed the incoming
   // query would make the output a function of the input and there would be no
@@ -197,14 +258,15 @@ describe("serializeTableState", () => {
     expect(
       serializeTableState(
         stateWith({
+          query: "tokyo",
           sortColumnId: "name",
           sortDirection: "desc",
           page: 3,
           pageSize: 25,
         }),
-        "?size=100&page=9&sort=size",
+        "?size=100&page=9&sort=size&q=kyoto",
       ),
-    ).toBe("?sort=-name&page=3&size=25");
+    ).toBe("?q=tokyo&sort=-name&page=3&size=25");
   });
 
   it("keeps the parameters it does not own after the ones it does, in the order they arrived", () => {
@@ -258,9 +320,16 @@ describe("the round trip", () => {
     ["an ascending sort", { sortColumnId: "size", sortDirection: "asc" }],
     ["a descending sort", { sortColumnId: "name", sortDirection: "desc" }],
     ["a page size alone", { pageSize: 100 }],
+    ["a search term alone", { query: "tokyo" }],
+    ["a term carrying a space", { query: "new york" }],
     [
-      "all three at once",
+      "a term carrying the query string's own punctuation",
+      { query: "a&b=c#d" },
+    ],
+    [
+      "all four at once",
       {
+        query: "tokyo",
         sortColumnId: "size",
         sortDirection: "desc",
         page: 6,
@@ -281,4 +350,26 @@ describe("the round trip", () => {
       expect({ ...DEFAULT_TABLE_STATE, ...restored }).toEqual(state);
     });
   }
+});
+
+describe("parseSearchTerm", () => {
+  it("reads the term out of a fully specified query and ignores the rest", () => {
+    expect(parseSearchTerm("?q=tokyo&sort=-population&page=3")).toBe("tokyo");
+  });
+
+  it("reads an empty query as the empty term", () => {
+    expect(parseSearchTerm("")).toBe("");
+  });
+
+  it("reads a query with no term as the empty term", () => {
+    expect(parseSearchTerm("?page=3")).toBe("");
+  });
+
+  // Same schema, so the term is decoded the same way whichever entry point
+  // reads it. A second decoding rule living here is the drift this narrow
+  // entry point exists to avoid.
+  it("decodes a term exactly as the four-key reader does", () => {
+    expect(parseSearchTerm("?q=a%26b%3Dc%23d")).toBe("a&b=c#d");
+    expect(parseSearchTerm("?q=new+york")).toBe("new york");
+  });
 });
