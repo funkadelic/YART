@@ -268,7 +268,7 @@ col.key("name", { label: "Part" });
 col.accessor("total", (row) => row.qty * row.unitPrice, { label: "Total" });
 ```
 
-`key` is constrained to the row type's own string keys, so a misspelt field is a
+`key` is constrained to the row type's own string keys, so a misspelled field is a
 compile error rather than a column of `undefined`. `accessor` takes any id,
 because its value is computed and answers to no field.
 
@@ -386,7 +386,7 @@ ships:
   no way to ask for all 50,250. Virtualization would fix both.
 - Sorting multiple columns at once is not implemented.
 - Sort and page state live in component state, so they are lost on reload and
-  cannot be linked to. `TableState` is one object for that reason: a serialiser
+  cannot be linked to. `TableState` is one object for that reason: a serializer
   writes all of it at once and a restored address writes all of it back at once,
   and five separate writes are five chances to tear. Moving it into the URL is the next
   thing on this list.
