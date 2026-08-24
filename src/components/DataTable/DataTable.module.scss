@@ -1,12 +1,4 @@
-@use "../styles/visually-hidden" as *;
-
-// the top-level parent container
-.container {
-  width: 100%;
-  box-sizing: border-box;
-  margin: 0 auto;
-  padding: var(--space-5);
-}
+@use "../../styles/visually-hidden" as *;
 
 // the table parent container
 .tableContainer {
@@ -103,10 +95,6 @@
 
 // responsive styles
 @media (width <= 768px) {
-  .container {
-    padding: var(--space-2-5);
-  }
-
   .tableContainer {
     overflow-x: auto;
     width: 0; // Force container to not expand

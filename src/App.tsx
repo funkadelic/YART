@@ -5,7 +5,7 @@ import { getCities } from "./api/getCities";
 import { useDebounce } from "./hooks/useDebounce";
 
 import { RootLayout } from "./features/RootLayout";
-import { SortableTable } from "./components/SortableTable";
+import { CityTable } from "./features/CityTable";
 
 const App = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -78,7 +78,7 @@ const App = () => {
   return (
     <RootLayout>
       <h1>City List</h1>
-      <SortableTable
+      <CityTable
         data={cities}
         searchTerm={searchTerm}
         onSearchChange={handleSearchChange}

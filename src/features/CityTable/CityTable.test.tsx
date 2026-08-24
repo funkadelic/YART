@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SortableTable } from "./SortableTable";
-import type { City } from "../api/getCities";
+import { CityTable } from "./CityTable";
+import type { City } from "../../api/getCities";
 
 // Mock data for testing
 const mockCities: City[] = [
@@ -63,14 +63,14 @@ const defaultProps = {
   error: null,
 };
 
-describe("SortableTable", () => {
+describe("CityTable", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe("Basic Rendering", () => {
     it("renders table with correct headers", () => {
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       expect(screen.getByText("City")).toBeInTheDocument();
       expect(screen.getByText("Country")).toBeInTheDocument();
@@ -80,7 +80,7 @@ describe("SortableTable", () => {
     });
 
     it("renders all city data", () => {
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       expect(screen.getByText("Tokyo")).toBeInTheDocument();
       expect(screen.getByText("Jakarta")).toBeInTheDocument();
@@ -90,7 +90,7 @@ describe("SortableTable", () => {
     });
 
     it("renders search input", () => {
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       const searchInput = screen.getByRole("textbox", { name: "Search" });
       expect(searchInput).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe("SortableTable", () => {
       const mockOnSearchChange = vi.fn();
 
       render(
-        <SortableTable {...defaultProps} onSearchChange={mockOnSearchChange} />,
+        <CityTable {...defaultProps} onSearchChange={mockOnSearchChange} />,
       );
 
       const searchInput = screen.getByRole("textbox", { name: "Search" });
@@ -115,7 +115,7 @@ describe("SortableTable", () => {
     });
 
     it("displays search term in input", () => {
-      render(<SortableTable {...defaultProps} searchTerm="Tokyo" />);
+      render(<CityTable {...defaultProps} searchTerm="Tokyo" />);
 
       const searchInput = screen.getByRole("textbox", { name: "Search" });
       expect(searchInput).toHaveValue("Tokyo");
@@ -123,7 +123,7 @@ describe("SortableTable", () => {
 
     it("shows search input even when there's an error", () => {
       const error = new Error("Test error");
-      render(<SortableTable {...defaultProps} error={error} />);
+      render(<CityTable {...defaultProps} error={error} />);
 
       expect(
         screen.getByRole("textbox", { name: "Search" }),
@@ -135,7 +135,7 @@ describe("SortableTable", () => {
   describe("Loading and Error States", () => {
     it("renders the download copy while the dataset has never arrived", () => {
       render(
-        <SortableTable
+        <CityTable
           {...defaultProps}
           data={[]}
           loading={true}
@@ -154,7 +154,7 @@ describe("SortableTable", () => {
       // followed by one more keystroke. Nothing is downloading, and a row
       // count cannot tell that apart from a cold start.
       render(
-        <SortableTable
+        <CityTable
           {...defaultProps}
           data={[]}
           loading={true}
@@ -171,7 +171,7 @@ describe("SortableTable", () => {
       // flag. Nothing has arrived and nothing has been searched for, so the
       // empty-result copy would be a statement about a search that never ran.
       const { container } = render(
-        <SortableTable
+        <CityTable
           {...defaultProps}
           data={[]}
           loading={false}
@@ -189,10 +189,10 @@ describe("SortableTable", () => {
     });
 
     it("keeps the table mounted while refetching with results on screen", () => {
-      const { rerender } = render(<SortableTable {...defaultProps} />);
+      const { rerender } = render(<CityTable {...defaultProps} />);
       const tableBeforeRefetch = screen.getByRole("table");
 
-      rerender(<SortableTable {...defaultProps} loading={true} />);
+      rerender(<CityTable {...defaultProps} loading={true} />);
 
       // Same DOM node, so the table is dimmed in place instead of unmounting
       // and flashing on every keystroke.
@@ -208,7 +208,7 @@ describe("SortableTable", () => {
 
     it("shows error state", () => {
       const error = new Error("Failed to fetch cities");
-      render(<SortableTable {...defaultProps} error={error} />);
+      render(<CityTable {...defaultProps} error={error} />);
 
       expect(
         screen.getByText("Error: Failed to fetch cities"),
@@ -217,13 +217,13 @@ describe("SortableTable", () => {
     });
 
     it("shows empty state when no data", () => {
-      render(<SortableTable {...defaultProps} data={[]} />);
+      render(<CityTable {...defaultProps} data={[]} />);
 
       expect(screen.getByText("No cities found")).toBeInTheDocument();
     });
 
     it("keeps the download copy off screen while refetching with rows on show", () => {
-      render(<SortableTable {...defaultProps} loading={true} />);
+      render(<CityTable {...defaultProps} loading={true} />);
 
       // The refetch path. Replacing the view here is what would unmount the
       // table on every keystroke.
@@ -239,7 +239,7 @@ describe("SortableTable", () => {
       const error = new Error("The city data could not be downloaded.");
 
       render(
-        <SortableTable
+        <CityTable
           {...defaultProps}
           data={[]}
           error={error}
@@ -255,7 +255,7 @@ describe("SortableTable", () => {
     it("offers no retry control when no handler is given", () => {
       const error = new Error("The city data could not be downloaded.");
 
-      render(<SortableTable {...defaultProps} data={[]} error={error} />);
+      render(<CityTable {...defaultProps} data={[]} error={error} />);
 
       expect(
         screen.getByText("Error: The city data could not be downloaded."),
@@ -269,7 +269,7 @@ describe("SortableTable", () => {
   describe("Sorting Functionality", () => {
     it("sorts by city name in ascending order", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       await user.click(screen.getByRole("button", { name: "City" }));
 
@@ -280,7 +280,7 @@ describe("SortableTable", () => {
 
     it("sorts by population in ascending order", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       await user.click(screen.getByRole("button", { name: "Population" }));
 
@@ -291,7 +291,7 @@ describe("SortableTable", () => {
 
     it("implements three-state sorting (asc -> desc -> none)", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       // The activation lives on the button, the state lives on the cell.
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
@@ -312,7 +312,7 @@ describe("SortableTable", () => {
 
     it("shows sort icons only for active column", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
       await user.click(screen.getByRole("button", { name: "City" }));
@@ -329,7 +329,7 @@ describe("SortableTable", () => {
 
     it("switches sort when clicking different column", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       // Sort by city first
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
@@ -376,7 +376,7 @@ describe("SortableTable", () => {
     }));
 
     it("shows pagination controls when data exceeds page size", () => {
-      render(<SortableTable {...defaultProps} data={largeMockData} />);
+      render(<CityTable {...defaultProps} data={largeMockData} />);
 
       expect(screen.getByText(/Page \d+ of \d+/)).toBeInTheDocument();
       expect(
@@ -388,7 +388,7 @@ describe("SortableTable", () => {
     });
 
     it("doesn't show pagination for single page of data", () => {
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument();
       expect(
@@ -398,7 +398,7 @@ describe("SortableTable", () => {
 
     it("navigates to next page", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} data={largeMockData} />);
+      render(<CityTable {...defaultProps} data={largeMockData} />);
 
       expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
 
@@ -412,7 +412,7 @@ describe("SortableTable", () => {
 
     it("navigates to previous page", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} data={largeMockData} />);
+      render(<CityTable {...defaultProps} data={largeMockData} />);
 
       // Go to page 2 first
       const nextButton = screen.getByRole("button", {
@@ -431,7 +431,7 @@ describe("SortableTable", () => {
 
     it("navigates to first page", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} data={largeMockData} />);
+      render(<CityTable {...defaultProps} data={largeMockData} />);
 
       // Go to page 2
       const nextButton = screen.getByRole("button", {
@@ -450,7 +450,7 @@ describe("SortableTable", () => {
 
     it("navigates to last page", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} data={largeMockData} />);
+      render(<CityTable {...defaultProps} data={largeMockData} />);
 
       const lastButton = screen.getByRole("button", {
         name: /Go to last page/,
@@ -461,7 +461,7 @@ describe("SortableTable", () => {
     });
 
     it("disables navigation buttons appropriately", () => {
-      render(<SortableTable {...defaultProps} data={largeMockData} />);
+      render(<CityTable {...defaultProps} data={largeMockData} />);
 
       // On first page, prev and first should be disabled
       expect(
@@ -482,7 +482,7 @@ describe("SortableTable", () => {
 
     it("changes page size", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} data={largeMockData} />);
+      render(<CityTable {...defaultProps} data={largeMockData} />);
 
       const pageSelect = screen.getByLabelText("Per page:");
       expect(pageSelect).toHaveValue("10"); // Default value
@@ -493,7 +493,7 @@ describe("SortableTable", () => {
 
     it("resets to page 1 when page size changes", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} data={largeMockData} />);
+      render(<CityTable {...defaultProps} data={largeMockData} />);
 
       // Go to page 2
       const nextButton = screen.getByRole("button", {
@@ -513,7 +513,7 @@ describe("SortableTable", () => {
     it("keeps rendering rows when the result set narrows under the current page", async () => {
       const user = userEvent.setup();
       const { rerender } = render(
-        <SortableTable {...defaultProps} data={fiftyRowData} />,
+        <CityTable {...defaultProps} data={fiftyRowData} />,
       );
 
       await user.click(screen.getByRole("button", { name: /Go to last page/ }));
@@ -522,18 +522,14 @@ describe("SortableTable", () => {
       // Rerendering the mounted instance is what reproduces the trap. A fresh
       // render would start on page one and never reach the state where the
       // navigation has vanished and no control on screen offers a way back.
-      rerender(
-        <SortableTable {...defaultProps} data={fiftyRowData.slice(0, 3)} />,
-      );
+      rerender(<CityTable {...defaultProps} data={fiftyRowData.slice(0, 3)} />);
 
       expect(screen.queryByText("No cities found")).not.toBeInTheDocument();
       expect(screen.getAllByRole("row")).toHaveLength(4);
     });
 
     it("shows no pagination navigation at exactly one page of rows", () => {
-      render(
-        <SortableTable {...defaultProps} data={fiftyRowData.slice(0, 10)} />,
-      );
+      render(<CityTable {...defaultProps} data={fiftyRowData.slice(0, 10)} />);
 
       // Header row plus all ten data rows.
       expect(screen.getAllByRole("row")).toHaveLength(11);
@@ -545,9 +541,7 @@ describe("SortableTable", () => {
     });
 
     it("shows pagination navigation reporting two pages at one row past a page", () => {
-      render(
-        <SortableTable {...defaultProps} data={fiftyRowData.slice(0, 11)} />,
-      );
+      render(<CityTable {...defaultProps} data={fiftyRowData.slice(0, 11)} />);
 
       expect(
         screen.getByRole("navigation", {
@@ -567,12 +561,12 @@ describe("SortableTable", () => {
     it("renders the empty state and no navigation when the result set narrows to nothing", async () => {
       const user = userEvent.setup();
       const { rerender } = render(
-        <SortableTable {...defaultProps} data={fiftyRowData} />,
+        <CityTable {...defaultProps} data={fiftyRowData} />,
       );
 
       await user.click(screen.getByRole("button", { name: /Go to last page/ }));
 
-      rerender(<SortableTable {...defaultProps} data={[]} />);
+      rerender(<CityTable {...defaultProps} data={[]} />);
 
       expect(screen.getByText("No cities found")).toBeInTheDocument();
       expect(
@@ -588,18 +582,18 @@ describe("SortableTable", () => {
       // moving them off the one they chose.
       const user = userEvent.setup();
       const { rerender } = render(
-        <SortableTable {...defaultProps} data={fiftyRowData} />,
+        <CityTable {...defaultProps} data={fiftyRowData} />,
       );
 
       await user.click(screen.getByRole("button", { name: /Go to last page/ }));
       expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
 
       rerender(
-        <SortableTable {...defaultProps} data={fiftyRowData.slice(0, 25)} />,
+        <CityTable {...defaultProps} data={fiftyRowData.slice(0, 25)} />,
       );
       expect(screen.getByText("Page 3 of 3")).toBeInTheDocument();
 
-      rerender(<SortableTable {...defaultProps} data={fiftyRowData} />);
+      rerender(<CityTable {...defaultProps} data={fiftyRowData} />);
       expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
     });
 
@@ -608,18 +602,14 @@ describe("SortableTable", () => {
       // the old set carries no meaning into it.
       const user = userEvent.setup();
       const { rerender } = render(
-        <SortableTable {...defaultProps} data={fiftyRowData} />,
+        <CityTable {...defaultProps} data={fiftyRowData} />,
       );
 
       await user.click(screen.getByRole("button", { name: "Go to last page" }));
       expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
 
       rerender(
-        <SortableTable
-          {...defaultProps}
-          data={fiftyRowData}
-          searchTerm="city"
-        />,
+        <CityTable {...defaultProps} data={fiftyRowData} searchTerm="city" />,
       );
       expect(screen.getByText("Page 1 of 5")).toBeInTheDocument();
     });
@@ -638,7 +628,7 @@ describe("SortableTable", () => {
 
     it("resets to page 1 when sorting changes", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} data={largeMockData} />);
+      render(<CityTable {...defaultProps} data={largeMockData} />);
 
       // Go to page 2
       const nextButton = screen.getByRole("button", {
@@ -656,7 +646,7 @@ describe("SortableTable", () => {
 
     it("maintains sort order across pages", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} data={largeMockData} />);
+      render(<CityTable {...defaultProps} data={largeMockData} />);
 
       // Sort by city (ascending)
       await user.click(screen.getByRole("button", { name: "City" }));
@@ -682,7 +672,7 @@ describe("SortableTable", () => {
 
   describe("Accessibility", () => {
     it("has proper ARIA labels on sort buttons", () => {
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
       expect(cityHeader).toHaveAttribute("aria-sort", "none");
@@ -690,7 +680,7 @@ describe("SortableTable", () => {
 
     it("updates ARIA sort attributes when sorting", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
       const citySortButton = screen.getByRole("button", { name: "City" });
@@ -704,7 +694,7 @@ describe("SortableTable", () => {
 
     it("advances one sort state per enter press on the sort button", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
       screen.getByRole("button", { name: "City" }).focus();
@@ -717,7 +707,7 @@ describe("SortableTable", () => {
 
     it("advances one sort state per space press on the sort button", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
       screen.getByRole("button", { name: "City" }).focus();
@@ -734,7 +724,7 @@ describe("SortableTable", () => {
 
     it("keeps the sort button named by its column label alone", async () => {
       const user = userEvent.setup();
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       const citySortButton = screen.getByRole("button", { name: "City" });
 
@@ -758,7 +748,7 @@ describe("SortableTable", () => {
       }));
 
       const { rerender, container } = render(
-        <SortableTable {...defaultProps} data={pagedData} />,
+        <CityTable {...defaultProps} data={pagedData} />,
       );
 
       // Matched on the exact attribute name rather than on a substring of the
@@ -768,13 +758,13 @@ describe("SortableTable", () => {
 
       // And again in the single-page state, where the navigation carrying it
       // is absent altogether.
-      rerender(<SortableTable {...defaultProps} />);
+      rerender(<CityTable {...defaultProps} />);
       expect(container.querySelectorAll("[aria-current]")).toHaveLength(0);
     });
 
     it("announces the sort change in the polite region", async () => {
       const user = userEvent.setup();
-      const { container } = render(<SortableTable {...defaultProps} />);
+      const { container } = render(<CityTable {...defaultProps} />);
 
       const announcer = container.querySelector(
         '[aria-live="polite"][aria-atomic="true"]',
@@ -799,7 +789,7 @@ describe("SortableTable", () => {
 
     it("announces the cleared sort, and stays silent until one is applied", async () => {
       const user = userEvent.setup();
-      const { container } = render(<SortableTable {...defaultProps} />);
+      const { container } = render(<CityTable {...defaultProps} />);
 
       const announcer = container.querySelector(
         '[aria-live="polite"][aria-atomic="true"]',
@@ -817,11 +807,9 @@ describe("SortableTable", () => {
     });
 
     it("announces a search that matches no rows", () => {
-      const { container, rerender } = render(
-        <SortableTable {...defaultProps} />,
-      );
+      const { container, rerender } = render(<CityTable {...defaultProps} />);
 
-      rerender(<SortableTable {...defaultProps} data={[]} searchTerm="zzzz" />);
+      rerender(<CityTable {...defaultProps} data={[]} searchTerm="zzzz" />);
 
       const regions = container.querySelectorAll('[aria-live="polite"]');
       const announced = Array.from(regions).map((region) => region.textContent);
@@ -829,7 +817,7 @@ describe("SortableTable", () => {
     });
 
     it("has table caption for screen readers", () => {
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       const table = screen.getByRole("table");
       const caption = table.querySelector("caption");
@@ -848,7 +836,7 @@ describe("SortableTable", () => {
         population: 1000000 + i * 100000,
       }));
 
-      render(<SortableTable {...defaultProps} data={largeMockData} />);
+      render(<CityTable {...defaultProps} data={largeMockData} />);
 
       // Named by the action alone. A name carrying the position would change
       // under focus on every press, which re-announces the whole control.
@@ -875,7 +863,7 @@ describe("SortableTable", () => {
         capital: i % 2 === 0 ? "primary" : "admin",
         population: 1000000 + i * 100000,
       }));
-      render(<SortableTable {...defaultProps} data={pagedData} />);
+      render(<CityTable {...defaultProps} data={pagedData} />);
 
       const pageInfo = screen.getByText(/Page \d+ of \d+/);
       expect(pageInfo).toHaveAttribute("aria-live", "polite");
@@ -893,7 +881,7 @@ describe("SortableTable", () => {
       // row count, on a cold start and again after a retry, an addition to an
       // existing region rather than a new region with content.
       const { container, rerender } = render(
-        <SortableTable
+        <CityTable
           {...defaultProps}
           data={[]}
           loading={true}
@@ -909,13 +897,13 @@ describe("SortableTable", () => {
       const resultsRegion = regions[1];
       expect(resultsRegion).toBeEmptyDOMElement();
 
-      rerender(<SortableTable {...defaultProps} />);
+      rerender(<CityTable {...defaultProps} />);
 
       expect(resultsRegion).toHaveTextContent(/^Showing \d+ cities out of \d+/);
     });
 
     it("has live regions for dynamic updates", () => {
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       const liveRegions = document.querySelectorAll('[aria-live="polite"]');
       expect(liveRegions.length).toBeGreaterThan(0);
@@ -924,13 +912,13 @@ describe("SortableTable", () => {
 
   describe("Data Display", () => {
     it("formats population numbers with commas", () => {
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       expect(screen.getByText("37,400,068")).toBeInTheDocument(); // Tokyo population
     });
 
     it("displays capital status correctly", () => {
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       // Should show "primary" for capitals and "admin" for non-capitals
       expect(screen.getAllByText("primary")).toHaveLength(3); // Tokyo, Jakarta, New Delhi are primary capitals
@@ -938,7 +926,7 @@ describe("SortableTable", () => {
     });
 
     it("displays all country codes", () => {
-      render(<SortableTable {...defaultProps} />);
+      render(<CityTable {...defaultProps} />);
 
       expect(screen.getAllByText("JPN")).toHaveLength(2); // Tokyo and Osaka both in Japan
       expect(screen.getByText("IDN")).toBeInTheDocument(); // Jakarta in Indonesia
