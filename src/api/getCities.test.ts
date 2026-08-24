@@ -173,7 +173,7 @@ describe("getCities dataset requests", () => {
 
     // Sharing one in-flight load must not collapse the two calls into one
     // answer: each still filters the shared rows for its own term.
-    expect(tokyoRows.length).not.toBe(japanRows.length);
+    expect(tokyoRows).not.toHaveLength(japanRows.length);
     expect(tokyoRows.every((city) => matchedBefore(city, "tokyo"))).toBe(true);
     expect(japanRows.every((city) => matchedBefore(city, "japan"))).toBe(true);
   });

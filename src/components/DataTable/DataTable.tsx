@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Column } from "./column";
 import type { TableState } from "./tableState";
 import { TableHead } from "./TableHead";
@@ -186,6 +187,60 @@ export function DataTable<T, Id extends string>({
     (column) => column.id === state.sortColumnId,
   )?.label;
 
+  // The four views the table can show, chosen once here rather than through a
+  // stack of conditional expressions inside the markup. The order is the
+  // precedence: a failure outranks a pending load, and both outrank a result.
+  let body: ReactNode;
+  if (error) {
+    body = <ErrorRegion error={error} onRetry={onRetry} />;
+  } else if (!datasetReady) {
+    // The whole view is replaced until the collection has arrived once, the
+    // first paint before the request even starts included: the empty result
+    // copy would otherwise claim a search had been made and matched nothing.
+    // Once the collection has arrived, a refetch keeps the table mounted so it
+    // does not unmount and flash on every keystroke.
+    body = <div className={styles.loading}>{labels.loading}</div>;
+  } else if (paginatedData.length === 0) {
+    body = <div className={styles.noResults}>{labels.empty}</div>;
+  } else {
+    body = (
+      <>
+        <div
+          className={`${styles.tableContainer} ${loading ? styles.refreshing : ""}`}
+          aria-busy={loading}
+        >
+          <table className={styles.table}>
+            <caption className={styles.srOnly}>
+              {labels.caption(
+                sortedRows.length,
+                sortSummary(state.sortDirection, activeLabel),
+              )}
+            </caption>
+            <TableHead
+              columns={columns}
+              sortColumnId={state.sortColumnId}
+              sortDirection={state.sortDirection}
+              onSortChange={onSortChange}
+            />
+            <TableBody
+              rows={paginatedData}
+              columns={columns}
+              getRowId={getRowId}
+            />
+          </table>
+        </div>
+
+        <Pagination
+          page={effectivePage}
+          totalPages={totalPages}
+          pageSize={state.pageSize}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
+      </>
+    );
+  }
+
   return (
     <>
       {/* a11y: Live region for announcing sort changes */}
@@ -208,57 +263,7 @@ export function DataTable<T, Id extends string>({
         )}
       </div>
 
-      {error ? (
-        <ErrorRegion error={error} onRetry={onRetry} />
-      ) : !datasetReady ? (
-        // The whole view is replaced until the collection has arrived once,
-        // the first paint before the request even starts included: the empty
-        // result copy would otherwise claim a search had been made and matched
-        // nothing. Once the collection has arrived, a refetch keeps the table
-        // mounted so it does not unmount and flash on every keystroke.
-        <div className={styles.loading}>{labels.loading}</div>
-      ) : (
-        <>
-          {paginatedData.length === 0 ? (
-            <div className={styles.noResults}>{labels.empty}</div>
-          ) : (
-            <>
-              <div
-                className={`${styles.tableContainer} ${loading ? styles.refreshing : ""}`}
-                aria-busy={loading}
-              >
-                <table className={styles.table}>
-                  <caption className={styles.srOnly}>
-                    {labels.caption(
-                      sortedRows.length,
-                      sortSummary(state.sortDirection, activeLabel),
-                    )}
-                  </caption>
-                  <TableHead
-                    columns={columns}
-                    sortColumnId={state.sortColumnId}
-                    sortDirection={state.sortDirection}
-                    onSortChange={onSortChange}
-                  />
-                  <TableBody
-                    rows={paginatedData}
-                    columns={columns}
-                    getRowId={getRowId}
-                  />
-                </table>
-              </div>
-
-              <Pagination
-                page={effectivePage}
-                totalPages={totalPages}
-                pageSize={state.pageSize}
-                onPageChange={onPageChange}
-                onPageSizeChange={onPageSizeChange}
-              />
-            </>
-          )}
-        </>
-      )}
+      {body}
     </>
   );
 }
