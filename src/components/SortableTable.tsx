@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { FiChevronUp, FiChevronDown } from "react-icons/fi";
 import {
   MdFirstPage,
   MdLastPage,
@@ -16,6 +15,8 @@ import {
   applyTableAction,
   type TableState,
 } from "./DataTable/tableState";
+import { TableHead } from "./DataTable/TableHead";
+import { TableBody } from "./DataTable/TableBody";
 import { useSortedRows } from "../hooks/useSortedRows";
 import { usePaginatedRows } from "../hooks/usePaginatedRows";
 import { SearchInput } from "./SearchInput";
@@ -196,63 +197,17 @@ export function SortableTable({
                       ? `sorted by ${activeLabel} ${tableState.sortDirection}ending`
                       : "not sorted"}
                   </caption>
-                  <thead>
-                    <tr>
-                      {cityColumns.map((column) => {
-                        const isActive = tableState.sortColumnId === column.id;
-                        const sortDirection = isActive
-                          ? tableState.sortDirection
-                          : null;
-
-                        return (
-                          <th
-                            key={column.id}
-                            scope="col"
-                            aria-sort={
-                              sortDirection === "asc"
-                                ? "ascending"
-                                : sortDirection === "desc"
-                                  ? "descending"
-                                  : "none"
-                            }
-                          >
-                            {
-                              // a11y: the accessible name is the column label
-                              // alone, so the control keeps one identity across
-                              // presses. The sort state is carried by the
-                              // header cell's own attribute, where the
-                              // specification puts it, and announced by the
-                              // live region above. The button handles Enter and
-                              // Space itself; a manual key handler alongside it
-                              // would fire twice.
-                              <button
-                                type="button"
-                                className={styles.sortButton}
-                                onClick={() => handleSort(column.id)}
-                              >
-                                {column.label}
-                                {sortDirection === "asc" && (
-                                  <FiChevronUp aria-hidden="true" />
-                                )}
-                                {sortDirection === "desc" && (
-                                  <FiChevronDown aria-hidden="true" />
-                                )}
-                              </button>
-                            }
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedData.map((city) => (
-                      <tr key={city.id}>
-                        {cityColumns.map((column) => (
-                          <td key={column.id}>{column.renderCell(city)}</td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
+                  <TableHead
+                    columns={cityColumns}
+                    sortColumnId={tableState.sortColumnId}
+                    sortDirection={tableState.sortDirection}
+                    onSortChange={handleSort}
+                  />
+                  <TableBody
+                    rows={paginatedData}
+                    columns={cityColumns}
+                    getRowId={cityRowId}
+                  />
                 </table>
               </div>
 

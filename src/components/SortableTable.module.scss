@@ -61,29 +61,6 @@
   }
 }
 
-// The control that fires the sort. It is a real button, so it arrives carrying
-// the browser's own font, background, border and padding, and none of the
-// header cell's colour. Reset all five or it renders as raw chrome inside the
-// header. The hover state is selected through this class rather than through an
-// inline attribute on the cell: an attribute selector goes on silently matching
-// nothing the moment the attribute it names is removed.
-.sortButton {
-  font: inherit;
-  font-size: var(--font-size-base);
-  font-weight: bold;
-  color: inherit;
-  background: none;
-  border: 0;
-  padding: 0;
-  display: flex;
-  gap: var(--space-2);
-  cursor: pointer;
-
-  &:hover {
-    color: var(--color-accent);
-  }
-}
-
 // the pagination container
 .paginationContainer {
   display: flex;
