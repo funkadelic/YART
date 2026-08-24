@@ -27,6 +27,26 @@ const REJECTED_PAGES: ReadonlyArray<readonly [string, string]> = [
   ["a number carrying trailing text", "?page=5abc"],
 ];
 
+// A signed token that does not name a column of the supplied set, which is the
+// only rule the sort parameter has: there is no separate direction to reject,
+// because the direction cannot be stated without a column to attach it to.
+const REJECTED_SORTS: ReadonlyArray<readonly [string, string]> = [
+  ["a column that does not exist", "?sort=nope"],
+  ["a prototype member's name", "?sort=__proto__"],
+  ["a key with no value", "?sort="],
+  ["a direction with no column", "?sort=-"],
+  ["a shouted id, since membership compares exactly", "?sort=NAME"],
+];
+
+// Everything outside the offered list, because the table's own select cannot
+// represent a size that is not one of its options.
+const REJECTED_SIZES: ReadonlyArray<readonly [string, string]> = [
+  ["a size the table does not offer", "?size=7"],
+  ["a word", "?size=abc"],
+  ["an enormous value in exponent notation", "?size=1e9"],
+  ["a key with no value", "?size="],
+];
+
 describe("parseTableState", () => {
   it("reads a page position out of the query", () => {
     expect(parseTableState("?page=3", WIDGET_COLUMN_IDS)).toEqual({ page: 3 });
@@ -58,6 +78,64 @@ describe("parseTableState", () => {
     expect(Object.getPrototypeOf(restored)).toBe(Object.prototype);
     expect(restored).toEqual({ page: 2 });
   });
+
+  it("reads a bare column id as that column ascending", () => {
+    expect(parseTableState("?sort=name", WIDGET_COLUMN_IDS)).toEqual({
+      sortColumnId: "name",
+      sortDirection: "asc",
+    });
+  });
+
+  it("reads a signed column id as that column descending", () => {
+    expect(parseTableState("?sort=-name", WIDGET_COLUMN_IDS)).toEqual({
+      sortColumnId: "name",
+      sortDirection: "desc",
+    });
+  });
+
+  for (const [label, search] of REJECTED_SORTS) {
+    it(`leaves the table unsorted for ${label}`, () => {
+      expect(parseTableState(search, WIDGET_COLUMN_IDS)).toEqual({});
+    });
+  }
+
+  it("reads an offered page size out of the query", () => {
+    expect(parseTableState("?size=25", WIDGET_COLUMN_IDS)).toEqual({
+      pageSize: 25,
+    });
+  });
+
+  for (const [label, search] of REJECTED_SIZES) {
+    it(`leaves the page size out for ${label}`, () => {
+      expect(parseTableState(search, WIDGET_COLUMN_IDS)).toEqual({});
+    });
+  }
+
+  it("reads the same state whichever order the parameters arrive in", () => {
+    expect(
+      parseTableState("?size=25&sort=-size&page=3", WIDGET_COLUMN_IDS),
+    ).toEqual(parseTableState("?page=3&size=25&sort=-size", WIDGET_COLUMN_IDS));
+  });
+
+  it("takes the first occurrence of a repeated key", () => {
+    expect(parseTableState("?page=2&page=5", WIDGET_COLUMN_IDS)).toEqual({
+      page: 2,
+    });
+  });
+
+  // The whole hostile query from the roadmap, which is the point of the total
+  // parse: every parameter fails on its own terms and none of them takes any
+  // other one down with it, so the reader gets the default view rather than a
+  // broken one.
+  it("falls back on every parameter of a hostile query at once, and builds a plain object doing it", () => {
+    const restored = parseTableState(
+      "?page=abc&size=1e9&sort=__proto__&dir=sideways",
+      WIDGET_COLUMN_IDS,
+    );
+
+    expect(restored).toEqual({});
+    expect(Object.getPrototypeOf(restored)).toBe(Object.prototype);
+  });
 });
 
 describe("serializeTableState", () => {
@@ -86,4 +164,121 @@ describe("serializeTableState", () => {
       serializeTableState(state, "?utm_source=x"),
     );
   });
+
+  it("writes an ascending sort as the bare column id", () => {
+    expect(
+      serializeTableState(
+        stateWith({ sortColumnId: "name", sortDirection: "asc" }),
+        "",
+      ),
+    ).toBe("?sort=name");
+  });
+
+  it("writes a descending sort as the signed column id", () => {
+    expect(
+      serializeTableState(
+        stateWith({ sortColumnId: "name", sortDirection: "desc" }),
+        "",
+      ),
+    ).toBe("?sort=-name");
+  });
+
+  it("writes an offered page size when it is not the default", () => {
+    expect(serializeTableState(stateWith({ pageSize: 50 }), "")).toBe(
+      "?size=50",
+    );
+  });
+
+  // Canonical order is the schema table's own order, which is what makes two
+  // equivalent views produce one string. An order that followed the incoming
+  // query would make the output a function of the input and there would be no
+  // canonical form to compare against.
+  it("writes the owned keys in the schema's order whatever order they arrived in", () => {
+    expect(
+      serializeTableState(
+        stateWith({
+          sortColumnId: "name",
+          sortDirection: "desc",
+          page: 3,
+          pageSize: 25,
+        }),
+        "?size=100&page=9&sort=size",
+      ),
+    ).toBe("?sort=-name&page=3&size=25");
+  });
+
+  it("keeps the parameters it does not own after the ones it does, in the order they arrived", () => {
+    expect(
+      serializeTableState(
+        stateWith({ page: 3 }),
+        "?utm_source=x&dir=sideways&page=9",
+      ),
+    ).toBe("?page=3&utm_source=x&dir=sideways");
+  });
+
+  // Under one signed sort token there is no direction key to own, so the
+  // roadmap's own `dir=sideways` is an unknown parameter rather than an invalid
+  // one. Its survival is the preservation rule working, not a validation miss.
+  it("preserves the unrecognized direction key from the hostile query", () => {
+    expect(
+      serializeTableState(
+        stateWith({ page: 2 }),
+        "?page=abc&size=1e9&sort=__proto__&dir=sideways",
+      ),
+    ).toBe("?page=2&dir=sideways");
+  });
+
+  it("keeps both occurrences of a repeated key it does not own", () => {
+    expect(serializeTableState(DEFAULT_TABLE_STATE, "?a=1&a=2")).toBe(
+      "?a=1&a=2",
+    );
+  });
+
+  it("writes nothing for a sort left at the default", () => {
+    expect(serializeTableState(stateWith({ page: 2 }), "?sort=name")).toBe(
+      "?page=2",
+    );
+  });
+
+  it("writes nothing for a page size left at the default", () => {
+    expect(serializeTableState(stateWith({ page: 2 }), "?size=10")).toBe(
+      "?page=2",
+    );
+  });
+});
+
+// The property that makes a link shareable at all: what the address says and
+// what the table shows are the same thing, in both directions.
+describe("the round trip", () => {
+  const ROUND_TRIPPED: ReadonlyArray<
+    readonly [string, Partial<TableState<WidgetColumnId>>]
+  > = [
+    ["a table at every default", {}],
+    ["a page position alone", { page: 4 }],
+    ["an ascending sort", { sortColumnId: "size", sortDirection: "asc" }],
+    ["a descending sort", { sortColumnId: "name", sortDirection: "desc" }],
+    ["a page size alone", { pageSize: 100 }],
+    [
+      "all three at once",
+      {
+        sortColumnId: "size",
+        sortDirection: "desc",
+        page: 6,
+        pageSize: 25,
+      },
+    ],
+  ];
+
+  for (const [label, fields] of ROUND_TRIPPED) {
+    it(`reproduces ${label}`, () => {
+      const state = stateWith(fields);
+
+      const restored = parseTableState(
+        serializeTableState(state, ""),
+        WIDGET_COLUMN_IDS,
+      );
+
+      expect({ ...DEFAULT_TABLE_STATE, ...restored }).toEqual(state);
+    });
+  }
 });
