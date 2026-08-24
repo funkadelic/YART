@@ -84,9 +84,10 @@ export function CityTable({
   );
 
   // What is currently in the box, which is not yet what the table has been
-  // asked for. Seeded from the committed term so a restored view paints the
-  // term that produced it, and declared next to the state it settles into so a
-  // reader meets the pair together.
+  // asked for. Seeded from the committed term, which the initializer above has
+  // already read out of the address, so a link carrying a term paints that term
+  // on the first render rather than filling the box in after mount. Declared
+  // next to the state it settles into so a reader meets the pair together.
   const [searchInput, setSearchInput] = useState(tableState.query);
 
   // The only place in this application that writes the address, and it replaces
@@ -123,25 +124,36 @@ export function CityTable({
   // onto the window, so a second listener cannot silently replace this one.
   useEffect(() => {
     const handlePopState = () => {
-      setTableState((state) => ({
+      const restored: TableState<CityColumnId> = {
         ...DEFAULT_TABLE_STATE,
         ...parseTableState(window.location.search, CITY_COLUMN_IDS),
-        // Carried over only because the schema does not own the search key yet;
-        // delete this line in the plan that gives it one.
-        query: state.query,
+      };
+
+      setTableState((state) => ({
+        ...restored,
         // A restored sort is still a first render, and announcing a sort to
         // someone who has just opened a link announces something that did not
         // just happen. Carrying the flag across means a traversal after a real
-        // sort still announces, while a cold one stays silent.
+        // sort still announces, while a cold one stays silent. It is the one
+        // field carried over, because it is the one field the address does not
+        // and will not hold.
         hasSorted: state.hasSorted,
       }));
+
+      // The box and the request behind it both follow the term the traversal
+      // landed on. Reporting it upward rather than letting the container read
+      // the address for itself keeps the single writer single and the reader
+      // count at two, and it is why this handler depends on the parent's
+      // callback where the three below depend on nothing.
+      setSearchInput(restored.query);
+      onSearchChange(restored.query);
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, []);
+  }, [onSearchChange]);
 
   // The functional updater form is what keeps these dependency arrays empty, so
   // the three callbacks keep one identity for the life of the table.

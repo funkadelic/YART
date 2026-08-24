@@ -2,12 +2,24 @@ import { useEffect, useCallback, useReducer, useState } from "react";
 
 import { getCities } from "./api/getCities";
 import { INITIAL_APP_STATE, applyAppAction } from "./appState";
+import { parseSearchTerm } from "./components/DataTable/tableStateUrl";
 
 import { RootLayout } from "./features/RootLayout";
 import { CityTable } from "./features/CityTable";
 
 const App = () => {
-  const [searchTerm, setSearchTerm] = useState("");
+  // Seeded from the address so the first render already asks for the right
+  // rows. Without this the effect below issues a request for the empty term and
+  // then immediately another for the restored one, so every shared link costs
+  // two requests on a cold start; the stale-result guard makes that survivable
+  // rather than correct.
+  //
+  // This is a read of the address and stays one. The single write lives with
+  // the table's view state, one layer down, and adding a second writer here is
+  // what would make the address a thing two components argue over.
+  const [searchTerm, setSearchTerm] = useState(() =>
+    parseSearchTerm(window.location.search),
+  );
   const [{ cities, error, loading, datasetReady, retryAttempt }, dispatch] =
     useReducer(applyAppAction, INITIAL_APP_STATE);
 
