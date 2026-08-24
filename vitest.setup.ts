@@ -33,6 +33,11 @@ beforeEach(() => {
 // document and one storage per test file, so a case that means to exercise the
 // no-stored-choice default silently exercises whatever the previous case stamped
 // on the document element, and passes for the wrong reason.
+//
+// The document URL is reset for the third variant of that leak: the environment
+// gives one location and one history per test file, so a query string written by
+// one case is still in the address for the next, and a case meaning to open a
+// link with no parameters opens the previous case's link instead.
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
@@ -44,6 +49,7 @@ afterEach(() => {
   if (typeof document !== "undefined") {
     document.documentElement.removeAttribute("data-theme");
     document.documentElement.style.removeProperty("color-scheme");
+    window.history.replaceState(null, "", "/");
   }
 
   try {
