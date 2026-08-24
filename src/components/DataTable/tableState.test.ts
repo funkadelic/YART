@@ -39,6 +39,11 @@ const SORT_CYCLE: Array<
   ["the active ascending column", sorted("name", "asc"), "name", "desc"],
   ["the active descending column", sorted("name", "desc"), null, null],
   ["a cleared column", sorted(null, null), "name", "asc"],
+  // Unreachable through the reducer's own transitions: the press that clears a
+  // sort nulls the column along with the direction, so nothing here produces a
+  // named column with no direction. A restored URL will, which is what this row
+  // covers ahead of the phase that adds one.
+  ["the active column with no direction", sorted("name", null), "name", "asc"],
 ];
 
 describe("applyTableAction: sorting", () => {

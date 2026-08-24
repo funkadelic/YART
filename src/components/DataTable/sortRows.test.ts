@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { columns } from "./column";
-import { sortRows } from "./sortRows";
+import { compareIdentities, sortRows } from "./sortRows";
 
 /**
  * A row type this module could plausibly be handed and the application never
@@ -188,5 +188,20 @@ describe("sortRows", () => {
       "a",
       "b",
     ]);
+  });
+});
+
+describe("compareIdentities", () => {
+  it("orders two identities the way their text orders", () => {
+    expect(compareIdentities("a", "b")).toBe(-1);
+    expect(compareIdentities("b", "a")).toBe(1);
+  });
+
+  // The caller owes the table an injective identity, so this arm answers a
+  // broken one rather than a legitimate tie. It reports equal instead of
+  // picking a winner, which leaves the surrounding sort's order untouched
+  // rather than making one up from rows it cannot tell apart.
+  it("reports two equal identities as equal", () => {
+    expect(compareIdentities("a", "a")).toBe(0);
   });
 });
