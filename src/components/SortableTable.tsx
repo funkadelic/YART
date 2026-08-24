@@ -7,24 +7,16 @@ import {
   MdChevronRight,
 } from "react-icons/md";
 import type { City } from "../api/getCities";
-import { compareRows } from "./compareRows";
+import { sortRows } from "./DataTable/sortRows";
+import {
+  cityColumns,
+  type CityColumnId,
+} from "../features/CityTable/cityColumns";
 import styles from "./SortableTable.module.scss";
 
-interface Column {
-  key: keyof City;
-  label: string;
-}
-
-// Every column sorts. A per-column opt-out was declared but never set, which
-// left two arms no input could reach; it belongs back here the day a caller
-// actually supplies a column that should not sort.
-const COLUMNS: Column[] = [
-  { key: "name", label: "City" },
-  { key: "country", label: "Country" },
-  { key: "capital", label: "Capital" },
-  { key: "countryIso3", label: "Country Code" },
-  { key: "population", label: "Population" },
-];
+// Row identity, as text, because that is what the sort module's tiebreak
+// compares. City ids are unique by construction at the parse boundary.
+const cityRowId = (city: City) => String(city.id);
 
 interface SortableTableProps {
   data: City[];
@@ -42,7 +34,7 @@ interface SortableTableProps {
 type SortDirection = "asc" | "desc" | null;
 
 interface SortState {
-  column: keyof City | null;
+  column: CityColumnId | null;
   direction: SortDirection;
 }
 
@@ -55,8 +47,8 @@ interface SortState {
  * is the sort column and direction, the page position, and the page size.
  *
  * Sorting cycles rather than toggling. A first press sorts ascending, a second
- * descending, and a third returns the table to its unsorted order. The ordering
- * itself is delegated to compareRows.
+ * descending, and a third returns the table to its unsorted order. Both the
+ * ordering and every rendered cell are delegated to the column descriptors.
  */
 export function SortableTable({
   data,
@@ -91,11 +83,8 @@ export function SortableTable({
 
   const sortedData = useMemo(() => {
     const { column, direction } = sortState;
-    if (!column || !direction) return data;
-
-    // The resolved collection is module-cached and shared by every reader, so
-    // it is treated as immutable and the sort runs over a copy.
-    return [...data].sort((a, b) => compareRows(a, b, column, direction));
+    const active = cityColumns.find((candidate) => candidate.id === column);
+    return sortRows(data, active, direction, cityRowId);
   }, [data, sortState]);
 
   const { paginatedData, totalPages, effectivePage } = useMemo(() => {
@@ -117,7 +106,7 @@ export function SortableTable({
     };
   }, [sortedData, currentPage, pageSize]);
 
-  const handleSort = (column: keyof City) => {
+  const handleSort = (column: CityColumnId) => {
     setSortState((prevState) => {
       if (prevState.column !== column) {
         // New column: start with ascending
@@ -163,8 +152,8 @@ export function SortableTable({
   // The announcements name what is on screen, and what is on screen is the
   // column label. sortState.column is the field name, which is not the name of
   // anything the reader can see.
-  const activeLabel = COLUMNS.find(
-    (column) => column.key === sortState.column,
+  const activeLabel = cityColumns.find(
+    (column) => column.id === sortState.column,
   )?.label;
 
   return (
@@ -251,15 +240,15 @@ export function SortableTable({
                   </caption>
                   <thead>
                     <tr>
-                      {COLUMNS.map((column) => {
-                        const isActive = sortState.column === column.key;
+                      {cityColumns.map((column) => {
+                        const isActive = sortState.column === column.id;
                         const sortDirection = isActive
                           ? sortState.direction
                           : null;
 
                         return (
                           <th
-                            key={column.key}
+                            key={column.id}
                             scope="col"
                             aria-sort={
                               sortDirection === "asc"
@@ -281,7 +270,7 @@ export function SortableTable({
                               <button
                                 type="button"
                                 className={styles.sortButton}
-                                onClick={() => handleSort(column.key)}
+                                onClick={() => handleSort(column.id)}
                               >
                                 {column.label}
                                 {sortDirection === "asc" && (
@@ -300,11 +289,9 @@ export function SortableTable({
                   <tbody>
                     {paginatedData.map((city) => (
                       <tr key={city.id}>
-                        <td>{city.name}</td>
-                        <td>{city.country}</td>
-                        <td>{city.capital}</td>
-                        <td>{city.countryIso3}</td>
-                        <td>{city.population.toLocaleString()}</td>
+                        {cityColumns.map((column) => (
+                          <td key={column.id}>{column.renderCell(city)}</td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>

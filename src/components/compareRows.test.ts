@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { City } from "../api/getCities";
 import { CITY_FIXTURE } from "../test/cityFixture";
-import { compareRows } from "./compareRows";
+import { compareValues } from "./compareRows";
 
 const BLANK_CAPITAL = CITY_FIXTURE.filter((city) => city.capital === "");
 const PRIMARY_CAPITAL = CITY_FIXTURE.filter(
@@ -31,17 +31,28 @@ function rowWithCapital(id: number, capital: unknown): City {
   return { ...CITY_FIXTURE[0], id, capital } as City;
 }
 
+/**
+ * The comparator no longer sees a row, so the ascending identity tiebreak it
+ * used to apply is applied here instead, exactly as the sort module applies it
+ * in the application. Every expected order below is therefore the same order
+ * this file asserted before the tiebreak moved.
+ */
+function byColumn(column: keyof City, direction: "asc" | "desc") {
+  return (a: City, b: City): number => {
+    const comparison = compareValues(a[column], b[column], direction);
+    return comparison !== 0 ? comparison : a.id - b.id;
+  };
+}
+
 function sortedIds(
   rows: City[],
   column: keyof City,
   direction: "asc" | "desc",
 ): number[] {
-  return [...rows]
-    .sort((a, b) => compareRows(a, b, column, direction))
-    .map((row) => row.id);
+  return [...rows].sort(byColumn(column, direction)).map((row) => row.id);
 }
 
-describe("compareRows", () => {
+describe("compareValues", () => {
   it("has a fixture that still carries the rows these cases need", () => {
     expect(BLANK_CAPITAL.length).toBeGreaterThanOrEqual(2);
     expect(PRIMARY_CAPITAL.length).toBeGreaterThanOrEqual(2);
@@ -50,53 +61,75 @@ describe("compareRows", () => {
 
   it("orders a blank value last when sorting ascending", () => {
     expect(
-      compareRows(BLANK_CAPITAL[0], PRIMARY_CAPITAL[0], "capital", "asc"),
+      compareValues(
+        BLANK_CAPITAL[0].capital,
+        PRIMARY_CAPITAL[0].capital,
+        "asc",
+      ),
     ).toBeGreaterThan(0);
     expect(
-      compareRows(PRIMARY_CAPITAL[0], BLANK_CAPITAL[0], "capital", "asc"),
+      compareValues(
+        PRIMARY_CAPITAL[0].capital,
+        BLANK_CAPITAL[0].capital,
+        "asc",
+      ),
     ).toBeLessThan(0);
   });
 
   it("orders a blank value last when sorting descending as well", () => {
     expect(
-      compareRows(BLANK_CAPITAL[0], PRIMARY_CAPITAL[0], "capital", "desc"),
+      compareValues(
+        BLANK_CAPITAL[0].capital,
+        PRIMARY_CAPITAL[0].capital,
+        "desc",
+      ),
     ).toBeGreaterThan(0);
     expect(
-      compareRows(PRIMARY_CAPITAL[0], BLANK_CAPITAL[0], "capital", "desc"),
+      compareValues(
+        PRIMARY_CAPITAL[0].capital,
+        BLANK_CAPITAL[0].capital,
+        "desc",
+      ),
     ).toBeLessThan(0);
   });
 
-  it("orders two blank values by ascending row id in both directions", () => {
+  it("reports two blank values as equal in both directions", () => {
+    // The pair used to come back separated by the row-id difference. Identity
+    // is not a value, so the ordering half of this case now lives beside the
+    // sort module; what is left here is the value-level fact it rested on.
     const [first, second] = BLANK_CAPITAL;
-    const idDifference = first.id - second.id;
 
-    expect(compareRows(first, second, "capital", "asc")).toBe(idDifference);
-    expect(compareRows(first, second, "capital", "desc")).toBe(idDifference);
+    expect(compareValues(first.capital, second.capital, "asc")).toBe(0);
+    expect(compareValues(first.capital, second.capital, "desc")).toBe(0);
   });
 
   it("treats a zero as the smallest number rather than as a blank", () => {
     expect(
-      compareRows(ZERO_POPULATION[0], LARGEST_POPULATION, "population", "asc"),
+      compareValues(
+        ZERO_POPULATION[0].population,
+        LARGEST_POPULATION.population,
+        "asc",
+      ),
     ).toBeLessThan(0);
     expect(
-      compareRows(ZERO_POPULATION[0], LARGEST_POPULATION, "population", "desc"),
+      compareValues(
+        ZERO_POPULATION[0].population,
+        LARGEST_POPULATION.population,
+        "desc",
+      ),
     ).toBeGreaterThan(0);
   });
 
-  it("orders two equal values by ascending row id in both directions", () => {
+  it("reports two equal values as equal in both directions", () => {
     const [first, second] = PRIMARY_CAPITAL;
-    const idDifference = first.id - second.id;
 
-    expect(compareRows(first, second, "capital", "asc")).toBe(idDifference);
-    expect(compareRows(first, second, "capital", "desc")).toBe(idDifference);
+    expect(compareValues(first.capital, second.capital, "asc")).toBe(0);
+    expect(compareValues(first.capital, second.capital, "desc")).toBe(0);
   });
 
   it("gives a string paired with a number a defined order", () => {
-    const text = rowWithCapital(1, "primary");
-    const number = rowWithCapital(2, 42);
-
-    const forward = compareRows(text, number, "capital", "asc");
-    const backward = compareRows(number, text, "capital", "asc");
+    const forward = compareValues("primary", 42, "asc");
+    const backward = compareValues(42, "primary", "asc");
 
     expect(forward).not.toBe(0);
     expect(Math.sign(backward)).toBe(-Math.sign(forward));
@@ -116,8 +149,8 @@ describe("compareRows", () => {
       [ten, five],
       [nine, five],
     ] as const) {
-      const forward = compareRows(pair[0], pair[1], "capital", "asc");
-      const backward = compareRows(pair[1], pair[0], "capital", "asc");
+      const forward = compareValues(pair[0].capital, pair[1].capital, "asc");
+      const backward = compareValues(pair[1].capital, pair[0].capital, "asc");
       expect(Math.sign(backward)).toBe(-Math.sign(forward));
     }
 
@@ -157,10 +190,12 @@ describe("compareRows", () => {
     const large = rowWithCapital(3, 10);
     const rows = [notANumber, small, large];
 
-    expect(compareRows(notANumber, small, "capital", "asc")).toBeGreaterThan(0);
-    expect(compareRows(notANumber, small, "capital", "desc")).toBeGreaterThan(
-      0,
-    );
+    expect(
+      compareValues(notANumber.capital, small.capital, "asc"),
+    ).toBeGreaterThan(0);
+    expect(
+      compareValues(notANumber.capital, small.capital, "desc"),
+    ).toBeGreaterThan(0);
 
     // Blank last, both directions, and the same order whichever way the rows
     // arrive.
@@ -173,38 +208,25 @@ describe("compareRows", () => {
     ]);
   });
 
-  it("orders two infinities of the same sign by row id", () => {
-    // Subtracting them gives NaN, which skips the tiebreak and leaves the
-    // order to the sort. They are equal as far as an ordering is concerned,
-    // so the tiebreak is what should decide them.
-    const first = rowWithCapital(1, Infinity);
-    const second = rowWithCapital(2, Infinity);
-    const negativeFirst = rowWithCapital(3, -Infinity);
-    const negativeSecond = rowWithCapital(4, -Infinity);
-    const finite = rowWithCapital(5, 5);
-
-    expect(compareRows(first, second, "capital", "asc")).toBe(-1);
-    expect(compareRows(first, second, "capital", "desc")).toBe(-1);
-    expect(compareRows(negativeFirst, negativeSecond, "capital", "asc")).toBe(
-      -1,
-    );
+  it("reports two infinities of the same sign as equal rather than NaN", () => {
+    // Subtracting them gives NaN, which is neither negative, positive, nor
+    // zero, so a tiebreak downstream of this function would never run and the
+    // order would be left to the sort. Comparing rather than subtracting is
+    // what makes the pair come back as the tie it is.
+    expect(compareValues(Infinity, Infinity, "asc")).toBe(0);
+    expect(compareValues(Infinity, Infinity, "desc")).toBe(0);
+    expect(compareValues(-Infinity, -Infinity, "asc")).toBe(0);
 
     // And the ordinary ordering against a finite value still holds.
-    expect(compareRows(first, finite, "capital", "asc")).toBeGreaterThan(0);
-    expect(compareRows(negativeFirst, finite, "capital", "asc")).toBeLessThan(
-      0,
-    );
+    expect(compareValues(Infinity, 5, "asc")).toBeGreaterThan(0);
+    expect(compareValues(-Infinity, 5, "asc")).toBeLessThan(0);
   });
 
   it("treats null and undefined as blank on either side", () => {
-    const absent = rowWithCapital(1, null);
-    const missing = rowWithCapital(2, undefined);
-    const present = rowWithCapital(3, "primary");
-
-    expect(compareRows(absent, present, "capital", "asc")).toBeGreaterThan(0);
-    expect(compareRows(absent, present, "capital", "desc")).toBeGreaterThan(0);
-    expect(compareRows(missing, present, "capital", "asc")).toBeGreaterThan(0);
-    expect(compareRows(present, missing, "capital", "desc")).toBeLessThan(0);
+    expect(compareValues(null, "primary", "asc")).toBeGreaterThan(0);
+    expect(compareValues(null, "primary", "desc")).toBeGreaterThan(0);
+    expect(compareValues(undefined, "primary", "asc")).toBeGreaterThan(0);
+    expect(compareValues("primary", undefined, "desc")).toBeLessThan(0);
   });
 
   it("produces the same order every time the same set is sorted", () => {
@@ -214,15 +236,9 @@ describe("compareRows", () => {
   });
 
   it("returns to the first ascending order after a round trip", () => {
-    const ascending = [...CITY_FIXTURE].sort((a, b) =>
-      compareRows(a, b, "capital", "asc"),
-    );
-    const descending = [...ascending].sort((a, b) =>
-      compareRows(a, b, "capital", "desc"),
-    );
-    const ascendingAgain = [...descending].sort((a, b) =>
-      compareRows(a, b, "capital", "asc"),
-    );
+    const ascending = [...CITY_FIXTURE].sort(byColumn("capital", "asc"));
+    const descending = [...ascending].sort(byColumn("capital", "desc"));
+    const ascendingAgain = [...descending].sort(byColumn("capital", "asc"));
 
     expect(ascendingAgain.map((row) => row.id)).toEqual(
       ascending.map((row) => row.id),
@@ -241,12 +257,7 @@ describe("compareRows", () => {
       for (const right of COLLATION_SAMPLE) {
         if (left === right) continue;
 
-        const comparison = compareRows(
-          rowWithCapital(1, left),
-          rowWithCapital(2, right),
-          "capital",
-          "asc",
-        );
+        const comparison = compareValues(left, right, "asc");
 
         expect(Math.sign(comparison)).toBe(
           Math.sign(left.localeCompare(right)),
