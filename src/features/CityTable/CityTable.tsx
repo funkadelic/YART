@@ -17,16 +17,16 @@ import {
 import styles from "./CityTable.module.scss";
 
 interface CityTableProps {
-  data: City[];
-  searchTerm: string;
-  onSearchChange: (term: string) => void;
-  loading: boolean;
+  readonly data: City[];
+  readonly searchTerm: string;
+  readonly onSearchChange: (term: string) => void;
+  readonly loading: boolean;
   // False until the underlying collection has arrived at least once.
-  datasetReady: boolean;
-  error: Error | null;
+  readonly datasetReady: boolean;
+  readonly error: Error | null;
   // Optional so the table stays usable on its own, without a container to
   // re-run the request behind it.
-  onRetry?: () => void;
+  readonly onRetry?: () => void;
 }
 
 /**

@@ -9,11 +9,11 @@ import {
 import styles from "./Pagination.module.scss";
 
 interface PaginationProps {
-  page: number;
-  totalPages: number;
-  pageSize: number;
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
+  readonly page: number;
+  readonly totalPages: number;
+  readonly pageSize: number;
+  readonly onPageChange: (page: number) => void;
+  readonly onPageSizeChange: (pageSize: number) => void;
 }
 
 /**

@@ -3,9 +3,9 @@ import { FiSearch } from "react-icons/fi";
 import styles from "./SearchInput.module.scss";
 
 interface SearchInputProps {
-  value: string;
-  onChange: (term: string) => void;
-  placeholder: string;
+  readonly value: string;
+  readonly onChange: (term: string) => void;
+  readonly placeholder: string;
 }
 
 /**

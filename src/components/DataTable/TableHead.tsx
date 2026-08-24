@@ -4,10 +4,10 @@ import type { Column } from "./column";
 import styles from "./TableHead.module.scss";
 
 interface TableHeadProps<T, Id extends string> {
-  columns: readonly Column<T, Id>[];
-  sortColumnId: Id | null;
-  sortDirection: "asc" | "desc" | null;
-  onSortChange: (columnId: Id) => void;
+  readonly columns: readonly Column<T, Id>[];
+  readonly sortColumnId: Id | null;
+  readonly sortDirection: "asc" | "desc" | null;
+  readonly onSortChange: (columnId: Id) => void;
 }
 
 /**

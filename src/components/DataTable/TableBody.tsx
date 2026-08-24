@@ -1,9 +1,9 @@
 import type { Column } from "./column";
 
 interface TableBodyProps<T, Id extends string> {
-  rows: readonly T[];
-  columns: readonly Column<T, Id>[];
-  getRowId: (row: T) => string;
+  readonly rows: readonly T[];
+  readonly columns: readonly Column<T, Id>[];
+  readonly getRowId: (row: T) => string;
 }
 
 /**

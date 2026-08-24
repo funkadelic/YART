@@ -30,30 +30,30 @@ export interface DataTableLabels {
 }
 
 export interface DataTableProps<T, Id extends string> {
-  rows: readonly T[];
-  columns: readonly Column<T, Id>[];
+  readonly rows: readonly T[];
+  readonly columns: readonly Column<T, Id>[];
   /**
    * Must be injective. It keys the rows for reconciliation and it breaks ties
    * between equal values in the sort, so two rows sharing a value here lose
    * their identity and their ordering in the same stroke.
    */
-  getRowId: (row: T) => string;
+  readonly getRowId: (row: T) => string;
   // The id is read off the column array above and only checked here. Without
   // the wrapper the compiler would collect a candidate from this prop too and
   // union it in, so a misspelt id would widen the union in silence instead of
   // failing at the line that holds it.
-  state: TableState<NoInfer<Id>>;
-  onSortChange: (columnId: NoInfer<Id>) => void;
-  onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: number) => void;
-  loading: boolean;
+  readonly state: TableState<NoInfer<Id>>;
+  readonly onSortChange: (columnId: NoInfer<Id>) => void;
+  readonly onPageChange: (page: number) => void;
+  readonly onPageSizeChange: (pageSize: number) => void;
+  readonly loading: boolean;
   // False until the underlying collection has arrived at least once.
-  datasetReady: boolean;
-  error: Error | null;
+  readonly datasetReady: boolean;
+  readonly error: Error | null;
   // Optional so the table stays usable on its own, without a container to
   // re-run the request behind it.
-  onRetry?: () => void;
-  labels: DataTableLabels;
+  readonly onRetry?: () => void;
+  readonly labels: DataTableLabels;
 }
 
 /**
