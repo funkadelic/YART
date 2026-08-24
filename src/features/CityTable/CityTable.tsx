@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import type { City } from "../../api/getCities";
 import { DataTable } from "../../components/DataTable/DataTable";
@@ -7,8 +7,13 @@ import {
   applyTableAction,
   type TableState,
 } from "../../components/DataTable/tableState";
+import {
+  parseTableState,
+  serializeTableState,
+} from "../../components/DataTable/tableStateUrl";
 import { SearchInput } from "../../components/SearchInput";
 import {
+  CITY_COLUMN_IDS,
   cityColumns,
   cityRowId,
   cityTableLabels,
@@ -48,10 +53,23 @@ export function CityTable({
   error,
   onRetry,
 }: CityTableProps) {
-  // Initialised with the term already in place, so the first render is the
-  // table the container asked for rather than one that resets itself on mount.
+  // Initialized with the term the container asked for and whatever the address
+  // carries, so the first render is already the restored view: a link naming a
+  // page never paints the first one for a frame on the way there. Reading it
+  // here rather than in an effect is what buys that, and the initializer is
+  // pure, so the development-mode double invoke costs one extra parse.
+  //
+  // This component holds the view state rather than receiving it the way the
+  // shared table does. About forty renders in the accessibility regression
+  // suite drive sorting and paging by clicking this component, so hoisting the
+  // state would put a stateful wrapper under all of them and the suite would
+  // start asserting against the wrapper instead of against the application.
   const [tableState, setTableState] = useState<TableState<CityColumnId>>(
-    () => ({ ...DEFAULT_TABLE_STATE, query: searchTerm }),
+    () => ({
+      ...DEFAULT_TABLE_STATE,
+      query: searchTerm,
+      ...parseTableState(window.location.search, CITY_COLUMN_IDS),
+    }),
   );
 
   // A new term is a different set of rows rather than a narrowing of the
@@ -63,6 +81,60 @@ export function CityTable({
       applyTableAction(tableState, { type: "query", query: searchTerm }),
     );
   }
+
+  // The only place in this application that writes the address, and it replaces
+  // rather than pushes, so one Back press leaves the site instead of stepping
+  // the reader back through positions they never asked to record.
+  //
+  // The comparison ahead of the write earns four things at once: a link that is
+  // already canonical is never rewritten, a parameter stating a default is
+  // stripped the moment it arrives, a hostile link is canonicalized on arrival,
+  // and a change driven by a back navigation cannot loop, because by then the
+  // address already says what the state says.
+  useEffect(() => {
+    const next = serializeTableState(tableState, window.location.search);
+    if (next === window.location.search) return;
+
+    // An empty query has to be written as the path. The empty string resolves
+    // to the current address and leaves the stale query exactly where it was,
+    // which is a write that reports success and changes nothing. The fragment
+    // rides along in both branches because a relative reference carrying a
+    // query but no fragment drops the fragment, and a shared link can carry one
+    // this application never put there.
+    window.history.replaceState(
+      window.history.state,
+      "",
+      next === ""
+        ? window.location.pathname + window.location.hash
+        : next + window.location.hash,
+    );
+  }, [tableState]);
+
+  // A history entry this application did not create can still carry a query it
+  // owns, so a traversal re-reads the whole view from the address and applies
+  // it in one write. Attached and detached symmetrically rather than assigned
+  // onto the window, so a second listener cannot silently replace this one.
+  useEffect(() => {
+    const handlePopState = () => {
+      setTableState((state) => ({
+        ...DEFAULT_TABLE_STATE,
+        ...parseTableState(window.location.search, CITY_COLUMN_IDS),
+        // Carried over only because the schema does not own the search key yet;
+        // delete this line in the plan that gives it one.
+        query: state.query,
+        // A restored sort is still a first render, and announcing a sort to
+        // someone who has just opened a link announces something that did not
+        // just happen. Carrying the flag across means a traversal after a real
+        // sort still announces, while a cold one stays silent.
+        hasSorted: state.hasSorted,
+      }));
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
 
   // The functional updater form is what keeps these dependency arrays empty, so
   // the three callbacks keep one identity for the life of the table.
