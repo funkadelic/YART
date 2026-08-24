@@ -52,6 +52,18 @@ interface UrlParamEntry {
  */
 const PARAM_SCHEMA: readonly UrlParamEntry[] = [
   {
+    key: "q",
+    // Taken exactly as it arrives, with nothing to validate. A term is a free
+    // string by nature: it reaches a controlled input's value and a substring
+    // match over the collection, never a lookup and never markup, so there is
+    // no shape it could fail to have. Every rule a term does have, the spelling
+    // of a space and the encoding of the punctuation the query string uses for
+    // itself, belongs to the query serializer below rather than here.
+    parse: (raw) => ({ query: raw }),
+    serialize: (state) =>
+      state.query === DEFAULT_TABLE_STATE.query ? null : state.query,
+  },
+  {
     key: "sort",
     // The remainder after the prefix is checked by locating it among the ids the
     // caller supplied, comparing values rather than indexing anything. Located
@@ -187,4 +199,17 @@ export function serializeTableState<Id extends string>(
 
   const query = next.toString();
   return query === "" ? "" : `?${query}`;
+}
+
+/**
+ * Reads only the search term a query string carries.
+ *
+ * The container behind the table needs the term on its very first render and
+ * owns none of the columns, so it reads through this rather than passing an
+ * empty column-id list to say it does not care about the sort. One schema and
+ * two entry points: the rules still live in exactly one place, and a reader of
+ * the call site can see what is being asked for.
+ */
+export function parseSearchTerm(search: string): string {
+  return parseTableState(search, []).query ?? DEFAULT_TABLE_STATE.query;
 }
