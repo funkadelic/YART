@@ -57,6 +57,88 @@ export interface DataTableProps<T, Id extends string> {
 }
 
 /**
+ * The failure, in place of the table.
+ *
+ * a11y: the failure arrives after the initial render, so without a live region
+ * a screen reader user is never told the load failed or that a way back is on
+ * offer. alert rather than status because the table it replaces is gone.
+ *
+ * A failed dataset load makes every search fail, so the way back belongs in the
+ * region that already reports it rather than in a second error surface. A
+ * native button carries the role, the focus, and the keyboard activation on its
+ * own.
+ */
+function ErrorRegion({
+  error,
+  onRetry,
+}: {
+  readonly error: Error;
+  readonly onRetry?: () => void;
+}) {
+  return (
+    <div className={styles.error} role="alert">
+      Error: {error.message}
+      {onRetry ? (
+        <button type="button" className={styles.retryButton} onClick={onRetry}>
+          Try again
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * What the sort live region says.
+ *
+ * A cleared sort and a sort that has never been applied render the same state,
+ * so the first render has to stay silent while the press that clears a sort
+ * does not. That is what hasSorted separates.
+ */
+function sortAnnouncement(
+  sortDirection: "asc" | "desc" | null,
+  hasSorted: boolean,
+  activeLabel: string | undefined,
+): string {
+  if (sortDirection && activeLabel) {
+    const order = sortDirection === "asc" ? "ascending" : "descending";
+    return `Table sorted by ${activeLabel} in ${order} order`;
+  }
+  return hasSorted ? "Table sort cleared" : "";
+}
+
+/**
+ * What the results live region says.
+ *
+ * Silent unless there is a settled result to report, because announcing a count
+ * mid-request would name rows that are about to be replaced. The empty result
+ * gets a sentence of its own: emptying a region is not an announcement, so a
+ * search matching nothing would otherwise be indistinguishable from a request
+ * that never came back.
+ */
+function resultsAnnouncement(
+  labels: DataTableLabels,
+  settled: boolean,
+  shown: number,
+  total: number,
+): string {
+  if (!settled) return "";
+  if (total === 0) return labels.emptyAnnouncement;
+  return labels.results(shown, total);
+}
+
+/**
+ * The sort, described for the caption, in the words the caption weaves into a
+ * sentence rather than the words the live region announces.
+ */
+function sortSummary(
+  sortDirection: "asc" | "desc" | null,
+  activeLabel: string | undefined,
+): string {
+  if (!sortDirection) return "not sorted";
+  return `sorted by ${activeLabel} ${sortDirection}ending`;
+}
+
+/**
  * Renders a collection as a sortable, paginated table.
  *
  * It holds nothing. The sort column and direction, the page position, the page
@@ -108,11 +190,7 @@ export function DataTable<T, Id extends string>({
     <>
       {/* a11y: Live region for announcing sort changes */}
       <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
-        {state.sortDirection && activeLabel
-          ? `Table sorted by ${activeLabel} in ${state.sortDirection === "asc" ? "ascending" : "descending"} order`
-          : state.hasSorted
-            ? "Table sort cleared"
-            : ""}
+        {sortAnnouncement(state.sortDirection, state.hasSorted, activeLabel)}
       </div>
       {/* a11y: mounted unconditionally rather than inside the branch that
           renders the table. A live region created with its message already in
@@ -122,34 +200,16 @@ export function DataTable<T, Id extends string>({
           is not an announcement either, so a search matching no rows would be
           indistinguishable from a request that never came back. */}
       <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
-        {error || loading || !datasetReady
-          ? ""
-          : sortedRows.length === 0
-            ? labels.emptyAnnouncement
-            : labels.results(paginatedData.length, sortedRows.length)}
+        {resultsAnnouncement(
+          labels,
+          !error && !loading && datasetReady,
+          paginatedData.length,
+          sortedRows.length,
+        )}
       </div>
 
       {error ? (
-        // a11y: the failure arrives after the initial render, so without a live
-        // region a screen reader user is never told the load failed or that a
-        // way back is on offer. alert rather than status because the table it
-        // replaces is gone.
-        <div className={styles.error} role="alert">
-          Error: {error.message}
-          {/* A failed dataset load makes every search fail, so the way back
-              belongs in the region that already reports it rather than in a
-              second error surface. A native button carries the role, the
-              focus, and the keyboard activation on its own. */}
-          {onRetry ? (
-            <button
-              type="button"
-              className={styles.retryButton}
-              onClick={onRetry}
-            >
-              Try again
-            </button>
-          ) : null}
-        </div>
+        <ErrorRegion error={error} onRetry={onRetry} />
       ) : !datasetReady ? (
         // The whole view is replaced until the collection has arrived once,
         // the first paint before the request even starts included: the empty
@@ -171,9 +231,7 @@ export function DataTable<T, Id extends string>({
                   <caption className={styles.srOnly}>
                     {labels.caption(
                       sortedRows.length,
-                      state.sortDirection
-                        ? `sorted by ${activeLabel} ${state.sortDirection}ending`
-                        : "not sorted",
+                      sortSummary(state.sortDirection, activeLabel),
                     )}
                   </caption>
                   <TableHead
