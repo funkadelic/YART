@@ -117,9 +117,22 @@ export function applyTableAction<Id extends string>(
     return { ...state, page: action.page };
   }
 
+  // A term that settles back where it started leaves the same rows in the same
+  // order, so the position chosen against them still means what it meant. This
+  // is the one action a control can emit at its current value: a sort press and
+  // a size selection are always a real change, while the debounce commits any
+  // sequence of keystrokes that pauses, including one that undoes itself. The
+  // same state object rather than an equal one, so the render and the address
+  // write behind it never run for a change that did not happen.
+  if (action.type === "query" && action.query === state.query) {
+    return state;
+  }
+
   // Sorting, resizing the page, and searching each replace the set of rows the
   // position was chosen against, so all three return to the first page. Fused
   // into one return so that reset has exactly one site in the codebase: whoever
-  // adds a fifth action has to decide about it rather than forget it.
+  // adds a fifth action has to decide about it rather than forget it. The guard
+  // above is a guard against the action, not a condition on the reset: once an
+  // action reaches this line it resets, whatever it carries.
   return { ...state, ...changedBy(state, action), page: 1 };
 }
