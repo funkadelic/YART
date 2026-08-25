@@ -424,6 +424,41 @@ describe("CityTable and the debounced address write", () => {
     expect(window.location.search).toBe("?q=tokyo");
   });
 
+  // The narrow window where a traversal and a commit are both in play. The
+  // keystrokes belong to the view the reader has left, so letting them land
+  // afterwards desyncs all three surfaces at once: the box would show the
+  // restored term while the rows, the position, and the address carried the
+  // typed one.
+  it("drops a commit still pending when a back navigation lands inside the window", async () => {
+    const user = userEvent.setup({ delay: null });
+    const onSearchChange = vi.fn();
+
+    render(<CityTable {...defaultProps} onSearchChange={onSearchChange} />);
+
+    await user.type(screen.getByRole("textbox", { name: "Search" }), "tokyo");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS - 1);
+    });
+
+    openAt("?q=kyoto&page=2");
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    // Well past the boundary the cancelled commit would have fired at.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS * 2);
+    });
+
+    expect(screen.getByRole("textbox", { name: "Search" })).toHaveValue(
+      "kyoto",
+    );
+    expect(screen.getByText("Page 2 of 5")).toBeInTheDocument();
+    expect(window.location.search).toBe("?q=kyoto&page=2");
+    expect(onSearchChange).toHaveBeenCalledTimes(1);
+    expect(onSearchChange).toHaveBeenCalledWith("kyoto");
+  });
+
   it("writes nothing further when the reader pauses again without typing", async () => {
     const user = userEvent.setup({ delay: null });
     const replaceState = vi.spyOn(window.history, "replaceState");

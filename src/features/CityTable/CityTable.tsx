@@ -129,12 +129,65 @@ export function CityTable({
     }
   }, [tableState]);
 
+  // The functional updater form is what keeps these dependency arrays empty, so
+  // the three callbacks keep one identity for the life of the table.
+  const handleSort = useCallback((columnId: CityColumnId) => {
+    setTableState((state) =>
+      applyTableAction(state, { type: "sort", columnId }),
+    );
+  }, []);
+
+  const handlePageChange = useCallback((page: number) => {
+    setTableState((state) => applyTableAction(state, { type: "page", page }));
+  }, []);
+
+  const handlePageSizeChange = useCallback((pageSize: number) => {
+    setTableState((state) =>
+      applyTableAction(state, { type: "pageSize", pageSize }),
+    );
+  }, []);
+
+  // This one carries a dependency where the three above carry none, so its
+  // identity is an argument rather than a guarantee: the only thing it depends
+  // on is the parent's callback, and that callback is itself memoized with an
+  // empty array, so in practice it is as stable as the three. Nothing below it
+  // inherits that argument, because the debounce reads its callback out of a
+  // ref rather than closing over it.
+  //
+  // Committing is the single point a pause in typing reaches. It moves the view
+  // state, which returns the reader to the first page because a new term is a
+  // different set of rows rather than a narrowing of the current one, and it
+  // reports the term upward so the request behind it is reissued.
+  const commitSearch = useCallback(
+    (term: string) => {
+      setTableState((state) =>
+        applyTableAction(state, { type: "query", query: term }),
+      );
+      onSearchChange(term);
+    },
+    [onSearchChange],
+  );
+
+  const { schedule: scheduleSearchCommit, cancel: cancelSearchCommit } =
+    useDebouncedCallback(commitSearch, SEARCH_DEBOUNCE_MS);
+
   // A history entry this application did not create can still carry a query it
   // owns, so a traversal re-reads the whole view from the address and applies
   // it in one write. Attached and detached symmetrically rather than assigned
   // onto the window, so a second listener cannot silently replace this one.
+  //
+  // Declared after the scheduler rather than beside the write above, because it
+  // has to be able to cancel a commit the scheduler is still holding, and a
+  // dependency array is read during the render that declares it.
   useEffect(() => {
     const handlePopState = () => {
+      // A traversal landing inside the debounce window would otherwise let the
+      // term the reader typed a moment ago land on top of the view they just
+      // navigated back to: the box would show the restored term while the rows,
+      // the position, and the address all carried the typed one. The keystrokes
+      // belong to the view the reader has left, so the commit goes with it.
+      cancelSearchCommit();
+
       const restored: TableState<CityColumnId> = {
         ...DEFAULT_TABLE_STATE,
         ...parseTableState(window.location.search, CITY_COLUMN_IDS),
@@ -155,7 +208,7 @@ export function CityTable({
       // landed on. Reporting it upward rather than letting the container read
       // the address for itself keeps the single writer single and the reader
       // count at two, and it is why this handler depends on the parent's
-      // callback where the three below depend on nothing.
+      // callback where the three above depend on nothing.
       setSearchInput(restored.query);
       onSearchChange(restored.query);
     };
@@ -164,49 +217,7 @@ export function CityTable({
     return () => {
       window.removeEventListener("popstate", handlePopState);
     };
-  }, [onSearchChange]);
-
-  // The functional updater form is what keeps these dependency arrays empty, so
-  // the three callbacks keep one identity for the life of the table.
-  const handleSort = useCallback((columnId: CityColumnId) => {
-    setTableState((state) =>
-      applyTableAction(state, { type: "sort", columnId }),
-    );
-  }, []);
-
-  const handlePageChange = useCallback((page: number) => {
-    setTableState((state) => applyTableAction(state, { type: "page", page }));
-  }, []);
-
-  const handlePageSizeChange = useCallback((pageSize: number) => {
-    setTableState((state) =>
-      applyTableAction(state, { type: "pageSize", pageSize }),
-    );
-  }, []);
-
-  // These two carry dependencies where the three above carry none, so their
-  // identity is an argument rather than a guarantee: the only thing either
-  // depends on is the parent's callback, and that callback is itself memoized
-  // with an empty array, so in practice the pair is as stable as the three.
-  //
-  // Committing is the single point a pause in typing reaches. It moves the view
-  // state, which returns the reader to the first page because a new term is a
-  // different set of rows rather than a narrowing of the current one, and it
-  // reports the term upward so the request behind it is reissued.
-  const commitSearch = useCallback(
-    (term: string) => {
-      setTableState((state) =>
-        applyTableAction(state, { type: "query", query: term }),
-      );
-      onSearchChange(term);
-    },
-    [onSearchChange],
-  );
-
-  const scheduleSearchCommit = useDebouncedCallback(
-    commitSearch,
-    SEARCH_DEBOUNCE_MS,
-  );
+  }, [onSearchChange, cancelSearchCommit]);
 
   // The box repaints on every keystroke while the commit waits for the pause,
   // so typing stays responsive and the table is asked once for what was typed.

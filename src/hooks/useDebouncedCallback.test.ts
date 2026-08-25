@@ -12,9 +12,9 @@ const CASE_TIMEOUT_MS = 5000;
 type Commit = (term: string) => void;
 
 /**
- * Renders the hook over a recording callback, handing back the debounced
- * function of the latest render alongside the recorder, so a case can assert
- * how many times the call actually landed rather than only what it landed
+ * Renders the hook over a recording callback, handing back the scheduler and
+ * cancel of the latest render alongside the recorder, so a case can assert how
+ * many times the call actually landed rather than only what it landed
  * with. No user input library is constructed in this file: the controlled
  * clock is deliberately isolated from the library that deadlocks against it,
  * so a failure here points at the timer setup and nothing else.
@@ -45,7 +45,7 @@ describe("useDebouncedCallback", () => {
     () => {
       const { result, commit } = renderDebouncedCallback();
 
-      result.current("tok");
+      result.current.schedule("tok");
 
       expect(commit).not.toHaveBeenCalled();
     },
@@ -57,7 +57,7 @@ describe("useDebouncedCallback", () => {
     () => {
       const { result, commit } = renderDebouncedCallback();
 
-      result.current("tok");
+      result.current.schedule("tok");
       vi.advanceTimersByTime(DELAY - 1);
       expect(commit).not.toHaveBeenCalled();
 
@@ -75,7 +75,7 @@ describe("useDebouncedCallback", () => {
       const { result, commit } = renderDebouncedCallback();
 
       for (const term of ["t", "to", "tok", "toky"]) {
-        result.current(term);
+        result.current.schedule(term);
         vi.advanceTimersByTime(DELAY - 50);
       }
 
@@ -96,7 +96,7 @@ describe("useDebouncedCallback", () => {
     () => {
       const { result, unmount, commit } = renderDebouncedCallback();
 
-      result.current("tok");
+      result.current.schedule("tok");
       vi.advanceTimersByTime(DELAY - 50);
 
       unmount();
@@ -114,7 +114,7 @@ describe("useDebouncedCallback", () => {
       const { result, rerender, commit } = renderDebouncedCallback();
 
       rerender({ callback: commit, delay: longerDelay });
-      result.current("tok");
+      result.current.schedule("tok");
 
       // The old boundary comes and goes without an invocation, because the
       // call was scheduled against the delay of the render that produced it.
@@ -124,6 +124,56 @@ describe("useDebouncedCallback", () => {
       vi.advanceTimersByTime(longerDelay - DELAY);
 
       expect(commit).toHaveBeenCalledWith("tok");
+    },
+    CASE_TIMEOUT_MS,
+  );
+
+  // Unmount is not the only way a pending call stops being wanted: a caller
+  // that has just replaced the state the call was typed against needs to drop
+  // it, and without this its only alternative is to let the stale value land on
+  // top of the new one.
+  it(
+    "never runs a call the caller cancelled",
+    () => {
+      const { result, commit } = renderDebouncedCallback();
+
+      result.current.schedule("tok");
+      vi.advanceTimersByTime(DELAY - 50);
+
+      result.current.cancel();
+      vi.advanceTimersByTime(DELAY * 2);
+
+      expect(commit).not.toHaveBeenCalled();
+    },
+    CASE_TIMEOUT_MS,
+  );
+
+  it(
+    "schedules normally again after a cancel",
+    () => {
+      const { result, commit } = renderDebouncedCallback();
+
+      result.current.schedule("tok");
+      result.current.cancel();
+      result.current.schedule("kyo");
+      vi.advanceTimersByTime(DELAY);
+
+      expect(commit).toHaveBeenCalledTimes(1);
+      expect(commit).toHaveBeenCalledWith("kyo");
+    },
+    CASE_TIMEOUT_MS,
+  );
+
+  it(
+    "clears nothing when there is nothing pending to cancel",
+    () => {
+      const { result, commit } = renderDebouncedCallback();
+
+      result.current.cancel();
+      result.current.cancel();
+      vi.advanceTimersByTime(DELAY * 2);
+
+      expect(commit).not.toHaveBeenCalled();
     },
     CASE_TIMEOUT_MS,
   );
@@ -138,7 +188,7 @@ describe("useDebouncedCallback", () => {
       const { result, rerender, commit } = renderDebouncedCallback();
       const replacement = vi.fn<Commit>();
 
-      result.current("tok");
+      result.current.schedule("tok");
       rerender({ callback: replacement, delay: DELAY });
       vi.advanceTimersByTime(DELAY);
 
@@ -153,22 +203,22 @@ describe("useDebouncedCallback", () => {
     "keeps one identity across renders whatever the caller does with its callback",
     () => {
       const { result, rerender, commit } = renderDebouncedCallback();
-      const first = result.current;
+      const first = result.current.schedule;
 
       rerender({ callback: commit, delay: DELAY });
-      expect(result.current).toBe(first);
+      expect(result.current.schedule).toBe(first);
 
       // Nothing about the callback reaches the memo, because the callback is
       // read out of a ref at fire time rather than captured, so the identity
       // the caller holds is one guarantee rather than an argument about how
       // some component two layers up wrote its own memo.
       rerender({ callback: vi.fn<Commit>(), delay: DELAY });
-      expect(result.current).toBe(first);
+      expect(result.current.schedule).toBe(first);
 
       // The delay does reach it: a scheduling call has to be able to read the
       // window the current render states.
       rerender({ callback: commit, delay: 400 });
-      expect(result.current).not.toBe(first);
+      expect(result.current.schedule).not.toBe(first);
     },
     CASE_TIMEOUT_MS,
   );
