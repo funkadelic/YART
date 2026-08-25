@@ -219,6 +219,15 @@ describe("toolchain baseline", () => {
     expect(manifest.scripts?.test).toBe("vitest run");
   });
 
+  // Most of the hook rule family is registered at warn rather than error by the
+  // plugin's own config, exhaustive-deps among them. Without the flag the gate
+  // exits zero with all of them reported, so neither the pipeline nor the
+  // pre-commit hook can fail on the rule that guards every dependency array in
+  // the tree.
+  it("fails the lint gate on a warning as well as an error", () => {
+    expect(manifest.scripts?.lint).toContain("--max-warnings 0");
+  });
+
   // The svg transformer that handled this asset is gone, and the asset went with it.
   it("keeps the orphaned logo asset deleted", () => {
     expect(existsSync(join(projectRoot, "src", "logo.svg"))).toBe(false);
