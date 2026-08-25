@@ -352,6 +352,50 @@ describe("the round trip", () => {
   }
 });
 
+// The column builder takes any string as an accessor id and constrains it in no
+// way, so an id beginning with the descending prefix is representable today.
+// Stripping the prefix before the lookup made such an id unreachable ascending
+// and asymmetric descending: one direction survived the round trip and the
+// other was silently dropped.
+describe("the round trip for a column id that begins with the prefix", () => {
+  type PrefixedColumnId = "-rank" | "name";
+
+  const PREFIXED_COLUMN_IDS: readonly PrefixedColumnId[] = ["-rank", "name"];
+
+  const DIRECTIONS: ReadonlyArray<readonly ["asc" | "desc", string]> = [
+    ["asc", "?sort=-rank"],
+    ["desc", "?sort=--rank"],
+  ];
+
+  for (const [direction, expected] of DIRECTIONS) {
+    it(`reproduces a ${direction} sort on it`, () => {
+      const state: TableState<PrefixedColumnId> = {
+        ...DEFAULT_TABLE_STATE,
+        sortColumnId: "-rank",
+        sortDirection: direction,
+      };
+
+      const written = serializeTableState(state, "");
+      expect(written).toBe(expected);
+
+      expect({
+        ...DEFAULT_TABLE_STATE,
+        ...parseTableState(written, PREFIXED_COLUMN_IDS),
+      }).toEqual(state);
+    });
+  }
+
+  // The exact match is tried first, so an id that exists as written wins over
+  // the id the prefix would produce from it. Nothing else could: one token
+  // carrying both the column and the direction cannot tell the two apart.
+  it("reads a token naming a real id as that id rather than as a sign on another", () => {
+    expect(parseTableState("?sort=-rank", PREFIXED_COLUMN_IDS)).toEqual({
+      sortColumnId: "-rank",
+      sortDirection: "asc",
+    });
+  });
+});
+
 describe("parseSearchTerm", () => {
   it("reads the term out of a fully specified query and ignores the rest", () => {
     expect(parseSearchTerm("?q=tokyo&sort=-population&page=3")).toBe("tokyo");

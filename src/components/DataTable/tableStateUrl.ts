@@ -65,21 +65,32 @@ const PARAM_SCHEMA: readonly UrlParamEntry[] = [
   },
   {
     key: "sort",
-    // The remainder after the prefix is checked by locating it among the ids the
-    // caller supplied, comparing values rather than indexing anything. Located
-    // with find rather than tested and then asserted, so the result arrives
-    // already typed as one of those ids and nothing here has to claim a type
-    // for a string that came out of the address.
+    // The token is checked by locating it among the ids the caller supplied,
+    // comparing values rather than indexing anything. Located with find rather
+    // than tested and then asserted, so the result arrives already typed as one
+    // of those ids and nothing here has to claim a type for a string that came
+    // out of the address.
+    //
+    // The whole token is tried before the prefix is stripped, because an id may
+    // itself begin with the prefix and nothing constrains it not to. Stripping
+    // first makes such an id unreachable ascending: it writes a token that
+    // reads back as a different id descending, so the sort is silently dropped
+    // rather than restored. Trying the exact match first leaves exactly one
+    // ambiguity, between an id and the id the prefix would produce from it, and
+    // resolves it toward the one that exists as written.
     parse: (raw, validColumnIds) => {
-      const descending = raw.startsWith(SORT_DESCENDING_PREFIX);
-      const id = descending ? raw.slice(SORT_DESCENDING_PREFIX.length) : raw;
+      const ascending = validColumnIds.find((candidate) => candidate === raw);
+      if (ascending !== undefined) {
+        return { sortColumnId: ascending, sortDirection: "asc" };
+      }
+
+      if (!raw.startsWith(SORT_DESCENDING_PREFIX)) return undefined;
+
+      const id = raw.slice(SORT_DESCENDING_PREFIX.length);
       const sortColumnId = validColumnIds.find((candidate) => candidate === id);
       if (sortColumnId === undefined) return undefined;
 
-      return {
-        sortColumnId,
-        sortDirection: descending ? "desc" : "asc",
-      };
+      return { sortColumnId, sortDirection: "desc" };
     },
     serialize: (state) =>
       state.sortColumnId === null
