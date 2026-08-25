@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { useEffect } from "react";
 import { describe, it, expect } from "vitest";
 
@@ -11,6 +11,9 @@ import { describe, it, expect } from "vitest";
  * race and cannot be asserted on. Writing from the unmount itself puts the same
  * write in the same place in the teardown with none of the timing, so the
  * ordering is what is under test rather than the scheduler.
+ *
+ * It renders a marker rather than nothing, so a case that runs after the
+ * teardown can tell an unmount that happened from one that never did.
  */
 function WritesAddressOnUnmount() {
   useEffect(
@@ -20,13 +23,25 @@ function WritesAddressOnUnmount() {
     [],
   );
 
-  return null;
+  return <p>still mounted</p>;
 }
 
-// These two cases are one assertion split across a teardown, so they are
+// These three cases are one assertion split across a teardown, so they are
 // ordered rather than independent. A hook that runs between tests cannot be
 // observed from inside one.
 describe("test setup teardown", () => {
+  // Asserted rather than assumed. Without this, the pair below passes whether
+  // the fixture writes anything at all, and the guard would go dead in silence
+  // the day the fixture stopped writing.
+  it("writes the address as it unmounts", () => {
+    const { unmount } = render(<WritesAddressOnUnmount />);
+
+    unmount();
+
+    expect(window.location.search).toBe("?q=leaked");
+    window.history.replaceState(null, "", "/");
+  });
+
   it("leaves an address write for the teardown to find", () => {
     render(<WritesAddressOnUnmount />);
 
@@ -39,5 +54,9 @@ describe("test setup teardown", () => {
     // the runner would then run the resets first and this case would open on
     // the previous one's leaked address.
     expect(window.location.search).toBe("");
+    // And fails if the unmount stops happening at all, which would otherwise
+    // leave this case green for the second reason a dead guard is green: no
+    // write to leak because nothing tore down.
+    expect(screen.queryByText("still mounted")).not.toBeInTheDocument();
   });
 });
