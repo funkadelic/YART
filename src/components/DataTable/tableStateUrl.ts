@@ -101,11 +101,13 @@ const PARAM_SCHEMA: readonly UrlParamEntry[] = [
 
       return { sortColumnId, sortDirection: "desc" };
     },
-    serialize: (state) =>
-      state.sortColumnId === null
-        ? null
-        : (state.sortDirection === "desc" ? SORT_DESCENDING_PREFIX : "") +
-          state.sortColumnId,
+    serialize: (state) => {
+      if (state.sortColumnId === null) return null;
+
+      const prefix =
+        state.sortDirection === "desc" ? SORT_DESCENDING_PREFIX : "";
+      return prefix + state.sortColumnId;
+    },
   },
   {
     key: "page",

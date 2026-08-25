@@ -142,7 +142,7 @@ describe("CityTable and the address", () => {
     );
     await user.selectOptions(screen.getByLabelText("Per page:"), "25");
 
-    expect(window.history.length).toBe(entriesBefore);
+    expect(window.history).toHaveLength(entriesBefore);
   });
 
   // The case a suite that only ever sets parameters never reaches: an empty
