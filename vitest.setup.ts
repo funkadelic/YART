@@ -47,25 +47,33 @@ beforeEach(() => {
 // previous case stamped on the document element, and a case meaning to open a
 // link with no parameters opens the previous case's link instead.
 afterEach(() => {
-  cleanup();
-
-  vi.unstubAllGlobals();
-  vi.restoreAllMocks();
-
-  // Three suites in this repository declare the node environment so they can read
-  // shipped files, and this setup file runs for them too. There is no document to
-  // reset there, and an unguarded reference is a ReferenceError that fails every
-  // one of their cases.
-  if (typeof document !== "undefined") {
-    document.documentElement.removeAttribute("data-theme");
-    document.documentElement.style.removeProperty("color-scheme");
-    window.history.replaceState(null, "", "/");
-  }
-
   try {
-    localStorage.clear();
-  } catch {
-    // Storage can be unavailable outright; there is then nothing to clear.
+    // The unmount is also the one step here that can throw: it flushes a
+    // pending render and its effects, and the boundary that would otherwise
+    // contain such a throw is itself being unmounted. The resets sit in a
+    // finally rather than after it, because a teardown that stops halfway
+    // hands the next test another test's leftovers, which is the failure these
+    // resets exist to prevent.
+    cleanup();
+  } finally {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+
+    // Three suites in this repository declare the node environment so they can
+    // read shipped files, and this setup file runs for them too. There is no
+    // document to reset there, and an unguarded reference is a ReferenceError
+    // that fails every one of their cases.
+    if (typeof document !== "undefined") {
+      document.documentElement.removeAttribute("data-theme");
+      document.documentElement.style.removeProperty("color-scheme");
+      window.history.replaceState(null, "", "/");
+    }
+
+    try {
+      localStorage.clear();
+    } catch {
+      // Storage can be unavailable outright; there is then nothing to clear.
+    }
   }
 });
 
