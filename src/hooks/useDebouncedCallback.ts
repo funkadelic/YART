@@ -63,6 +63,11 @@ export function useDebouncedCallback<A extends unknown[]>(
     (...args: A) => {
       clearTimeout(pending.current);
       pending.current = setTimeout(() => {
+        // Dropped as it fires, for the same reason the cancel below drops it:
+        // a handle the platform has already retired must not be clearable a
+        // second time, and a call that has landed retires its own handle just
+        // as surely as a cancel does.
+        pending.current = undefined;
         latest.current(...args);
       }, delay);
     },

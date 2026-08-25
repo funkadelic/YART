@@ -164,6 +164,42 @@ describe("useDebouncedCallback", () => {
     CASE_TIMEOUT_MS,
   );
 
+  // The handle is retired by a call that lands just as surely as by a cancel,
+  // so the drop belongs in both places. The path is live in the application: a
+  // search commits, a traversal follows, and the traversal cancels a commit
+  // that is no longer pending. What the platform is handed is asserted
+  // directly, because the handle itself is deliberately not observable and a
+  // case that only re-scheduled afterwards would pass either way.
+  it(
+    "hands the platform nothing when a cancel follows a call that already landed",
+    () => {
+      const { result, commit } = renderDebouncedCallback();
+
+      result.current.schedule("tok");
+      vi.advanceTimersByTime(DELAY);
+      expect(commit).toHaveBeenCalledTimes(1);
+
+      const clear = vi.spyOn(globalThis, "clearTimeout");
+      try {
+        result.current.cancel();
+
+        expect(clear).toHaveBeenCalledWith(undefined);
+      } finally {
+        // Restored inside the case rather than left to the shared teardown,
+        // which runs after this file has put the real clock back and would
+        // therefore reinstall the controlled clock's own function.
+        clear.mockRestore();
+      }
+
+      result.current.schedule("kyo");
+      vi.advanceTimersByTime(DELAY);
+
+      expect(commit).toHaveBeenCalledTimes(2);
+      expect(commit).toHaveBeenLastCalledWith("kyo");
+    },
+    CASE_TIMEOUT_MS,
+  );
+
   it(
     "clears nothing when there is nothing pending to cancel",
     () => {
