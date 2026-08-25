@@ -109,13 +109,24 @@ export function CityTable({
     // rides along in both branches because a relative reference carrying a
     // query but no fragment drops the fragment, and a shared link can carry one
     // this application never put there.
-    window.history.replaceState(
-      window.history.state,
-      "",
-      next === ""
-        ? window.location.pathname + window.location.hash
-        : next + window.location.hash,
-    );
+    //
+    // Guarded because no write to the address is worth the table. Browsers rate
+    // limit history mutation and throw rather than ignoring the call, and a held
+    // Enter key on the paging control reaches that ceiling in seconds over a
+    // collection with thousands of pages. A throw here is a throw in a
+    // commit-phase effect, so the boundary above would replace the whole view
+    // with the failure fallback over a link that failed to update.
+    try {
+      window.history.replaceState(
+        window.history.state,
+        "",
+        next === ""
+          ? window.location.pathname + window.location.hash
+          : next + window.location.hash,
+      );
+    } catch {
+      // The view state is unchanged and correct; only the address fell behind.
+    }
   }, [tableState]);
 
   // A history entry this application did not create can still carry a query it

@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 
 import { CityTable } from "./CityTable";
 import App from "../../App";
+import { RootLayout } from "../RootLayout";
 import { getCities } from "../../api/getCities";
 import type { City } from "../../api/getCities";
 
@@ -276,6 +277,34 @@ describe("CityTable and the address", () => {
     expect(announcer).toHaveTextContent(
       "Table sorted by Population in descending order",
     );
+  });
+
+  // The address is a convenience and the table is not. Browsers rate limit
+  // history mutation and throw rather than ignoring the call, and a held Enter
+  // key on the paging control reaches that ceiling over a collection with this
+  // many pages. Unguarded, the throw lands in a commit-phase effect and the
+  // boundary around the main slot replaces the whole view with its fallback,
+  // which is the reader losing the table over a link that failed to update.
+  it("keeps the table rendered when the browser refuses the address write", async () => {
+    const user = userEvent.setup({ delay: null });
+    vi.spyOn(window.history, "replaceState").mockImplementation(() => {
+      throw new DOMException(
+        "Attempt to use history.replaceState() more than 100 times per 30 seconds",
+        "SecurityError",
+      );
+    });
+
+    render(
+      <RootLayout>
+        <CityTable {...defaultProps} />
+      </RootLayout>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Go to next page" }));
+
+    expect(screen.getByText("Page 2 of 5")).toBeInTheDocument();
+    expect(screen.getByText("City 11")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("carries a tracking parameter and an unrecognized key through a write, behind the keys it owns", async () => {
