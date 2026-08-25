@@ -11,7 +11,7 @@ search, sort, and paginate a list of world cities without a table library.
 - Empty state when a search matches nothing
 - A failed dataset load replaces the table with the message and a retry control
 - Search is debounced by 150ms after the last keystroke, using a hand-rolled
-  `useDebounce` hook rather than a utility library
+  `useDebouncedCallback` hook rather than a utility library
 
 ### Sorting
 
@@ -25,6 +25,21 @@ search, sort, and paginate a list of world cities without a table library.
 - Page size defaults to 10 and can be changed at runtime
 - Previous and next navigation, plus jumps to the first and last page
 - Page size changes reset to the first page
+
+### Shareable links
+
+- The search term, the sort, the page, and the page size all live in the query
+  string, so a view can be copied out of the address bar and reopened as itself
+- Four keys: `q`, `sort`, `page`, and `size`. A descending sort is the column id
+  behind a hyphen, so `?sort=-population` is population, largest first
+- A value equal to its default is left out, so the plain view is a bare path and
+  one view has exactly one address
+- Every parameter is validated on its own and falls back on its own, so
+  `?page=0&size=25` still opens at 25 rows a page
+- Written with `replaceState` rather than `pushState`, so one Back press leaves
+  the site instead of walking back through positions nobody asked to record
+- Parameters the app does not own, a tracking tag for instance, survive the
+  write untouched
 
 ### Theme
 
@@ -240,18 +255,26 @@ that is really a number has to be padded to sort as one. Unpadded, `"2"` follows
 `"1934976309"` and the two lowest ids land at the end of every group of rows
 whose sorted values are equal. `cityRowId` pads to ten digits for that reason.
 
-### Why the caller debounces
+### Why the container debounces
 
 `SearchInput` calls `onChange` on every keystroke and `DataTable` renders
-whatever `rows` it is given. That split leaves the debounce interval, the
-request and the retry policy to the caller. Swapping the 150ms delay for 300ms,
-or replacing the simulated API with a real endpoint, touches no table code.
+whatever `rows` it is given. Neither of them knows what a pause in typing means.
+The container between them does: `CityTable` holds what is in the box, and the
+one term that typing settles on drives the page reset, the address write, and
+the request behind it. Swapping the 150ms delay for 300ms, or replacing the
+simulated API with a real endpoint, touches no table code.
 
-The `useDebounce` hook is standalone and works with any value:
+`useDebouncedCallback` debounces the call rather than a value, which is what
+keeps it usable straight from an event handler. It hands back a scheduler and a
+cancel:
 
 ```tsx
-const debouncedFilters = useDebounce(filters, 300);
+const { schedule, cancel } = useDebouncedCallback(commit, 300);
 ```
+
+The cancel is not decoration. A back navigation landing inside the window would
+otherwise let the term the reader typed a moment ago land on top of the view
+they navigated back to.
 
 ## Configuring
 
@@ -385,8 +408,3 @@ ships:
 - Every row renders, so a page size of 100 is 100 rows in the DOM and there is
   no way to ask for all 50,250. Virtualization would fix both.
 - Sorting multiple columns at once is not implemented.
-- Sort and page state live in component state, so they are lost on reload and
-  cannot be linked to. `TableState` is one object for that reason: a serializer
-  writes all of it at once and a restored address writes all of it back at once,
-  and five separate writes are five chances to tear. Moving it into the URL is the next
-  thing on this list.
