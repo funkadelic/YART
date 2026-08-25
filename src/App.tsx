@@ -53,7 +53,7 @@ const App = () => {
       })
       .finally(() => {
         if (ignore) return;
-        dispatch({ type: "settled" }); // always lower loading for either try or catch
+        dispatch({ type: "settled" });
       });
 
     return () => {
