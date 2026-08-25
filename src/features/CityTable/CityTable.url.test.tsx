@@ -350,10 +350,19 @@ describe("CityTable, the address, and the search term", () => {
     // went out, not what came back.
     seam.mockReturnValue(new Promise<City[]>(() => {}));
 
-    render(<App />);
+    // Restored here rather than left to the shared teardown, which restores
+    // spies and this seam is not one: it is a plain mock function standing in
+    // for a module export, so nothing global reaches it. Without this, the next
+    // case in this file to render the application gets a request that never
+    // resolves and reads as a bug in the code under test.
+    try {
+      render(<App />);
 
-    expect(seam).toHaveBeenCalledTimes(1);
-    expect(seam).toHaveBeenCalledWith({ searchTerm: "tokyo" });
+      expect(seam).toHaveBeenCalledTimes(1);
+      expect(seam).toHaveBeenCalledWith({ searchTerm: "tokyo" });
+    } finally {
+      seam.mockRestore();
+    }
   });
 
   it("restores the box, reports the term upward, and applies the other values in the same update", () => {
