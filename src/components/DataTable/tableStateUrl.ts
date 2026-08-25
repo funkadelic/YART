@@ -60,8 +60,17 @@ const PARAM_SCHEMA: readonly UrlParamEntry[] = [
     // of a space and the encoding of the punctuation the query string uses for
     // itself, belongs to the query serializer below rather than here.
     parse: (raw) => ({ query: raw }),
-    serialize: (state) =>
-      state.query === DEFAULT_TABLE_STATE.query ? null : state.query,
+    // Trimmed on the way out, because the search itself trims: a term carrying
+    // edge whitespace selects the same rows as one without, so writing it
+    // verbatim would give one view two addresses that never converge, and a
+    // term that is nothing but whitespace would write a key for a view
+    // identical to the default. Trimmed here rather than in the state, so what
+    // the reader is typing stays painted in the box exactly as they typed it
+    // while the address stays canonical.
+    serialize: (state) => {
+      const term = state.query.trim();
+      return term === DEFAULT_TABLE_STATE.query ? null : term;
+    },
   },
   {
     key: "sort",

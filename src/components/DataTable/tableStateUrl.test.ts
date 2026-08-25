@@ -296,6 +296,32 @@ describe("serializeTableState", () => {
     );
   });
 
+  // The search trims before it matches, so a term carrying edge whitespace
+  // selects the same rows as one without. Writing it verbatim would give one
+  // view two addresses that never converge, which is the claim the canonical
+  // form is supposed to make good on.
+  it("writes a term carrying edge whitespace as the same address as one without", () => {
+    const padded = serializeTableState(stateWith({ query: " tokyo " }), "");
+
+    expect(padded).toBe("?q=tokyo");
+    expect(padded).toBe(serializeTableState(stateWith({ query: "tokyo" }), ""));
+  });
+
+  it("writes nothing for a term that is only whitespace", () => {
+    expect(serializeTableState(stateWith({ query: "   " }), "?q=old")).toBe("");
+  });
+
+  // The trim belongs to the address and stops there: the box paints what the
+  // reader typed, so trimming the state would delete a space out from under a
+  // cursor mid-word.
+  it("leaves the state's own term untouched", () => {
+    const state = stateWith({ query: " tokyo " });
+
+    serializeTableState(state, "");
+
+    expect(state.query).toBe(" tokyo ");
+  });
+
   it("writes nothing for a sort left at the default", () => {
     expect(serializeTableState(stateWith({ page: 2 }), "?sort=name")).toBe(
       "?page=2",
