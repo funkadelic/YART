@@ -27,6 +27,15 @@ export const cityColumns = [
 export type CityColumnId = (typeof cityColumns)[number]["id"];
 
 /**
+ * The closed set a sort id restored from an address is checked for membership
+ * in. Derived from the columns rather than written out beside them, so a column
+ * that is added, renamed, or removed cannot leave a stale entry behind here.
+ */
+export const CITY_COLUMN_IDS: readonly CityColumnId[] = cityColumns.map(
+  (column) => column.id,
+);
+
+/**
  * The width every city id is padded to before it is handed over as a row
  * identity. Ten because the dataset's ids are geoname ids, which the generator
  * emits at ten digits, and the two rows the parse boundary numbers itself. A

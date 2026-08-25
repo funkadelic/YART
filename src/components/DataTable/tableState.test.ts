@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_TABLE_STATE,
+  PAGE_SIZE_OPTIONS,
   applyTableAction,
   type TableAction,
   type TableState,
@@ -99,6 +100,43 @@ describe("applyTableAction: the page", () => {
   it("keeps the page it holds when nothing about the row set changed", () => {
     expect(applyTableAction(BASE, { type: "page", page: 4 }).page).toBe(4);
   });
+
+  // The debounce commits any sequence of keystrokes that pauses, including one
+  // that undoes itself, so a reader who types a character and deletes it
+  // commits the term they already had. The rows are the same rows and the
+  // position chosen against them still means what it meant.
+  it("keeps the page when a term settles back where it started", () => {
+    const searched: TableState<WidgetColumnId> = { ...BASE, query: "oslo" };
+
+    const next = applyTableAction(searched, { type: "query", query: "oslo" });
+
+    expect(next.page).toBe(4);
+    // The same object, not merely an equal one, so the render and the address
+    // write behind it never run for a change that did not happen.
+    expect(next).toBe(searched);
+  });
+
+  // The counterpart, and the reason the guard above names the query action
+  // rather than comparing whatever field an action happens to carry. Neither
+  // other control can emit its own current value, so a guard covering them
+  // would be a rule with no case it applies to, and the reset would stop being
+  // one line a reader can find.
+  it("still returns to the first page for a size that is already in effect", () => {
+    const next = applyTableAction(BASE, {
+      type: "pageSize",
+      pageSize: BASE.pageSize,
+    });
+
+    expect(next.page).toBe(1);
+  });
+
+  it("returns to the first page when an empty term follows a non-empty one", () => {
+    const searched: TableState<WidgetColumnId> = { ...BASE, query: "oslo" };
+
+    expect(applyTableAction(searched, { type: "query", query: "" }).page).toBe(
+      1,
+    );
+  });
 });
 
 describe("applyTableAction: the query and the page size", () => {
@@ -145,5 +183,12 @@ describe("DEFAULT_TABLE_STATE", () => {
       query: "",
       hasSorted: false,
     });
+  });
+
+  // The one thing that has to hold for the rule that keeps defaults out of the
+  // address and the select's own rendered value to agree, and the first thing
+  // that breaks if the default or the offered list is edited alone.
+  it("starts at a size the table actually offers", () => {
+    expect(PAGE_SIZE_OPTIONS).toContain(DEFAULT_TABLE_STATE.pageSize);
   });
 });

@@ -1,28 +1,26 @@
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useReducer, useState } from "react";
 
-import type { City } from "./api/getCities";
 import { getCities } from "./api/getCities";
-import { useDebounce } from "./hooks/useDebounce";
+import { INITIAL_APP_STATE, applyAppAction } from "./appState";
 
 import { RootLayout } from "./features/RootLayout";
-import { CityTable } from "./features/CityTable";
+import { CityTable, parseSearchTerm } from "./features/CityTable";
 
 const App = () => {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [cities, setCities] = useState<City[]>([]);
-  const [error, setError] = useState<Error | null>(null);
-  const [loading, setLoading] = useState(false);
-  // The loading flag is also true for a refetch that follows an empty result
-  // set, so on its own it cannot say whether the wait is a download or a
-  // search. This records the one fact it cannot carry: whether the collection
-  // has arrived at least once.
-  const [datasetReady, setDatasetReady] = useState(false);
-  // The retry control below increments retryAttempt, and the effect lists it as
-  // a dependency, which is what lets a failed load be run again without a page
-  // reload.
-  const [retryAttempt, setRetryAttempt] = useState(0);
-
-  const debouncedSearchTerm = useDebounce(searchTerm, 150);
+  // Seeded from the address so the first render already asks for the right
+  // rows. Without this the effect below issues a request for the empty term and
+  // then immediately another for the restored one, so every shared link costs
+  // two requests on a cold start; the stale-result guard makes that survivable
+  // rather than correct.
+  //
+  // This is a read of the address and stays one. The single write lives with
+  // the table's view state, one layer down, and adding a second writer here is
+  // what would make the address a thing two components argue over.
+  const [searchTerm, setSearchTerm] = useState(() =>
+    parseSearchTerm(window.location.search),
+  );
+  const [{ cities, error, loading, datasetReady, retryAttempt }, dispatch] =
+    useReducer(applyAppAction, INITIAL_APP_STATE);
 
   useEffect(() => {
     // The asynchronous work sits directly in the effect rather than behind a
@@ -34,34 +32,38 @@ const App = () => {
 
     // Clear the last failure as the new attempt starts, so a retry does not
     // leave the old error on screen beside the new load.
-    setError(null);
-    setLoading(true);
+    dispatch({ type: "attempt" });
 
-    getCities({ searchTerm: debouncedSearchTerm })
+    getCities({ searchTerm })
       .then((searchResult) => {
         if (ignore) return;
-        setCities(searchResult);
-        setDatasetReady(true);
+        dispatch({ type: "resolved", cities: searchResult });
       })
       .catch((err: unknown) => {
         if (ignore) return;
         if (err instanceof Error) {
-          setError(err);
+          dispatch({ type: "failed", error: err });
         } else {
-          setError(new Error("An unexpected error occurred"));
+          dispatch({
+            type: "failed",
+            error: new Error("An unexpected error occurred"),
+          });
         }
       })
       .finally(() => {
         if (ignore) return;
-        setLoading(false); // always set loading to false for either try or catch
+        dispatch({ type: "settled" });
       });
 
     return () => {
       ignore = true;
     };
-  }, [debouncedSearchTerm, retryAttempt]);
+  }, [searchTerm, retryAttempt]);
 
-  // Memoize the search change handler to prevent re-renders
+  // Receives the term the search box has settled on rather than every
+  // keystroke: the debounce lives with the box now, so what arrives here is
+  // already the term worth issuing a request for. Memoized because the child
+  // holds on to it, and an empty dependency array is what makes that hold safe.
   const handleSearchChange = useCallback((term: string) => {
     setSearchTerm(term);
   }, []);
@@ -72,7 +74,7 @@ const App = () => {
   // deployment behind a spinner and re-downloads several megabytes of city data
   // with nobody watching.
   const handleRetry = useCallback(() => {
-    setRetryAttempt((previousAttempt) => previousAttempt + 1);
+    dispatch({ type: "retry" });
   }, []);
 
   return (
@@ -80,7 +82,6 @@ const App = () => {
       <h1>City List</h1>
       <CityTable
         data={cities}
-        searchTerm={searchTerm}
         onSearchChange={handleSearchChange}
         loading={loading}
         datasetReady={datasetReady}

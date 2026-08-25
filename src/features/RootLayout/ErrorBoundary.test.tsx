@@ -173,7 +173,6 @@ describe("ErrorBoundary mounted in the layout", () => {
       <RootLayout>
         <CityTable
           data={[]}
-          searchTerm=""
           onSearchChange={() => {}}
           loading={false}
           datasetReady={false}

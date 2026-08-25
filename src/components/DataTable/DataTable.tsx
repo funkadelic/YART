@@ -94,17 +94,23 @@ function ErrorRegion({
  * A cleared sort and a sort that has never been applied render the same state,
  * so the first render has to stay silent while the press that clears a sort
  * does not. That is what hasSorted separates.
+ *
+ * It separates the sorted case too, not just the cleared one: a sort can arrive
+ * without anybody pressing anything, because a link can carry one. That is
+ * still a first render, and a region reporting what the table is rather than
+ * what just changed announces something that did not happen.
  */
 function sortAnnouncement(
   sortDirection: "asc" | "desc" | null,
   hasSorted: boolean,
   activeLabel: string | undefined,
 ): string {
+  if (!hasSorted) return "";
   if (sortDirection && activeLabel) {
     const order = sortDirection === "asc" ? "ascending" : "descending";
     return `Table sorted by ${activeLabel} in ${order} order`;
   }
-  return hasSorted ? "Table sort cleared" : "";
+  return "Table sort cleared";
 }
 
 /**

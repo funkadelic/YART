@@ -6,6 +6,7 @@ import {
   MdChevronRight,
 } from "react-icons/md";
 
+import { PAGE_SIZE_OPTIONS } from "./tableState";
 import styles from "./Pagination.module.scss";
 
 interface PaginationProps {
@@ -37,8 +38,8 @@ export function Pagination({
 
   /**
    * Turns the select's string value into the number the arithmetic divides by.
-   * The option list is fixed at four values, so nothing out of range or
-   * non-numeric can reach the arithmetic through this control.
+   * The option list is a closed set, so nothing out of range or non-numeric can
+   * reach the arithmetic through this control.
    */
   const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onPageSizeChange(Number.parseInt(e.target.value, 10));
@@ -58,18 +59,18 @@ export function Pagination({
     <div className={styles.paginationContainer}>
       <div className={styles.pageSizeContainer}>
         <label htmlFor={pageSizeId}>Per page:</label>
-        {/* Fixed at four values, which is also what keeps the page size a
-            number from a known set: nothing outside this list can reach the
+        {/* A closed list, so nothing outside PAGE_SIZE_OPTIONS can reach the
             arithmetic through this control. */}
         <select
           id={pageSizeId}
           value={pageSize}
           onChange={handlePageSizeChange}
         >
-          <option value={10}>10</option>
-          <option value={25}>25</option>
-          <option value={50}>50</option>
-          <option value={100}>100</option>
+          {PAGE_SIZE_OPTIONS.map((size) => (
+            <option key={size} value={size}>
+              {size}
+            </option>
+          ))}
         </select>
       </div>
 
