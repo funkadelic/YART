@@ -128,8 +128,29 @@ describe("useDebouncedCallback", () => {
     CASE_TIMEOUT_MS,
   );
 
+  // The case the hook exists to make impossible to get wrong. A caller handing
+  // over a fresh callback on every render, which is what an inline arrow is,
+  // used to have its pending call run the closure of the render that scheduled
+  // it: the arguments were current and the implementation was not.
   it(
-    "keeps one identity across renders while the callback and the delay are unchanged",
+    "runs the callback of the latest render rather than the one current when the call was scheduled",
+    () => {
+      const { result, rerender, commit } = renderDebouncedCallback();
+      const replacement = vi.fn<Commit>();
+
+      result.current("tok");
+      rerender({ callback: replacement, delay: DELAY });
+      vi.advanceTimersByTime(DELAY);
+
+      expect(commit).not.toHaveBeenCalled();
+      expect(replacement).toHaveBeenCalledTimes(1);
+      expect(replacement).toHaveBeenCalledWith("tok");
+    },
+    CASE_TIMEOUT_MS,
+  );
+
+  it(
+    "keeps one identity across renders whatever the caller does with its callback",
     () => {
       const { result, rerender, commit } = renderDebouncedCallback();
       const first = result.current;
@@ -137,7 +158,16 @@ describe("useDebouncedCallback", () => {
       rerender({ callback: commit, delay: DELAY });
       expect(result.current).toBe(first);
 
+      // Nothing about the callback reaches the memo, because the callback is
+      // read out of a ref at fire time rather than captured, so the identity
+      // the caller holds is one guarantee rather than an argument about how
+      // some component two layers up wrote its own memo.
       rerender({ callback: vi.fn<Commit>(), delay: DELAY });
+      expect(result.current).toBe(first);
+
+      // The delay does reach it: a scheduling call has to be able to read the
+      // window the current render states.
+      rerender({ callback: commit, delay: 400 });
       expect(result.current).not.toBe(first);
     },
     CASE_TIMEOUT_MS,
