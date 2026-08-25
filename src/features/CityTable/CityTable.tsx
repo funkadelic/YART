@@ -160,10 +160,21 @@ export function CityTable({
   // reports the term upward so the request behind it is reissued.
   const commitSearch = useCallback(
     (term: string) => {
+      // Canonicalized here, once, rather than at each of the three places that
+      // decide whether two terms are the same view. The search trims before it
+      // matches and the address trims before it writes, so a term differing
+      // only in edge whitespace selects the same rows at the same address;
+      // committing it verbatim is what makes the state disagree with both of
+      // them, and the disagreement costs the reader their position, strips the
+      // page from the address, and reissues a request for rows that did not
+      // change. The box goes on painting what was typed, because what is being
+      // typed is separate state from what typing settles on.
+      const settled = term.trim();
+
       setTableState((state) =>
-        applyTableAction(state, { type: "query", query: term }),
+        applyTableAction(state, { type: "query", query: settled }),
       );
-      onSearchChange(term);
+      onSearchChange(settled);
     },
     [onSearchChange],
   );
