@@ -27,13 +27,10 @@ export default defineConfig([
       "react/react-in-jsx-scope": "off",
     },
   },
-  {
-    plugins: {
-      "react-hooks": reactHooks,
-    },
-    rules: {
-      ...reactHooks.configs.recommended.rules,
-    },
-  },
+  // The plugin's own flat config rather than a hand-built entry, so the shape
+  // tracks the installed major instead of the one this file was written against.
+  // Note it enables the React Compiler rule family, not just the two classic
+  // hook rules.
+  reactHooks.configs.flat.recommended,
   prettierConfig, // must go last
 ]);
