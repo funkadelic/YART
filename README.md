@@ -52,8 +52,9 @@ search, sort, and paginate a list of world cities without a table library.
 
 ### Accessibility
 
-- Column headers carry a descriptive label for the action the next click will
-  take, for example "Sort by Country descending"
+- Sorting is a real button inside each column header, so Enter and Space work
+  without a mouse, and the button is named for its column alone so a press does
+  not re-announce the whole control
 - Icons are hidden from assistive technology, since the header text already
   carries the meaning
 - Live regions announce sort changes and result counts
@@ -269,7 +270,10 @@ keeps it usable straight from an event handler. It hands back a scheduler and a
 cancel:
 
 ```tsx
-const { schedule, cancel } = useDebouncedCallback(commit, 300);
+const { schedule, cancel } = useDebouncedCallback(
+  commitSearch,
+  SEARCH_DEBOUNCE_MS,
+);
 ```
 
 The cancel is not decoration. A back navigation landing inside the window would
@@ -332,14 +336,18 @@ one.
 
 ### Page size options
 
-The page size select is populated from a fixed list of four, with 10 as the
-default:
+The page size select is populated from `PAGE_SIZE_OPTIONS` in
+`src/components/DataTable/tableState.ts`, the one place the list is written
+down. 10 is the default:
 
 ```tsx
-<option value={10}>10</option>
-<option value={25}>25</option>
-<option value={50}>50</option>
-<option value={100}>100</option>
+<select id={pageSizeId} value={pageSize} onChange={handlePageSizeChange}>
+  {PAGE_SIZE_OPTIONS.map((size) => (
+    <option key={size} value={size}>
+      {size}
+    </option>
+  ))}
+</select>
 ```
 
 Changing the page size, the sort, or the query returns to page 1, so no rows are
