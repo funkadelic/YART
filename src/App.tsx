@@ -2,10 +2,9 @@ import { useEffect, useCallback, useReducer, useState } from "react";
 
 import { getCities } from "./api/getCities";
 import { INITIAL_APP_STATE, applyAppAction } from "./appState";
-import { parseSearchTerm } from "./components/DataTable/tableStateUrl";
 
 import { RootLayout } from "./features/RootLayout";
-import { CityTable } from "./features/CityTable";
+import { CityTable, parseSearchTerm } from "./features/CityTable";
 
 const App = () => {
   // Seeded from the address so the first render already asks for the right
