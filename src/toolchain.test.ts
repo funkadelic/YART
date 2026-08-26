@@ -705,7 +705,7 @@ describe("toolchain baseline", () => {
     expect(offenders).toEqual([]);
   });
 
-  // The guard above only sees files it recognises as tests. A clock installed from
+  // The guard above only sees files it recognizes as tests. A clock installed from
   // shared setup would put the whole suite on a frozen clock from a file it never
   // reads, so that possibility is closed here rather than left implicit. The
   // files read are the ones the config actually names, so a project that grows a
@@ -889,7 +889,7 @@ describe("toolchain baseline", () => {
 
   // The footer carries this same attribution and has its own test. The README
   // copy has nothing watching it, so a documentation rewrite could drop the
-  // source link, the licence link, or the record of what was changed, and the
+  // source link, the license link, or the record of what was changed, and the
   // suite would stay green while the obligation lapsed in the place most readers
   // meet this project first.
   it("keeps the data attribution in the README", () => {
@@ -906,13 +906,13 @@ describe("toolchain baseline", () => {
     }
   });
 
-  // The README and the licence file already disagreed once, in the direction of
+  // The README and the license file already disagreed once, in the direction of
   // the README claiming a fresh CSV run the artifact's own tie-break ordering
   // disproves. Removal was guarded in neither document and divergence was guarded
   // in neither, so the wrong copy sat beside the right one with the suite green.
   // Both documents are asserted here from one pair of literals, which makes a
   // rewrite of either one alone a red test rather than a silent contradiction.
-  it("keeps one account of the dataset's provenance in the README and the licence file", () => {
+  it("keeps one account of the dataset's provenance in the README and the license file", () => {
     const sentences = [PROVENANCE_SERIALIZATION, PROVENANCE_REGENERATION];
 
     for (const name of ["README.md", "src/data/worldcities/license.txt"]) {
