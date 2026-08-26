@@ -56,10 +56,14 @@ export interface ColumnOptions<T, V> {
  * guess, so it is supplied here; the column id and the value type are then
  * inferred per call, which is the whole point.
  *
- * The id is a const type parameter, so an array of these carries the literal
- * union of its ids with no assertion written anywhere. Renaming a column is
- * then a compile error at every use site rather than a silent widening to
- * string.
+ * The id is constrained to string and every call site passes a string literal,
+ * so it infers as that literal, not as string. An array of these carries the
+ * literal union of its ids with no assertion written anywhere, and renaming a
+ * column is a compile error at every use site rather than a silent widening.
+ *
+ * The const modifier on the two id parameters below does nothing here, since
+ * the argument is already a bare literal. It would matter only if an id
+ * arrived inside an array or object literal, where inference would widen.
  */
 export function columns<T>() {
   /**
