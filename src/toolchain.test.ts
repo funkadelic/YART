@@ -408,6 +408,31 @@ function coveragePatterns(key: string): string[] | null {
   return [...declared[1].matchAll(/"([^"]*)"/g)].map((match) => match[1]);
 }
 
+/**
+ * Every file that can install something on the whole suite: the config itself,
+ * and each setup file it declares. Derived rather than named, because the config
+ * carries one setupFiles array per project, the browser project's is empty
+ * today, and a third project or a setup file added to that one would sit outside
+ * a written-out pair and never be read.
+ */
+function suiteWideFiles(): string[] {
+  const declared = [
+    ...stripComments(
+      readFileSync(join(projectRoot, CONFIG_FILE), "utf8"),
+    ).matchAll(/setupFiles\s*:\s*\[([^\]]*)\]/g),
+  ];
+
+  // An absence here would quietly shrink the guard to the config alone, which
+  // is why the count is asserted at the call site rather than assumed.
+  const files = declared.flatMap((match) =>
+    [...match[1].matchAll(/"([^"]*)"/g)].map((entry) =>
+      entry[1].replace(/^\.\//, ""),
+    ),
+  );
+
+  return [CONFIG_FILE, ...files];
+}
+
 // The three things CC BY 4.0 obliges this repository to state, written out here
 // so the assertion below matches the committed copy exactly rather than a shape
 // that resembles it.
@@ -635,9 +660,19 @@ describe("toolchain baseline", () => {
 
   // The guard above only sees files it recognises as tests. A clock installed from
   // shared setup would put the whole suite on a frozen clock from a file it never
-  // reads, so that possibility is closed here rather than left implicit.
+  // reads, so that possibility is closed here rather than left implicit. The
+  // files read are the ones the config actually names, so a project that grows a
+  // setup file is covered the day it is added rather than the day someone
+  // remembers this list.
   it("installs no global fake clock outside the test files", () => {
-    for (const name of ["vitest.setup.ts", "vite.config.ts"]) {
+    const scanned = suiteWideFiles();
+
+    expect(
+      scanned.length,
+      `${CONFIG_FILE} declares no setup files, so this guard reads the config alone`,
+    ).toBeGreaterThan(1);
+
+    for (const name of scanned) {
       const source = stripComments(
         readFileSync(join(projectRoot, name), "utf8"),
       );
