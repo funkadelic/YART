@@ -44,6 +44,16 @@ updates:
       - dependency-name: typescript
         update-types:
           - version-update:semver-major
+      # Unlike the two above, this one is a wait rather than a decision. ESLint 10
+      # cannot install here at all: eslint-plugin-react declares a peer ceiling of
+      # eslint ^9.7 and 7.37.5 is the newest it has published, so npm ci fails on the
+      # peer conflict before a single rule runs. The rest of the stack is already
+      # ready, react-hooks, typescript-eslint and config-prettier all accept ^10.
+      # Drop this entry once eslint-plugin-react publishes a release that accepts
+      # eslint 10, and expect @eslint/js to move to 10.x in the same change.
+      - dependency-name: eslint
+        update-types:
+          - version-update:semver-major
 
   # Third-party actions used by the workflow are pinned to commit SHAs. A SHA pin is
   # only a live mitigation while something keeps it current, so the action references
