@@ -19,8 +19,8 @@ export default defineConfig({
   // JSX runtimes.
   //
   // Test-only packages are default-imported in places, and none of them reaches
-  // that set, because they are externalized to Node and never processed by the
-  // optimizer. The accessibility engine, axe-core, in the two axe test files,
+  // that set, because the app optimizer scans the entry graph rather than the
+  // test files. The accessibility engine, axe-core, in the two axe test files,
   // ships no exports map and no module type, so it resolves as CommonJS and the
   // third condition fires for it. The CSS processor, postcss, in the token
   // guard, resolves through its own exports map to lib/postcss.mjs, so no
