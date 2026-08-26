@@ -548,9 +548,18 @@ describe("toolchain baseline", () => {
     ).toMatch(/provider\s*:\s*"v8"/);
 
     const sourceRoot = join(projectRoot, "src");
-    const files = readdirSync(sourceRoot, { recursive: true })
-      .map((entry) => join(sourceRoot, entry as string))
-      .filter((file) => /\.tsx?$/.test(file))
+    // withFileTypes, because a failed browser run leaves a screenshot directory
+    // named after the suite that wrote it. `src/__screenshots__/a11y.browser.test.tsx`
+    // is a directory whose name ends in .tsx, so a name-only filter hands it to
+    // readFileSync and this guard dies of EISDIR for a reason unrelated to what
+    // it checks. CI never sees it, because the browser sweep runs after the
+    // coverage step, which is exactly why it would only ever bite locally.
+    const files = readdirSync(sourceRoot, {
+      recursive: true,
+      withFileTypes: true,
+    })
+      .filter((entry) => entry.isFile() && /\.tsx?$/.test(entry.name))
+      .map((entry) => join(entry.parentPath, entry.name))
       .concat(join(projectRoot, CONFIG_FILE))
       .filter((file) => file !== guardFile);
 
