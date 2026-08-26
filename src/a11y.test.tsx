@@ -110,6 +110,13 @@ async function sweep(state: string): Promise<void> {
     resultTypes: ["violations", "incomplete"],
   });
 
+  // A sweep that reached a verdict on nothing is caught here rather than by the
+  // allowlist below. That allowlist happens to be non-empty today, so an engine
+  // that stopped running would fail it, but that is a property of the current
+  // three entries rather than of the check: the day jsdom can decide all three,
+  // the allowlist empties and both assertions become empty against empty.
+  expect(results.passes.length, state).toBeGreaterThan(0);
+
   sweptStates.push(state);
 
   expect(describeViolations(results), state).toEqual([]);

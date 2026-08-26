@@ -44,12 +44,20 @@ const sweptStates: string[] = [];
  *
  * resultTypes is passed for the same reason the jsdom sweep passes it: without
  * it the engine builds a full node list for the thirty-odd rules that pass on
- * every sweep, and nothing reads it.
+ * every sweep, and nothing reads it. It still reports which rules passed, which
+ * is what the first assertion below reads.
  */
 async function sweep(state: string): Promise<void> {
   const results = await axe.run(document, {
     resultTypes: ["violations", "incomplete"],
   });
+
+  // Both assertions below compare against an empty set in this file, so a sweep
+  // that reached a verdict on nothing reads exactly like a sweep of a clean
+  // page. The rules that passed are what tell the two apart. Asserted as a
+  // floor rather than as the count evaluated today, so a rule retired upstream
+  // is not a failure and an engine that ran nothing still is.
+  expect(results.passes.length, state).toBeGreaterThan(0);
 
   sweptStates.push(state);
 
