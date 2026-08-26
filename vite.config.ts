@@ -27,6 +27,10 @@ export default defineConfig({
         "src/test/**",
         "src/**/*.d.ts",
       ],
+      // Without this the number is a report rather than a gate, and a change
+      // that drops coverage merges green with the drop recorded in a log
+      // nobody reads.
+      thresholds: { 100: true },
     },
   },
 });
