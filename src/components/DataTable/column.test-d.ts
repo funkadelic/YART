@@ -1,11 +1,10 @@
-// Two naming constraints, both of which a rename would break silently.
-//
-// This file must not be named as a test. The runner's include pattern would
-// collect it and fail it for declaring no suite. It must not carry the
-// type-declaration test suffix either: that suffix falls outside the coverage
-// exclude glob, which is the reason the runner's own type-check mode was turned
-// down in favour of the gate that already runs. `npm run typecheck` compiles
-// this file, and that is the whole of it.
+// The suffix is the runner's own convention for a type-level test, so the file
+// is named for what it is. It is checked by `npm run typecheck` and executed by
+// nothing: the runner's default include does not match this suffix, no
+// type-check block is configured that would start collecting it, and the
+// repository's own test-file walker does not match it either. Adding such a
+// block, or renaming the file to the ordinary test suffix, would collect it and
+// fail it for declaring no suite.
 
 import { columns } from "./column";
 import type { DataTableProps } from "./DataTable";
