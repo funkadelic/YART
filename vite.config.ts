@@ -45,6 +45,17 @@ export default defineConfig({
   // before this bump as well. Adopting the compiler is a change of its own with
   // its own gate run, so the option stays unset and the peers stay uninstalled.
   plugins: [react()],
+  build: {
+    // Spelled out from the same four floors the browserslist declares, because
+    // the bundler does not read that field and the two are otherwise free to
+    // drift. They already had: the default is baseline-widely-available, which
+    // is Firefox 114 against the declared floor of 111, and the other three
+    // agree exactly. The divergence emits nothing today, since a build pinned
+    // to these targets and a build on the default produce the same chunk down
+    // to its content hash, so this pins a floor rather than changing output.
+    // Update it and the browserslist together; nothing asserts they agree.
+    target: ["chrome111", "edge111", "firefox111", "safari16.4"],
+  },
   test: {
     coverage: {
       // Declared once at root level rather than inside a project, because the
