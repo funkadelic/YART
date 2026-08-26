@@ -25,6 +25,18 @@ export default defineConfig({
   // opt-out back to the previous behavior, is declined here rather than
   // overlooked. The evidence it is not needed is the whole suite staying green
   // across the bump, coverage included.
+
+  // The plugin is taken at 6.x and taken bare. Its three peers other than the
+  // bundler are every one of them optional, so none of them is installed by
+  // taking it: oxc-transform-react is the Rust port of React Compiler, reached
+  // through the compiler option, and @rolldown/plugin-babel together with
+  // babel-plugin-react-compiler is the Babel route to the same adoption through
+  // the exported reactCompilerPreset. What is declined here is therefore an
+  // experimental compiler rather than a faster JSX transform. The JSX transform
+  // is Oxc's, arrives with the plugin itself and needs no peer at all, which is
+  // also why this major drops Babel and the refresh runtime out of the tree
+  // instead of adding to it. Adopting the compiler is a change of its own with
+  // its own gate run, so the option stays unset and the peers stay uninstalled.
   plugins: [react()],
   test: {
     coverage: {
