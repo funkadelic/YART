@@ -1,4 +1,4 @@
-import { act, screen } from "@testing-library/react";
+import { act, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // The bootstrap module reads its container and mounts on evaluation, so there
@@ -70,10 +70,14 @@ describe("bootstrap", () => {
       await import("./index");
     });
 
+    // Scoped to the container rather than the document: the claim is that the
+    // bootstrap mounted the application inside #root, and a document-wide query
+    // is satisfied by a table rendered anywhere at all.
+    //
     // The awaited query is not a stylistic choice. The application paints its
     // loading branch first and resolves the dataset only after the seam's
     // simulated latency, so a synchronous lookup finds nothing.
-    expect(await screen.findByRole("table")).toBeInTheDocument();
+    expect(await within(container!).findByRole("table")).toBeInTheDocument();
   });
 
   it("throws when the root container is absent", async () => {
