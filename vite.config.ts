@@ -4,6 +4,27 @@ import { defaultExclude, defineConfig } from "vitest/config";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // What a default import from a CommonJS module resolves to changed in this
+  // major. It is module.exports when the importer is .mjs or .mts, or the
+  // closest manifest declares the module type, or the importee does not mark
+  // itself as an ES module, and module.exports.default otherwise. This manifest
+  // declares the module type, so the second condition fires for every file
+  // under src/.
+  //
+  // The only default imports of CommonJS-resolved packages in this tree are the
+  // accessibility engine, axe-core, in the two axe test files, and the CSS
+  // processor, postcss, in the token guard. Neither marks itself as an ES
+  // module, so the third condition fires independently and both branches point
+  // the same way. The view library and its DOM renderer are CommonJS-only but
+  // are never default-imported; every import of them here is named. The
+  // pre-bundled set was read out of the optimizer's own output directory and is
+  // exactly those two, the DOM client entry, the two icon subpaths and the two
+  // JSX runtimes.
+  //
+  // That measurement is why legacy.inconsistentCjsInterop, the deprecated
+  // opt-out back to the previous behavior, is declined here rather than
+  // overlooked. The evidence it is not needed is the whole suite staying green
+  // across the bump, coverage included.
   plugins: [react()],
   test: {
     coverage: {
