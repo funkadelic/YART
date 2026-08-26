@@ -25,9 +25,12 @@ export async function getCities({
   const all = await loadCities();
 
   const needle = searchTerm.trim().toLowerCase();
+  // The empty term returns a copy, so the module-scope cache cannot escape
+  // and both branches hand back an array the caller owns. Copying 50,250
+  // references costs less than the latency below.
   const matched = needle
     ? all.filter((city) => city.searchKey.includes(needle))
-    : all;
+    : [...all];
 
   // The latency is applied to the filter rather than only to the download, so a
   // cache-warm call still behaves like a network call and the container's
