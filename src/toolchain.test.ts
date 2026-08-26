@@ -33,14 +33,163 @@ const manifest = JSON.parse(
 ) as Manifest;
 
 /**
- * Source with comments blanked out, so a construct named in prose is never mistaken
- * for one the file actually performs. String literals holding a `//` sequence survive
- * only if they carry the usual scheme colon, which is enough for test sources.
+ * A character that can end a value. It is the whole of the rule that tells a
+ * division from a regular expression literal, which both open with a slash and
+ * are distinguished by nothing else. The closing brace and the less-than sign
+ * are on the list for JSX rather than for JavaScript: a self-closing tag puts a
+ * slash right after `{...props}` and a closing tag puts one right after `<`, and
+ * reading either as a regular expression would run to the next slash in the
+ * file.
+ */
+const ENDS_A_VALUE = /[\w$)\]}"'`/<]/;
+
+/** A span of source, and whether the scanner reads it as code. */
+interface Span {
+  start: number;
+  end: number;
+  kind: "code" | "comment" | "literal";
+}
+
+/**
+ * The index just past the comment or literal beginning at `start`, or null when
+ * ordinary code begins there. `previous` is the last significant character
+ * before it, which is what decides whether a slash opens a regular expression.
+ */
+function spanEnd(
+  source: string,
+  start: number,
+  previous: string,
+): number | null {
+  const opener = source[start];
+
+  if (opener === "/" && source[start + 1] === "/") {
+    const end = source.indexOf("\n", start);
+    return end === -1 ? source.length : end;
+  }
+
+  if (opener === "/" && source[start + 1] === "*") {
+    const end = source.indexOf("*/", start + 2);
+    return end === -1 ? source.length : end + 2;
+  }
+
+  const isRegex = opener === "/" && !ENDS_A_VALUE.test(previous);
+
+  if (!isRegex && opener !== '"' && opener !== "'" && opener !== "`") {
+    return null;
+  }
+
+  let index = start + 1;
+  let inCharacterClass = false;
+
+  while (index < source.length) {
+    const character = source[index];
+
+    if (character === "\\") {
+      index += 2;
+      continue;
+    }
+
+    if (isRegex && character === "[") inCharacterClass = true;
+    else if (isRegex && character === "]") inCharacterClass = false;
+    else if (character === opener && !inCharacterClass) return index + 1;
+    // An unterminated quote is a misread rather than a real literal, so it ends
+    // at the line break instead of consuming the rest of the file.
+    else if (character === "\n" && opener !== "`") return index;
+
+    index += 1;
+  }
+
+  return source.length;
+}
+
+/**
+ * The source split into code, comments and literals in one pass.
+ *
+ * One pass rather than two regex sweeps, because the two orderings a sweep can
+ * take are wrong in opposite directions. Blanking comments first rewrites a glob
+ * such as "src/**" followed later by "*\/y", whose two string literals open and
+ * close a block comment between them and take the code in between with them.
+ * Blanking literals first reads the apostrophe in a comment's "the file's own"
+ * as opening a string, and swallows to the next apostrophe. A scanner that knows
+ * which construct it is inside has neither failure.
+ */
+function spans(source: string): Span[] {
+  const found: Span[] = [];
+  let index = 0;
+  let codeStart = 0;
+  let previous = "";
+
+  while (index < source.length) {
+    const end = spanEnd(source, index, previous);
+
+    if (end === null) {
+      const character = source[index];
+      if (!/\s/.test(character)) previous = character;
+      index += 1;
+      continue;
+    }
+
+    if (index > codeStart) {
+      found.push({ start: codeStart, end: index, kind: "code" });
+    }
+
+    const following = source[index + 1];
+
+    found.push({
+      start: index,
+      end,
+      kind:
+        source[index] === "/" && (following === "/" || following === "*")
+          ? "comment"
+          : "literal",
+    });
+
+    previous = source[end - 1];
+    index = end;
+    codeStart = end;
+  }
+
+  if (index > codeStart) {
+    found.push({ start: codeStart, end: index, kind: "code" });
+  }
+
+  return found;
+}
+
+/** A span reduced to spaces, keeping its line breaks so offsets still line up. */
+function blank(text: string): string {
+  return text.replace(/[^\n]/g, " ");
+}
+
+/**
+ * Source with comments blanked out, so a construct named in prose is never
+ * mistaken for one the file actually performs.
+ *
+ * Literals are kept rather than blanked. They are part of the code, and one
+ * guard below reads the provider name out of one.
  */
 function stripComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  return spans(source)
+    .map((span) => {
+      const text = source.slice(span.start, span.end);
+      return span.kind === "comment" ? blank(text) : text;
+    })
+    .join("");
+}
+
+/**
+ * Source with everything that is not code blanked out, so an index into it is an
+ * index into the original and every character it still shows is code. This is
+ * what the parenthesis counting below reads: a string holding a bracket and a
+ * pattern such as /\(/ both carry parentheses that balance nothing.
+ */
+function codeMask(source: string): string {
+  return spans(source)
+    .map((span) => {
+      const text = source.slice(span.start, span.end);
+      return span.kind === "code" ? text : blank(text);
+    })
+    .join("");
 }
 
 /**
@@ -70,17 +219,21 @@ function normalizeComment(source: string): string {
  * mentions an option somewhere.
  */
 function callArguments(source: string, callee: string): string[] {
+  // Matched and counted over the mask so a call named inside a string is not
+  // found and a bracket inside one does not close the slice, then sliced out of
+  // the source so the caller reads the arguments as written.
+  const mask = codeMask(source);
   const pattern = new RegExp(`${callee}\\s*\\(`, "g");
   const found: string[] = [];
   let match: RegExpExecArray | null;
 
-  while ((match = pattern.exec(source)) !== null) {
+  while ((match = pattern.exec(mask)) !== null) {
     const start = match.index + match[0].length;
     let index = start;
     let depth = 1;
 
-    while (index < source.length && depth > 0) {
-      const character = source[index];
+    while (index < mask.length && depth > 0) {
+      const character = mask[index];
       if (character === "(") depth += 1;
       else if (character === ")") depth -= 1;
       index += 1;
@@ -226,17 +379,15 @@ function sonarEquivalents(pattern: string): string[] {
 
 // The coverage block of the config, ready to be read a key at a time.
 //
-// Line comments are blanked and block comments are not, rather than reaching
-// for the shared blanker: a glob such as the type-declaration one carries the
-// block-comment closing sequence inside a string literal, so blanking block
-// comments here would rewrite the very patterns being compared.
+// Comments are blanked through the shared helper, which leaves the globs being
+// compared intact: they carry the block-comment sequences inside string
+// literals, and the helper knows the difference.
 //
 // Anchored at the coverage key, because a project may carry an include or an
 // exclude of its own and the first one in the file is not necessarily this one.
 function coverageBlock(): string {
-  const source = readFileSync(join(projectRoot, CONFIG_FILE), "utf8").replace(
-    /(^|[^:])\/\/[^\n]*/g,
-    "$1",
+  const source = stripComments(
+    readFileSync(join(projectRoot, CONFIG_FILE), "utf8"),
   );
 
   return source.slice(source.indexOf("coverage:"));
