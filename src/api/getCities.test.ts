@@ -331,6 +331,7 @@ describe("getCities result ownership", () => {
     const second = await coldGetCities({ searchTerm: "" });
 
     expect(first).not.toBe(cached);
+    expect(second).not.toBe(cached);
     expect(first).not.toBe(second);
   });
 });
