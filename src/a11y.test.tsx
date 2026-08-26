@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
@@ -8,18 +11,60 @@ import { CITY_FIXTURE_ENVELOPE } from "./test/cityFixture";
 import { describeViolations, incompleteRuleIds } from "./test/axeSweep";
 import { stubDatasetFetch } from "./test/fetchStub";
 
+// The sweep below runs over the whole document rather than over the body, which
+// is what puts the page-level rules in play. The runner hands each file a bare
+// document, though, so those rules would report on the harness shell rather than
+// on the one the app ships: no language and no title, neither of which is true
+// of index.html.
+//
+// The two facts are therefore lifted off the committed shell rather than written
+// out here, which is what keeps the rules pointed at the application. A shell
+// that loses its language or its title leaves these empty and the sweep goes
+// red, rather than the harness quietly supplying what the shell dropped.
+//
+// Nothing else is copied. The shipped body holds a mount point and two scripts,
+// and every case below mounts its own tree.
+const shell = readFileSync(
+  join(
+    (import.meta as ImportMeta & { dirname: string }).dirname,
+    "..",
+    "index.html",
+  ),
+  "utf8",
+);
+
+document.documentElement.lang =
+  /<html[^>]*\slang="([^"]*)"/.exec(shell)?.[1] ?? "";
+document.title = /<title>([^<]*)<\/title>/.exec(shell)?.[1] ?? "";
+
 // The rules the engine cannot decide in this environment, asserted by set
 // equality rather than ignored. A rule that newly stops being evaluated and a
 // rule that starts being evaluated again both turn this red, so the gate cannot
 // be quietly weakened by taking a rule out of play.
 //
-// The one entry: jsdom has no layout engine and no canvas, so the rendered color
-// pair behind an element cannot be computed and the contrast rule is undecided
-// on every sweep. That ground is covered another way. src/theme/tokens.test.ts
-// resolves the token indirection in the shipped stylesheet and asserts the
-// contrast ratio of every pair it finds, in both themes, against the text and
-// non-text thresholds. This entry records that pairing; it is not a suppression.
-const EXPECTED_INCOMPLETE = Object.freeze(["color-contrast"]);
+// Three entries, all of one cause: jsdom implements no layout, so a rule that
+// has to ask what is painted where cannot reach a verdict and files itself
+// undecided. Each is paired with something that does decide it, and the pairing
+// is the reason the entry is a record rather than a suppression.
+//
+// color-contrast needs the rendered color pair behind an element, which needs a
+// canvas jsdom does not provide. src/theme/tokens.test.ts covers that ground
+// instead: it resolves the token indirection in the shipped stylesheet and
+// asserts the contrast ratio of every pair it finds, in both themes, against the
+// text and non-text thresholds.
+//
+// landmark-one-main and page-has-heading-one are the two page-level rules that
+// first check whether a modal is open, which the engine answers through
+// document.elementFromPoint. jsdom does not implement it, so both rules abort
+// with an internal error rather than reading the DOM they were about to read.
+// src/a11y.browser.test.tsx decides both for real: its sweep evaluates 45 rules
+// against 36 under a body context, and these two are among the nine the widened
+// context adds.
+const EXPECTED_INCOMPLETE = Object.freeze([
+  "color-contrast",
+  "landmark-one-main",
+  "page-has-heading-one",
+]);
 
 /**
  * Every state the app is swept in, in the order the sweeps run. Written out
@@ -48,6 +93,12 @@ const sweptStates: string[] = [];
  * them. The state name rides along as the assertion message, which is what
  * makes a failure say which of the swept states broke.
  *
+ * The context is the document rather than the body. Nine rules match the html
+ * element, so a body context leaves them outside the include tree and they are
+ * reported neither as violations nor as undecided. Three of the nine read the
+ * application's own rendered DOM: the skip mechanism to the main content, the
+ * single main landmark, and the top-level heading.
+ *
  * resultTypes is passed deliberately: without it the engine builds a full node
  * list for the thirty-odd rules that pass on every sweep, and nothing reads it.
  * Expect jsdom to complain on stderr about an unimplemented canvas context on
@@ -55,7 +106,7 @@ const sweptStates: string[] = [];
  * contrast rule as undecided in the first place.
  */
 async function sweep(state: string): Promise<void> {
-  const results = await axe.run(document.body, {
+  const results = await axe.run(document, {
     resultTypes: ["violations", "incomplete"],
   });
 

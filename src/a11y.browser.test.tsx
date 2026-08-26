@@ -37,12 +37,17 @@ const sweptStates: string[] = [];
  * them. The state name rides along as the assertion message, which is what
  * makes a failure say which of the swept states broke.
  *
+ * The context is the document rather than the body, for the reason the jsdom
+ * sweep widens its own: nine rules match the html element and a body context
+ * reports them neither as violations nor as undecided. Here the page really is
+ * the page, so the page-level rules read what a reader would load.
+ *
  * resultTypes is passed for the same reason the jsdom sweep passes it: without
  * it the engine builds a full node list for the thirty-odd rules that pass on
  * every sweep, and nothing reads it.
  */
 async function sweep(state: string): Promise<void> {
-  const results = await axe.run(document.body, {
+  const results = await axe.run(document, {
     resultTypes: ["violations", "incomplete"],
   });
 
