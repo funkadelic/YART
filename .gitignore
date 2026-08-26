@@ -34,3 +34,9 @@ yarn-error.log*
 # artifact, and it is deliberately not committed: the committed dataset is
 # src/data/worldcities/cities.json.
 src/data/worldcities/worldcities.csv
+
+# Failure screenshots the browser runner writes, and the attachment copies it
+# keeps beside them. Only a red run produces either, and they are evidence of
+# that run rather than of this tree.
+src/__screenshots__/
+/.vitest-attachments/

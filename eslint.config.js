@@ -32,5 +32,29 @@ export default defineConfig([
   // Note it enables the React Compiler rule family, not just the two classic
   // hook rules.
   reactHooks.configs.flat.recommended,
+  // src/test/ is excluded from coverage, and unlike the other three exclude
+  // patterns its contents actually execute. Nothing but the runner's own
+  // structure keeps a module with real logic from being placed there and
+  // imported by the app, which would put executing application code outside
+  // the measured set with every guard still green. Test files are exempt
+  // because importing that scaffolding is what it is for.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/**/*.test.{ts,tsx}", "src/**/*.test-d.ts", "src/test/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/test/**"],
+              message:
+                "src/test/ holds test scaffolding and is excluded from coverage. Importing it from application code moves executing code outside the coverage gate.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   prettierConfig, // must go last
 ]);

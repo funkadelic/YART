@@ -1,0 +1,16 @@
+# Text files are stored and checked out with LF endings whatever the platform's
+# own convention is. Without this a Windows clone with core.autocrlf=true
+# rewrites a file's endings on the way back in, and the next diff is the whole
+# file rather than the line that changed. This repository has already paid that
+# once.
+#
+# text=auto leaves git to decide what is text, so the committed dataset and the
+# license PDF are left alone. Every tracked file is already LF, so this
+# renormalizes nothing on arrival and exists to keep it that way.
+* text=auto eol=lf
+
+# The license PDF happens to carry no carriage return and no null byte today, so
+# git reads it as text and the rule above is a no-op on it. That is a property of
+# this one file rather than of PDFs, and a regenerated copy would not be bound by
+# it, so the format is marked for what it is instead.
+*.pdf binary

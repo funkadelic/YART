@@ -5,17 +5,16 @@
 // the phase rests on. Consolidating this file back into its sibling looks like
 // tidying and is the defect.
 //
-// It must not be named as a test file either, for the two reasons recorded at
-// the head of that sibling: the runner would collect it and fail it for
-// declaring no suite, and the type-declaration suffix falls outside the
-// coverage exclude glob.
+// The suffix means here what it means at the head of that sibling: it is the
+// runner's own convention for a type-level test, compiled by `npm run typecheck`
+// and collected as a suite by nothing.
 
 import type {
   Equal,
   Expect,
   IsAny,
   Not,
-} from "../../components/DataTable/columnTypes";
+} from "../../components/DataTable/column.test-d";
 import type { CityColumnId } from "./cityColumns";
 
 /**

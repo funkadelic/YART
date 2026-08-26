@@ -33,14 +33,165 @@ const manifest = JSON.parse(
 ) as Manifest;
 
 /**
- * Source with comments blanked out, so a construct named in prose is never mistaken
- * for one the file actually performs. String literals holding a `//` sequence survive
- * only if they carry the usual scheme colon, which is enough for test sources.
+ * A character that can end a value. It is the whole of the rule that tells a
+ * division from a regular expression literal, which both open with a slash and
+ * are distinguished by nothing else. The closing brace and the less-than sign
+ * are on the list for JSX rather than for JavaScript: a self-closing tag puts a
+ * slash right after `{...props}` and a closing tag puts one right after `<`, and
+ * reading either as a regular expression would run to the next slash in the
+ * file.
+ */
+const ENDS_A_VALUE = /[\w$)\]}"'`/<]/;
+
+/** A span of source, and whether the scanner reads it as code. */
+interface Span {
+  start: number;
+  end: number;
+  kind: "code" | "comment" | "literal";
+}
+
+/**
+ * The index just past the comment or literal beginning at `start`, or null when
+ * ordinary code begins there. `previous` is the last significant character
+ * before it, which is what decides whether a slash opens a regular expression.
+ */
+function spanEnd(
+  source: string,
+  start: number,
+  previous: string,
+): number | null {
+  const opener = source[start];
+
+  if (opener === "/" && source[start + 1] === "/") {
+    const end = source.indexOf("\n", start);
+    return end === -1 ? source.length : end;
+  }
+
+  if (opener === "/" && source[start + 1] === "*") {
+    const end = source.indexOf("*/", start + 2);
+    return end === -1 ? source.length : end + 2;
+  }
+
+  const isRegex = opener === "/" && !ENDS_A_VALUE.test(previous);
+
+  if (!isRegex && opener !== '"' && opener !== "'" && opener !== "`") {
+    return null;
+  }
+
+  let index = start + 1;
+  let inCharacterClass = false;
+
+  while (index < source.length) {
+    const character = source[index];
+
+    if (character === "\\") {
+      index += 2;
+      continue;
+    }
+
+    if (isRegex && character === "[") inCharacterClass = true;
+    else if (isRegex && character === "]") inCharacterClass = false;
+    else if (character === opener && !inCharacterClass) return index + 1;
+    // An unterminated quote is a misread rather than a real literal, so it ends
+    // at the line break instead of consuming the rest of the file.
+    else if (character === "\n" && opener !== "`") return index;
+
+    index += 1;
+  }
+
+  return source.length;
+}
+
+/**
+ * The source split into code, comments and literals in one pass.
+ *
+ * One pass rather than two regex sweeps, because the two orderings a sweep can
+ * take are wrong in opposite directions. Blanking comments first rewrites a glob
+ * such as "src/**" followed later by "*\/y", whose two string literals open and
+ * close a block comment between them and take the code in between with them.
+ * Blanking literals first reads the apostrophe in a comment's "the file's own"
+ * as opening a string, and swallows to the next apostrophe. A scanner that knows
+ * which construct it is inside has neither failure.
+ */
+function spans(source: string): Span[] {
+  const found: Span[] = [];
+  let index = 0;
+  let codeStart = 0;
+  let previous = "";
+
+  while (index < source.length) {
+    const end = spanEnd(source, index, previous);
+
+    if (end === null) {
+      const character = source[index];
+      if (!/\s/.test(character)) previous = character;
+      index += 1;
+      continue;
+    }
+
+    if (index > codeStart) {
+      found.push({ start: codeStart, end: index, kind: "code" });
+    }
+
+    const following = source[index + 1];
+    const kind =
+      source[index] === "/" && (following === "/" || following === "*")
+        ? "comment"
+        : "literal";
+
+    found.push({ start: index, end, kind });
+
+    // A comment is not a value, so it must not decide how the next slash reads.
+    // A block comment ends in "/", which ENDS_A_VALUE accepts, so letting one
+    // set this reads the regular expression after it as a division and runs to
+    // whatever slash comes next. A literal does end a value and must set it.
+    if (kind !== "comment") previous = source[end - 1];
+
+    index = end;
+    codeStart = end;
+  }
+
+  if (index > codeStart) {
+    found.push({ start: codeStart, end: index, kind: "code" });
+  }
+
+  return found;
+}
+
+/** A span reduced to spaces, keeping its line breaks so offsets still line up. */
+function blank(text: string): string {
+  return text.replace(/[^\n]/g, " ");
+}
+
+/**
+ * Source with comments blanked out, so a construct named in prose is never
+ * mistaken for one the file actually performs.
+ *
+ * Literals are kept rather than blanked. They are part of the code, and one
+ * guard below reads the provider name out of one.
  */
 function stripComments(source: string): string {
-  return source
-    .replace(/\/\*[\s\S]*?\*\//g, " ")
-    .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
+  return spans(source)
+    .map((span) => {
+      const text = source.slice(span.start, span.end);
+      return span.kind === "comment" ? blank(text) : text;
+    })
+    .join("");
+}
+
+/**
+ * Source with everything that is not code blanked out, so an index into it is an
+ * index into the original and every character it still shows is code. This is
+ * what the parenthesis counting below reads: a string holding a bracket and a
+ * pattern such as /\(/ both carry parentheses that balance nothing.
+ */
+function codeMask(source: string): string {
+  return spans(source)
+    .map((span) => {
+      const text = source.slice(span.start, span.end);
+      return span.kind === "code" ? text : blank(text);
+    })
+    .join("");
 }
 
 /**
@@ -70,17 +221,21 @@ function normalizeComment(source: string): string {
  * mentions an option somewhere.
  */
 function callArguments(source: string, callee: string): string[] {
+  // Matched and counted over the mask so a call named inside a string is not
+  // found and a bracket inside one does not close the slice, then sliced out of
+  // the source so the caller reads the arguments as written.
+  const mask = codeMask(source);
   const pattern = new RegExp(`${callee}\\s*\\(`, "g");
   const found: string[] = [];
   let match: RegExpExecArray | null;
 
-  while ((match = pattern.exec(source)) !== null) {
+  while ((match = pattern.exec(mask)) !== null) {
     const start = match.index + match[0].length;
     let index = start;
     let depth = 1;
 
-    while (index < source.length && depth > 0) {
-      const character = source[index];
+    while (index < mask.length && depth > 0) {
+      const character = mask[index];
       if (character === "(") depth += 1;
       else if (character === ")") depth -= 1;
       index += 1;
@@ -161,6 +316,125 @@ const BINDS_CLOCK = /\badvanceTimers\b/;
 const DISABLES_DELAY = /\bdelay\s*:\s*null\b/;
 const DIRECT_USER_EVENT_CALL = /\buserEvent\.(?!setup\b)[A-Za-z]\w*\s*\(/;
 
+// A test file that mounts more than it asserts is spending its runtime producing
+// coverage rather than evidence, and the coverage gate cannot tell the two apart.
+// A file that asserts nothing at all is the limiting case of the same thing, and
+// the inequality alone lets it through, so it is named separately below.
+// Two counting decisions are written out here because the naive reading gets them
+// wrong in opposite directions and neither is visible in the pattern itself. A
+// member call such as a root's own render method is counted, deliberately: the
+// stricter reading costs nothing today and a bootstrap test driving a root
+// directly is exactly where the first one would appear. A rerender call is not
+// counted, because there is no word boundary inside that identifier and the rule
+// names the two mounting entry points only.
+const COUNTS_AS_RENDER = /\b(?:renderHook|render)\s*\(/g;
+const COUNTS_AS_ASSERTION = /\bexpect\s*\(/g;
+
+// The complete coverage exclude list. Four entries, named here rather than
+// derived: a list that grows quietly is how the guard stops being one. Three
+// of them match artifacts that never execute; src/test/** matches the shared
+// scaffolding, which does execute on every run and is excluded because it is
+// support code for the tests rather than code the product ships. An
+// application source file appearing beside them would be the gate being fitted
+// to the code instead of the code being written to the gate, and the lint rule
+// in eslint.config.js is what stops the one executing entry becoming that same
+// hole by being imported from outside a test.
+const COVERAGE_EXCLUDE_PATTERNS = [
+  "src/**/*.test.{ts,tsx}",
+  "src/**/*.test-d.ts",
+  "src/test/**",
+  "src/**/*.d.ts",
+];
+
+// The complete coverage include list. One entry, named here for the same
+// reason its exclude sibling is written out: narrowing this to a subdirectory
+// satisfies a hundred percent by shrinking the gate's input rather than by
+// covering the code, and it is the sibling property the exclude guard does not
+// reach.
+const COVERAGE_INCLUDE_PATTERNS = ["src/**/*.{ts,tsx}"];
+
+// A suppression comment in any provider's spelling, matched against raw source
+// because a hint is itself a comment and blanking comments first would make the
+// guard vacuous. None exists in this tree: the standing convention is that an
+// otherwise-unreachable branch records the condition that would make it
+// reachable, never that it is hidden from the report.
+const COVERAGE_IGNORE_HINT = /\b(?:v8|c8|istanbul|node)\s+ignore\b/;
+
+const CONFIG_FILE = "vite.config.ts";
+const WORKFLOW_FILE = ".github/workflows/ci.yml";
+const SONAR_FILE = "sonar-project.properties";
+
+/**
+ * One coverage exclude pattern written in Sonar's dialect, which is the same
+ * statement in a matcher with two fewer features: it expands no braces, and its
+ * patterns are rooted at the project rather than at the source directory. Both
+ * differences are mechanical, so the Sonar list is derived here rather than
+ * written out a second time and left to drift from the list it has to agree
+ * with.
+ */
+function sonarEquivalents(pattern: string): string[] {
+  const braces = /\{([^}]*)\}/.exec(pattern);
+  const expanded = braces
+    ? braces[1].split(",").map((option) => pattern.replace(braces[0], option))
+    : [pattern];
+
+  return expanded.map((entry) => entry.replace(/^src\/\*\*\//, "**/"));
+}
+
+// The coverage block of the config, ready to be read a key at a time.
+//
+// Comments are blanked through the shared helper, which leaves the globs being
+// compared intact: they carry the block-comment sequences inside string
+// literals, and the helper knows the difference.
+//
+// Anchored at the coverage key, because a project may carry an include or an
+// exclude of its own and the first one in the file is not necessarily this one.
+function coverageBlock(): string {
+  const source = stripComments(
+    readFileSync(join(projectRoot, CONFIG_FILE), "utf8"),
+  );
+
+  return source.slice(source.indexOf("coverage:"));
+}
+
+// The written-out patterns of one coverage key, read out of the block above.
+// Returns null when the key is absent, so a deleted list fails as a missing
+// list rather than passing as an empty one.
+function coveragePatterns(key: string): string[] | null {
+  const declared = new RegExp(`${key}\\s*:\\s*\\[([^\\]]*)\\]`).exec(
+    coverageBlock(),
+  );
+
+  if (declared === null) return null;
+
+  return [...declared[1].matchAll(/"([^"]*)"/g)].map((match) => match[1]);
+}
+
+/**
+ * Every file that can install something on the whole suite: the config itself,
+ * and each setup file it declares. Derived rather than named, because the config
+ * carries one setupFiles array per project, the browser project's is empty
+ * today, and a third project or a setup file added to that one would sit outside
+ * a written-out pair and never be read.
+ */
+function suiteWideFiles(): string[] {
+  const declared = [
+    ...stripComments(
+      readFileSync(join(projectRoot, CONFIG_FILE), "utf8"),
+    ).matchAll(/setupFiles\s*:\s*\[([^\]]*)\]/g),
+  ];
+
+  // An absence here would quietly shrink the guard to the config alone, which
+  // is why the count is asserted at the call site rather than assumed.
+  const files = declared.flatMap((match) =>
+    [...match[1].matchAll(/"([^"]*)"/g)].map((entry) =>
+      entry[1].replace(/^\.\//, ""),
+    ),
+  );
+
+  return [CONFIG_FILE, ...files];
+}
+
 // The three things CC BY 4.0 obliges this repository to state, written out here
 // so the assertion below matches the committed copy exactly rather than a shape
 // that resembles it.
@@ -214,9 +488,115 @@ describe("toolchain baseline", () => {
   });
 
   // The one runner is driven in single-pass mode, so a pipeline run cannot be left
-  // holding a watch process.
-  it("keeps the test script on the current runner in single-pass mode", () => {
-    expect(manifest.scripts?.test).toBe("vitest run");
+  // holding a watch process. The script also has to say which project it means:
+  // with more than one project declared, a run that names none fans out to every
+  // one of them, including the project that needs a browser engine installed.
+  // Asserted as those three properties rather than as one string, so adding a flag
+  // is free and dropping the project filter is not.
+  it("keeps the test script on the current runner in single-pass mode against one project", () => {
+    const script = manifest.scripts?.test ?? "";
+
+    expect(
+      script,
+      "the test script does not start the runner in single-pass mode",
+    ).toMatch(/^vitest\s+run\b/);
+    expect(script, "the test script carries a watch flag").not.toMatch(
+      /(^|\s)(-w|--watch)\b/,
+    );
+    expect(script, "the test script names no project").toMatch(/--project[= ]/);
+  });
+
+  // The guard above covers the script a developer types and neither of the two
+  // the pipeline runs. Both are asserted as the properties that make them gates
+  // rather than as one string, for the same reason: adding a flag is free and
+  // dropping the one that matters is not.
+  //
+  // Without --coverage nothing measures coverage, so the threshold is never
+  // evaluated and coverage/lcov.info is never written, which the Sonar import
+  // reads as a silent zero rather than as an error. Without the browser project
+  // named, the browser script fans out to every project and reports the
+  // deterministic suite a second time as if it were the real-engine one.
+  it("keeps the coverage and browser scripts carrying the flags their gates need", () => {
+    const coverage = manifest.scripts?.["test:coverage"] ?? "";
+
+    expect(coverage, "the coverage script collects no coverage").toMatch(
+      /(^|\s)--coverage\b/,
+    );
+    expect(coverage, "the coverage script names no project").toMatch(
+      /--project[= ]jsdom\b/,
+    );
+
+    expect(
+      manifest.scripts?.["test:browser"] ?? "",
+      "the browser script does not name the browser project",
+    ).toMatch(/--project[= ]browser\b/);
+  });
+
+  // A gate nothing invokes is not a gate. The browser project and its one test
+  // file both survive the deletion of the step that runs them, so the pipeline
+  // is asserted to name both scripts rather than the manifest alone being
+  // trusted to imply that something calls them.
+  it("runs both test gates from the pipeline", () => {
+    // Judged on live lines only, for the reason the pre-commit guard is:
+    // commenting a step out leaves every expected string in the file.
+    const live = readFileSync(join(projectRoot, WORKFLOW_FILE), "utf8")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"));
+
+    for (const script of ["npm run test:coverage", "npm run test:browser"]) {
+      expect(
+        live.some((line) => line.includes(script)),
+        `${WORKFLOW_FILE} no longer runs ${script}`,
+      ).toBe(true);
+    }
+  });
+
+  // The step above installs one browser binary and vite.config.ts launches one,
+  // three directories apart, with neither file mentioning the other. They agree
+  // today through a Playwright default rather than through anything written
+  // down: a headless launch naming no channel resolves to the headless shell,
+  // which is the only thing --only-shell downloads. Turn headless off to debug a
+  // sweep locally, or name a channel, and the pipeline fails on a missing
+  // executable that says nothing about accessibility. Asserted here so it fails
+  // in the suite a developer runs first, and as one implication rather than as an
+  // equality: installing more than the launch needs is wasteful, not broken.
+  it("installs the browser binary the accessibility sweep launches", () => {
+    const install = readFileSync(join(projectRoot, WORKFLOW_FILE), "utf8")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"))
+      .find((line) => line.includes("playwright install"));
+
+    expect(install, `${WORKFLOW_FILE} installs no browser`).toBeDefined();
+
+    const config = stripComments(
+      readFileSync(join(projectRoot, CONFIG_FILE), "utf8"),
+    );
+    const launched = [...config.matchAll(/browser\s*:\s*"([^"]*)"/g)].map(
+      (match) => match[1],
+    );
+
+    expect(
+      launched.length,
+      `${CONFIG_FILE} launches no browser`,
+    ).toBeGreaterThan(0);
+
+    for (const browser of launched) {
+      expect(
+        install as string,
+        `${WORKFLOW_FILE} does not install ${browser}`,
+      ).toContain(browser);
+    }
+
+    // The shell is a headless launch with no channel named, and nothing else.
+    const resolvesToShell =
+      /headless\s*:\s*true/.test(config) && !/channel\s*:/.test(config);
+
+    expect(
+      /--only-shell\b/.test(install as string) && !resolvesToShell,
+      `${WORKFLOW_FILE} installs the headless shell alone and ${CONFIG_FILE} launches a browser that is not it`,
+    ).toBe(false);
   });
 
   // Most of the hook rule family is registered at warn rather than error by the
@@ -327,11 +707,21 @@ describe("toolchain baseline", () => {
     expect(offenders).toEqual([]);
   });
 
-  // The guard above only sees files it recognises as tests. A clock installed from
+  // The guard above only sees files it recognizes as tests. A clock installed from
   // shared setup would put the whole suite on a frozen clock from a file it never
-  // reads, so that possibility is closed here rather than left implicit.
+  // reads, so that possibility is closed here rather than left implicit. The
+  // files read are the ones the config actually names, so a project that grows a
+  // setup file is covered the day it is added rather than the day someone
+  // remembers this list.
   it("installs no global fake clock outside the test files", () => {
-    for (const name of ["vitest.setup.ts", "vite.config.ts"]) {
+    const scanned = suiteWideFiles();
+
+    expect(
+      scanned.length,
+      `${CONFIG_FILE} declares no setup files, so this guard reads the config alone`,
+    ).toBeGreaterThan(1);
+
+    for (const name of scanned) {
       const source = stripComments(
         readFileSync(join(projectRoot, name), "utf8"),
       );
@@ -345,9 +735,167 @@ describe("toolchain baseline", () => {
     }
   });
 
+  // A file whose mounts outnumber its assertions is measured here rather than in
+  // review, because the number a reviewer would have to count is the one thing a
+  // machine counts reliably. Each file is read from disk with nothing carried
+  // between iterations, so the offender list is the same on one worker or many.
+  it("asserts something, and no more renders than assertions, in every test file", () => {
+    expect(scannedFiles.length).toBeGreaterThan(0);
+
+    const offenders: string[] = [];
+
+    for (const file of scannedFiles) {
+      // codeMask rather than stripComments: this counts call sites, and
+      // stripComments deliberately keeps literals, so a string such as
+      // "call render(x) before expect(y)" would score one of each. The provider
+      // guard is the only one that needs the literals it keeps.
+      const source = codeMask(readFileSync(file, "utf8"));
+      const renders = source.match(COUNTS_AS_RENDER)?.length ?? 0;
+      const assertions = source.match(COUNTS_AS_ASSERTION)?.length ?? 0;
+      const name = relative(projectRoot, file);
+
+      // Named ahead of the comparison rather than left to it: zero renders
+      // against zero assertions satisfies the inequality while being the
+      // clearest case of a file that produces coverage and no evidence.
+      if (assertions === 0) {
+        offenders.push(`${name}: asserts nothing`);
+      } else if (renders > assertions) {
+        offenders.push(
+          `${name}: ${renders} renders against ${assertions} assertions`,
+        );
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
+
+  // The exclude list decides what the hundred percent is measured over, so it is
+  // the one place a gate can be satisfied by shrinking its own input. Compared as
+  // a set: reordering the four patterns is not a weakening and must not flap the
+  // guard, while adding one, removing one or emptying the list must all fail.
+  it("keeps the coverage exclude list at the four patterns it is written to hold", () => {
+    const patterns = coveragePatterns("exclude");
+
+    expect(
+      patterns,
+      `${CONFIG_FILE} declares no coverage exclude list`,
+    ).not.toBeNull();
+
+    expect(patterns?.toSorted()).toEqual(COVERAGE_EXCLUDE_PATTERNS.toSorted());
+  });
+
+  // The threshold is the single line that turns the number into a gate, and the
+  // include list decides what the number is measured over. Both sit beside the
+  // exclude list and neither was guarded, so the gate could be reverted to a
+  // report, or fitted to a third of the tree, with every other guard green.
+  // Compared the same way the exclude list is: reordering is not a weakening
+  // and must not flap, while narrowing, widening or emptying must all fail.
+  it("keeps the coverage gate at a hundred percent over the whole source tree", () => {
+    expect(
+      coverageBlock(),
+      `${CONFIG_FILE} declares no hundred percent coverage threshold`,
+    ).toMatch(/thresholds\s*:\s*\{\s*100\s*:\s*true\s*,?\s*\}/);
+
+    const patterns = coveragePatterns("include");
+
+    expect(
+      patterns,
+      `${CONFIG_FILE} declares no coverage include list`,
+    ).not.toBeNull();
+
+    expect(patterns?.toSorted()).toEqual(COVERAGE_INCLUDE_PATTERNS.toSorted());
+  });
+
+  // Sonar reads a file the coverage report excludes as main source and counts
+  // every line of it as uncovered, which is how the same tree reported 92.9%
+  // there and 98.5% here. The properties file states that the two lists have to
+  // agree; this is the assertion that makes the statement hold, and it is
+  // derived from the coverage list so neither side can be edited alone.
+  it("keeps the Sonar test inclusions agreeing with the coverage exclude list", () => {
+    const declared = /^sonar\.test\.inclusions=(.*)$/m.exec(
+      readFileSync(join(projectRoot, SONAR_FILE), "utf8"),
+    );
+
+    expect(
+      declared,
+      `${SONAR_FILE} declares no test inclusions`,
+    ).not.toBeNull();
+
+    const patterns = (declared?.[1] ?? "")
+      .split(",")
+      .map((pattern) => pattern.trim())
+      .filter((pattern) => pattern !== "");
+
+    expect(patterns.toSorted()).toEqual(
+      COVERAGE_EXCLUDE_PATTERNS.flatMap(sonarEquivalents).toSorted(),
+    );
+  });
+
+  // The other way to reach the number without writing the test: name the provider
+  // whose suppression syntax the tree happens to carry, and suppress. Both halves
+  // are asserted, and the config is scanned alongside the source because it is the
+  // file that holds the coverage block.
+  it("uses the v8 provider and carries no coverage ignore hint anywhere", () => {
+    expect(
+      stripComments(readFileSync(join(projectRoot, CONFIG_FILE), "utf8")),
+      `${CONFIG_FILE} does not declare the v8 coverage provider`,
+    ).toMatch(/provider\s*:\s*"v8"/);
+
+    const sourceRoot = join(projectRoot, "src");
+    // withFileTypes, because a failed browser run leaves a screenshot directory
+    // named after the suite that wrote it. `src/__screenshots__/a11y.browser.test.tsx`
+    // is a directory whose name ends in .tsx, so a name-only filter hands it to
+    // readFileSync and this guard dies of EISDIR for a reason unrelated to what
+    // it checks. CI never sees it, because the browser sweep runs after the
+    // coverage step, which is exactly why it would only ever bite locally.
+    const files = readdirSync(sourceRoot, {
+      recursive: true,
+      withFileTypes: true,
+    })
+      .filter((entry) => entry.isFile() && /\.tsx?$/.test(entry.name))
+      .map((entry) => join(entry.parentPath, entry.name))
+      .concat(join(projectRoot, CONFIG_FILE))
+      .filter((file) => file !== guardFile);
+
+    expect(files.length).toBeGreaterThan(0);
+
+    const offenders = files.filter((file) =>
+      COVERAGE_IGNORE_HINT.test(readFileSync(file, "utf8")),
+    );
+
+    expect(offenders.map((file) => relative(projectRoot, file))).toEqual([]);
+  });
+
+  // The real-engine sweep mounts App rather than the entry module, so it has to
+  // pull in the global stylesheet itself. That is a second copy of the fact of
+  // which sheets this app ships, and the sweep it feeds is the contrast one: a
+  // sheet added to the entry module alone leaves the sweep reading a page no
+  // reader ever loads, and reporting green on it. Compared as a set of
+  // side-effect imports, which is what a global sheet is; a module stylesheet
+  // arrives bound to a name and is nobody's global.
+  it("keeps the browser sweep on the same global stylesheets the entry module ships", () => {
+    const globalSheets = (file: string): string[] =>
+      [
+        ...stripComments(
+          readFileSync(join(projectRoot, file), "utf8"),
+        ).matchAll(/^import\s+"([^"]*\.css)";$/gm),
+      ]
+        .map((match) => match[1])
+        .toSorted();
+
+    const shipped = globalSheets("src/index.tsx");
+
+    expect(
+      shipped.length,
+      "src/index.tsx imports no global stylesheet",
+    ).toBeGreaterThan(0);
+
+    expect(globalSheets("src/a11y.browser.test.tsx")).toEqual(shipped);
+  });
+
   // The footer carries this same attribution and has its own test. The README
   // copy has nothing watching it, so a documentation rewrite could drop the
-  // source link, the licence link, or the record of what was changed, and the
+  // source link, the license link, or the record of what was changed, and the
   // suite would stay green while the obligation lapsed in the place most readers
   // meet this project first.
   it("keeps the data attribution in the README", () => {
@@ -364,13 +912,13 @@ describe("toolchain baseline", () => {
     }
   });
 
-  // The README and the licence file already disagreed once, in the direction of
+  // The README and the license file already disagreed once, in the direction of
   // the README claiming a fresh CSV run the artifact's own tie-break ordering
   // disproves. Removal was guarded in neither document and divergence was guarded
   // in neither, so the wrong copy sat beside the right one with the suite green.
   // Both documents are asserted here from one pair of literals, which makes a
   // rewrite of either one alone a red test rather than a silent contradiction.
-  it("keeps one account of the dataset's provenance in the README and the licence file", () => {
+  it("keeps one account of the dataset's provenance in the README and the license file", () => {
     const sentences = [PROVENANCE_SERIALIZATION, PROVENANCE_REGENERATION];
 
     for (const name of ["README.md", "src/data/worldcities/license.txt"]) {

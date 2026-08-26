@@ -65,6 +65,13 @@ search, sort, and paginate a list of world cities without a table library.
   ratio in both themes, computed from the shipped stylesheet rather than from a
   copy of it
 
+Every push sweeps the running app for violations of a set of automated rules and
+fails on any of them, once against a simulated DOM and once in a real browser
+across both themes and a paged table. Contrast is the reason the second run
+exists: measuring it needs a layout engine, which the simulated DOM does not
+have. Automated rules cannot establish conformance, so the sweeps catch
+regressions rather than prove the list above.
+
 ## Stack
 
 - [TypeScript](https://www.typescriptlang.org)
@@ -398,11 +405,23 @@ so a passing test is evidence the announcement is right.
 | `npm run preview`         | Serve the built bundle locally                                      |
 | `npm test`                | Run the test suite once                                             |
 | `npm run test:watch`      | Run the test suite in watch mode                                    |
+| `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%    |
+| `npm run test:browser`    | Run the accessibility checks in a real Chromium                     |
 | `npm run typecheck`       | Check types without emitting output                                 |
 | `npm run lint`            | Run ESLint (`lint:fix` to autofix)                                  |
 | `npm run format`          | Run Prettier                                                        |
 | `npm run format:check`    | Check formatting without rewriting anything                         |
 | `npm run generate:cities` | Regenerate the committed dataset asset from the upstream CSV export |
+
+`npm run test:browser` drives a real Chromium through Playwright. `npm ci`
+downloads neither that browser nor the system libraries it needs, so a clean
+clone fetches both once with
+`npx playwright install --with-deps --only-shell chromium`, whose `--with-deps`
+half needs `sudo` on Linux. CI runs that same command, so both paths install the
+same binary. The step is optional for ordinary development: `npm test` runs the
+same accessibility checks against a simulated DOM and needs nothing extra.
+Neither run is a conformance claim; both catch regressions against a set of
+automated rules.
 
 ## Notes and next steps
 

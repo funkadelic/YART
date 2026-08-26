@@ -15,11 +15,17 @@ jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
-    # A green run takes well under a minute, so this is roughly fifteen times the
-    # headroom a cold cache needs. The runner's own per-test timeout already catches
-    # a deadlock inside a test. This covers the hangs it cannot see, in shared setup
-    # or teardown or in the install itself, which would otherwise hold a machine for
-    # the six-hour platform default.
+    # The Chromium install below now dominates the job: an apt dependency install
+    # plus a browser download, one to three minutes on a cold runner, against tens
+    # of seconds for everything that ran before it. The suite itself is not the
+    # cost, and the accessibility sweep is not either: the jsdom run takes seven
+    # seconds locally and the browser run two. Call a green job four minutes with a
+    # cold npm cache and a slow mirror, so ten is a little over double the headroom
+    # rather than the fifteen times over it this said when the job ended at the
+    # build. The runner's own per-test timeout already catches a deadlock inside a
+    # test. This covers the hangs it cannot see, in shared setup or teardown or in
+    # either install, which would otherwise hold a machine for the six-hour platform
+    # default.
     timeout-minutes: 10
     steps:
       - name: Checkout
@@ -63,6 +69,17 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # The browser download is the most expensive thing in this job, so it sits
+      # behind every cheap gate: a failing lint, typecheck, format check, coverage
+      # run or build stops the job before a byte of it is fetched. The jsdom
+      # accessibility check already ran inside the Test step, so what follows is
+      # the real-engine half of the accessibility gate rather than the whole of it.
+      - name: Install Chromium
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: Accessibility sweep
+        run: npm run test:browser
 
       # Last, so a failing test or build reports as itself rather than as an
       # absent coverage report.

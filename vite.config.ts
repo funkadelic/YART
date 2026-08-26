@@ -1,13 +1,16 @@
-import { defineConfig } from "vitest/config";
+import { playwright } from "@vitest/browser-playwright";
 import react from "@vitejs/plugin-react";
+import { defaultExclude, defineConfig } from "vitest/config";
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: "jsdom",
-    setupFiles: ["./vitest.setup.ts"],
     coverage: {
+      // Declared once at root level rather than inside a project, because the
+      // runner rejects coverage options on a project. That is also the mechanism
+      // by which the gate is measured over the deterministic jsdom suite alone:
+      // the only command that asks for coverage is the one scoped to that project.
       provider: "v8",
       // lcov for the Sonar import, text so a local run says the same thing the
       // gate will. The default reporters write html into coverage/ as well,
@@ -17,19 +20,80 @@ export default defineConfig({
       // report covers only files a test happened to import, so deleting the last
       // test that touched a module would raise the percentage.
       include: ["src/**/*.{ts,tsx}"],
+      // Four patterns and no named file. Three of them name artifacts that
+      // never execute. The fourth, src/test/**, names the shared scaffolding,
+      // which does run on every pass of this suite and is deliberately not
+      // measured: it is support code for the tests rather than code the
+      // product ships. That makes it the one directory holding executing code
+      // outside the gate, so eslint.config.js forbids importing it from
+      // anything that is not itself a test. An entry naming an application
+      // source file is how a coverage gate stops measuring the code it exists
+      // to measure.
       exclude: [
         "src/**/*.test.{ts,tsx}",
+        // Type-level assertions, settled by the compiler and never run.
+        "src/**/*.test-d.ts",
         "src/test/**",
         "src/**/*.d.ts",
-        // The type-level assertion file. Its claims are settled by the compiler
-        // and it ships to nobody, but the two columns it asserts about are real
-        // values built by the real factory, which is what makes the claims
-        // testable rather than restatements of themselves. Nothing loads them,
-        // so the file reports zero and no test could honestly raise it. Its
-        // sibling under features/ needs no entry: that one holds types only and
-        // compiles away to nothing.
-        "src/components/DataTable/columnTypes.ts",
       ],
+      // Without this the number is a report rather than a gate, and a change
+      // that drops coverage merges green with the drop recorded in a log
+      // nobody reads.
+      thresholds: { 100: true },
     },
+    projects: [
+      {
+        // Everything that runs without an engine. This is the suite the coverage
+        // gate measures and the one a clean install can run, so it is named rather
+        // than left implicit: a second project turns an unfiltered run into a
+        // browser launch.
+        extends: true,
+        test: {
+          name: "jsdom",
+          environment: "jsdom",
+          setupFiles: ["./vitest.setup.ts"],
+          // Supplying exclude replaces the runner's own default rather than adding
+          // to it, so the spread is what keeps the dependency directory out of
+          // collection. The added pattern is the browser project's whole input.
+          exclude: [...defaultExclude, "src/**/*.browser.test.tsx"],
+        },
+      },
+      {
+        // A real engine, for the checks that need layout and paint. It shares the
+        // root plugin list through extends, without which the JSX here never
+        // transforms, and it takes no setup file: the shared setup stubs the media
+        // query this project exists to exercise for real, and stubs the dataset
+        // fetch down to a fixture that would leave the paged table three pages long.
+        extends: true,
+        test: {
+          name: "browser",
+          include: ["src/**/*.browser.test.tsx"],
+          setupFiles: [],
+          browser: {
+            enabled: true,
+            headless: true,
+            // The runner's own default is a phone-sized window, at which the
+            // table overflows its scroll container and the last column is
+            // clipped. The contrast rule then reports every cell in that column
+            // as undecided rather than passing or failing it, because a
+            // partially obscured element has no determinable background. A
+            // desktop window is the layout this table is built for and the one
+            // in which the rule can actually reach a verdict.
+            viewport: { width: 1280, height: 900 },
+            // A factory in this major version. The bare string throws while the
+            // projects are still resolving, before a single test is collected.
+            provider: playwright(),
+            // The pipeline downloads chromium-headless-shell alone, and this
+            // launch resolves to exactly that: Playwright routes a headless
+            // launch that names no channel to the shell. Naming a channel, or
+            // turning headless off for a local debugging run, asks for a binary
+            // CI never fetched. src/toolchain.test.ts holds the two files
+            // together, so that edit is a red test here rather than a missing
+            // executable in the pipeline saying nothing about accessibility.
+            instances: [{ browser: "chromium" }],
+          },
+        },
+      },
+    ],
   },
 });
