@@ -200,6 +200,7 @@ const COVERAGE_INCLUDE_PATTERNS = ["src/**/*.{ts,tsx}"];
 const COVERAGE_IGNORE_HINT = /\b(?:v8|c8|istanbul|node)\s+ignore\b/;
 
 const CONFIG_FILE = "vite.config.ts";
+const WORKFLOW_FILE = ".github/workflows/ci.yml";
 
 // The coverage block of the config, ready to be read a key at a time.
 //
@@ -301,6 +302,52 @@ describe("toolchain baseline", () => {
       /(^|\s)(-w|--watch)\b/,
     );
     expect(script, "the test script names no project").toMatch(/--project[= ]/);
+  });
+
+  // The guard above covers the script a developer types and neither of the two
+  // the pipeline runs. Both are asserted as the properties that make them gates
+  // rather than as one string, for the same reason: adding a flag is free and
+  // dropping the one that matters is not.
+  //
+  // Without --coverage nothing measures coverage, so the threshold is never
+  // evaluated and coverage/lcov.info is never written, which the Sonar import
+  // reads as a silent zero rather than as an error. Without the browser project
+  // named, the browser script fans out to every project and reports the
+  // deterministic suite a second time as if it were the real-engine one.
+  it("keeps the coverage and browser scripts carrying the flags their gates need", () => {
+    const coverage = manifest.scripts?.["test:coverage"] ?? "";
+
+    expect(coverage, "the coverage script collects no coverage").toMatch(
+      /(^|\s)--coverage\b/,
+    );
+    expect(coverage, "the coverage script names no project").toMatch(
+      /--project[= ]jsdom\b/,
+    );
+
+    expect(
+      manifest.scripts?.["test:browser"] ?? "",
+      "the browser script does not name the browser project",
+    ).toMatch(/--project[= ]browser\b/);
+  });
+
+  // A gate nothing invokes is not a gate. The browser project and its one test
+  // file both survive the deletion of the step that runs them, so the pipeline
+  // is asserted to name both scripts rather than the manifest alone being
+  // trusted to imply that something calls them.
+  it("runs both test gates from the pipeline", () => {
+    // Judged on live lines only, for the reason the pre-commit guard is:
+    // commenting a step out leaves every expected string in the file.
+    const live = readFileSync(join(projectRoot, WORKFLOW_FILE), "utf8")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"));
+
+    for (const script of ["npm run test:coverage", "npm run test:browser"]) {
+      expect(
+        live.some((line) => line.includes(script)),
+        `${WORKFLOW_FILE} no longer runs ${script}`,
+      ).toBe(true);
+    }
   });
 
   // Most of the hook rule family is registered at warn rather than error by the
