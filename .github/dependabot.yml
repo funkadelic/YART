@@ -54,6 +54,16 @@ updates:
       - dependency-name: eslint
         update-types:
           - version-update:semver-major
+      # Not a third decision, a consequence of the vite one above. Every published
+      # 6.x of this plugin declares peer vite ^8, and it carries oxc-transform-react
+      # and @rolldown/plugin-babel as peers besides, so taking it is taking the
+      # Rolldown and Oxc pipeline under another name. There is no 6.x that installs
+      # against vite 7. The pinned 5.2.0 already accepts ^4 through ^8, so it
+      # survives the eventual move and nothing is owed by waiting. Lift this in the
+      # same change that lifts the vite hold, not before and not separately.
+      - dependency-name: "@vitejs/plugin-react"
+        update-types:
+          - version-update:semver-major
 
   # Third-party actions used by the workflow are pinned to commit SHAs. A SHA pin is
   # only a live mitigation while something keeps it current, so the action references
