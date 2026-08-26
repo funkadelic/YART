@@ -316,6 +316,8 @@ const DIRECT_USER_EVENT_CALL = /\buserEvent\.(?!setup\b)[A-Za-z]\w*\s*\(/;
 
 // A test file that mounts more than it asserts is spending its runtime producing
 // coverage rather than evidence, and the coverage gate cannot tell the two apart.
+// A file that asserts nothing at all is the limiting case of the same thing, and
+// the inequality alone lets it through, so it is named separately below.
 // Two counting decisions are written out here because the naive reading gets them
 // wrong in opposite directions and neither is visible in the pattern itself. A
 // member call such as a root's own render method is counted, deliberately: the
@@ -653,7 +655,7 @@ describe("toolchain baseline", () => {
   // review, because the number a reviewer would have to count is the one thing a
   // machine counts reliably. Each file is read from disk with nothing carried
   // between iterations, so the offender list is the same on one worker or many.
-  it("registers no more renders than assertions in any test file", () => {
+  it("asserts something, and no more renders than assertions, in every test file", () => {
     expect(scannedFiles.length).toBeGreaterThan(0);
 
     const offenders: string[] = [];
@@ -662,10 +664,16 @@ describe("toolchain baseline", () => {
       const source = stripComments(readFileSync(file, "utf8"));
       const renders = source.match(COUNTS_AS_RENDER)?.length ?? 0;
       const assertions = source.match(COUNTS_AS_ASSERTION)?.length ?? 0;
+      const name = relative(projectRoot, file);
 
-      if (renders > assertions) {
+      // Named ahead of the comparison rather than left to it: zero renders
+      // against zero assertions satisfies the inequality while being the
+      // clearest case of a file that produces coverage and no evidence.
+      if (assertions === 0) {
+        offenders.push(`${name}: asserts nothing`);
+      } else if (renders > assertions) {
         offenders.push(
-          `${relative(projectRoot, file)}: ${renders} renders against ${assertions} assertions`,
+          `${name}: ${renders} renders against ${assertions} assertions`,
         );
       }
     }
