@@ -47,11 +47,12 @@ const projectRoot = join(here.dirname, "..");
 // fixture, a comment, or a dependency.
 const SENTINEL_CITY = "Guangzhou";
 
-// The build tool's own chunk-size warning threshold: roughly 3.3 times the real
-// chunk and roughly 23 times a re-bundled regression, so it discriminates without
-// needing retuning on every dependency bump. A chunk that outgrows it is
-// re-measured and explained, never accommodated by moving this number upward. A
-// ceiling that follows each regression has stopped being a gate.
+// The build tool's own chunk-size warning threshold: a little over twice the real
+// chunk, and roughly a seventh of what a re-bundled regression produces, so it sits
+// between the two with room on both sides and needs no retuning on every dependency
+// bump. A chunk that outgrows it is re-measured and explained, never accommodated by
+// moving this number upward. A ceiling that follows each regression has stopped
+// being a gate.
 const JS_CHUNK_SIZE_CEILING_BYTES = 512000;
 
 // The emitted dataset carries a content hash in its name. That is what makes a
