@@ -66,6 +66,14 @@ export default defineConfig({
           browser: {
             enabled: true,
             headless: true,
+            // The runner's own default is a phone-sized window, at which the
+            // table overflows its scroll container and the last column is
+            // clipped. The contrast rule then reports every cell in that column
+            // as undecided rather than passing or failing it, because a
+            // partially obscured element has no determinable background. A
+            // desktop window is the layout this table is built for and the one
+            // in which the rule can actually reach a verdict.
+            viewport: { width: 1280, height: 900 },
             // A factory in this major version. The bare string throws while the
             // projects are still resolving, before a single test is collected.
             provider: playwright(),
