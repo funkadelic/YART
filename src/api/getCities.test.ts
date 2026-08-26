@@ -313,3 +313,24 @@ describe("getCities search parity", () => {
     expect(byOwnName.map((city) => city.id)).not.toContain(target.id);
   });
 });
+describe("getCities result ownership", () => {
+  it("hands back an array the caller owns rather than the cached one", async () => {
+    // The copy on the empty-term branch has no other observable consequence,
+    // so without an identity assertion a later refactor can hand the
+    // module-scope cache straight to callers again and nothing goes red.
+    vi.resetModules();
+    const [{ getCities: coldGetCities }, { loadCities }] = await Promise.all([
+      import("./getCities"),
+      import("../data/worldcities/cities"),
+    ]);
+
+    // Both imports come from the one registry reset above, so the array the
+    // loader caches is the array the seam would otherwise return.
+    const cached = await loadCities();
+    const first = await coldGetCities({ searchTerm: "" });
+    const second = await coldGetCities({ searchTerm: "" });
+
+    expect(first).not.toBe(cached);
+    expect(first).not.toBe(second);
+  });
+});
