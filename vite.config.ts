@@ -11,15 +11,20 @@ export default defineConfig({
   // declares the module type, so the second condition fires for every file
   // under src/.
   //
-  // The only default imports of CommonJS-resolved packages in this tree are the
-  // accessibility engine, axe-core, in the two axe test files, and the CSS
-  // processor, postcss, in the token guard. Neither marks itself as an ES
-  // module, so the third condition fires independently and both branches point
-  // the same way. The view library and its DOM renderer are CommonJS-only but
-  // are never default-imported; every import of them here is named. The
+  // Nothing the browser bundle contains is reached by that change. The view
+  // library and its DOM renderer are the CommonJS-only packages src/ depends on,
+  // and they are never default-imported; every import of them here is named. The
   // pre-bundled set was read out of the optimizer's own output directory and is
   // exactly those two, the DOM client entry, the two icon subpaths and the two
   // JSX runtimes.
+  //
+  // Two test files do default-import a package, and neither appears in that set,
+  // because both are externalized to Node and never processed by the optimizer.
+  // The accessibility engine, axe-core, in the two axe test files, ships no
+  // exports map and no module type, so it resolves as CommonJS and the third
+  // condition fires for it. The CSS processor, postcss, in the token guard,
+  // resolves through its own exports map to lib/postcss.mjs, so no interop rule
+  // applies to it at all.
   //
   // That measurement is why legacy.inconsistentCjsInterop, the deprecated
   // opt-out back to the previous behavior, is declined here rather than
@@ -34,8 +39,10 @@ export default defineConfig({
   // the exported reactCompilerPreset. What is declined here is therefore an
   // experimental compiler rather than a faster JSX transform. The JSX transform
   // is Oxc's, arrives with the plugin itself and needs no peer at all, which is
-  // also why this major drops Babel and the refresh runtime out of the tree
-  // instead of adding to it. Adopting the compiler is a change of its own with
+  // also why this major drops the refresh runtime out of the tree instead of
+  // adding to it. Babel is still installed, at @babel/core, but it arrives
+  // through the lint plugin's dependency edge rather than this one and was here
+  // before this bump as well. Adopting the compiler is a change of its own with
   // its own gate run, so the option stays unset and the peers stay uninstalled.
   plugins: [react()],
   test: {

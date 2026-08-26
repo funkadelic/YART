@@ -1,18 +1,21 @@
 // @vitest-environment node
 //
-// One reason this file opts out of the DOM environment, measured rather than
-// assumed. A second reason stood here until the bundler moved to Vite 8. It
-// described an invariant belonging to the old transform tool, it was still live
-// on Vite 7.3.6, where deleting the pragma above stopped the build outright,
-// and it went away with the tool, because Vite 8 does not depend on it and the
-// same probe now passes.
+// The pragma above has no correctness reason left, measured rather than
+// assumed. The reason that stood here until the bundler moved to Vite 8
+// described an invariant belonging to the old transform tool: it was live on
+// Vite 7.3.6, where deleting the pragma stopped the build outright, and it went
+// away with the tool, because Vite 8 does not depend on it and the same probe
+// now passes. What the pragma buys today is only the DOM environment's setup
+// cost, which a file that shells out to a build has no use for.
 //
-// The runner sets the environment name to a test value, and a programmatic
-// build inherits it, so the view library resolves to its development build and
-// the artifact measured is more than twice the size of the one a release build
-// produces. Passing a production mode to the build call does not correct that.
-// Setting the environment variable does, and reproduces the release build's
-// content hash exactly.
+// The environment variable this file sets in its body is a separate matter, and
+// this paragraph is about that rather than about the pragma. The runner sets the
+// environment name to a test value, and a programmatic build inherits it, so the
+// view library resolves to its development build and the artifact measured comes
+// out close to twice the size of the one a release build produces. Passing a
+// production mode to the build call does not correct that. Setting the
+// environment variable does, and reproduces the release build's content hash
+// exactly.
 //
 // What goes undetected without this file: a plain value import of the dataset in
 // place of the URL-suffixed one. It compiles, it typechecks, and it puts the
