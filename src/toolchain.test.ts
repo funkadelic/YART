@@ -185,6 +185,13 @@ const COVERAGE_EXCLUDE_PATTERNS = [
   "src/**/*.d.ts",
 ];
 
+// The complete coverage include list. One entry, named here for the same
+// reason its exclude sibling is written out: narrowing this to a subdirectory
+// satisfies a hundred percent by shrinking the gate's input rather than by
+// covering the code, and it is the sibling property the exclude guard does not
+// reach.
+const COVERAGE_INCLUDE_PATTERNS = ["src/**/*.{ts,tsx}"];
+
 // A suppression comment in any provider's spelling, matched against raw source
 // because a hint is itself a comment and blanking comments first would make the
 // guard vacuous. None exists in this tree: the standing convention is that an
@@ -193,6 +200,37 @@ const COVERAGE_EXCLUDE_PATTERNS = [
 const COVERAGE_IGNORE_HINT = /\b(?:v8|c8|istanbul|node)\s+ignore\b/;
 
 const CONFIG_FILE = "vite.config.ts";
+
+// The coverage block of the config, ready to be read a key at a time.
+//
+// Line comments are blanked and block comments are not, rather than reaching
+// for the shared blanker: a glob such as the type-declaration one carries the
+// block-comment closing sequence inside a string literal, so blanking block
+// comments here would rewrite the very patterns being compared.
+//
+// Anchored at the coverage key, because a project may carry an include or an
+// exclude of its own and the first one in the file is not necessarily this one.
+function coverageBlock(): string {
+  const source = readFileSync(join(projectRoot, CONFIG_FILE), "utf8").replace(
+    /(^|[^:])\/\/[^\n]*/g,
+    "$1",
+  );
+
+  return source.slice(source.indexOf("coverage:"));
+}
+
+// The written-out patterns of one coverage key, read out of the block above.
+// Returns null when the key is absent, so a deleted list fails as a missing
+// list rather than passing as an empty one.
+function coveragePatterns(key: string): string[] | null {
+  const declared = new RegExp(`${key}\\s*:\\s*\\[([^\\]]*)\\]`).exec(
+    coverageBlock(),
+  );
+
+  if (declared === null) return null;
+
+  return [...declared[1].matchAll(/"([^"]*)"/g)].map((match) => match[1]);
+}
 
 // The three things CC BY 4.0 obliges this repository to state, written out here
 // so the assertion below matches the committed copy exactly rather than a shape
@@ -420,29 +458,36 @@ describe("toolchain baseline", () => {
   // a set: reordering the four patterns is not a weakening and must not flap the
   // guard, while adding one, removing one or emptying the list must all fail.
   it("keeps the coverage exclude list at the four patterns it is written to hold", () => {
-    // Line comments only, rather than the shared blanker: a glob such as
-    // src/**/*.d.ts carries the block-comment sequence inside a string literal,
-    // so blanking block comments here would rewrite the patterns being compared.
-    const source = readFileSync(join(projectRoot, CONFIG_FILE), "utf8").replace(
-      /(^|[^:])\/\/[^\n]*/g,
-      "$1",
-    );
-
-    // Anchored inside the coverage block, because a project may carry an exclude
-    // of its own and the first one in the file is not necessarily this one.
-    const block = source.slice(source.indexOf("coverage:"));
-    const declared = /exclude\s*:\s*\[([^\]]*)\]/.exec(block);
+    const patterns = coveragePatterns("exclude");
 
     expect(
-      declared,
+      patterns,
       `${CONFIG_FILE} declares no coverage exclude list`,
     ).not.toBeNull();
 
-    const patterns = [...(declared?.[1] ?? "").matchAll(/"([^"]*)"/g)].map(
-      (match) => match[1],
-    );
+    expect(patterns?.toSorted()).toEqual(COVERAGE_EXCLUDE_PATTERNS.toSorted());
+  });
 
-    expect(patterns.toSorted()).toEqual(COVERAGE_EXCLUDE_PATTERNS.toSorted());
+  // The threshold is the single line that turns the number into a gate, and the
+  // include list decides what the number is measured over. Both sit beside the
+  // exclude list and neither was guarded, so the gate could be reverted to a
+  // report, or fitted to a third of the tree, with every other guard green.
+  // Compared the same way the exclude list is: reordering is not a weakening
+  // and must not flap, while narrowing, widening or emptying must all fail.
+  it("keeps the coverage gate at a hundred percent over the whole source tree", () => {
+    expect(
+      coverageBlock(),
+      `${CONFIG_FILE} declares no hundred percent coverage threshold`,
+    ).toMatch(/thresholds\s*:\s*\{\s*100\s*:\s*true\s*,?\s*\}/);
+
+    const patterns = coveragePatterns("include");
+
+    expect(
+      patterns,
+      `${CONFIG_FILE} declares no coverage include list`,
+    ).not.toBeNull();
+
+    expect(patterns?.toSorted()).toEqual(COVERAGE_INCLUDE_PATTERNS.toSorted());
   });
 
   // The other way to reach the number without writing the test: name the provider
