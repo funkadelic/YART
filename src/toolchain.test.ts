@@ -205,6 +205,24 @@ const COVERAGE_IGNORE_HINT = /\b(?:v8|c8|istanbul|node)\s+ignore\b/;
 
 const CONFIG_FILE = "vite.config.ts";
 const WORKFLOW_FILE = ".github/workflows/ci.yml";
+const SONAR_FILE = "sonar-project.properties";
+
+/**
+ * One coverage exclude pattern written in Sonar's dialect, which is the same
+ * statement in a matcher with two fewer features: it expands no braces, and its
+ * patterns are rooted at the project rather than at the source directory. Both
+ * differences are mechanical, so the Sonar list is derived here rather than
+ * written out a second time and left to drift from the list it has to agree
+ * with.
+ */
+function sonarEquivalents(pattern: string): string[] {
+  const braces = /\{([^}]*)\}/.exec(pattern);
+  const expanded = braces
+    ? braces[1].split(",").map((option) => pattern.replace(braces[0], option))
+    : [pattern];
+
+  return expanded.map((entry) => entry.replace(/^src\/\*\*\//, "**/"));
+}
 
 // The coverage block of the config, ready to be read a key at a time.
 //
@@ -539,6 +557,31 @@ describe("toolchain baseline", () => {
     ).not.toBeNull();
 
     expect(patterns?.toSorted()).toEqual(COVERAGE_INCLUDE_PATTERNS.toSorted());
+  });
+
+  // Sonar reads a file the coverage report excludes as main source and counts
+  // every line of it as uncovered, which is how the same tree reported 92.9%
+  // there and 98.5% here. The properties file states that the two lists have to
+  // agree; this is the assertion that makes the statement hold, and it is
+  // derived from the coverage list so neither side can be edited alone.
+  it("keeps the Sonar test inclusions agreeing with the coverage exclude list", () => {
+    const declared = /^sonar\.test\.inclusions=(.*)$/m.exec(
+      readFileSync(join(projectRoot, SONAR_FILE), "utf8"),
+    );
+
+    expect(
+      declared,
+      `${SONAR_FILE} declares no test inclusions`,
+    ).not.toBeNull();
+
+    const patterns = (declared?.[1] ?? "")
+      .split(",")
+      .map((pattern) => pattern.trim())
+      .filter((pattern) => pattern !== "");
+
+    expect(patterns.toSorted()).toEqual(
+      COVERAGE_EXCLUDE_PATTERNS.flatMap(sonarEquivalents).toSorted(),
+    );
   });
 
   // The other way to reach the number without writing the test: name the provider
