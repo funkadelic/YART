@@ -406,13 +406,15 @@ so a passing test is evidence the announcement is right.
 | `npm run format:check`    | Check formatting without rewriting anything                         |
 | `npm run generate:cities` | Regenerate the committed dataset asset from the upstream CSV export |
 
-`npm run test:browser` drives a real Chromium through Playwright, which needs
-system libraries `npm ci` does not install. On Linux that is a one-time
-`sudo npx playwright install-deps chromium`. CI installs them itself, so the
-command is optional for ordinary development: `npm test` runs the same
-accessibility checks against a simulated DOM and needs nothing extra. Neither
-run is a conformance claim; both catch regressions against a set of automated
-rules.
+`npm run test:browser` drives a real Chromium through Playwright. `npm ci`
+downloads neither that browser nor the system libraries it needs, so a clean
+clone fetches both once with
+`npx playwright install --with-deps --only-shell chromium`, whose `--with-deps`
+half needs `sudo` on Linux. CI runs that same command, so both paths install the
+same binary. The step is optional for ordinary development: `npm test` runs the
+same accessibility checks against a simulated DOM and needs nothing extra.
+Neither run is a conformance claim; both catch regressions against a set of
+automated rules.
 
 ## Notes and next steps
 
