@@ -550,6 +550,53 @@ describe("toolchain baseline", () => {
     }
   });
 
+  // The step above installs one browser binary and vite.config.ts launches one,
+  // three directories apart, with neither file mentioning the other. They agree
+  // today through a Playwright default rather than through anything written
+  // down: a headless launch naming no channel resolves to the headless shell,
+  // which is the only thing --only-shell downloads. Turn headless off to debug a
+  // sweep locally, or name a channel, and the pipeline fails on a missing
+  // executable that says nothing about accessibility. Asserted here so it fails
+  // in the suite a developer runs first, and as one implication rather than as an
+  // equality: installing more than the launch needs is wasteful, not broken.
+  it("installs the browser binary the accessibility sweep launches", () => {
+    const install = readFileSync(join(projectRoot, WORKFLOW_FILE), "utf8")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"))
+      .find((line) => line.includes("playwright install"));
+
+    expect(install, `${WORKFLOW_FILE} installs no browser`).toBeDefined();
+
+    const config = stripComments(
+      readFileSync(join(projectRoot, CONFIG_FILE), "utf8"),
+    );
+    const launched = [...config.matchAll(/browser\s*:\s*"([^"]*)"/g)].map(
+      (match) => match[1],
+    );
+
+    expect(
+      launched.length,
+      `${CONFIG_FILE} launches no browser`,
+    ).toBeGreaterThan(0);
+
+    for (const browser of launched) {
+      expect(
+        install as string,
+        `${WORKFLOW_FILE} does not install ${browser}`,
+      ).toContain(browser);
+    }
+
+    // The shell is a headless launch with no channel named, and nothing else.
+    const resolvesToShell =
+      /headless\s*:\s*true/.test(config) && !/channel\s*:/.test(config);
+
+    expect(
+      /--only-shell\b/.test(install as string) && !resolvesToShell,
+      `${WORKFLOW_FILE} installs the headless shell alone and ${CONFIG_FILE} launches a browser that is not it`,
+    ).toBe(false);
+  });
+
   // Most of the hook rule family is registered at warn rather than error by the
   // plugin's own config, exhaustive-deps among them. Without the flag the gate
   // exits zero with all of them reported, so neither the pipeline nor the

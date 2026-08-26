@@ -83,6 +83,13 @@ export default defineConfig({
             // A factory in this major version. The bare string throws while the
             // projects are still resolving, before a single test is collected.
             provider: playwright(),
+            // The pipeline downloads chromium-headless-shell alone, and this
+            // launch resolves to exactly that: Playwright routes a headless
+            // launch that names no channel to the shell. Naming a channel, or
+            // turning headless off for a local debugging run, asks for a binary
+            // CI never fetched. src/toolchain.test.ts holds the two files
+            // together, so that edit is a red test here rather than a missing
+            // executable in the pipeline saying nothing about accessibility.
             instances: [{ browser: "chromium" }],
           },
         },
