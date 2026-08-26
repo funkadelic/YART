@@ -81,9 +81,9 @@ const SWEPT_STATES = Object.freeze([
 
 /**
  * What actually ran, recorded as it runs. A state quietly dropped from the walk
- * below leaves this short of the list above and the closing assertion goes red,
- * which is the same shape as the did-the-walker-find-anything guard the
- * toolchain suite uses.
+ * below leaves this short of the list above and the closing case goes red, which
+ * is the same shape as the did-the-walker-find-anything guard the toolchain
+ * suite uses.
  */
 const sweptStates: string[] = [];
 
@@ -117,10 +117,14 @@ async function sweep(state: string): Promise<void> {
   // the allowlist empties and both assertions become empty against empty.
   expect(results.passes.length, state).toBeGreaterThan(0);
 
-  sweptStates.push(state);
-
   expect(describeViolations(results), state).toEqual([]);
   expect(incompleteRuleIds(results), state).toEqual(EXPECTED_INCOMPLETE);
+
+  // Recorded after the assertions rather than before them, so a state that
+  // failed its sweep is not also filed as swept. The throw ends the case today,
+  // which makes the order look moot; it stops being moot the moment anyone makes
+  // this collect rather than throw.
+  sweptStates.push(state);
 }
 
 describe("accessibility", () => {
@@ -174,7 +178,14 @@ describe("accessibility", () => {
       "Error: The city data could not be downloaded (status 404).",
     );
     await sweep("error");
+  });
 
+  // Its own case rather than the tail of the sweep that happens to run last.
+  // Held there, selecting a single sweep through -t, .only or a shard split
+  // failed this file with a list one entry long, which reads as an accessibility
+  // regression rather than as the ordering fact it is. It still only means
+  // anything after the cases above have run, and now says so in its own name.
+  it("swept every state it says it sweeps", () => {
     expect(sweptStates).toEqual(SWEPT_STATES);
   });
 });

@@ -59,10 +59,13 @@ async function sweep(state: string): Promise<void> {
   // is not a failure and an engine that ran nothing still is.
   expect(results.passes.length, state).toBeGreaterThan(0);
 
-  sweptStates.push(state);
-
   expect(describeViolations(results), state).toEqual([]);
   expect(incompleteRuleIds(results), state).toEqual(EXPECTED_INCOMPLETE);
+
+  // Recorded after the assertions rather than before them, for the reason the
+  // jsdom sweep records it there: a state that failed its sweep is not a state
+  // that was swept clean.
+  sweptStates.push(state);
 }
 
 describe("accessibility in a real engine", () => {
