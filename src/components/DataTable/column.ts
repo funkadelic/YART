@@ -61,9 +61,10 @@ export interface ColumnOptions<T, V> {
  * literal union of its ids with no assertion written anywhere, and renaming a
  * column is a compile error at every use site rather than a silent widening.
  *
- * The const modifier on the two id parameters below does nothing here, since
- * the argument is already a bare literal. It would matter only if an id
- * arrived inside an array or object literal, where inference would widen.
+ * The const modifier on the two id parameters below is redundant, since a
+ * scalar string parameter already infers a literal from a literal argument.
+ * It changes inference only for a parameter that takes an array or object,
+ * which is not this signature.
  */
 export function columns<T>() {
   /**
