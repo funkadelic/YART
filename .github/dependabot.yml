@@ -32,36 +32,23 @@ updates:
         update-types:
           - minor
           - patch
-    # Two majors are deliberate holds rather than open questions, so they are not
-    # reproposed every week. Vite 8 swaps the pipeline to Rolldown and Oxc, which is a
-    # rewrite this milestone does not need, and TypeScript 7 is the native port compiler,
-    # far too large to ride in on a dependency sweep. Minor and patch updates to both
+    # Both entries below are held on purpose, so neither is reproposed every week. The
+    # first is a decision: TypeScript 7 is the native port compiler, far too large to
+    # ride in on a dependency sweep and be read as a routine version bump. The second
+    # is a wait, for the reason written beside it. Minor and patch updates to both
     # still arrive as normal.
     ignore:
-      - dependency-name: vite
-        update-types:
-          - version-update:semver-major
       - dependency-name: typescript
         update-types:
           - version-update:semver-major
-      # Unlike the two above, this one is a wait rather than a decision. ESLint 10
-      # cannot install here at all: eslint-plugin-react declares a peer ceiling of
-      # eslint ^9.7 and 7.37.5 is the newest it has published, so npm ci fails on the
-      # peer conflict before a single rule runs. The rest of the stack is already
-      # ready, react-hooks, typescript-eslint and config-prettier all accept ^10.
-      # Drop this entry once eslint-plugin-react publishes a release that accepts
-      # eslint 10, and expect @eslint/js to move to 10.x in the same change.
+      # This one is blocked rather than judged. ESLint 10 cannot install here at all:
+      # eslint-plugin-react declares a peer ceiling of eslint ^9.7 and 7.37.5 is the
+      # newest it has published, so npm ci fails on the peer conflict before a single
+      # rule runs. The rest of the stack is already ready, react-hooks,
+      # typescript-eslint and config-prettier all accept ^10. Drop this entry once
+      # eslint-plugin-react publishes a release that accepts eslint 10, and expect
+      # @eslint/js to move to 10.x in the same change.
       - dependency-name: eslint
-        update-types:
-          - version-update:semver-major
-      # Not a third decision, a consequence of the vite one above. Every published
-      # 6.x of this plugin declares peer vite ^8, and it carries oxc-transform-react
-      # and @rolldown/plugin-babel as peers besides, so taking it is taking the
-      # Rolldown and Oxc pipeline under another name. There is no 6.x that installs
-      # against vite 7. The pinned 5.2.0 already accepts ^4 through ^8, so it
-      # survives the eventual move and nothing is owed by waiting. Lift this in the
-      # same change that lifts the vite hold, not before and not separately.
-      - dependency-name: "@vitejs/plugin-react"
         update-types:
           - version-update:semver-major
 

@@ -4,7 +4,58 @@ import { defaultExclude, defineConfig } from "vitest/config";
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  // What a default import from a CommonJS module resolves to changed in this
+  // major. It is module.exports when the importer is .mjs or .mts, or the
+  // closest manifest declares the module type, or the importee does not mark
+  // itself as an ES module, and module.exports.default otherwise. This manifest
+  // declares the module type, so the second condition fires for every file
+  // under src/.
+  //
+  // Nothing the browser bundle contains is reached by that change. The view
+  // library and its DOM renderer are the CommonJS-only packages src/ depends on,
+  // and they are never default-imported; every import of them here is named. The
+  // pre-bundled set was read out of the optimizer's own output directory and is
+  // exactly those two, the DOM client entry, the two icon subpaths and the two
+  // JSX runtimes.
+  //
+  // Test-only packages are default-imported in places, and none of them reaches
+  // that set, because the app optimizer scans the entry graph rather than the
+  // test files. The accessibility engine, axe-core, in the two axe test files,
+  // ships no exports map and no module type, so it resolves as CommonJS and the
+  // third condition fires for it. The CSS processor, postcss, in the token
+  // guard, resolves through its own exports map to lib/postcss.mjs, so no
+  // interop rule applies to it at all.
+  //
+  // That measurement is why legacy.inconsistentCjsInterop, the deprecated
+  // opt-out back to the previous behavior, is declined here rather than
+  // overlooked. The evidence it is not needed is the whole suite staying green
+  // across the bump, coverage included.
+
+  // The plugin is taken at 6.x and taken bare. Its three peers other than the
+  // bundler are every one of them optional, so none of them is installed by
+  // taking it: oxc-transform-react is the Rust port of React Compiler, reached
+  // through the compiler option, and @rolldown/plugin-babel together with
+  // babel-plugin-react-compiler is the Babel route to the same adoption through
+  // the exported reactCompilerPreset. What is declined here is therefore an
+  // experimental compiler rather than a faster JSX transform. The JSX transform
+  // is Oxc's, arrives with the plugin itself and needs no peer at all, which is
+  // also why this major drops the refresh runtime out of the tree instead of
+  // adding to it. Babel is still installed, at @babel/core, but it arrives
+  // through the lint plugin's dependency edge rather than this one and was here
+  // before this bump as well. Adopting the compiler is a change of its own with
+  // its own gate run, so the option stays unset and the peers stay uninstalled.
   plugins: [react()],
+  build: {
+    // Spelled out from the same four floors the browserslist declares, because
+    // the bundler does not read that field and the two are otherwise free to
+    // drift. They already had: the default is baseline-widely-available, which
+    // is Firefox 114 against the declared floor of 111, and the other three
+    // agree exactly. The divergence emits nothing today, since a build pinned
+    // to these targets and a build on the default produce the same chunk down
+    // to its content hash, so this pins a floor rather than changing output.
+    // Update it and the browserslist together; nothing asserts they agree.
+    target: ["chrome111", "edge111", "firefox111", "safari16.4"],
+  },
   test: {
     coverage: {
       // Declared once at root level rather than inside a project, because the

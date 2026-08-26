@@ -1,20 +1,21 @@
 // @vitest-environment node
 //
-// Two reasons this file opts out of the DOM environment, both measured rather
-// than assumed.
+// The pragma above has no correctness reason left, measured rather than
+// assumed. The reason that stood here until the bundler moved to Vite 8
+// described an invariant belonging to the old transform tool: it was live on
+// Vite 7.3.6, where deleting the pragma stopped the build outright, and it went
+// away with the tool, because Vite 8 does not depend on it and the same probe
+// now passes. What the pragma saves today is only the DOM environment's setup
+// cost, which a file that shells out to a build has no reason to pay.
 //
-// The bundler's transform layer refuses to start once the DOM environment has
-// replaced the global text encoder. It encodes an empty string, checks the result
-// against the global byte array type, and treats that check as an invariant. The
-// two constructors come from different realms, so the check is false and the
-// build never begins.
-//
-// The runner also sets the environment name to a test value, and a programmatic
-// build inherits it, so the view library resolves to its development build and
-// the artifact measured is more than twice the size of the one a release build
-// produces. Passing a production mode to the build call does not correct that.
-// Setting the environment variable does, and reproduces the release build's
-// content hash exactly.
+// The environment variable this file sets in its body is a separate matter, and
+// this paragraph is about that rather than about the pragma. The runner sets the
+// environment name to a test value, and a programmatic build inherits it, so the
+// view library resolves to its development build and the artifact measured comes
+// out close to twice the size of the one a release build produces. Passing a
+// production mode to the build call does not correct that. Setting the
+// environment variable does, and reproduces the release build's content hash
+// exactly.
 //
 // What goes undetected without this file: a plain value import of the dataset in
 // place of the URL-suffixed one. It compiles, it typechecks, and it puts the
@@ -46,11 +47,12 @@ const projectRoot = join(here.dirname, "..");
 // fixture, a comment, or a dependency.
 const SENTINEL_CITY = "Guangzhou";
 
-// The build tool's own chunk-size warning threshold: roughly 3.3 times the real
-// chunk and roughly 23 times a re-bundled regression, so it discriminates without
-// needing retuning on every dependency bump. A chunk that outgrows it is
-// re-measured and explained, never accommodated by moving this number upward. A
-// ceiling that follows each regression has stopped being a gate.
+// The build tool's own chunk-size warning threshold: a little over twice the real
+// chunk, and roughly a seventh of what a re-bundled regression produces, so it sits
+// between the two with room on both sides and needs no retuning on every dependency
+// bump. A chunk that outgrows it is re-measured and explained, never accommodated by
+// moving this number upward. A ceiling that follows each regression has stopped
+// being a gate.
 const JS_CHUNK_SIZE_CEILING_BYTES = 512000;
 
 // The emitted dataset carries a content hash in its name. That is what makes a

@@ -10,7 +10,12 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    // Was "node", which is node10 resolution and ignores the exports field. The
+    // bundler package ships neither a main nor a types field and is reachable
+    // only through its exports map, so the compiler could not find the
+    // declarations for the programmatic build entry point that the bundle guard
+    // imports. This value is the resolution the bundler itself performs.
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
