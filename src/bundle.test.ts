@@ -5,8 +5,8 @@
 // described an invariant belonging to the old transform tool: it was live on
 // Vite 7.3.6, where deleting the pragma stopped the build outright, and it went
 // away with the tool, because Vite 8 does not depend on it and the same probe
-// now passes. What the pragma buys today is only the DOM environment's setup
-// cost, which a file that shells out to a build has no use for.
+// now passes. What the pragma saves today is only the DOM environment's setup
+// cost, which a file that shells out to a build has no reason to pay.
 //
 // The environment variable this file sets in its body is a separate matter, and
 // this paragraph is about that rather than about the pragma. The runner sets the

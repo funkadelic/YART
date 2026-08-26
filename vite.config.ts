@@ -18,13 +18,13 @@ export default defineConfig({
   // exactly those two, the DOM client entry, the two icon subpaths and the two
   // JSX runtimes.
   //
-  // Two test files do default-import a package, and neither appears in that set,
-  // because both are externalized to Node and never processed by the optimizer.
-  // The accessibility engine, axe-core, in the two axe test files, ships no
-  // exports map and no module type, so it resolves as CommonJS and the third
-  // condition fires for it. The CSS processor, postcss, in the token guard,
-  // resolves through its own exports map to lib/postcss.mjs, so no interop rule
-  // applies to it at all.
+  // Test-only packages are default-imported in places, and none of them reaches
+  // that set, because they are externalized to Node and never processed by the
+  // optimizer. The accessibility engine, axe-core, in the two axe test files,
+  // ships no exports map and no module type, so it resolves as CommonJS and the
+  // third condition fires for it. The CSS processor, postcss, in the token
+  // guard, resolves through its own exports map to lib/postcss.mjs, so no
+  // interop rule applies to it at all.
   //
   // That measurement is why legacy.inconsistentCjsInterop, the deprecated
   // opt-out back to the previous behavior, is declined here rather than
