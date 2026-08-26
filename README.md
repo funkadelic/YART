@@ -65,6 +65,13 @@ search, sort, and paginate a list of world cities without a table library.
   ratio in both themes, computed from the shipped stylesheet rather than from a
   copy of it
 
+Every push sweeps the running app for violations of a set of automated rules and
+fails on any of them, once against a simulated DOM and once in a real browser
+across both themes and a paged table. Contrast is the reason the second run
+exists: measuring it needs a layout engine, which the simulated DOM does not
+have. Automated rules cannot establish conformance, so the sweeps catch
+regressions rather than prove the list above.
+
 ## Stack
 
 - [TypeScript](https://www.typescriptlang.org)
