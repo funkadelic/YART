@@ -173,6 +173,27 @@ const DIRECT_USER_EVENT_CALL = /\buserEvent\.(?!setup\b)[A-Za-z]\w*\s*\(/;
 const COUNTS_AS_RENDER = /\b(?:renderHook|render)\s*\(/g;
 const COUNTS_AS_ASSERTION = /\bexpect\s*\(/g;
 
+// The complete coverage exclude list. Four entries, named here rather than
+// derived: a list that grows quietly is how the guard stops being one. Every
+// entry matches an artifact that never executes, so an application source file
+// appearing beside them would be the gate being fitted to the code instead of
+// the code being written to the gate.
+const COVERAGE_EXCLUDE_PATTERNS = [
+  "src/**/*.test.{ts,tsx}",
+  "src/**/*.test-d.ts",
+  "src/test/**",
+  "src/**/*.d.ts",
+];
+
+// A suppression comment in any provider's spelling, matched against raw source
+// because a hint is itself a comment and blanking comments first would make the
+// guard vacuous. None exists in this tree: the standing convention is that an
+// otherwise-unreachable branch records the condition that would make it
+// reachable, never that it is hidden from the report.
+const COVERAGE_IGNORE_HINT = /\b(?:v8|c8|istanbul|node)\s+ignore\b/;
+
+const CONFIG_FILE = "vite.config.ts";
+
 // The three things CC BY 4.0 obliges this repository to state, written out here
 // so the assertion below matches the committed copy exactly rather than a shape
 // that resembles it.
@@ -392,6 +413,62 @@ describe("toolchain baseline", () => {
     }
 
     expect(offenders).toEqual([]);
+  });
+
+  // The exclude list decides what the hundred percent is measured over, so it is
+  // the one place a gate can be satisfied by shrinking its own input. Compared as
+  // a set: reordering the four patterns is not a weakening and must not flap the
+  // guard, while adding one, removing one or emptying the list must all fail.
+  it("keeps the coverage exclude list at the four patterns it is written to hold", () => {
+    // Line comments only, rather than the shared blanker: a glob such as
+    // src/**/*.d.ts carries the block-comment sequence inside a string literal,
+    // so blanking block comments here would rewrite the patterns being compared.
+    const source = readFileSync(join(projectRoot, CONFIG_FILE), "utf8").replace(
+      /(^|[^:])\/\/[^\n]*/g,
+      "$1",
+    );
+
+    // Anchored inside the coverage block, because a project may carry an exclude
+    // of its own and the first one in the file is not necessarily this one.
+    const block = source.slice(source.indexOf("coverage:"));
+    const declared = /exclude\s*:\s*\[([^\]]*)\]/.exec(block);
+
+    expect(
+      declared,
+      `${CONFIG_FILE} declares no coverage exclude list`,
+    ).not.toBeNull();
+
+    const patterns = [...(declared?.[1] ?? "").matchAll(/"([^"]*)"/g)].map(
+      (match) => match[1],
+    );
+
+    expect(patterns.toSorted()).toEqual(COVERAGE_EXCLUDE_PATTERNS.toSorted());
+  });
+
+  // The other way to reach the number without writing the test: name the provider
+  // whose suppression syntax the tree happens to carry, and suppress. Both halves
+  // are asserted, and the config is scanned alongside the source because it is the
+  // file that holds the coverage block.
+  it("uses the v8 provider and carries no coverage ignore hint anywhere", () => {
+    expect(
+      stripComments(readFileSync(join(projectRoot, CONFIG_FILE), "utf8")),
+      `${CONFIG_FILE} does not declare the v8 coverage provider`,
+    ).toMatch(/provider\s*:\s*"v8"/);
+
+    const sourceRoot = join(projectRoot, "src");
+    const files = readdirSync(sourceRoot, { recursive: true })
+      .map((entry) => join(sourceRoot, entry as string))
+      .filter((file) => /\.tsx?$/.test(file))
+      .concat(join(projectRoot, CONFIG_FILE))
+      .filter((file) => file !== guardFile);
+
+    expect(files.length).toBeGreaterThan(0);
+
+    const offenders = files.filter((file) =>
+      COVERAGE_IGNORE_HINT.test(readFileSync(file, "utf8")),
+    );
+
+    expect(offenders.map((file) => relative(projectRoot, file))).toEqual([]);
   });
 
   // The footer carries this same attribution and has its own test. The README
