@@ -28,7 +28,7 @@
     "autoprefixer": "10.5.4",
     "axe-core": "4.13.0",
     "browserslist": "4.28.8",
-    "eslint": "9.39.5",
+    "eslint": "10.9.0",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "7.1.1",
