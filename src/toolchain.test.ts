@@ -134,17 +134,19 @@ function spans(source: string): Span[] {
     }
 
     const following = source[index + 1];
+    const kind =
+      source[index] === "/" && (following === "/" || following === "*")
+        ? "comment"
+        : "literal";
 
-    found.push({
-      start: index,
-      end,
-      kind:
-        source[index] === "/" && (following === "/" || following === "*")
-          ? "comment"
-          : "literal",
-    });
+    found.push({ start: index, end, kind });
 
-    previous = source[end - 1];
+    // A comment is not a value, so it must not decide how the next slash reads.
+    // A block comment ends in "/", which ENDS_A_VALUE accepts, so letting one
+    // set this reads the regular expression after it as a division and runs to
+    // whatever slash comes next. A literal does end a value and must set it.
+    if (kind !== "comment") previous = source[end - 1];
+
     index = end;
     codeStart = end;
   }
@@ -743,7 +745,11 @@ describe("toolchain baseline", () => {
     const offenders: string[] = [];
 
     for (const file of scannedFiles) {
-      const source = stripComments(readFileSync(file, "utf8"));
+      // codeMask rather than stripComments: this counts call sites, and
+      // stripComments deliberately keeps literals, so a string such as
+      // "call render(x) before expect(y)" would score one of each. The provider
+      // guard is the only one that needs the literals it keeps.
+      const source = codeMask(readFileSync(file, "utf8"));
       const renders = source.match(COUNTS_AS_RENDER)?.length ?? 0;
       const assertions = source.match(COUNTS_AS_ASSERTION)?.length ?? 0;
       const name = relative(projectRoot, file);
