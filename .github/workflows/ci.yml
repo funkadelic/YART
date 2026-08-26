@@ -64,6 +64,17 @@ jobs:
       - name: Build
         run: npm run build
 
+      # The browser download is the most expensive thing in this job, so it sits
+      # behind every cheap gate: a failing lint, typecheck, format check, coverage
+      # run or build stops the job before a byte of it is fetched. The jsdom
+      # accessibility check already ran inside the Test step, so what follows is
+      # the real-engine half of the accessibility gate rather than the whole of it.
+      - name: Install Chromium
+        run: npx playwright install --with-deps --only-shell chromium
+
+      - name: Accessibility sweep
+        run: npm run test:browser
+
       # Last, so a failing test or build reports as itself rather than as an
       # absent coverage report.
       #
