@@ -619,6 +619,33 @@ describe("toolchain baseline", () => {
     expect(offenders.map((file) => relative(projectRoot, file))).toEqual([]);
   });
 
+  // The real-engine sweep mounts App rather than the entry module, so it has to
+  // pull in the global stylesheet itself. That is a second copy of the fact of
+  // which sheets this app ships, and the sweep it feeds is the contrast one: a
+  // sheet added to the entry module alone leaves the sweep reading a page no
+  // reader ever loads, and reporting green on it. Compared as a set of
+  // side-effect imports, which is what a global sheet is; a module stylesheet
+  // arrives bound to a name and is nobody's global.
+  it("keeps the browser sweep on the same global stylesheets the entry module ships", () => {
+    const globalSheets = (file: string): string[] =>
+      [
+        ...stripComments(
+          readFileSync(join(projectRoot, file), "utf8"),
+        ).matchAll(/^import\s+"([^"]*\.css)";$/gm),
+      ]
+        .map((match) => match[1])
+        .toSorted();
+
+    const shipped = globalSheets("src/index.tsx");
+
+    expect(
+      shipped.length,
+      "src/index.tsx imports no global stylesheet",
+    ).toBeGreaterThan(0);
+
+    expect(globalSheets("src/a11y.browser.test.tsx")).toEqual(shipped);
+  });
+
   // The footer carries this same attribution and has its own test. The README
   // copy has nothing watching it, so a documentation rewrite could drop the
   // source link, the licence link, or the record of what was changed, and the
