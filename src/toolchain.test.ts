@@ -161,6 +161,18 @@ const BINDS_CLOCK = /\badvanceTimers\b/;
 const DISABLES_DELAY = /\bdelay\s*:\s*null\b/;
 const DIRECT_USER_EVENT_CALL = /\buserEvent\.(?!setup\b)[A-Za-z]\w*\s*\(/;
 
+// A test file that mounts more than it asserts is spending its runtime producing
+// coverage rather than evidence, and the coverage gate cannot tell the two apart.
+// Two counting decisions are written out here because the naive reading gets them
+// wrong in opposite directions and neither is visible in the pattern itself. A
+// member call such as a root's own render method is counted, deliberately: the
+// stricter reading costs nothing today and a bootstrap test driving a root
+// directly is exactly where the first one would appear. A rerender call is not
+// counted, because there is no word boundary inside that identifier and the rule
+// names the two mounting entry points only.
+const COUNTS_AS_RENDER = /\b(?:renderHook|render)\s*\(/g;
+const COUNTS_AS_ASSERTION = /\bexpect\s*\(/g;
+
 // The three things CC BY 4.0 obliges this repository to state, written out here
 // so the assertion below matches the committed copy exactly rather than a shape
 // that resembles it.
@@ -356,6 +368,30 @@ describe("toolchain baseline", () => {
         CONFIGURES_CLOCK,
       );
     }
+  });
+
+  // A file whose mounts outnumber its assertions is measured here rather than in
+  // review, because the number a reviewer would have to count is the one thing a
+  // machine counts reliably. Each file is read from disk with nothing carried
+  // between iterations, so the offender list is the same on one worker or many.
+  it("registers no more renders than assertions in any test file", () => {
+    expect(scannedFiles.length).toBeGreaterThan(0);
+
+    const offenders: string[] = [];
+
+    for (const file of scannedFiles) {
+      const source = stripComments(readFileSync(file, "utf8"));
+      const renders = source.match(COUNTS_AS_RENDER)?.length ?? 0;
+      const assertions = source.match(COUNTS_AS_ASSERTION)?.length ?? 0;
+
+      if (renders > assertions) {
+        offenders.push(
+          `${relative(projectRoot, file)}: ${renders} renders against ${assertions} assertions`,
+        );
+      }
+    }
+
+    expect(offenders).toEqual([]);
   });
 
   // The footer carries this same attribution and has its own test. The README
