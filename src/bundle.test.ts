@@ -1,15 +1,13 @@
 // @vitest-environment node
 //
-// Two reasons this file opts out of the DOM environment, both measured rather
-// than assumed.
+// One reason this file opts out of the DOM environment, measured rather than
+// assumed. A second reason stood here until the bundler moved to Vite 8. It
+// described an invariant belonging to the old transform tool, it was still live
+// on Vite 7.3.6, where deleting the pragma above stopped the build outright,
+// and it went away with the tool, because Vite 8 does not depend on it and the
+// same probe now passes.
 //
-// The bundler's transform layer refuses to start once the DOM environment has
-// replaced the global text encoder. It encodes an empty string, checks the result
-// against the global byte array type, and treats that check as an invariant. The
-// two constructors come from different realms, so the check is false and the
-// build never begins.
-//
-// The runner also sets the environment name to a test value, and a programmatic
+// The runner sets the environment name to a test value, and a programmatic
 // build inherits it, so the view library resolves to its development build and
 // the artifact measured is more than twice the size of the one a release build
 // produces. Passing a production mode to the build call does not correct that.
