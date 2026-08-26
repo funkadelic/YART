@@ -398,11 +398,21 @@ so a passing test is evidence the announcement is right.
 | `npm run preview`         | Serve the built bundle locally                                      |
 | `npm test`                | Run the test suite once                                             |
 | `npm run test:watch`      | Run the test suite in watch mode                                    |
+| `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%    |
+| `npm run test:browser`    | Run the accessibility checks in a real Chromium                     |
 | `npm run typecheck`       | Check types without emitting output                                 |
 | `npm run lint`            | Run ESLint (`lint:fix` to autofix)                                  |
 | `npm run format`          | Run Prettier                                                        |
 | `npm run format:check`    | Check formatting without rewriting anything                         |
 | `npm run generate:cities` | Regenerate the committed dataset asset from the upstream CSV export |
+
+`npm run test:browser` drives a real Chromium through Playwright, which needs
+system libraries `npm ci` does not install. On Linux that is a one-time
+`sudo npx playwright install-deps chromium`. CI installs them itself, so the
+command is optional for ordinary development: `npm test` runs the same
+accessibility checks against a simulated DOM and needs nothing extra. Neither
+run is a conformance claim; both catch regressions against a set of automated
+rules.
 
 ## Notes and next steps
 

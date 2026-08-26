@@ -214,9 +214,22 @@ describe("toolchain baseline", () => {
   });
 
   // The one runner is driven in single-pass mode, so a pipeline run cannot be left
-  // holding a watch process.
-  it("keeps the test script on the current runner in single-pass mode", () => {
-    expect(manifest.scripts?.test).toBe("vitest run");
+  // holding a watch process. The script also has to say which project it means:
+  // with more than one project declared, a run that names none fans out to every
+  // one of them, including the project that needs a browser engine installed.
+  // Asserted as those three properties rather than as one string, so adding a flag
+  // is free and dropping the project filter is not.
+  it("keeps the test script on the current runner in single-pass mode against one project", () => {
+    const script = manifest.scripts?.test ?? "";
+
+    expect(
+      script,
+      "the test script does not start the runner in single-pass mode",
+    ).toMatch(/^vitest\s+run\b/);
+    expect(script, "the test script carries a watch flag").not.toMatch(
+      /(^|\s)(-w|--watch)\b/,
+    );
+    expect(script, "the test script names no project").toMatch(/--project[= ]/);
   });
 
   // Most of the hook rule family is registered at warn rather than error by the

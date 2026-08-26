@@ -57,9 +57,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest",
+    "test": "vitest run --project=jsdom",
+    "test:coverage": "vitest run --project=jsdom --coverage",
+    "test:watch": "vitest --project=jsdom",
+    "test:browser": "vitest run --project=browser",
     "prepare": "husky"
   },
   "browserslist": [
