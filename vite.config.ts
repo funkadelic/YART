@@ -20,9 +20,15 @@ export default defineConfig({
       // report covers only files a test happened to import, so deleting the last
       // test that touched a module would raise the percentage.
       include: ["src/**/*.{ts,tsx}"],
-      // Four patterns over artifacts that never execute, and no named file. An
-      // entry naming an application source file is how a coverage gate stops
-      // measuring the code it exists to measure.
+      // Four patterns and no named file. Three of them name artifacts that
+      // never execute. The fourth, src/test/**, names the shared scaffolding,
+      // which does run on every pass of this suite and is deliberately not
+      // measured: it is support code for the tests rather than code the
+      // product ships. That makes it the one directory holding executing code
+      // outside the gate, so eslint.config.js forbids importing it from
+      // anything that is not itself a test. An entry naming an application
+      // source file is how a coverage gate stops measuring the code it exists
+      // to measure.
       exclude: [
         "src/**/*.test.{ts,tsx}",
         // Type-level assertions, settled by the compiler and never run.

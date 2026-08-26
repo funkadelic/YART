@@ -174,10 +174,14 @@ const COUNTS_AS_RENDER = /\b(?:renderHook|render)\s*\(/g;
 const COUNTS_AS_ASSERTION = /\bexpect\s*\(/g;
 
 // The complete coverage exclude list. Four entries, named here rather than
-// derived: a list that grows quietly is how the guard stops being one. Every
-// entry matches an artifact that never executes, so an application source file
-// appearing beside them would be the gate being fitted to the code instead of
-// the code being written to the gate.
+// derived: a list that grows quietly is how the guard stops being one. Three
+// of them match artifacts that never execute; src/test/** matches the shared
+// scaffolding, which does execute on every run and is excluded because it is
+// support code for the tests rather than code the product ships. An
+// application source file appearing beside them would be the gate being fitted
+// to the code instead of the code being written to the gate, and the lint rule
+// in eslint.config.js is what stops the one executing entry becoming that same
+// hole by being imported from outside a test.
 const COVERAGE_EXCLUDE_PATTERNS = [
   "src/**/*.test.{ts,tsx}",
   "src/**/*.test-d.ts",
