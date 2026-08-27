@@ -43,6 +43,12 @@ const EXPECTED_COLUMNS = [
   "population",
 ];
 
+// A tuple rather than an array, so an index into a row carries the type at that
+// position instead of a possibly-absent one. The order is the one the case
+// below holds the asset's own columns array to, so the two cannot drift apart
+// without that case reporting it first.
+type AssetRow = [number, string, string, string, string, string, number];
+
 // The upstream release plus this repository's own revision of it, so a
 // regenerated asset from the same release is still distinguishable.
 const EXPECTED_VERSION = /^\d+\.\d+\.\d+\+r\d+$/;
@@ -129,7 +135,7 @@ describe("committed city dataset", () => {
     const offenders: string[] = [];
 
     rows.forEach((row, at) => {
-      const [, name, nameAscii, country] = row as string[];
+      const [, name, nameAscii, country] = row as AssetRow;
 
       for (const [field, value] of [
         ["name", name],
@@ -148,7 +154,7 @@ describe("committed city dataset", () => {
   // recorded as zero upstream and are kept that way, so a stricter predicate
   // would flag correct data as corrupt.
   it("records every population at or above zero, and keeps the zero rows", () => {
-    const populations = rows.map((row) => (row as number[])[6]);
+    const populations = rows.map((row) => (row as AssetRow)[6]);
     const belowZero = populations.filter((population) => population < 0);
     const atZero = populations.filter((population) => population === 0);
 
@@ -160,7 +166,7 @@ describe("committed city dataset", () => {
   });
 
   it("gives every row a unique id", () => {
-    const ids = rows.map((row) => (row as number[])[0]);
+    const ids = rows.map((row) => (row as AssetRow)[0]);
 
     expect(new Set(ids).size).toBe(ids.length);
   });
@@ -171,7 +177,7 @@ describe("committed city dataset", () => {
   // fails here.
   it("keeps every id either synthetic or at or above the upstream floor", () => {
     const stray = rows
-      .map((row) => (row as number[])[0])
+      .map((row) => (row as AssetRow)[0])
       .filter((id) => id < UPSTREAM_ID_FLOOR && !SYNTHETIC_IDS.has(id));
 
     expect(stray).toEqual([]);

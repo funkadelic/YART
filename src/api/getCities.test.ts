@@ -6,6 +6,7 @@ import {
   readCommittedAsset,
   stubDatasetFetchFromDisk,
 } from "../test/fetchStub";
+import { required } from "../test/required";
 
 // The committed asset is read once and served verbatim through the stubbed
 // request, so the real data quirks stay in play. The country case below is one
@@ -321,7 +322,7 @@ describe("getCities search parity", () => {
     // deliberately absent from the exported domain type, which is the whole
     // reason it has to be reached this way.
     const rows = await loadCities();
-    const target = rows[0];
+    const target = required(rows[0], "the first loaded row");
     const ownName = target.name;
     target.searchKey = SEARCH_KEY_SENTINEL;
 

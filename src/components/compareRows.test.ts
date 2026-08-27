@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { City } from "../api/getCities";
 import { cityRowId } from "../features/CityTable/cityColumns";
 import { CITY_FIXTURE } from "../test/cityFixture";
+import { required } from "../test/required";
 import { compareIdentities } from "./DataTable/sortRows";
 import { compareValues } from "./compareRows";
 
@@ -11,6 +12,16 @@ const PRIMARY_CAPITAL = CITY_FIXTURE.filter(
   (city) => city.capital === "primary",
 );
 const ZERO_POPULATION = CITY_FIXTURE.filter((city) => city.population === 0);
+// Picked once here rather than indexed at each case below, so the cases read as
+// the comparison they are testing. The first case in the block asserts the
+// counts these three depend on.
+const BLANK = required(BLANK_CAPITAL[0], "a fixture row with a blank capital");
+const PRIMARY = required(
+  PRIMARY_CAPITAL[0],
+  "a fixture row with a primary capital",
+);
+const ZERO = required(ZERO_POPULATION[0], "a fixture row with no population");
+const FIRST_CITY = required(CITY_FIXTURE[0], "the first fixture row");
 const LARGEST_POPULATION = CITY_FIXTURE.reduce((largest, city) =>
   city.population > largest.population ? city : largest,
 );
@@ -66,43 +77,28 @@ describe("compareValues", () => {
 
   it("orders a blank value last when sorting ascending", () => {
     expect(
-      compareValues(
-        BLANK_CAPITAL[0].capital,
-        PRIMARY_CAPITAL[0].capital,
-        "asc",
-      ),
+      compareValues(BLANK.capital, PRIMARY.capital, "asc"),
     ).toBeGreaterThan(0);
-    expect(
-      compareValues(
-        PRIMARY_CAPITAL[0].capital,
-        BLANK_CAPITAL[0].capital,
-        "asc",
-      ),
-    ).toBeLessThan(0);
+    expect(compareValues(PRIMARY.capital, BLANK.capital, "asc")).toBeLessThan(
+      0,
+    );
   });
 
   it("orders a blank value last when sorting descending as well", () => {
     expect(
-      compareValues(
-        BLANK_CAPITAL[0].capital,
-        PRIMARY_CAPITAL[0].capital,
-        "desc",
-      ),
+      compareValues(BLANK.capital, PRIMARY.capital, "desc"),
     ).toBeGreaterThan(0);
-    expect(
-      compareValues(
-        PRIMARY_CAPITAL[0].capital,
-        BLANK_CAPITAL[0].capital,
-        "desc",
-      ),
-    ).toBeLessThan(0);
+    expect(compareValues(PRIMARY.capital, BLANK.capital, "desc")).toBeLessThan(
+      0,
+    );
   });
 
   it("reports two blank values as equal in both directions", () => {
     // The pair used to come back separated by the row-id difference. Identity
     // is not a value, so the ordering half of this case now lives beside the
     // sort module; what is left here is the value-level fact it rested on.
-    const [first, second] = BLANK_CAPITAL;
+    const first = required(BLANK_CAPITAL[0], "the first blank-capital row");
+    const second = required(BLANK_CAPITAL[1], "the second blank-capital row");
 
     expect(compareValues(first.capital, second.capital, "asc")).toBe(0);
     expect(compareValues(first.capital, second.capital, "desc")).toBe(0);
@@ -110,23 +106,19 @@ describe("compareValues", () => {
 
   it("treats a zero as the smallest number rather than as a blank", () => {
     expect(
-      compareValues(
-        ZERO_POPULATION[0].population,
-        LARGEST_POPULATION.population,
-        "asc",
-      ),
+      compareValues(ZERO.population, LARGEST_POPULATION.population, "asc"),
     ).toBeLessThan(0);
     expect(
-      compareValues(
-        ZERO_POPULATION[0].population,
-        LARGEST_POPULATION.population,
-        "desc",
-      ),
+      compareValues(ZERO.population, LARGEST_POPULATION.population, "desc"),
     ).toBeGreaterThan(0);
   });
 
   it("reports two equal values as equal in both directions", () => {
-    const [first, second] = PRIMARY_CAPITAL;
+    const first = required(PRIMARY_CAPITAL[0], "the first primary-capital row");
+    const second = required(
+      PRIMARY_CAPITAL[1],
+      "the second primary-capital row",
+    );
 
     expect(compareValues(first.capital, second.capital, "asc")).toBe(0);
     expect(compareValues(first.capital, second.capital, "desc")).toBe(0);
@@ -252,9 +244,7 @@ describe("compareValues", () => {
 
   it("sorts an empty set and a single-row set without throwing", () => {
     expect(sortedIds([], "name", "asc")).toEqual([]);
-    expect(sortedIds([CITY_FIXTURE[0]], "name", "asc")).toEqual([
-      CITY_FIXTURE[0].id,
-    ]);
+    expect(sortedIds([FIRST_CITY], "name", "asc")).toEqual([FIRST_CITY.id]);
   });
 
   it("agrees in sign with the per-call comparison it replaces", () => {
@@ -281,10 +271,10 @@ describe("the city row identity", () => {
    * the fixture carries no short id and so cannot fail this on its own.
    */
   const SHORT_IDS = [1, 2];
-  const asRow = (id: number) => ({ ...CITY_FIXTURE[0], id });
+  const asRow = (id: number) => ({ ...FIRST_CITY, id });
 
   it("orders as the number does, so the lowest ids do not sort last", () => {
-    const geonameId = CITY_FIXTURE[0].id;
+    const geonameId = FIRST_CITY.id;
 
     for (const short of SHORT_IDS) {
       expect(short).toBeLessThan(geonameId);
@@ -296,7 +286,7 @@ describe("the city row identity", () => {
   });
 
   it("has a case that fails without the padding", () => {
-    const geonameId = CITY_FIXTURE[0].id;
+    const geonameId = FIRST_CITY.id;
 
     // Not every short id inverts: geoname ids begin with 1, so raw "1" is a
     // prefix of one and still sorts first. Id 2 is the one that moves, and one
@@ -317,8 +307,8 @@ describe("the city row identity", () => {
   });
 
   it("stays unique across the ids it pads", () => {
-    const rows = [...SHORT_IDS, CITY_FIXTURE[0].id].map((id) => ({
-      ...CITY_FIXTURE[0],
+    const rows = [...SHORT_IDS, FIRST_CITY.id].map((id) => ({
+      ...FIRST_CITY,
       id,
     }));
 

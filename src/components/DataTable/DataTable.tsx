@@ -53,7 +53,7 @@ export interface DataTableProps<T, Id extends string> {
   readonly error: Error | null;
   // Optional so the table stays usable on its own, without a container to
   // re-run the request behind it.
-  readonly onRetry?: () => void;
+  readonly onRetry?: (() => void) | undefined;
   readonly labels: DataTableLabels;
 }
 
@@ -74,7 +74,7 @@ function ErrorRegion({
   onRetry,
 }: {
   readonly error: Error;
-  readonly onRetry?: () => void;
+  readonly onRetry?: (() => void) | undefined;
 }) {
   return (
     <div className={styles.error} role="alert">

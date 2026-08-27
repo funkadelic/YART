@@ -7,7 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // all rather than hand back the first one's cached result.
 
 const actEnvironment = globalThis as typeof globalThis & {
-  IS_REACT_ACT_ENVIRONMENT?: boolean;
+  // Explicitly undefined rather than merely optional, because the teardown
+  // writes back whatever was read, and absent is what it reads first.
+  IS_REACT_ACT_ENVIRONMENT?: boolean | undefined;
 };
 
 /**

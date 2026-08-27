@@ -6,6 +6,7 @@ import { setPrefersDark } from "../../test/matchMediaStub";
 import { THEME_STORAGE_KEY } from "../../theme/resolveTheme";
 import { Header } from "./Header";
 import { ThemeControl } from "./ThemeControl";
+import { required } from "../../test/required";
 
 const OPTION_NAMES = ["Light", "Dark", "System"];
 
@@ -136,7 +137,9 @@ describe("ThemeControl", () => {
       </>,
     );
 
-    const [first, second] = screen.getAllByRole("radiogroup");
+    const groups = screen.getAllByRole("radiogroup");
+    const first = required(groups[0], "the first radiogroup");
+    const second = required(groups[1], "the second radiogroup");
     const ids = screen
       .getAllByRole("radio")
       .map((radio) => radio.getAttribute("id"));

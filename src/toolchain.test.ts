@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
+import { required } from "./test/required";
 
 /**
  * Guards over the toolchain baseline itself. The migration established each
@@ -123,7 +124,7 @@ function spans(source: string): Span[] {
     const end = spanEnd(source, index, previous);
 
     if (end === null) {
-      const character = source[index];
+      const character = required(source[index], "the character at the cursor");
       if (!/\s/.test(character)) previous = character;
       index += 1;
       continue;
@@ -145,7 +146,8 @@ function spans(source: string): Span[] {
     // A block comment ends in "/", which ENDS_A_VALUE accepts, so letting one
     // set this reads the regular expression after it as a division and runs to
     // whatever slash comes next. A literal does end a value and must set it.
-    if (kind !== "comment") previous = source[end - 1];
+    if (kind !== "comment")
+      previous = required(source[end - 1], "the character ending the span");
 
     index = end;
     codeStart = end;
@@ -462,7 +464,11 @@ const LAUNCHED_BROWSER = /\bbrowser(?:Name)?\s*:\s*"([^"]*)"/g;
 function sonarEquivalents(pattern: string): string[] {
   const braces = /\{([^}]*)\}/.exec(pattern);
   const expanded = braces
-    ? braces[1].split(",").map((option) => pattern.replace(braces[0], option))
+    ? required(braces[1], "the brace group")
+        .split(",")
+        .map((option) =>
+          pattern.replace(required(braces[0], "the brace match"), option),
+        )
     : [pattern];
 
   return expanded.map((entry) => entry.replace(/^src\/\*\*\//, "**/"));
@@ -494,7 +500,9 @@ function coveragePatterns(key: string): string[] | null {
 
   if (declared === null) return null;
 
-  return [...declared[1].matchAll(/"([^"]*)"/g)].map((match) => match[1]);
+  return [
+    ...required(declared[1], "the declared list").matchAll(/"([^"]*)"/g),
+  ].map((match) => required(match[1], "a quoted entry"));
 }
 
 /**
@@ -514,8 +522,8 @@ function suiteWideFiles(): string[] {
   // An absence here would quietly shrink the guard to the config alone, which
   // is why the count is asserted at the call site rather than assumed.
   const files = declared.flatMap((match) =>
-    [...match[1].matchAll(/"([^"]*)"/g)].map((entry) =>
-      entry[1].replace(/^\.\//, ""),
+    [...required(match[1], "the declared list").matchAll(/"([^"]*)"/g)].map(
+      (entry) => required(entry[1], "a quoted entry").replace(/^\.\//, ""),
     ),
   );
 
@@ -1117,7 +1125,7 @@ describe("toolchain baseline", () => {
           readFileSync(join(projectRoot, file), "utf8"),
         ).matchAll(/^import\s+"([^"]*\.css)";$/gm),
       ]
-        .map((match) => match[1])
+        .map((match) => required(match[1], "the imported stylesheet"))
         .toSorted();
 
     const shipped = globalSheets("src/index.tsx");
