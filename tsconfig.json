@@ -14,6 +14,11 @@
     // value and a present undefined stay distinguishable.
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
+    // Imports and exports are emitted as written rather than elided by
+    // inference, so a type-only import has to say so. The convention was
+    // already followed everywhere, which is why this turns on against a clean
+    // tree; the flag is what stops it lapsing silently.
+    "verbatimModuleSyntax": true,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
