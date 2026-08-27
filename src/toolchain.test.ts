@@ -428,6 +428,20 @@ const KNOWN_TEST_RUNNERS = [
   ...UNTAKEN_TEST_RUNNERS,
 ];
 
+// Both files that launch a browser, held below against the one browser install
+// line in the pipeline. There was one launch site for as long as there was one
+// runner, and there are two now, so the holding is evaluated per file: a check
+// taken across the pair passes on a file contributing nothing as long as the
+// other file still contributes a match, which is the vacuous pass the whole
+// exercise is written against.
+const LAUNCH_CONFIG_FILES = [CONFIG_FILE, E2E_CONFIG_FILE];
+
+// The browser a config launches, matched under either key the two runners use
+// for it. One names it inside its instance list, the other on its shared use
+// block, and an extraction that knew only the first spelling would contribute
+// zero matches from the second file and assert nothing at all about it.
+const LAUNCHED_BROWSER = /\bbrowser(?:Name)?\s*:\s*"([^"]*)"/g;
+
 /**
  * One coverage exclude pattern written in Sonar's dialect, which is the same
  * statement in a matcher with two fewer features: it expands no braces, and its
@@ -629,11 +643,11 @@ describe("toolchain baseline", () => {
     ).not.toMatch(/(^|\s)--coverage\b/);
   });
 
-  // A gate nothing invokes is not a gate. The browser project and its one test
-  // file both survive the deletion of the step that runs them, so the pipeline
-  // is asserted to name both scripts rather than the manifest alone being
-  // trusted to imply that something calls them.
-  it("runs both test gates from the pipeline", () => {
+  // A gate nothing invokes is not a gate. Every project, config and spec file
+  // survives the deletion of the step that runs it, so the pipeline is asserted
+  // to name each script rather than the manifest alone being trusted to imply
+  // that something calls them.
+  it("runs every test gate from the pipeline", () => {
     // Judged on live lines only, for the reason the pre-commit guard is:
     // commenting a step out leaves every expected string in the file.
     const live = readFileSync(join(projectRoot, WORKFLOW_FILE), "utf8")
@@ -641,7 +655,11 @@ describe("toolchain baseline", () => {
       .map((line) => line.trim())
       .filter((line) => line && !line.startsWith("#"));
 
-    for (const script of ["npm run test:coverage", "npm run test:browser"]) {
+    for (const script of [
+      "npm run test:coverage",
+      "npm run test:browser",
+      "npm run test:e2e",
+    ]) {
       expect(
         live.some((line) => line.includes(script)),
         `${WORKFLOW_FILE} no longer runs ${script}`,
@@ -649,16 +667,21 @@ describe("toolchain baseline", () => {
     }
   });
 
-  // The step above installs one browser binary and vite.config.ts launches one,
-  // three directories apart, with neither file mentioning the other. They agree
-  // today through a Playwright default rather than through anything written
-  // down: a headless launch naming no channel resolves to the headless shell,
-  // which is the only thing --only-shell downloads. Turn headless off to debug a
-  // sweep locally, or name a channel, and the pipeline fails on a missing
-  // executable that says nothing about accessibility. Asserted here so it fails
-  // in the suite a developer runs first, and as one implication rather than as an
-  // equality: installing more than the launch needs is wasteful, not broken.
-  it("installs the browser binary the accessibility sweep launches", () => {
+  // The step above installs one browser binary and two config files each launch
+  // one, with none of the three mentioning either of the others. They agree
+  // today through a runner default rather than through anything written down: a
+  // headless launch naming no channel resolves to the headless shell, which is
+  // the only thing --only-shell downloads. Turn headless off to debug locally,
+  // or name a channel, and the pipeline fails on a missing executable that says
+  // nothing about what the gate was measuring. Asserted here so it fails in the
+  // suite a developer runs first, and as one implication rather than as an
+  // equality: installing more than a launch needs is wasteful, not broken.
+  //
+  // Every check below is inside the loop rather than taken over the two files
+  // together. A count summed across the pair is satisfied by one file while the
+  // other contributes nothing, and a shell resolution read off the concatenated
+  // pair is satisfied by one file being headless while the other is not.
+  it("installs the browser binary both launch configurations ask for", () => {
     const install = readFileSync(join(projectRoot, WORKFLOW_FILE), "utf8")
       .split("\n")
       .map((line) => line.trim())
@@ -667,33 +690,35 @@ describe("toolchain baseline", () => {
 
     expect(install, `${WORKFLOW_FILE} installs no browser`).toBeDefined();
 
-    const config = stripComments(
-      readFileSync(join(projectRoot, CONFIG_FILE), "utf8"),
-    );
-    const launched = [...config.matchAll(/browser\s*:\s*"([^"]*)"/g)].map(
-      (match) => match[1],
-    );
+    for (const name of LAUNCH_CONFIG_FILES) {
+      // Comments blanked for both files, so a browser named in prose is never
+      // mistaken for one a file launches. Both of these carry long comments
+      // naming this browser.
+      const config = stripComments(
+        readFileSync(join(projectRoot, name), "utf8"),
+      );
+      const launched = [...config.matchAll(LAUNCHED_BROWSER)].map(
+        (match) => match[1],
+      );
 
-    expect(
-      launched.length,
-      `${CONFIG_FILE} launches no browser`,
-    ).toBeGreaterThan(0);
+      expect(launched.length, `${name} launches no browser`).toBeGreaterThan(0);
 
-    for (const browser of launched) {
+      for (const browser of launched) {
+        expect(
+          install as string,
+          `${WORKFLOW_FILE} does not install ${browser}, which ${name} launches`,
+        ).toContain(browser);
+      }
+
+      // The shell is a headless launch with no channel named, and nothing else.
+      const resolvesToShell =
+        /headless\s*:\s*true/.test(config) && !/channel\s*:/.test(config);
+
       expect(
-        install as string,
-        `${WORKFLOW_FILE} does not install ${browser}`,
-      ).toContain(browser);
+        /--only-shell\b/.test(install as string) && !resolvesToShell,
+        `${WORKFLOW_FILE} installs the headless shell alone and ${name} launches a browser that is not it`,
+      ).toBe(false);
     }
-
-    // The shell is a headless launch with no channel named, and nothing else.
-    const resolvesToShell =
-      /headless\s*:\s*true/.test(config) && !/channel\s*:/.test(config);
-
-    expect(
-      /--only-shell\b/.test(install as string) && !resolvesToShell,
-      `${WORKFLOW_FILE} installs the headless shell alone and ${CONFIG_FILE} launches a browser that is not it`,
-    ).toBe(false);
   });
 
   // Most of the hook rule family is registered at warn rather than error by the
