@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -278,6 +278,15 @@ function findTestFiles(directory: string): string[] {
 const scannedFiles = findTestFiles(projectRoot).filter(
   (file) => file !== guardFile,
 );
+
+// The directory holding the second runner's specs. Named here because two
+// guards below read it and one of them asserts it is still being read.
+const E2E_DIRECTORY = "e2e";
+
+/** Whether a scanned file is one of the second runner's specs. */
+function isEndToEndSpec(file: string): boolean {
+  return relative(projectRoot, file).split(sep)[0] === E2E_DIRECTORY;
+}
 
 /** browserslist wherever it is configured: inline, keyed by env, or in its own file. */
 function browserslistQueries(): unknown[] {
@@ -783,6 +792,13 @@ describe("toolchain baseline", () => {
   // fake one into whatever runs next. Both were found the hard way during the
   // migration, so both are asserted across the whole tree rather than in the one
   // file that happened to hit them.
+  //
+  // This is the second guard reading the scanned file list, so it gained the
+  // second runner's directory as an input the day that directory appeared.
+  // Stating it is the point: a guard silently gaining a new input is the kind of
+  // thing that gets discovered rather than known. It is inert for those specs,
+  // which fake no clock and import no input library, so both loops below skip
+  // them on their first condition.
   it("binds every faked clock correctly in every test file", () => {
     expect(scannedFiles.length).toBeGreaterThan(0);
 
@@ -861,8 +877,39 @@ describe("toolchain baseline", () => {
   // review, because the number a reviewer would have to count is the one thing a
   // machine counts reliably. Each file is read from disk with nothing carried
   // between iterations, so the offender list is the same on one worker or many.
+  //
+  // This rule reaches the second runner's specs unmodified, and the mechanism is
+  // worth writing down because it reads like a change that would be needed and
+  // is not. The walk starts at the project root rather than at the source
+  // directory, it skips four directories and the second runner's is not one of
+  // them, and the filename pattern it matches is the runner-default shape rather
+  // than the narrower one this project happens to use, so a spec in that
+  // directory is graded the day it is written with no configuration change at
+  // all.
+  //
+  // Which half of the rule bites such a spec is the other thing worth stating.
+  // It mounts nothing and asserts something, so it satisfies the inequality
+  // trivially; what catches it is the zero-assertion branch below, which is
+  // exactly the file that navigates, produces a green run and proves nothing.
+  // The setup module in the same directory does not match the filename pattern
+  // and is therefore not graded, which is correct, because it asserts nothing by
+  // design.
+  //
+  // Two alternatives were rejected. Widening the mounting pattern to count
+  // navigations was rejected because it makes the rule mean two different things
+  // depending on which directory it is read in. Exempting the second runner with
+  // a recorded reason was rejected because what is written here is that reason
+  // plus the guard still running, which is strictly stronger and costs no code.
   it("asserts something, and no more renders than assertions, in every test file", () => {
     expect(scannedFiles.length).toBeGreaterThan(0);
+
+    // Without this the recording above goes stale silently: adding that
+    // directory to the skipped set would stop grading every end-to-end spec
+    // with the comment still sitting here saying they are graded.
+    expect(
+      scannedFiles.some(isEndToEndSpec),
+      `no file under ${E2E_DIRECTORY}/ is graded, so the rule stopped reading the end-to-end specs`,
+    ).toBe(true);
 
     const offenders: string[] = [];
 
