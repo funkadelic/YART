@@ -78,6 +78,14 @@ export default defineConfig({
     // constraint already binds the browser project in vite.config.ts, and
     // src/toolchain.test.ts holds both files against the install line.
     headless: true,
+    // Stated rather than inherited. The theme spec stores a dark choice and
+    // asserts the blocking script stamps it, which only discriminates while the
+    // preference underneath disagrees: the script falls back to the media query
+    // when no choice is stored, so under a dark preference it would stamp dark
+    // on its own and the assertion would hold with the stored choice ignored.
+    // That currently works because this is the runner's default, which is a
+    // coincidence the spec should not be resting on.
+    colorScheme: "light",
   },
   webServer: {
     // The port is explicit and strict because the preview server otherwise
