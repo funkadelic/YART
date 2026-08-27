@@ -8,6 +8,12 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 import { defineConfig } from "eslint/config";
 
 export default defineConfig([
+  // Build output, not authored source. `eslint .` walks the working tree, so
+  // without this the gate reports parse errors for an emitted bundle and a
+  // coverage report.
+  {
+    ignores: ["dist/", "coverage/"],
+  },
   {
     files: ["**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}"],
     languageOptions: { globals: globals.browser },
@@ -78,6 +84,15 @@ export default defineConfig([
         },
       ],
     },
+  },
+  // The type-aware rules need declarations to reason about, and the plain
+  // JavaScript in this tree has none: a build script reading an untyped CSV
+  // parser and a flat config importing a plugin that ships no types. Every
+  // value there is `any`, so the rules report the absence of types rather than
+  // a defect. Syntax and correctness rules still apply.
+  {
+    files: ["**/*.{js,mjs,cjs}"],
+    extends: [tseslint.configs.disableTypeChecked],
   },
   prettierConfig, // must go last
 ]);

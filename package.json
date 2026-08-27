@@ -55,7 +55,7 @@
     "build": "vite build",
     "generate:cities": "node scripts/generate-cities.mjs",
     "preview": "vite preview",
-    "lint": "eslint src e2e --max-warnings 0 && stylelint \"src/**/*.{css,scss}\"",
+    "lint": "eslint . --max-warnings 0 && stylelint \"src/**/*.{css,scss}\"",
     "lint:fix": "eslint src e2e --fix && stylelint \"src/**/*.{css,scss}\" --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

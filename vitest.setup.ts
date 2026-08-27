@@ -98,7 +98,7 @@ configure({
     actEnvironment.IS_REACT_ACT_ENVIRONMENT = false;
 
     try {
-      const result = await callback();
+      const result: unknown = await callback();
 
       await new Promise<void>((resolve) => {
         setTimeout(() => resolve(), 0);

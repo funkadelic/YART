@@ -30,7 +30,12 @@ function preloadDataset(): Plugin {
             /(^|\/)cities-[^/]*\.json$/.test(output.fileName),
         );
 
-        if (datasets.length !== 1) {
+        // A length check does not narrow an index access under
+        // noUncheckedIndexedAccess, so the guard rides on a destructured
+        // binding rather than on the index at the use site.
+        const [dataset] = datasets;
+
+        if (!dataset || datasets.length !== 1) {
           throw new Error(
             `expected exactly one emitted dataset asset, found ${datasets.length}`,
           );
@@ -50,7 +55,7 @@ function preloadDataset(): Plugin {
               // Written relative here rather than root-absolute, because the
               // base this build uses is relative and a tag injected at this
               // point is past the rewrite that would otherwise apply it.
-              href: `./${datasets[0].fileName}`,
+              href: `./${dataset.fileName}`,
             },
           },
         ];
