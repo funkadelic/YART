@@ -4,28 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!--
-      Both hrefs are root-absolute so the bundler rewrites them against the
-      configured base, the same way it rewrites the module script below. Neither
-      file is imported by anything in src/, so nothing in the build fails when
-      one is renamed or deleted: the reference is held honest by a test in
-      src/toolchain.test.ts instead, which is what the manifest went without
-      while it shipped into every build referenced by nothing.
-    -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#f45d48" />
 
-    <!--
-      The description is written for a search result and for a link preview,
-      which are the two places it is read. The Open Graph url is absolute
-      because a preview crawler has no document to resolve a relative one
-      against, and it names the published site rather than the repository.
-
-      No og:image: there is no social card to point at, and a tag naming a file
-      that 404s renders worse than no tag at all. A card image is the one thing
-      still missing from this block.
-    -->
     <meta
       name="description"
       content="Search, sort and paginate 50,250 world cities in the browser. A React 19 and TypeScript reference table built without a table library."
@@ -93,13 +75,6 @@
   </head>
   <body>
     <div id="root"></div>
-    <!--
-      The mount point above stays empty without JavaScript, and an empty page
-      reports nothing. Left unstyled on purpose: the stylesheet is a build
-      artifact the bundler links here, and this has to read correctly in the
-      dev server too, where the styles arrive through the module graph that is
-      not running either.
-    -->
     <noscript>
       <p>
         Yet Another React Table needs JavaScript to load, search and sort the
