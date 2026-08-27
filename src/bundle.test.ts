@@ -115,6 +115,30 @@ it(
         datasets[0],
         `${datasets[0]} carries no content hash, so a corrected dataset would keep the same URL`,
       ).toMatch(HASHED_JSON_ASSET);
+
+      // The shell names the emitted dataset so the preload scanner can start
+      // the largest request on the page before the entry chunk has parsed. It
+      // has to name the file exactly: a preload for a name that is not there
+      // costs a request and still leaves the real fetch to make, and one
+      // without crossorigin is not reusable by that fetch, so the dataset
+      // arrives twice. Both failures are silent in a browser and neither is
+      // visible in the source, since the name only exists once the bundle does.
+      const preload = /<link[^>]*rel="preload"[^>]*>/.exec(
+        readFileSync(join(outDir, "index.html"), "utf8"),
+      )?.[0];
+
+      expect(
+        preload,
+        "the built shell carries no dataset preload",
+      ).toBeDefined();
+      expect(
+        preload ?? "",
+        "the preload does not name the emitted dataset",
+      ).toContain(`assets/${datasets[0]}`);
+      expect(
+        preload ?? "",
+        "the preload carries no crossorigin, so the dataset downloads twice",
+      ).toContain("crossorigin");
     } finally {
       // Assigning undefined would store the string "undefined" rather than
       // clearing the variable, so an absent NODE_ENV has to be deleted.
