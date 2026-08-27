@@ -40,3 +40,9 @@ src/data/worldcities/worldcities.csv
 # that run rather than of this tree.
 src/__screenshots__/
 /.vitest-attachments/
+
+# Traces, screenshots and the HTML report the end-to-end runner writes. Only a
+# red run produces any of them, and they are evidence of that run rather than of
+# this tree.
+/test-results
+/playwright-report
