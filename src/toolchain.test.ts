@@ -290,15 +290,24 @@ function isEndToEndSpec(file: string): boolean {
   return relative(projectRoot, file).split(sep)[0] === E2E_DIRECTORY;
 }
 
+/**
+ * Array.isArray narrows an unknown to any[], which reintroduces the untyped
+ * value the check was meant to remove. This narrows to unknown[] instead, so
+ * the elements stay unknown and have to be checked before they are used.
+ */
+function isUnknownArray(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
 /** browserslist wherever it is configured: inline, keyed by env, or in its own file. */
 function browserslistQueries(): unknown[] {
   const configured = manifest.browserslist;
 
-  if (Array.isArray(configured)) return configured;
+  if (isUnknownArray(configured)) return configured;
 
   if (configured && typeof configured === "object") {
     return Object.values(configured as Record<string, unknown>).flatMap(
-      (value) => (Array.isArray(value) ? value : []),
+      (value) => (isUnknownArray(value) ? value : []),
     );
   }
 

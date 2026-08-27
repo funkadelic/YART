@@ -681,7 +681,7 @@ describe("CityTable", () => {
       ).textContent;
 
       // Page 2 first city should be alphabetically after page 1 first city
-      expect(firstCityPage1!.localeCompare(firstCityPage2!)).toBeLessThan(0);
+      expect(firstCityPage1.localeCompare(firstCityPage2)).toBeLessThan(0);
     });
   });
 

@@ -79,7 +79,7 @@ describe("bootstrap", () => {
     // The awaited query is not a stylistic choice. The application paints its
     // loading branch first and resolves the dataset only after the seam's
     // simulated latency, so a synchronous lookup finds nothing.
-    expect(await within(container!).findByRole("table")).toBeInTheDocument();
+    expect(await within(container).findByRole("table")).toBeInTheDocument();
   });
 
   it("throws when the root container is absent", async () => {
