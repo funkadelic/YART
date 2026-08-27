@@ -78,7 +78,7 @@ regressions rather than prove the list above.
 - [React](https://reactjs.org)
 - [Vite](https://vitejs.dev/)
 - [Vitest](https://vitest.dev) and [Testing Library](https://testing-library.com/)
-- [Playwright](https://playwright.dev) for the end to end suite
+- [Playwright](https://playwright.dev) for the end-to-end suite
 - [React Icons](https://react-icons.github.io/react-icons/)
 - [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/)
 
@@ -420,7 +420,7 @@ the network as a separate content-hashed asset.
 | `npm run test:watch`      | Run the test suite in watch mode                                    |
 | `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%    |
 | `npm run test:browser`    | Run the accessibility checks in a real Chromium                     |
-| `npm run test:e2e`        | Run the end to end suite in a real Chromium against a built bundle  |
+| `npm run test:e2e`        | Run the end-to-end suite in a real Chromium against a built bundle  |
 | `npm run typecheck`       | Check types without emitting output                                 |
 | `npm run lint`            | Run ESLint (`lint:fix` to autofix)                                  |
 | `npm run format`          | Run Prettier                                                        |
