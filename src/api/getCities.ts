@@ -16,8 +16,11 @@ const LATENCY_MS = 200;
 
 /**
  * Fake API that returns cities matching a search term against city name, ascii
- * name, or country name. The dataset itself is downloaded once and cached, so a
- * failed download is what rejects here.
+ * name, country name, or country code. Capital is rendered by the table but is
+ * not matched, because its values are classification codes rather than anything
+ * a reader searches for; the loader's key comment carries the reasoning. The
+ * dataset itself is downloaded once and cached, so a failed download is what
+ * rejects here.
  */
 export async function getCities({
   searchTerm = "",
