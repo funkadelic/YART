@@ -278,7 +278,7 @@ describe("loadCities indexing", () => {
 
     const rows = await loadCities();
     // A row whose ascii name differs from its name, so the joined key is a
-    // claim about three fields rather than about one field repeated.
+    // claim about four fields rather than about one field repeated.
     const row = rows.find((city) => city.nameAscii !== city.name);
     if (!row) {
       throw new Error(
@@ -287,7 +287,7 @@ describe("loadCities indexing", () => {
     }
 
     expect(row.searchKey).toBe(
-      [row.name, row.nameAscii, row.country]
+      [row.name, row.nameAscii, row.country, row.countryIso3]
         .join(SEARCH_KEY_SEPARATOR)
         .toLowerCase(),
     );
@@ -299,5 +299,23 @@ describe("loadCities indexing", () => {
     const cityCarriesSearchKey: CityCarriesSearchKey = false;
 
     expect(cityCarriesSearchKey).toBe(false);
+  });
+
+  it("indexes the country code and leaves the capital classification out", async () => {
+    stubDatasetFetch(CITY_FIXTURE_ENVELOPE);
+    const loadCities = await freshLoadCities();
+
+    const rows = await loadCities();
+    // A capital, so the row carries a non-empty classification the key could
+    // pick up. A row with an empty capital would satisfy the second assertion
+    // no matter what the loader joined.
+    const tokyo = rows.find((city) => city.name === "Tokyo");
+    if (!tokyo) {
+      throw new Error("The fixture no longer carries Tokyo.");
+    }
+    expect(tokyo.capital).toBe("primary");
+
+    expect(tokyo.searchKey).toContain("jpn");
+    expect(tokyo.searchKey).not.toContain("primary");
   });
 });

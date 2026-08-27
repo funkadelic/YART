@@ -32,15 +32,18 @@ async function freshGetCities() {
 }
 
 /**
- * The per-field matcher the derived search key replaced, reproduced exactly.
- * The parity cases compare the seam against this rather than against a recorded
- * count, so a divergence of the same size but different membership still fails.
+ * The per-field matcher the derived search key replaced, over the same fields
+ * the key is built from. The parity cases compare the seam against this rather
+ * than against a recorded count, so a divergence of the same size but different
+ * membership still fails. Capital is absent here because it is absent from the
+ * key, so a loader that started folding it in would break parity rather than
+ * pass quietly.
  */
 function matchedBefore(city: City, searchTerm: string): boolean {
   const needle = searchTerm.trim().toLowerCase();
   if (!needle) return true;
-  return [city.name, city.nameAscii, city.country].some((field) =>
-    field.toLowerCase().includes(needle),
+  return [city.name, city.nameAscii, city.country, city.countryIso3].some(
+    (field) => field.toLowerCase().includes(needle),
   );
 }
 
@@ -108,15 +111,33 @@ describe("getCities", () => {
 
     expect(result.some((city) => city.country === "Japan")).toBe(true);
 
-    // Matching is a substring search across name, ascii name, and country, so
-    // a result need not be in Japan: "Pajapan, Mexico" matches on its name.
+    // Matching is a substring search across name, ascii name, country, and
+    // country code, so a result need not be in Japan: "Pajapan, Mexico" matches
+    // on its name.
     expect(
       result.every((city) =>
-        [city.name, city.nameAscii, city.country].some((field) =>
-          field.toLowerCase().includes("japan"),
+        [city.name, city.nameAscii, city.country, city.countryIso3].some(
+          (field) => field.toLowerCase().includes("japan"),
         ),
       ),
     ).toBe(true);
+  });
+
+  it("matches on country code", async () => {
+    const result = await getCities({ searchTerm: "jpn" });
+
+    // The term returned nothing at all before the code was indexed, which is
+    // what made a shared "?q=jpn" link paint an empty table for its recipient.
+    expect(result.length).toBeGreaterThan(0);
+    expect(result.some((city) => city.countryIso3 === "JPN")).toBe(true);
+  });
+
+  it("does not match on the capital classification", async () => {
+    // Deliberate, not an oversight: the column renders "primary", "admin", and
+    // "minor", and indexing them would bleed those substrings into every short
+    // needle. The loader's key comment carries the measurement.
+    expect(await getCities({ searchTerm: "primary" })).toHaveLength(0);
+    expect(await getCities({ searchTerm: "admin" })).toHaveLength(0);
   });
 
   it("returns an empty list when nothing matches", async () => {

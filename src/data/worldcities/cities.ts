@@ -122,7 +122,13 @@ function parseCities(payload: unknown): IndexedCity[] {
       countryIso3,
       capital,
       population,
-      searchKey: [name, nameAscii, country]
+      // Four of the five rendered columns. Capital is the one left out, and
+      // deliberately: its only values are the upstream classification codes
+      // "primary", "admin", "minor", and empty, which nobody types into a city
+      // search, and folding them in would bleed into every short needle. Over
+      // the committed rows "in" would match 31,388 of 50,250 instead of 19,051,
+      // through "admin" and "minor" rather than through anything a reader meant.
+      searchKey: [name, nameAscii, country, countryIso3]
         .join(SEARCH_KEY_SEPARATOR)
         .toLowerCase(),
     };
