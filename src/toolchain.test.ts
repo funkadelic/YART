@@ -765,6 +765,53 @@ describe("toolchain baseline", () => {
     expect(existsSync(join(projectRoot, "src", "logo.svg"))).toBe(false);
   });
 
+  // Nothing under src/ imports the icon or the manifest. index.html names each
+  // by href and the bundler copies both out of public/ verbatim, so a rename
+  // breaks neither the build nor the type check: it surfaces as a request for a
+  // file that is not there, in a browser, after the fact. That is how the
+  // manifest came to ship into every build referenced by nothing at all, with an
+  // empty icons array, and stayed that way.
+  //
+  // Read outward from the shell rather than from a second copy of the filenames
+  // kept here, so renaming a file and its href together stays green and renaming
+  // one of them does not.
+  it("keeps the icon and manifest links in index.html resolving to shipped files", () => {
+    const html = readFileSync(join(projectRoot, "index.html"), "utf8");
+    const publicDirectory = join(projectRoot, "public");
+
+    for (const relation of ["icon", "manifest"]) {
+      const link = new RegExp(`<link[^>]*\\brel="${relation}"[^>]*>`).exec(
+        html,
+      )?.[0];
+
+      expect(link, `index.html declares no ${relation} link`).toBeDefined();
+
+      const href = /\bhref="([^"]*)"/.exec(link ?? "")?.[1];
+
+      expect(href, `the ${relation} link declares no href`).toBeDefined();
+      expect(
+        existsSync(join(publicDirectory, (href ?? "").replace(/^\//, ""))),
+        `the ${relation} link points at ${href ?? ""}, which public/ does not carry`,
+      ).toBe(true);
+    }
+
+    const manifest = JSON.parse(
+      readFileSync(join(publicDirectory, "manifest.json"), "utf8"),
+    ) as { icons?: { src?: string }[] };
+
+    expect(
+      manifest.icons ?? [],
+      "the manifest carries no icon, so an install has nothing to draw",
+    ).not.toHaveLength(0);
+
+    for (const icon of manifest.icons ?? []) {
+      expect(
+        existsSync(join(publicDirectory, icon.src ?? "")),
+        `the manifest names the icon ${icon.src ?? ""}, which public/ does not carry`,
+      ).toBe(true);
+    }
+  });
+
   // browserslist is pinned to explicit versions like the rest of the manifest. A
   // shared query such as "defaults" or "last 2 versions" would let upstream data
   // releases move the build output without a commit.

@@ -1,7 +1,14 @@
 {
   "short_name": "YART",
   "name": "Yet Another React Table (YART)",
-  "icons": [],
+  "description": "Search, sort and paginate 50,250 world cities in the browser.",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
   "start_url": ".",
   "display": "standalone",
   "theme_color": "#f45d48",
