@@ -45,6 +45,17 @@ export default defineConfig({
   // before this bump as well. Adopting the compiler is a change of its own with
   // its own gate run, so the option stays unset and the peers stay uninstalled.
   plugins: [react()],
+  // Relative rather than the literal repository subpath the site is published
+  // under. One build has to serve from two addresses: the root, which is where
+  // `vite preview` serves it and therefore where both browser suites drive it,
+  // and /YART/, which is where GitHub Pages serves a project site. A literal
+  // base would move the preview address out from under the suites, and reading
+  // the base off an environment variable would leave the built artifact the
+  // pipeline measures different from the one it publishes.
+  //
+  // Safe here because the app writes its own address from window.location
+  // rather than from a hardcoded path, so nothing in the tree assumes the root.
+  base: "./",
   build: {
     // Spelled out from the same four floors the browserslist declares, because
     // the bundler does not read that field and the two are otherwise free to

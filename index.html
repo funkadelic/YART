@@ -3,6 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#f45d48" />
+
+    <meta
+      name="description"
+      content="Search, sort and paginate 50,250 world cities in the browser. A React 19 and TypeScript reference table built without a table library."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://funkadelic.github.io/YART/" />
+    <meta property="og:title" content="Yet Another React Table (YART)" />
+    <meta
+      property="og:description"
+      content="Search, sort and paginate 50,250 world cities in the browser. A React 19 and TypeScript reference table built without a table library."
+    />
+    <meta name="twitter:card" content="summary" />
     <!--
       Stamps the theme onto the document element before first paint, so no
       wrong-theme frame is ever shown. Blocking and classic on purpose: a
@@ -58,6 +75,12 @@
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <p>
+        Yet Another React Table needs JavaScript to load, search and sort the
+        city dataset. Enable it and reload this page.
+      </p>
+    </noscript>
     <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
