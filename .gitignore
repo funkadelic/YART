@@ -41,8 +41,11 @@ src/data/worldcities/worldcities.csv
 src/__screenshots__/
 /.vitest-attachments/
 
-# Traces, screenshots and the HTML report the end-to-end runner writes. Only a
-# red run produces any of them, and they are evidence of that run rather than of
-# this tree.
+# What the end-to-end runner writes. The traces and screenshots under
+# test-results/ come from failures alone and are evidence of that run rather
+# than of this tree; the bookkeeping file beside them is rewritten on every run,
+# green included. No reporter is configured, so playwright-report/ is not
+# written at all: the entry is kept so an ad-hoc run asking for the HTML
+# reporter cannot leave a committable directory behind.
 /test-results
 /playwright-report
