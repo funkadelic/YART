@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CityTable } from "./CityTable";
 import type { City } from "../../api/getCities";
+import { required } from "../../test/required";
 
 // Mock data for testing
 const mockCities: City[] = [
@@ -661,7 +662,10 @@ describe("CityTable", () => {
 
       // Get first city on page 1
       const rows = screen.getAllByRole("row");
-      const firstCityPage1 = rows[1].textContent;
+      const firstCityPage1 = required(
+        rows[1],
+        "the first body row",
+      ).textContent;
 
       // Go to page 2
       const nextButton = screen.getByRole("button", {
@@ -671,10 +675,13 @@ describe("CityTable", () => {
 
       // Get first city on page 2
       const rowsPage2 = screen.getAllByRole("row");
-      const firstCityPage2 = rowsPage2[1].textContent;
+      const firstCityPage2 = required(
+        rowsPage2[1],
+        "the first body row on page two",
+      ).textContent;
 
       // Page 2 first city should be alphabetically after page 1 first city
-      expect(firstCityPage1!.localeCompare(firstCityPage2!)).toBeLessThan(0);
+      expect(firstCityPage1.localeCompare(firstCityPage2)).toBeLessThan(0);
     });
   });
 

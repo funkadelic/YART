@@ -7,7 +7,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 // all rather than hand back the first one's cached result.
 
 const actEnvironment = globalThis as typeof globalThis & {
-  IS_REACT_ACT_ENVIRONMENT?: boolean;
+  // Explicitly undefined rather than merely optional, because the teardown
+  // writes back whatever was read, and absent is what it reads first.
+  IS_REACT_ACT_ENVIRONMENT?: boolean | undefined;
 };
 
 /**
@@ -77,7 +79,7 @@ describe("bootstrap", () => {
     // The awaited query is not a stylistic choice. The application paints its
     // loading branch first and resolves the dataset only after the seam's
     // simulated latency, so a synchronous lookup finds nothing.
-    expect(await within(container!).findByRole("table")).toBeInTheDocument();
+    expect(await within(container).findByRole("table")).toBeInTheDocument();
   });
 
   it("throws when the root container is absent", async () => {

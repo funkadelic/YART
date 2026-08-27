@@ -25,7 +25,7 @@ export interface Column<T, Id extends string = string> {
    * measure without reading the DOM, and amending this interface twice is the
    * cost that buys.
    */
-  readonly width?: string;
+  readonly width?: string | undefined;
   readonly renderCell: (row: T) => ReactNode;
   readonly compare: (a: T, b: T, direction: "asc" | "desc") => number;
 }
@@ -43,9 +43,10 @@ export interface Column<T, Id extends string = string> {
  */
 export interface ColumnOptions<T, V> {
   readonly label: string;
-  readonly width?: string;
-  readonly renderCell?: (value: V, row: T) => ReactNode;
-  readonly compare?: (a: V, b: V, direction: "asc" | "desc") => number;
+  readonly width?: string | undefined;
+  readonly renderCell?: ((value: V, row: T) => ReactNode) | undefined;
+  readonly compare?:
+    ((a: V, b: V, direction: "asc" | "desc") => number) | undefined;
 }
 
 /**

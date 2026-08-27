@@ -15,6 +15,7 @@ import postcss from "postcss";
 import { describe, expect, it } from "vitest";
 
 import { THEME_STORAGE_KEY } from "./resolveTheme";
+import { required } from "../test/required";
 
 // Resolved from this file's own location rather than from the working directory,
 // which is wherever the runner happened to be invoked and is not the project root
@@ -180,7 +181,11 @@ function colourLiterals(source: string): string[] {
  */
 function focusRingSuppressions(source: string): string[] {
   return [...source.matchAll(OUTLINE_DECLARATION)]
-    .filter(([, value]) => RING_CANCELLING_VALUE.test(value))
+    .filter(([, value]) =>
+      RING_CANCELLING_VALUE.test(
+        required(value, "the outline declaration's value"),
+      ),
+    )
     .map(([declaration]) => declaration.trim());
 }
 
@@ -275,7 +280,9 @@ function resolve(
   }
 
   const indirection = BARE_INDIRECTION.exec(value);
-  return indirection ? resolve(indirection[1], scope, seen) : value;
+  return indirection
+    ? resolve(required(indirection[1], "the var() target"), scope, seen)
+    : value;
 }
 
 // Relative luminance and contrast ratio, straight from the specification. Five
@@ -292,14 +299,18 @@ function luminance(hex: string): number {
     digits.length === 3
       ? [...digits].map((digit) => digit + digit).join("")
       : digits;
+  // Asserted as a triple, because the three offsets are a literal and the map
+  // over them cannot return any other length.
   const [red, green, blue] = [0, 2, 4].map((offset) =>
     channel(parseInt(full.slice(offset, offset + 2), 16)),
-  );
+  ) as [number, number, number];
   return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
 }
 
 function contrastRatio(a: string, b: string): number {
-  const [lighter, darker] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  const [lighter, darker] = [luminance(a), luminance(b)].sort(
+    (x, y) => y - x,
+  ) as [number, number];
   return (lighter + 0.05) / (darker + 0.05);
 }
 
@@ -525,7 +536,10 @@ describe("the theme script in index.html", () => {
   // nonce is the one this file will need first, and it defers nothing.
   const blocking = [...head.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)]
     .filter(
-      (match) => !/\b(?:type=["']module["']|defer|async)\b/.test(match[1]),
+      (match) =>
+        !/\b(?:type=["']module["']|defer|async)\b/.test(
+          required(match[1], "the script tag's attributes"),
+        ),
     )
     .map((match) => ({
       body: match[2],
@@ -548,7 +562,7 @@ describe("the theme script in index.html", () => {
       -1,
     );
     expect(
-      blocking[0].offset,
+      required(blocking[0], "the blocking script").offset,
       "the theme script does not precede the module script",
     ).toBeLessThan(moduleScript);
   });
@@ -559,7 +573,7 @@ describe("the theme script in index.html", () => {
   it("reads the same storage key the resolver exports", () => {
     expect(blocking, "no blocking script to read a key from").toHaveLength(1);
     expect(
-      blocking[0].body,
+      required(blocking[0], "the blocking script").body,
       `the theme script does not mention the storage key ${THEME_STORAGE_KEY}`,
     ).toContain(THEME_STORAGE_KEY);
   });

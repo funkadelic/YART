@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { columns } from "../components/DataTable/column";
 import { useSortedRows } from "./useSortedRows";
+import { required } from "../test/required";
 
 interface Widget {
   id: string;
@@ -82,7 +83,11 @@ describe("useSortedRows", () => {
     rerender({ ...SORTED_ASC, direction: "desc" });
 
     expect(seen[1]).not.toBe(seen[0]);
-    expect(seen[1].map((widget) => widget.name)).toEqual(["beta", "alpha"]);
+    expect(
+      required(seen[1], "the rows from the second render").map(
+        (widget) => widget.name,
+      ),
+    ).toEqual(["beta", "alpha"]);
   });
 
   it("returns a new array when the rows change", () => {

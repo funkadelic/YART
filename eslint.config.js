@@ -13,7 +13,21 @@ export default defineConfig([
     languageOptions: { globals: globals.browser },
   },
   eslint.configs.recommended,
-  tseslint.configs.recommended,
+  // Type-aware rather than syntax-only, which is what puts the promise rules in
+  // play: a floating promise and a promise passed where a void callback is
+  // expected are both invisible without types, and this tree is built on a
+  // request seam, effects and a debounce. projectService reads the tsconfig
+  // this repository already has, so the linted set and the typechecked set are
+  // the same set by construction rather than by a second list kept here.
+  tseslint.configs.recommendedTypeChecked,
+  {
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+  },
   {
     ...react.configs.flat.recommended,
     languageOptions: {
