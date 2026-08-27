@@ -646,8 +646,17 @@ describe("toolchain baseline", () => {
       "the browser script does not name the browser project",
     ).toMatch(/--project[= ]browser\b/);
 
+    // Read off the script itself rather than off an empty-string fallback. The
+    // two assertions above get existence for free because they match a flag
+    // positively and an absent script matches nothing; this one is the inverted
+    // case, where an absent script satisfies the pattern it is checked against.
+    // Without the line below, deleting the end-to-end script entirely passes
+    // the guard that exists to keep it honest.
+    const endToEnd = manifest.scripts?.["test:e2e"];
+
+    expect(endToEnd, "the end-to-end script is gone").toBeDefined();
     expect(
-      manifest.scripts?.["test:e2e"] ?? "",
+      endToEnd as string,
       "the end-to-end script collects coverage, which writes a second report into the directory the static analysis import reads",
     ).not.toMatch(/(^|\s)--coverage\b/);
   });
@@ -711,6 +720,18 @@ describe("toolchain baseline", () => {
       );
 
       expect(launched.length, `${name} launches no browser`).toBeGreaterThan(0);
+
+      // The names above are read off explicit keys. A device preset carries a
+      // browser type of its own, so one spread into either file would add a
+      // launch this guard never sees and the install check below would pass on
+      // a binary the pipeline never fetched. Banned rather than parsed: the
+      // preset table lives in the runner's own package, and reproducing it here
+      // to keep it in step is a worse trade than making this guard be extended
+      // on the day a preset is actually wanted.
+      expect(
+        config,
+        `${name} configures a device preset, which carries a browser type past the check above`,
+      ).not.toMatch(/\bdevices\s*\[/);
 
       for (const browser of launched) {
         expect(
