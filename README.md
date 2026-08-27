@@ -3,6 +3,9 @@
 A React and TypeScript prototype for browsing a large dataset in the browser:
 search, sort, and paginate a list of world cities without a table library.
 
+**[Live demo](https://funkadelic.github.io/YART/)**, published from `main` by the
+pipeline once every gate passes.
+
 ## Features
 
 ### Search
