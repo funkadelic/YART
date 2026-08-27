@@ -1,6 +1,63 @@
 import { playwright } from "@vitest/browser-playwright";
 import react from "@vitejs/plugin-react";
 import { defaultExclude, defineConfig } from "vitest/config";
+import type { Plugin } from "vite";
+
+/**
+ * Adds a preload for the dataset asset to the built shell.
+ *
+ * The dataset is requested by a module that cannot run until the entry chunk
+ * has downloaded and parsed, so the largest thing the page needs is the last
+ * thing it asks for. The link below moves that request to the shell, where the
+ * preload scanner reaches it immediately and the two downloads overlap.
+ *
+ * The name is content-hashed and exists only once the bundle does, which is why
+ * this reads it off the bundle rather than being written into index.html by
+ * hand. A shell carrying a stale hash would preload a file that is not there,
+ * pay for the request and still fetch the real one afterwards, so the lookup
+ * throws rather than skipping quietly when it finds anything but one match.
+ */
+function preloadDataset(): Plugin {
+  return {
+    name: "yart-preload-dataset",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(_html, context) {
+        const datasets = Object.values(context.bundle ?? {}).filter(
+          (output) =>
+            output.type === "asset" &&
+            /(^|\/)cities-[^/]*\.json$/.test(output.fileName),
+        );
+
+        if (datasets.length !== 1) {
+          throw new Error(
+            `expected exactly one emitted dataset asset, found ${datasets.length}`,
+          );
+        }
+
+        return [
+          {
+            tag: "link",
+            injectTo: "head",
+            attrs: {
+              rel: "preload",
+              as: "fetch",
+              // Required for an as="fetch" preload to be reused rather than
+              // downloaded a second time, which on this asset would cost more
+              // than the preload saves.
+              crossorigin: "anonymous",
+              // Written relative here rather than root-absolute, because the
+              // base this build uses is relative and a tag injected at this
+              // point is past the rewrite that would otherwise apply it.
+              href: `./${datasets[0].fileName}`,
+            },
+          },
+        ];
+      },
+    },
+  };
+}
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -44,7 +101,7 @@ export default defineConfig({
   // through the lint plugin's dependency edge rather than this one and was here
   // before this bump as well. Adopting the compiler is a change of its own with
   // its own gate run, so the option stays unset and the peers stay uninstalled.
-  plugins: [react()],
+  plugins: [react(), preloadDataset()],
   // Relative rather than the literal repository subpath the site is published
   // under. One build has to serve from two addresses: the root, which is where
   // `vite preview` serves it and therefore where both browser suites drive it,

@@ -48,6 +48,18 @@ test("the running page fetches the content-hashed dataset asset", async ({
     { timeout: DATASET_READY_TIMEOUT_MS },
   );
 
+  // Counted for the whole navigation, because the shell preloads this asset and
+  // the application then fetches it. A preload the fetch cannot reuse, which is
+  // what an absent crossorigin attribute or a changed request mode would leave,
+  // downloads several megabytes twice and reports nothing: the page still
+  // works, only slower than it was before the preload was added.
+  const datasetRequests: string[] = [];
+  page.on("request", (request) => {
+    if (HASHED_JSON_ASSET.test(new URL(request.url()).pathname)) {
+      datasetRequests.push(request.url());
+    }
+  });
+
   await page.goto("/");
 
   const response = await datasetResponse;
@@ -56,10 +68,15 @@ test("the running page fetches the content-hashed dataset asset", async ({
   const body = await response.body();
   expect(body.byteLength).toBeGreaterThan(STUB_FLOOR_BYTES);
 
-  // Distinguishes the application's own runtime request from the document
-  // itself or a bundled script, each of which the engine reports under its own
-  // type.
-  expect(response.request().resourceType()).toBe("fetch");
+  // Distinguishes this from the document itself or a bundled script, each of
+  // which the engine reports under its own type.
+  //
+  // An exclusion rather than an equality, because two things can issue this one
+  // request and the engine types them differently: the shell's preload, which
+  // it reports as "other", and the application's own fetch, which it reports as
+  // "fetch". Whichever asks first is the one recorded, and the other reuses it.
+  // Pinning either would make the test a race.
+  expect(["fetch", "other"]).toContain(response.request().resourceType());
 
   // Ties the transport back to what the reader sees: a fixture-sized payload
   // would report a fixture-sized count here.
@@ -67,4 +84,9 @@ test("the running page fetches the content-hashed dataset asset", async ({
     `City data with ${TOTAL_ROWS} entries, currently not sorted`,
     { timeout: DATASET_READY_TIMEOUT_MS },
   );
+
+  expect(
+    datasetRequests,
+    "the dataset was requested more than once, so the preload is not being reused",
+  ).toHaveLength(1);
 });
