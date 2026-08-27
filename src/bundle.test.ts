@@ -57,6 +57,10 @@ const JS_CHUNK_SIZE_CEILING_BYTES = 512000;
 
 // The emitted dataset carries a content hash in its name. That is what makes a
 // corrected dataset reach a returning visitor rather than their cache.
+//
+// e2e/dataset.spec.ts holds the same claim from the transport side, restating
+// this pattern rather than importing it: this file owns the emitted artifact,
+// that one owns what the running page actually pulled over the wire.
 const HASHED_JSON_ASSET = /^cities-[A-Za-z0-9_-]{6,}\.json$/;
 
 // The build takes under a second warm. The generous allowance covers a cold

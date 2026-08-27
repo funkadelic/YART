@@ -81,6 +81,25 @@ jobs:
       - name: Accessibility sweep
         run: npm run test:browser
 
+      # After the sweep, because both of the expensive things this step needs
+      # already exist by here: the browser binary the install above fetched, and
+      # the build the suite serves rather than produces. Placed before the scan
+      # for the same reason the sweep is, so a broken flow reports as itself.
+      - name: End-to-end sweep
+        run: npm run test:e2e
+
+      # The traces and screenshots the sweep retains are worth keeping only if
+      # they can be reached, and a runner's filesystem is gone the moment the
+      # job ends. Conditioned on failure because that is the only case that
+      # writes any, and it runs even after the step above stops the job.
+      - name: Upload end-to-end failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-failure-artifacts
+          path: test-results/
+          retention-days: 7
+
       # Last, so a failing test or build reports as itself rather than as an
       # absent coverage report.
       #

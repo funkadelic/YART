@@ -78,6 +78,7 @@ regressions rather than prove the list above.
 - [React](https://reactjs.org)
 - [Vite](https://vitejs.dev/)
 - [Vitest](https://vitest.dev) and [Testing Library](https://testing-library.com/)
+- [Playwright](https://playwright.dev) for the end-to-end suite
 - [React Icons](https://react-icons.github.io/react-icons/)
 - [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/)
 
@@ -401,6 +402,13 @@ it("sorts by population descending on the second activation", async () => {
 The assertions read `aria-sort`, the same attribute a screen reader announces,
 so a passing test is evidence the announcement is right.
 
+A second suite under `e2e/` runs in a real browser against a production build,
+covering four things a simulated DOM cannot show: that reopening a link restores
+the search, sort and page it carries; that Back and Forward move through history
+the way the shareable-link design intends; that the theme is stamped before the
+first paint rather than after the page loads; and that the dataset arrives over
+the network as a separate content-hashed asset.
+
 ## Scripts
 
 | Script                    | What it does                                                        |
@@ -412,21 +420,28 @@ so a passing test is evidence the announcement is right.
 | `npm run test:watch`      | Run the test suite in watch mode                                    |
 | `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%    |
 | `npm run test:browser`    | Run the accessibility checks in a real Chromium                     |
+| `npm run test:e2e`        | Run the end-to-end suite in a real Chromium against a built bundle  |
 | `npm run typecheck`       | Check types without emitting output                                 |
 | `npm run lint`            | Run ESLint (`lint:fix` to autofix)                                  |
 | `npm run format`          | Run Prettier                                                        |
 | `npm run format:check`    | Check formatting without rewriting anything                         |
 | `npm run generate:cities` | Regenerate the committed dataset asset from the upstream CSV export |
 
-`npm run test:browser` drives a real Chromium through Playwright. `npm ci`
-downloads neither that browser nor the system libraries it needs, so a clean
-clone fetches both once with
+`npm run test:browser` and `npm run test:e2e` both drive a real Chromium.
+`npm ci` downloads neither that browser nor the system libraries it needs, so a
+clean clone fetches both once with
 `npx playwright install --with-deps --only-shell chromium`, whose `--with-deps`
-half needs `sudo` on Linux. CI runs that same command, so both paths install the
-same binary. The step is optional for ordinary development: `npm test` runs the
-same accessibility checks against a simulated DOM and needs nothing extra.
-Neither run is a conformance claim; both catch regressions against a set of
-automated rules.
+half needs `sudo` on Linux. CI runs that same command, so every path installs
+the same binary.
+
+`npm run test:e2e` serves a production build rather than making one, so run
+`npm run build` first. Without a build it stops in well under a second and names
+the command to run.
+
+Both are optional for ordinary development. `npm test` runs the same
+accessibility checks as `npm run test:browser` against a simulated DOM and needs
+nothing extra; neither of those two is a conformance claim, and both catch
+regressions against a set of automated rules.
 
 ## Notes and next steps
 

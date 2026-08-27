@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, relative } from "node:path";
+import { join, relative, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -279,6 +279,15 @@ const scannedFiles = findTestFiles(projectRoot).filter(
   (file) => file !== guardFile,
 );
 
+// The directory holding the second runner's specs. Named here because two
+// guards below read it and one of them asserts it is still being read.
+const E2E_DIRECTORY = "e2e";
+
+/** Whether a scanned file is one of the second runner's specs. */
+function isEndToEndSpec(file: string): boolean {
+  return relative(projectRoot, file).split(sep)[0] === E2E_DIRECTORY;
+}
+
 /** browserslist wherever it is configured: inline, keyed by env, or in its own file. */
 function browserslistQueries(): unknown[] {
   const configured = manifest.browserslist;
@@ -361,8 +370,86 @@ const COVERAGE_INCLUDE_PATTERNS = ["src/**/*.{ts,tsx}"];
 const COVERAGE_IGNORE_HINT = /\b(?:v8|c8|istanbul|node)\s+ignore\b/;
 
 const CONFIG_FILE = "vite.config.ts";
+const E2E_CONFIG_FILE = "playwright.config.ts";
 const WORKFLOW_FILE = ".github/workflows/ci.yml";
 const SONAR_FILE = "sonar-project.properties";
+
+// The two test runners this repository is written to hold, each paired with the
+// file that configures it. Named as pairs rather than as two loose lists so
+// neither half can be asserted without the other: a runner declared with no
+// config is a dependency nothing drives, and a config with no runner declared is
+// a file nothing reads.
+//
+// Two runners rather than one, deliberately. The first runner's browser project
+// exposes a page object with no navigation method of any kind, so a real
+// navigation, a reload and a history traversal cannot be reached from it at all.
+// Four flows need exactly those: the address restored across a reload, the
+// arrival edges canonicalized on a fresh load, the entry ledger across a back
+// and forward traversal, and the theme stamped before any module runs. That is
+// what the second runner was taken for, and it is the shape of question that
+// would force a third to be a decision rather than a drift.
+//
+// Coverage is deliberately not generalized across the two. The second runner
+// collects none, the hundred percent threshold stays measured over the first
+// runner's deterministic project alone, and the reason sits beside the second
+// runner's own config.
+const TEST_RUNNERS = [
+  { package: "vitest", config: CONFIG_FILE },
+  { package: "@playwright/test", config: E2E_CONFIG_FILE },
+];
+
+// Test-runner packages this repository has not taken. The first seven belong to
+// the runner that was removed rather than ported, and any one of them
+// reappearing means that runner is back. The rest are the runners a contributor
+// is most likely to reach for next, listed so a third runner arriving as a
+// dependency is a red test rather than a fact the tree quietly stops stating.
+// The driver package the second runner sits on is not here, because it is a
+// direct dependency of this tree by design.
+const UNTAKEN_TEST_RUNNERS = [
+  "jest",
+  "jest-environment-jsdom",
+  "ts-jest",
+  "ts-node",
+  "@types/jest",
+  "identity-obj-proxy",
+  "jest-transformer-svg",
+  "mocha",
+  "jasmine",
+  "ava",
+  "karma",
+  "qunit",
+  "tape",
+  "cypress",
+  "testcafe",
+  "nightwatch",
+  "webdriverio",
+  "@web/test-runner",
+  "node-tap",
+];
+
+// Every runner package name this guard knows about, taken or not. The
+// intersection of this list with the declared dependencies is compared as a
+// sorted set, the same way the coverage exclude list is: reordering either list
+// is not a weakening and must not flap the guard, while a runner arriving or a
+// runner leaving must both fail.
+const KNOWN_TEST_RUNNERS = [
+  ...TEST_RUNNERS.map((runner) => runner.package),
+  ...UNTAKEN_TEST_RUNNERS,
+];
+
+// Both files that launch a browser, held below against the one browser install
+// line in the pipeline. There was one launch site for as long as there was one
+// runner, and there are two now, so the holding is evaluated per file: a check
+// taken across the pair passes on a file contributing nothing as long as the
+// other file still contributes a match, which is the vacuous pass the whole
+// exercise is written against.
+const LAUNCH_CONFIG_FILES = [CONFIG_FILE, E2E_CONFIG_FILE];
+
+// The browser a config launches, matched under either key the two runners use
+// for it. One names it inside its instance list, the other on its shared use
+// block, and an extraction that knew only the first spelling would contribute
+// zero matches from the second file and assert nothing at all about it.
+const LAUNCHED_BROWSER = /\bbrowser(?:Name)?\s*:\s*"([^"]*)"/g;
 
 /**
  * One coverage exclude pattern written in Sonar's dialect, which is the same
@@ -457,9 +544,15 @@ const PROVENANCE_REGENERATION =
   "committed one.";
 
 describe("toolchain baseline", () => {
-  // The previous runner and its adapters were removed rather than ported.
-  // Any one of them reappearing means a second, competing test toolchain is back.
-  it("keeps the previous test runner and its adapters out of the manifest", () => {
+  // This guard used to ban a list of names belonging to the runner that was
+  // removed, and nothing else. A second runner arriving with a config of its own
+  // and a dependency of its own passed it mechanically, while the founding claim
+  // it stood for, that the whole suite runs under one runner reading one config,
+  // had quietly stopped being true. A guard that passes while the intent it
+  // names is violated is worse than a red test, so the statement is widened
+  // rather than the runner declined: two runners, named, with the file that
+  // configures each, and a third is red.
+  it("holds the tree to the two test runners it is written to run", () => {
     const declared = new Set(
       Object.entries(manifest)
         .filter(([key]) => /dependencies$/i.test(key) || key === "overrides")
@@ -470,17 +563,24 @@ describe("toolchain baseline", () => {
         ),
     );
 
-    const retired = [
-      "jest",
-      "jest-environment-jsdom",
-      "ts-jest",
-      "ts-node",
-      "@types/jest",
-      "identity-obj-proxy",
-      "jest-transformer-svg",
-    ];
+    // Both halves of each pair, so the statement is a fact rather than an
+    // aspiration.
+    for (const runner of TEST_RUNNERS) {
+      expect(
+        declared.has(runner.package),
+        `the manifest no longer declares ${runner.package}`,
+      ).toBe(true);
+      expect(
+        existsSync(join(projectRoot, runner.config)),
+        `${runner.config} is gone, so ${runner.package} is configured by nothing`,
+      ).toBe(true);
+    }
 
-    expect(retired.filter((name) => declared.has(name))).toEqual([]);
+    expect(
+      KNOWN_TEST_RUNNERS.filter((name) => declared.has(name)).toSorted(),
+      "the declared test runners are no longer the two this tree is written to run",
+    ).toEqual(TEST_RUNNERS.map((runner) => runner.package).toSorted());
+
     expect(manifest.jest, "the manifest carries a jest block").toBeUndefined();
     expect(
       readdirSync(projectRoot).filter((name) => /^jest\.config\./.test(name)),
@@ -516,7 +616,22 @@ describe("toolchain baseline", () => {
   // reads as a silent zero rather than as an error. Without the browser project
   // named, the browser script fans out to every project and reports the
   // deterministic suite a second time as if it were the real-engine one.
-  it("keeps the coverage and browser scripts carrying the flags their gates need", () => {
+  //
+  // The end-to-end script is read the other way round: it must carry no
+  // coverage flag at all. The answer written beside its config is that this
+  // runner measures nothing and the hundred percent threshold stays over the
+  // deterministic project alone, and without this line that answer is a claim
+  // about intent that nothing checks. The failure it prevents is silent rather
+  // than loud: a coverage flag added later emits a second report over the same
+  // directory the static analysis import reads.
+  //
+  // Nothing else has to move for that carve, and both reasons are worth stating
+  // because both stop holding if the end-to-end specs are ever moved under the
+  // source directory. The coverage block of the build config is untouched, which
+  // is what keeps the four-pattern exclude set guard green, and the static
+  // analysis source set is the source directory, which is what keeps the derived
+  // inclusions guard green. Both hold because the specs live outside it.
+  it("keeps each pipeline test script carrying the flags its gate needs, and none it must not", () => {
     const coverage = manifest.scripts?.["test:coverage"] ?? "";
 
     expect(coverage, "the coverage script collects no coverage").toMatch(
@@ -530,13 +645,27 @@ describe("toolchain baseline", () => {
       manifest.scripts?.["test:browser"] ?? "",
       "the browser script does not name the browser project",
     ).toMatch(/--project[= ]browser\b/);
+
+    // Read off the script itself rather than off an empty-string fallback. The
+    // two assertions above get existence for free because they match a flag
+    // positively and an absent script matches nothing; this one is the inverted
+    // case, where an absent script satisfies the pattern it is checked against.
+    // Without the line below, deleting the end-to-end script entirely passes
+    // the guard that exists to keep it honest.
+    const endToEnd = manifest.scripts?.["test:e2e"];
+
+    expect(endToEnd, "the end-to-end script is gone").toBeDefined();
+    expect(
+      endToEnd as string,
+      "the end-to-end script collects coverage, which writes a second report into the directory the static analysis import reads",
+    ).not.toMatch(/(^|\s)--coverage\b/);
   });
 
-  // A gate nothing invokes is not a gate. The browser project and its one test
-  // file both survive the deletion of the step that runs them, so the pipeline
-  // is asserted to name both scripts rather than the manifest alone being
-  // trusted to imply that something calls them.
-  it("runs both test gates from the pipeline", () => {
+  // A gate nothing invokes is not a gate. Every project, config and spec file
+  // survives the deletion of the step that runs it, so the pipeline is asserted
+  // to name each script rather than the manifest alone being trusted to imply
+  // that something calls them.
+  it("runs every test gate from the pipeline", () => {
     // Judged on live lines only, for the reason the pre-commit guard is:
     // commenting a step out leaves every expected string in the file.
     const live = readFileSync(join(projectRoot, WORKFLOW_FILE), "utf8")
@@ -544,7 +673,11 @@ describe("toolchain baseline", () => {
       .map((line) => line.trim())
       .filter((line) => line && !line.startsWith("#"));
 
-    for (const script of ["npm run test:coverage", "npm run test:browser"]) {
+    for (const script of [
+      "npm run test:coverage",
+      "npm run test:browser",
+      "npm run test:e2e",
+    ]) {
       expect(
         live.some((line) => line.includes(script)),
         `${WORKFLOW_FILE} no longer runs ${script}`,
@@ -552,16 +685,21 @@ describe("toolchain baseline", () => {
     }
   });
 
-  // The step above installs one browser binary and vite.config.ts launches one,
-  // three directories apart, with neither file mentioning the other. They agree
-  // today through a Playwright default rather than through anything written
-  // down: a headless launch naming no channel resolves to the headless shell,
-  // which is the only thing --only-shell downloads. Turn headless off to debug a
-  // sweep locally, or name a channel, and the pipeline fails on a missing
-  // executable that says nothing about accessibility. Asserted here so it fails
-  // in the suite a developer runs first, and as one implication rather than as an
-  // equality: installing more than the launch needs is wasteful, not broken.
-  it("installs the browser binary the accessibility sweep launches", () => {
+  // The step above installs one browser binary and two config files each launch
+  // one, with none of the three mentioning either of the others. They agree
+  // today through a runner default rather than through anything written down: a
+  // headless launch naming no channel resolves to the headless shell, which is
+  // the only thing --only-shell downloads. Turn headless off to debug locally,
+  // or name a channel, and the pipeline fails on a missing executable that says
+  // nothing about what the gate was measuring. Asserted here so it fails in the
+  // suite a developer runs first, and as one implication rather than as an
+  // equality: installing more than a launch needs is wasteful, not broken.
+  //
+  // Every check below is inside the loop rather than taken over the two files
+  // together. A count summed across the pair is satisfied by one file while the
+  // other contributes nothing, and a shell resolution read off the concatenated
+  // pair is satisfied by one file being headless while the other is not.
+  it("installs the browser binary both launch configurations ask for", () => {
     const install = readFileSync(join(projectRoot, WORKFLOW_FILE), "utf8")
       .split("\n")
       .map((line) => line.trim())
@@ -570,33 +708,47 @@ describe("toolchain baseline", () => {
 
     expect(install, `${WORKFLOW_FILE} installs no browser`).toBeDefined();
 
-    const config = stripComments(
-      readFileSync(join(projectRoot, CONFIG_FILE), "utf8"),
-    );
-    const launched = [...config.matchAll(/browser\s*:\s*"([^"]*)"/g)].map(
-      (match) => match[1],
-    );
+    for (const name of LAUNCH_CONFIG_FILES) {
+      // Comments blanked for both files, so a browser named in prose is never
+      // mistaken for one a file launches. Both of these carry long comments
+      // naming this browser.
+      const config = stripComments(
+        readFileSync(join(projectRoot, name), "utf8"),
+      );
+      const launched = [...config.matchAll(LAUNCHED_BROWSER)].map(
+        (match) => match[1],
+      );
 
-    expect(
-      launched.length,
-      `${CONFIG_FILE} launches no browser`,
-    ).toBeGreaterThan(0);
+      expect(launched.length, `${name} launches no browser`).toBeGreaterThan(0);
 
-    for (const browser of launched) {
+      // The names above are read off explicit keys. A device preset carries a
+      // browser type of its own, so one spread into either file would add a
+      // launch this guard never sees and the install check below would pass on
+      // a binary the pipeline never fetched. Banned rather than parsed: the
+      // preset table lives in the runner's own package, and reproducing it here
+      // to keep it in step is a worse trade than making this guard be extended
+      // on the day a preset is actually wanted.
       expect(
-        install as string,
-        `${WORKFLOW_FILE} does not install ${browser}`,
-      ).toContain(browser);
+        config,
+        `${name} configures a device preset, which carries a browser type past the check above`,
+      ).not.toMatch(/\bdevices\s*\[/);
+
+      for (const browser of launched) {
+        expect(
+          install as string,
+          `${WORKFLOW_FILE} does not install ${browser}, which ${name} launches`,
+        ).toContain(browser);
+      }
+
+      // The shell is a headless launch with no channel named, and nothing else.
+      const resolvesToShell =
+        /headless\s*:\s*true/.test(config) && !/channel\s*:/.test(config);
+
+      expect(
+        /--only-shell\b/.test(install as string) && !resolvesToShell,
+        `${WORKFLOW_FILE} installs the headless shell alone and ${name} launches a browser that is not it`,
+      ).toBe(false);
     }
-
-    // The shell is a headless launch with no channel named, and nothing else.
-    const resolvesToShell =
-      /headless\s*:\s*true/.test(config) && !/channel\s*:/.test(config);
-
-    expect(
-      /--only-shell\b/.test(install as string) && !resolvesToShell,
-      `${WORKFLOW_FILE} installs the headless shell alone and ${CONFIG_FILE} launches a browser that is not it`,
-    ).toBe(false);
   });
 
   // Most of the hook rule family is registered at warn rather than error by the
@@ -661,6 +813,13 @@ describe("toolchain baseline", () => {
   // fake one into whatever runs next. Both were found the hard way during the
   // migration, so both are asserted across the whole tree rather than in the one
   // file that happened to hit them.
+  //
+  // This is the second guard reading the scanned file list, so it gained the
+  // second runner's directory as an input the day that directory appeared.
+  // Stating it is the point: a guard silently gaining a new input is the kind of
+  // thing that gets discovered rather than known. It is inert for those specs,
+  // which fake no clock and import no input library, so both loops below skip
+  // them on their first condition.
   it("binds every faked clock correctly in every test file", () => {
     expect(scannedFiles.length).toBeGreaterThan(0);
 
@@ -739,8 +898,39 @@ describe("toolchain baseline", () => {
   // review, because the number a reviewer would have to count is the one thing a
   // machine counts reliably. Each file is read from disk with nothing carried
   // between iterations, so the offender list is the same on one worker or many.
+  //
+  // This rule reaches the second runner's specs unmodified, and the mechanism is
+  // worth writing down because it reads like a change that would be needed and
+  // is not. The walk starts at the project root rather than at the source
+  // directory, it skips four directories and the second runner's is not one of
+  // them, and the filename pattern it matches is the runner-default shape rather
+  // than the narrower one this project happens to use, so a spec in that
+  // directory is graded the day it is written with no configuration change at
+  // all.
+  //
+  // Which half of the rule bites such a spec is the other thing worth stating.
+  // It mounts nothing and asserts something, so it satisfies the inequality
+  // trivially; what catches it is the zero-assertion branch below, which is
+  // exactly the file that navigates, produces a green run and proves nothing.
+  // The setup module in the same directory does not match the filename pattern
+  // and is therefore not graded, which is correct, because it asserts nothing by
+  // design.
+  //
+  // Two alternatives were rejected. Widening the mounting pattern to count
+  // navigations was rejected because it makes the rule mean two different things
+  // depending on which directory it is read in. Exempting the second runner with
+  // a recorded reason was rejected because what is written here is that reason
+  // plus the guard still running, which is strictly stronger and costs no code.
   it("asserts something, and no more renders than assertions, in every test file", () => {
     expect(scannedFiles.length).toBeGreaterThan(0);
+
+    // Without this the recording above goes stale silently: adding that
+    // directory to the skipped set would stop grading every end-to-end spec
+    // with the comment still sitting here saying they are graded.
+    expect(
+      scannedFiles.some(isEndToEndSpec),
+      `no file under ${E2E_DIRECTORY}/ is graded, so the rule stopped reading the end-to-end specs`,
+    ).toBe(true);
 
     const offenders: string[] = [];
 

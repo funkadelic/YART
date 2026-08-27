@@ -23,5 +23,5 @@
     "baseUrl": "./src",
     "plugins": [{ "name": "typescript-plugin-css-modules" }]
   },
-  "include": ["src", "vitest.setup.ts"]
+  "include": ["src", "vitest.setup.ts", "e2e"]
 }

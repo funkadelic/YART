@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
+    "@playwright/test": "1.62.1",
     "@testing-library/jest-dom": "7.0.1",
     "@testing-library/react": "16.3.2",
     "@testing-library/user-event": "14.6.6",
@@ -52,8 +53,8 @@
     "build": "vite build",
     "generate:cities": "node scripts/generate-cities.mjs",
     "preview": "vite preview",
-    "lint": "eslint src --max-warnings 0 && stylelint \"src/**/*.{css,scss}\"",
-    "lint:fix": "eslint src --fix && stylelint \"src/**/*.{css,scss}\" --fix",
+    "lint": "eslint src e2e --max-warnings 0 && stylelint \"src/**/*.{css,scss}\"",
+    "lint:fix": "eslint src e2e --fix && stylelint \"src/**/*.{css,scss}\" --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
@@ -61,6 +62,7 @@
     "test:coverage": "vitest run --project=jsdom --coverage",
     "test:watch": "vitest --project=jsdom",
     "test:browser": "vitest run --project=browser",
+    "test:e2e": "playwright test",
     "prepare": "husky"
   },
   "browserslist": [
