@@ -36,6 +36,17 @@ jobs:
           # pull request looks new and the new-code gate measures the wrong set.
           fetch-depth: 0
 
+      # Only on a pull request: the action compares the head against the base,
+      # and a push has no base to compare against. Placed before the install so
+      # a dependency with a known advisory stops the run before the rest of the
+      # job spends anything on it, and so the finding arrives while the change
+      # is still under review rather than as an alert after the merge.
+      - name: Dependency review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high
+
       - name: Set up Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
