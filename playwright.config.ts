@@ -1,5 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
+import globalSetup from "./e2e/globalSetup";
+
 // This is the second test runner in the tree, and it collects no coverage at
 // all. The hundred percent threshold stays measured over the deterministic
 // jsdom project alone, which is the project the only command asking for
@@ -30,15 +32,19 @@ import { defineConfig } from "@playwright/test";
 const PREVIEW_PORT = 4173;
 const PREVIEW_URL = `http://localhost:${PREVIEW_PORT}`;
 
+// Called here rather than registered through the runner's globalSetup key,
+// which is where it started and where it did not work. Measured: the web server
+// is started before the registered setup runs, so a missing build failed as the
+// sixty second readiness timeout this check exists to replace, and the setup it
+// would have failed in was never reached. This module is loaded before anything
+// is started, so the same check fails in under a second here.
+globalSetup();
+
 export default defineConfig({
   // The default file match is rooted at this file's own directory, which is the
   // repository root, so without this the runner collects every test file under
   // src/ and fails in a storm of import errors.
   testDir: "e2e",
-  // Runs before the web server starts, which is what turns a missing build into
-  // a one second message naming the build command rather than a sixty second
-  // readiness timeout blaming the server.
-  globalSetup: "./e2e/globalSetup.ts",
   // ponytail: one worker, because every spec pulls the same multi-megabyte
   // dataset asset over the preview server. Raise it when the spec count makes
   // the wall clock matter.

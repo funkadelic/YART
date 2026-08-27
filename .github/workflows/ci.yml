@@ -81,6 +81,13 @@ jobs:
       - name: Accessibility sweep
         run: npm run test:browser
 
+      # After the sweep, because both of the expensive things this step needs
+      # already exist by here: the browser binary the install above fetched, and
+      # the build the suite serves rather than produces. Placed before the scan
+      # for the same reason the sweep is, so a broken flow reports as itself.
+      - name: End-to-end sweep
+        run: npm run test:e2e
+
       # Last, so a failing test or build reports as itself rather than as an
       # absent coverage report.
       #

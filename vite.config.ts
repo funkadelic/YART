@@ -105,8 +105,12 @@ export default defineConfig({
           setupFiles: ["./vitest.setup.ts"],
           // Supplying exclude replaces the runner's own default rather than adding
           // to it, so the spread is what keeps the dependency directory out of
-          // collection. The added pattern is the browser project's whole input.
-          exclude: [...defaultExclude, "src/**/*.browser.test.tsx"],
+          // collection. The first added pattern is the browser project's whole
+          // input. The second is the other runner's whole input: both runners
+          // match the same spec filenames from the same project root, so without
+          // it this one collects the end-to-end specs and each of them fails on
+          // import with a message about being called from a configuration file.
+          exclude: [...defaultExclude, "src/**/*.browser.test.tsx", "e2e/**"],
         },
       },
       {

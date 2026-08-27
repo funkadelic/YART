@@ -8,8 +8,12 @@ const here = import.meta as ImportMeta & { dirname: string };
 const projectRoot = join(here.dirname, "..");
 
 /**
- * Runs once, before the preview server is started, and refuses the run when
- * there is no build to serve.
+ * Refuses the run when there is no build to serve.
+ *
+ * Called from playwright.config.ts at module scope rather than registered as
+ * the runner's own global setup, because that hook is measured to run after the
+ * web server rather than before it, which is a minute too late to be this
+ * check. The reason sits beside the call.
  *
  * This suite consumes an existing build rather than producing one, so the
  * failure mode it has to buy off is a missing build, and that failure is worse
