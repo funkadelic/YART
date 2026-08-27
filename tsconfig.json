@@ -32,8 +32,16 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": "./src",
     "plugins": [{ "name": "typescript-plugin-css-modules" }]
   },
-  "include": ["src", "vitest.setup.ts", "e2e"]
+  "include": [
+    "src",
+    "e2e",
+    "vitest.setup.ts",
+    "vite.config.ts",
+    "playwright.config.ts",
+    "eslint.config.js",
+    "postcss.config.js",
+    "scripts"
+  ]
 }
