@@ -49,8 +49,24 @@ export default defineConfig({
   // dataset asset over the preview server. Raise it when the spec count makes
   // the wall clock matter.
   workers: 1,
+  // A committed test.only silently reduces this gate to one spec and still
+  // exits zero, which is the same class of failure as a vacuous assertion: the
+  // pipeline reports green over work it never ran. Local runs keep the
+  // shorthand, because narrowing to one spec is what it is for.
+  forbidOnly: !!process.env.CI,
+  // Two specs wait out the dataset arriving twice, at the twenty seconds each
+  // of those waits declares. Under the thirty second default the second wait
+  // could never spend its allowance, so the number written beside it was not
+  // the number in force. Sized to hold both waits plus the rest of the spec.
+  timeout: 60_000,
   use: {
     baseURL: PREVIEW_URL,
+    // Both default to off, which left the ignore entries for them describing
+    // files nothing wrote. Kept to failures alone: a green run produces no
+    // evidence worth keeping, and a trace over a multi-megabyte dataset fetch
+    // is not cheap.
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
     // No device preset, deliberately: a preset smuggles in a viewport and a
     // browser type past the guard that holds this file against the pipeline's
     // browser install.
@@ -69,8 +85,13 @@ export default defineConfig({
     // on an address nothing is listening on.
     command: `npm run preview -- --port ${PREVIEW_PORT} --strictPort`,
     url: PREVIEW_URL,
-    // A local run attaches to a preview server already up; the pipeline, which
-    // sets this variable, always starts its own.
-    reuseExistingServer: !process.env.CI,
+    // Never reused, including locally. The precondition above proves a build
+    // exists, not that the server already listening is serving it, and nothing
+    // in the deterministic suite refreshes dist/ (the bundle test builds into a
+    // temporary directory), so a stale preview left running is the ordinary
+    // local case rather than an unlucky one. Paired with the strict port, a
+    // stale server now fails the run loudly on the bind instead of quietly
+    // answering it from an old build.
+    reuseExistingServer: false,
   },
 });
