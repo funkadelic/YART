@@ -458,3 +458,11 @@ ships:
 - Every row renders, so a page size of 100 is 100 rows in the DOM and there is
   no way to ask for all 50,250. Virtualization would fix both.
 - Sorting multiple columns at once is not implemented.
+
+## License
+
+The source in this repository is MIT licensed; see `LICENSE`.
+
+The city dataset is not covered by that license. It is redistributed from
+SimpleMaps under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and
+keeps those terms, which is what the Data attribution section above is for.
