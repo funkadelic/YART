@@ -4,6 +4,7 @@ import tseslint from "typescript-eslint";
 import react from "eslint-plugin-react";
 import prettierConfig from "eslint-config-prettier";
 import reactHooks from "eslint-plugin-react-hooks";
+import jsxA11y from "eslint-plugin-jsx-a11y";
 import { defineConfig } from "eslint/config";
 
 export default defineConfig([
@@ -32,6 +33,14 @@ export default defineConfig([
   // Note it enables the React Compiler rule family, not just the two classic
   // hook rules.
   reactHooks.configs.flat.recommended,
+  // The axe sweeps assert what a rendered tree does; this asserts what the JSX
+  // says, which is the half that has no test to render it. A control that no
+  // case mounts is invisible to both sweeps and visible here.
+  //
+  // recommended rather than strict: strict turns on rules whose correct answer
+  // depends on the surrounding markup, which is what makes them noisy in a tree
+  // this small rather than more careful.
+  jsxA11y.flatConfigs.recommended,
   // src/test/ is excluded from coverage, and unlike the other three exclude
   // patterns its contents actually execute. Nothing but the runner's own
   // structure keeps a module with real logic from being placed there and
