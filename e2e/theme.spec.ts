@@ -61,12 +61,21 @@ test("the stored theme is stamped on the document element with the module bundle
     )
     .toBe("dark");
 
-  await page.route(BUILT_SCRIPTS, (route) => route.abort());
+  // Counted rather than inferred. Asserting the table is absent after the
+  // reload proves nothing: the table is absent at that instant either way,
+  // because it does not render until the dataset fetch and the seam's latency
+  // resolve. Measured, that version stays green with the abort pattern matching
+  // nothing, which would leave the two assertions below satisfied by the theme
+  // hook's post-hydration effect, the exact vacuous pass this file exists to
+  // avoid.
+  let abortedScripts = 0;
+  await page.route(BUILT_SCRIPTS, (route) => {
+    abortedScripts += 1;
+    return route.abort();
+  });
   await page.reload();
 
-  // The isolation itself, checked, so this cannot silently stop being an
-  // isolation test if the abort pattern ever stops matching.
-  await expect(page.getByRole("table")).toHaveCount(0);
+  expect(abortedScripts).toBeGreaterThan(0);
 
   // Both halves, each against the exact expected value. Delete the blocking
   // script from the document and both read empty, which is the falsifiability
