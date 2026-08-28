@@ -89,7 +89,7 @@ Every push sweeps the running app for violations of a set of automated rules and
 
 ### What ships
 
-- Four catalogs: English, Spanish, French, and a right-to-left pseudo-locale. The pseudo-locale is not a language. It is readable English padded and wrapped in direction marks, and it ships so that the direction and the truncation have something to prove themselves against, because the other three all read left to right
+- Four catalogs: English, Spanish, French, and a right-to-left pseudo-locale. The pseudo-locale is readable English, padded and wrapped in direction marks. It ships so the direction and the truncation can be tested, because the other three all read left to right
 - A language picker in the header, offering the machine's own preference first and then each catalog named in its own language, so a reader who cannot read the interface in front of them can still find their own
 - Every reader-facing string comes from a catalog, the failure messages and the licence attribution included. One key union is derived from the base catalog, so a missing or misspelled key fails the type check rather than rendering at runtime
 - The document's language and direction follow the resolved locale, and both are stamped before the first paint, so no wrong-language and no wrong-direction frame is ever shown
@@ -98,7 +98,7 @@ Every push sweeps the running app for violations of a set of automated rules and
 
 ### Why there is no internationalization library
 
-The strings resolve through typed catalogs and the platform's own `Intl` namespace. Nothing was installed for it. Three general-purpose libraries were evaluated first, and their weight against what this application actually ships is the argument:
+The strings resolve through typed catalogs and the platform's own `Intl` namespace. Nothing was installed for it. The libraries considered first, and what each would add:
 
 | Library                             | Added weight, minified and gzipped               |
 | ----------------------------------- | ------------------------------------------------ |
@@ -107,11 +107,11 @@ The strings resolve through typed catalogs and the platform's own `Intl` namespa
 | `@lingui/core` with `@lingui/react` | about 10.4 kB                                    |
 | `typesafe-i18n`                     | small, plus a generator watching the source tree |
 
-The production script this application ships was 66.77 kB gzipped when those numbers were taken, on 2026-08-28, so the three add between roughly a sixth and a third again of the compressed JavaScript a reader downloads. What they buy for it is a message format that translation vendors consume, plus runtime language detection and a plugin ecosystem. These forty-odd strings across four catalogs never leave this repository and are written by the same person who writes the code, so the interchange format is the whole benefit and it goes unclaimed. Two of the three would also cost message arguments their type checking, or add a build step to get it back, in a tree where `satisfies` already gives it for nothing.
+The production script this application ships was 66.77 kB gzipped when those numbers were taken, on 2026-08-28, so the first three add between roughly a sixth and a third again of the compressed JavaScript a reader downloads. What they buy for it is a message format that translation vendors consume, plus runtime language detection and a plugin ecosystem. These forty-odd strings across four catalogs never leave this repository and are written by the same person who writes the code, so nothing here uses the interchange format. Two of those three would also cost message arguments their type checking, or add a build step to get it back, where `satisfies` already gives it.
 
-Rerun `npm run build` to check the ratio for yourself; the numbers above are a measurement with a date on it, not a standing claim.
+Rerun `npm run build` to check the ratio for yourself. The numbers above will drift as the dependencies do.
 
-The answer would change for a locale with more plural categories than the four shipped catalogs need, which is the point at which a real message formatter starts earning its keep.
+A locale with more plural categories than these four need would change the answer, and would want a real message formatter.
 
 ### What stays in the source language
 

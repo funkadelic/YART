@@ -8,17 +8,16 @@ import {
 /**
  * The right-to-left pseudo-locale.
  *
- * Not a language. It exists so direction and truncation have something to prove
- * themselves against, because the three catalogs beside it are all left to
- * right and would leave both untestable.
+ * It exists so the direction and the truncation can be tested, because the
+ * three catalogs beside it all read left to right and would leave both
+ * untestable.
  *
  * A deliberate hybrid of the two pseudo-locales the browsers already ship: the
  * direction comes from the right-to-left one, the readability and the padding
  * come from the left-to-right one. The character reversal the real right-to-left
- * pseudo-locale performs is dropped on purpose, and dropping it is the point
- * rather than an omission: anyone reading this repository has to be able to read
- * this catalog, which is the whole reason it was taken over shipping Arabic
- * strings nobody here can review.
+ * pseudo-locale performs is dropped on purpose: anyone reading this repository
+ * has to be able to read this catalog, which is why it was taken over shipping
+ * Arabic strings nobody here can review.
  *
  * Every entry is derived from the corresponding entry of the base catalog rather
  * than committed as a transformed literal, so this file cannot drift from the
