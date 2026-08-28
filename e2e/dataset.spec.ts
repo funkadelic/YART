@@ -38,6 +38,13 @@ const STUB_FLOOR_BYTES = 1_000_000;
 // the unsearched view filters nothing.
 const TOTAL_ROWS = 50250;
 
+// The tag the application resolves for the locale this run is pinned to in
+// playwright.config.ts. The caption groups its count on that tag, so the
+// expectation below is computed through the platform rather than typed: a
+// separator written by hand is the one thing a failure here cannot show.
+const RESOLVED_TAG = "en-US";
+const GROUPED_TOTAL = new Intl.NumberFormat(RESOLVED_TAG).format(TOTAL_ROWS);
+
 test("the running page fetches the content-hashed dataset asset", async ({
   page,
 }) => {
@@ -81,7 +88,7 @@ test("the running page fetches the content-hashed dataset asset", async ({
   // Ties the transport back to what the reader sees: a fixture-sized payload
   // would report a fixture-sized count here.
   await expect(page.getByRole("table")).toHaveAccessibleName(
-    `City data with ${TOTAL_ROWS} entries, currently not sorted`,
+    `City data with ${GROUPED_TOTAL} entries, currently not sorted`,
     { timeout: DATASET_READY_TIMEOUT_MS },
   );
 

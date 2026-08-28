@@ -29,7 +29,16 @@ const RESTORED_ADDRESS = "/?q=san&sort=-population&page=2&size=25";
 // src/data/worldcities/cities.json. A change to that file moves it.
 const MATCHING_ROWS = 1701;
 
-const RESTORED_CAPTION = `City data with ${MATCHING_ROWS} entries, currently sorted by Population descending`;
+// The tag the application resolves for the locale this run is pinned to in
+// playwright.config.ts. The caption groups its count on that tag, so the two
+// expectations below are computed through the platform rather than typed: a
+// separator written by hand is the one thing a failure here cannot show.
+const RESOLVED_TAG = "en-US";
+const GROUPED_MATCHES = new Intl.NumberFormat(RESOLVED_TAG).format(
+  MATCHING_ROWS,
+);
+
+const RESTORED_CAPTION = `City data with ${GROUPED_MATCHES} entries, currently sorted by Population descending`;
 
 test("a reload restores the whole view from the address", async ({ page }) => {
   await page.goto(RESTORED_ADDRESS);
@@ -119,6 +128,6 @@ test("a sort key naming no column is dropped on arrival", async ({ page }) => {
   // is canonicalized on arrival rather than reaching the comparator.
   await expect(page).toHaveURL("/?q=san&size=25");
   await expect(page.getByRole("table")).toHaveAccessibleName(
-    `City data with ${MATCHING_ROWS} entries, currently not sorted`,
+    `City data with ${GROUPED_MATCHES} entries, currently not sorted`,
   );
 });
