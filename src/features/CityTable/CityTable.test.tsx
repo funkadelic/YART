@@ -8,6 +8,7 @@ import { numberFormatFor } from "../../i18n/format";
 import { setLocaleChoice } from "../../i18n/localeStore";
 import { required } from "../../test/required";
 import { buildCityColumns } from "./cityColumns";
+import { buildTableLabels } from "./cityLabels";
 
 // A spy over the real builder rather than a replacement for it, so every case
 // in this file goes on exercising the shipping columns. The one thing a spy can
@@ -18,6 +19,15 @@ vi.mock("./cityColumns", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./cityColumns")>();
 
   return { ...actual, buildCityColumns: vi.fn(actual.buildCityColumns) };
+});
+
+// The same spy over the labels builder, and for the same reason. The object it
+// returns is held by the table across renders, so how often it is built is the
+// whole content of the claim that its identity follows the locale.
+vi.mock("./cityLabels", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./cityLabels")>();
+
+  return { ...actual, buildTableLabels: vi.fn(actual.buildTableLabels) };
 });
 
 // Mock data for testing
@@ -68,6 +78,22 @@ const mockCities: City[] = [
     population: 28514000,
   },
 ];
+
+/**
+ * A run of rows wide enough to page, generated rather than written out. Nothing
+ * in the content is asserted; only how many there are.
+ */
+function pagedFixture(count: number): City[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: index + 1,
+    name: `City ${index + 1}`,
+    nameAscii: `City ${index + 1}`,
+    country: `Country ${index + 1}`,
+    countryIso3: `C${index.toString().padStart(2, "0")}`,
+    capital: index % 2 === 0 ? "primary" : "admin",
+    population: 1000000 + index * 100000,
+  }));
+}
 
 const defaultProps = {
   data: mockCities,
@@ -1005,6 +1031,144 @@ describe("CityTable", () => {
       expect(screen.getByText(fr.columnName)).toBeInTheDocument();
       expect(screen.getByText(fr.columnCountryCode)).toBeInTheDocument();
       expect(screen.queryByText("Country Code")).not.toBeInTheDocument();
+    });
+
+    // The table's own chrome, which used to be English literals inside the
+    // shared component. Every one of them moves on the same render, because
+    // they all arrive in the one object the memo below rebuilds.
+    it("takes the table's own chrome from the catalog", async () => {
+      const user = userEvent.setup();
+      setLocaleChoice("fr");
+
+      const { container, rerender } = render(
+        <CityTable
+          {...defaultProps}
+          data={[]}
+          loading={true}
+          datasetReady={false}
+        />,
+      );
+
+      expect(screen.getByText(fr.loading)).toBeInTheDocument();
+
+      rerender(<CityTable {...defaultProps} />);
+
+      // Re-read rather than held, because the assertion is about what the
+      // caption says now and the second read happens after a re-render.
+      const captionText = () =>
+        screen.getByRole("table").querySelector("caption")?.textContent ?? "";
+
+      expect(captionText()).toContain(fr.unsorted);
+
+      const announcer = container.querySelector(
+        '[aria-live="polite"][aria-atomic="true"]',
+      );
+
+      await user.click(screen.getByRole("button", { name: fr.columnName }));
+
+      expect(announcer).toHaveTextContent(
+        fr.sortedAnnouncement(fr.columnName, "asc"),
+      );
+      expect(captionText()).toContain(fr.sortSummary(fr.columnName, "asc"));
+    });
+
+    it("takes the failure and the way back from the catalog", () => {
+      setLocaleChoice("fr");
+
+      render(
+        <CityTable
+          {...defaultProps}
+          data={[]}
+          errorMessage="quelque chose a mal tourné"
+          onRetry={() => {}}
+        />,
+      );
+
+      expect(
+        screen.getByText(fr.error("quelque chose a mal tourné"), asWritten),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: fr.retry }),
+      ).toBeInTheDocument();
+    });
+
+    it("takes the search box's own two strings from the catalog", () => {
+      setLocaleChoice("fr");
+
+      render(<CityTable {...defaultProps} />);
+
+      const box = screen.getByRole("textbox", { name: fr.searchName });
+      expect(box).toHaveAttribute("placeholder", fr.searchPlaceholder);
+    });
+
+    // One catalog entry per control, read twice. Two entries would let a
+    // translation move the tooltip and leave the accessible name in the
+    // previous language, which nothing on screen would show.
+    it("names each page control once, as both its tooltip and its accessible name", () => {
+      setLocaleChoice("fr");
+
+      render(<CityTable {...defaultProps} data={pagedFixture(25)} />);
+
+      expect(
+        screen.getByRole("navigation", { name: fr.paginationNavigation }),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText(fr.pageSize, asWritten)).toBeInTheDocument();
+
+      for (const name of [
+        fr.firstPage,
+        fr.previousPage,
+        fr.nextPage,
+        fr.lastPage,
+      ]) {
+        expect(screen.getByRole("button", { name })).toHaveAttribute(
+          "title",
+          name,
+        );
+      }
+    });
+
+    // Enough pages that the total carries a group separator, so the assertion
+    // is about grouping rather than about a number too small to group. Both
+    // sides are computed through the catalog on the resolved tag: the French
+    // separator is a narrow no-break space and a typed literal holding an
+    // ordinary one fails on a difference no terminal renders.
+    it("groups the page label's numbers on the resolved locale", () => {
+      setLocaleChoice("fr");
+
+      const rows = pagedFixture(10010);
+      const totalPages = rows.length / 10;
+
+      render(<CityTable {...defaultProps} data={rows} />);
+
+      const expected = fr.pageStatus("fr-FR", 1, totalPages);
+
+      expect(expected).not.toBe(`Page 1 sur ${String(totalPages)}`);
+      expect(screen.getByText(expected, asWritten)).toBeInTheDocument();
+    });
+
+    // The same claim the column array carries, and for the same reason: the
+    // table holds this object across renders and several of its entries are
+    // closures, so its identity has to move when the locale does and must not
+    // move otherwise.
+    it("builds the labels object once per locale and not once per render", () => {
+      const built = vi.mocked(buildTableLabels);
+
+      setLocaleChoice("en");
+
+      const { rerender } = render(<CityTable {...defaultProps} />);
+
+      expect(built).toHaveBeenCalledTimes(1);
+
+      rerender(<CityTable {...defaultProps} />);
+      rerender(<CityTable {...defaultProps} loading={true} />);
+
+      expect(built).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        setLocaleChoice("fr");
+      });
+
+      expect(built).toHaveBeenCalledTimes(2);
     });
 
     // The array identity is what the sort and page memos downstream depend on:

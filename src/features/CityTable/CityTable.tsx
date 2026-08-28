@@ -14,7 +14,7 @@ import {
 import { SearchInput } from "../../components/SearchInput";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 import { useLocale } from "../../hooks/useLocale";
-import { buildTableLabels } from "./cityLabels";
+import { buildSearchLabels, buildTableLabels } from "./cityLabels";
 import {
   CITY_COLUMN_IDS,
   buildCityColumns,
@@ -77,6 +77,12 @@ export function CityTable({
   // change otherwise. That is exactly what a memo keyed on the catalog and the
   // tag gives, and a module-scope constant cannot give it at all.
   const labels = useMemo(() => buildTableLabels(catalog, tag), [catalog, tag]);
+
+  // The search box's own two strings, built from the same catalog on the same
+  // render so the whole tree changes language at once. Keyed on the catalog
+  // alone because neither entry weaves a number, so the tag decides nothing
+  // here and listing it would claim a dependency this does not have.
+  const searchLabels = useMemo(() => buildSearchLabels(catalog), [catalog]);
 
   // The other documented exception to module-scope construction, and it keys on
   // exactly the two values the labels above key on. That is a requirement
@@ -277,7 +283,7 @@ export function CityTable({
       <SearchInput
         value={searchInput}
         onChange={handleSearchChange}
-        placeholder="Search for a city"
+        labels={searchLabels}
       />
       <DataTable
         rows={data}

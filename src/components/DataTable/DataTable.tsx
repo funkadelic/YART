@@ -285,6 +285,7 @@ export function DataTable<T, Id extends string>({
           pageSize={state.pageSize}
           onPageChange={onPageChange}
           onPageSizeChange={onPageSizeChange}
+          labels={labels.pagination}
         />
       </>
     );

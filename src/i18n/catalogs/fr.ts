@@ -77,6 +77,8 @@ export const fr = {
   previousPage: "Aller à la page précédente",
   nextPage: "Aller à la page suivante",
   lastPage: "Aller à la dernière page",
+  searchName: "Rechercher",
+  searchPlaceholder: "Rechercher une ville",
   pageStatus: (tag: string, page: number, totalPages: number) => {
     const number = numberFormatFor(tag);
 

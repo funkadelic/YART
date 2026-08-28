@@ -1,4 +1,5 @@
 import type { DataTableLabels } from "../../components/DataTable/DataTable";
+import type { SearchInputLabels } from "../../components/SearchInput";
 import type { Catalog } from "../../i18n/catalogs/en";
 
 /**
@@ -40,5 +41,23 @@ export function buildTableLabels(
       pageStatus: (page, totalPages) =>
         catalog.pageStatus(tag, page, totalPages),
     },
+  };
+}
+
+/**
+ * The catalog, narrowed to the two strings the search box shows.
+ *
+ * Its own builder rather than a third field on the object above, because the box
+ * is a sibling of the table rather than part of it: the table never sees these
+ * two strings and has no business carrying them.
+ *
+ * No tag, and the absence is the point. Neither entry weaves a number or a
+ * plural, so there is nothing here for a formatter to do, and taking a parameter
+ * that changes nothing would put a second key on the memo that reads it.
+ */
+export function buildSearchLabels(catalog: Catalog): SearchInputLabels {
+  return {
+    name: catalog.searchName,
+    placeholder: catalog.searchPlaceholder,
   };
 }

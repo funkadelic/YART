@@ -41,6 +41,7 @@ interface PaginationProps {
   readonly pageSize: number;
   readonly onPageChange: (page: number) => void;
   readonly onPageSizeChange: (pageSize: number) => void;
+  readonly labels: PaginationLabels;
 }
 
 /**
@@ -50,6 +51,11 @@ interface PaginationProps {
  * a change to how sorting is held cannot reach it. The select's value is parsed
  * to a number here, at the only place that sees the event, so the callback
  * never receives a string.
+ *
+ * Every word it shows arrives in the labels object, the table's own slice of
+ * which is handed down whole rather than spread or reshaped. Each of the four
+ * actions reads one entry twice, once as the tooltip and once as the accessible
+ * name, which is the only arrangement in which the two cannot drift apart.
  */
 export function Pagination({
   page,
@@ -57,6 +63,7 @@ export function Pagination({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  labels,
 }: PaginationProps) {
   // Derived rather than a fixed string, so two tables on one page do not label
   // each other's select.
@@ -84,7 +91,7 @@ export function Pagination({
   return (
     <div className={styles.paginationContainer}>
       <div className={styles.pageSizeContainer}>
-        <label htmlFor={pageSizeId}>Per page:</label>
+        <label htmlFor={pageSizeId}>{labels.pageSize}</label>
         {/* A closed list, so nothing outside PAGE_SIZE_OPTIONS can reach the
             arithmetic through this control. */}
         <select
@@ -102,19 +109,19 @@ export function Pagination({
 
       {totalPages > 1 && (
         <nav
-          aria-label="Table pagination navigation"
+          aria-label={labels.navigation}
           className={styles.navigationContainer}
         >
           <button
             type="button"
             onClick={handleFirstPage}
             disabled={page === 1}
-            title="Go to first page"
+            title={labels.firstPage}
             // a11y: named by the action alone, as the sort headers are. A name
             // carrying the position changes under focus, which re-announces the
             // whole control on every press; the live region below is what
             // reports where the user landed.
-            aria-label="Go to first page"
+            aria-label={labels.firstPage}
             className={styles.navButton}
           >
             <MdFirstPage aria-hidden="true" />
@@ -124,8 +131,8 @@ export function Pagination({
             type="button"
             onClick={() => onPageChange(page - 1)}
             disabled={page === 1}
-            title="Go to previous page"
-            aria-label="Go to previous page"
+            title={labels.previousPage}
+            aria-label={labels.previousPage}
             className={styles.navButton}
           >
             <MdChevronLeft aria-hidden="true" />
@@ -140,15 +147,15 @@ export function Pagination({
             aria-live="polite"
             aria-atomic="true"
           >
-            Page {page} of {totalPages}
+            {labels.pageStatus(page, totalPages)}
           </span>
 
           <button
             type="button"
             onClick={() => onPageChange(page + 1)}
             disabled={page === totalPages}
-            title="Go to next page"
-            aria-label="Go to next page"
+            title={labels.nextPage}
+            aria-label={labels.nextPage}
             className={styles.navButton}
           >
             <MdChevronRight aria-hidden="true" />
@@ -158,8 +165,8 @@ export function Pagination({
             type="button"
             onClick={handleLastPage}
             disabled={page === totalPages}
-            title="Go to last page"
-            aria-label="Go to last page"
+            title={labels.lastPage}
+            aria-label={labels.lastPage}
             className={styles.navButton}
           >
             <MdLastPage aria-hidden="true" />

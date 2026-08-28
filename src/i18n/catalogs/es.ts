@@ -58,6 +58,8 @@ export const es = {
   previousPage: "Ir a la página anterior",
   nextPage: "Ir a la página siguiente",
   lastPage: "Ir a la última página",
+  searchName: "Buscar",
+  searchPlaceholder: "Buscar una ciudad",
   pageStatus: (tag: string, page: number, totalPages: number) => {
     const number = numberFormatFor(tag);
 

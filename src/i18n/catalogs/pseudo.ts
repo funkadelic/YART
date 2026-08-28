@@ -58,9 +58,9 @@ export function pseudoize(message: string): string {
 }
 
 /**
- * The pseudo-locale catalog. The two function-valued entries pseudo-translate
- * the base catalog's result rather than a template, so the numbers woven into
- * the sentence land inside the brackets where a truncation would cut them.
+ * The pseudo-locale catalog. Every function-valued entry pseudo-translates the
+ * base catalog's result rather than a template, so the values woven into a
+ * sentence land inside the brackets where a truncation would cut them.
  *
  * It declares no plural nouns of its own, and that is not an omission. Its
  * strings really are English and its resolved tag really is the English one, so
@@ -94,6 +94,8 @@ export const pseudo = {
   previousPage: pseudoize(en.previousPage),
   nextPage: pseudoize(en.nextPage),
   lastPage: pseudoize(en.lastPage),
+  searchName: pseudoize(en.searchName),
+  searchPlaceholder: pseudoize(en.searchPlaceholder),
   pageStatus: (tag: string, page: number, totalPages: number) =>
     pseudoize(en.pageStatus(tag, page, totalPages)),
 } satisfies Catalog;
