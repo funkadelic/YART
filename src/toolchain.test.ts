@@ -62,9 +62,10 @@ type Range = readonly [start: number, end: number];
  * Every comment in the file.
  *
  * A comment is trivia rather than a node, so it is reached through the token it
- * precedes rather than found in the tree. Every comment precedes exactly one
- * token, the end-of-file token included, so walking the leaves reaches each one
- * once and no comment is missed at the end of a file or before a closing brace.
+ * is attached to rather than found in the tree. Every comment is attached to
+ * exactly one token, the end-of-file token included, so walking the leaves
+ * reaches each one once and none is missed at the end of a file or before a
+ * closing brace.
  */
 function commentRanges(file: ts.SourceFile): Range[] {
   const text = file.getFullText();
@@ -74,9 +75,16 @@ function commentRanges(file: ts.SourceFile): Range[] {
     const children = node.getChildren(file);
 
     if (children.length === 0) {
-      const leading =
-        ts.getLeadingCommentRanges(text, node.getFullStart()) ?? [];
-      for (const comment of leading) found.push([comment.pos, comment.end]);
+      // Both, because the two APIs partition the comments rather than overlap.
+      // A comment sitting on the same line as the code before it is trailing by
+      // definition and the leading reader skips it, so reading leading alone
+      // leaves every end-of-line comment in the file visible as code.
+      const attached = [
+        ...(ts.getLeadingCommentRanges(text, node.getFullStart()) ?? []),
+        ...(ts.getTrailingCommentRanges(text, node.getEnd()) ?? []),
+      ];
+
+      for (const comment of attached) found.push([comment.pos, comment.end]);
       return;
     }
 
