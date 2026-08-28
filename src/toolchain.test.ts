@@ -1,5 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import { required } from "./test/required";
 
@@ -34,135 +35,105 @@ const manifest = JSON.parse(
 ) as Manifest;
 
 /**
- * A character that can end a value. It is the whole of the rule that tells a
- * division from a regular expression literal, which both open with a slash and
- * are distinguished by nothing else. The closing brace and the less-than sign
- * are on the list for JSX rather than for JavaScript: a self-closing tag puts a
- * slash right after `{...props}` and a closing tag puts one right after `<`, and
- * reading either as a regular expression would run to the next slash in the
- * file.
- */
-const ENDS_A_VALUE = /[\w$)\]}"'`/<]/;
-
-/** A span of source, and whether the scanner reads it as code. */
-interface Span {
-  start: number;
-  end: number;
-  kind: "code" | "comment" | "literal";
-}
-
-/**
- * The index just past the comment or literal beginning at `start`, or null when
- * ordinary code begins there. `previous` is the last significant character
- * before it, which is what decides whether a slash opens a regular expression.
- */
-function spanEnd(
-  source: string,
-  start: number,
-  previous: string,
-): number | null {
-  const opener = source[start];
-
-  if (opener === "/" && source[start + 1] === "/") {
-    const end = source.indexOf("\n", start);
-    return end === -1 ? source.length : end;
-  }
-
-  if (opener === "/" && source[start + 1] === "*") {
-    const end = source.indexOf("*/", start + 2);
-    return end === -1 ? source.length : end + 2;
-  }
-
-  const isRegex = opener === "/" && !ENDS_A_VALUE.test(previous);
-
-  if (!isRegex && opener !== '"' && opener !== "'" && opener !== "`") {
-    return null;
-  }
-
-  let index = start + 1;
-  let inCharacterClass = false;
-
-  while (index < source.length) {
-    const character = source[index];
-
-    if (character === "\\") {
-      index += 2;
-      continue;
-    }
-
-    if (isRegex && character === "[") inCharacterClass = true;
-    else if (isRegex && character === "]") inCharacterClass = false;
-    else if (character === opener && !inCharacterClass) return index + 1;
-    // An unterminated quote is a misread rather than a real literal, so it ends
-    // at the line break instead of consuming the rest of the file.
-    else if (character === "\n" && opener !== "`") return index;
-
-    index += 1;
-  }
-
-  return source.length;
-}
-
-/**
- * The source split into code, comments and literals in one pass.
+ * The file parsed once, as TSX so a JSX tag and a generic arrow both read the
+ * way the tree writes them.
  *
- * One pass rather than two regex sweeps, because the two orderings a sweep can
- * take are wrong in opposite directions. Blanking comments first rewrites a glob
- * such as "src/**" followed later by "*\/y", whose two string literals open and
- * close a block comment between them and take the code in between with them.
- * Blanking literals first reads the apostrophe in a comment's "the file's own"
- * as opening a string, and swallows to the next apostrophe. A scanner that knows
- * which construct it is inside has neither failure.
+ * A parse rather than a scan, because the one question a character-level
+ * scanner cannot answer is the one that matters here: whether a slash opens a
+ * regular expression or divides is decided by the grammar, not by the
+ * characters either side of it, and a slash inside a JSX tag is a third case
+ * again. The parser settles all three; nothing below approximates them.
  */
-function spans(source: string): Span[] {
-  const found: Span[] = [];
-  let index = 0;
-  let codeStart = 0;
-  let previous = "";
+function parse(source: string): ts.SourceFile {
+  return ts.createSourceFile(
+    "scanned.tsx",
+    source,
+    ts.ScriptTarget.Latest,
+    // Parent pointers, which the walk to the leaves below needs.
+    true,
+    ts.ScriptKind.TSX,
+  );
+}
 
-  while (index < source.length) {
-    const end = spanEnd(source, index, previous);
+/** A half-open span of the source, in UTF-16 code units. */
+type Range = readonly [start: number, end: number];
 
-    if (end === null) {
-      const character = required(source[index], "the character at the cursor");
-      if (!/\s/.test(character)) previous = character;
-      index += 1;
-      continue;
+/**
+ * Every comment in the file.
+ *
+ * A comment is trivia rather than a node, so it is reached through the token it
+ * precedes rather than found in the tree. Every comment precedes exactly one
+ * token, the end-of-file token included, so walking the leaves reaches each one
+ * once and no comment is missed at the end of a file or before a closing brace.
+ */
+function commentRanges(file: ts.SourceFile): Range[] {
+  const text = file.getFullText();
+  const found: Range[] = [];
+
+  const visit = (node: ts.Node): void => {
+    const children = node.getChildren(file);
+
+    if (children.length === 0) {
+      const leading =
+        ts.getLeadingCommentRanges(text, node.getFullStart()) ?? [];
+      for (const comment of leading) found.push([comment.pos, comment.end]);
+      return;
     }
 
-    if (index > codeStart) {
-      found.push({ start: codeStart, end: index, kind: "code" });
-    }
+    for (const child of children) visit(child);
+  };
 
-    const following = source[index + 1];
-    const kind =
-      source[index] === "/" && (following === "/" || following === "*")
-        ? "comment"
-        : "literal";
-
-    found.push({ start: index, end, kind });
-
-    // A comment is not a value, so it must not decide how the next slash reads.
-    // A block comment ends in "/", which ENDS_A_VALUE accepts, so letting one
-    // set this reads the regular expression after it as a division and runs to
-    // whatever slash comes next. A literal does end a value and must set it.
-    if (kind !== "comment")
-      previous = required(source[end - 1], "the character ending the span");
-
-    index = end;
-    codeStart = end;
-  }
-
-  if (index > codeStart) {
-    found.push({ start: codeStart, end: index, kind: "code" });
-  }
-
+  visit(file);
   return found;
 }
 
-/** A span reduced to spaces, keeping its line breaks so offsets still line up. */
-function blank(text: string): string {
-  return text.replace(/[^\n]/g, " ");
+/**
+ * Every string, template chunk, regular expression and run of JSX text.
+ *
+ * A template's interpolations are code and stay code: only the literal chunks
+ * around them are listed here, which is why the template head, middle and tail
+ * are named separately rather than the template expression that holds them.
+ */
+function literalRanges(file: ts.SourceFile): Range[] {
+  const found: Range[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isStringLiteralLike(node) ||
+      ts.isRegularExpressionLiteral(node) ||
+      ts.isTemplateHead(node) ||
+      ts.isTemplateMiddle(node) ||
+      ts.isTemplateTail(node) ||
+      ts.isJsxText(node)
+    ) {
+      found.push([node.getStart(file), node.getEnd()]);
+    }
+
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
+  return found;
+}
+
+/**
+ * The source with every listed range reduced to spaces, keeping the line breaks
+ * so an index into the result is still an index into the original.
+ *
+ * Split by code unit rather than by code point, because that is the unit the
+ * parser reports its positions in and an astral character would otherwise slide
+ * every offset after it by one.
+ */
+function blankRanges(source: string, ranges: readonly Range[]): string {
+  const characters = source.split("");
+
+  for (const [start, end] of ranges) {
+    for (let index = start; index < end; index += 1) {
+      if (characters[index] !== "\n") characters[index] = " ";
+    }
+  }
+
+  return characters.join("");
 }
 
 /**
@@ -173,27 +144,18 @@ function blank(text: string): string {
  * guard below reads the provider name out of one.
  */
 function stripComments(source: string): string {
-  return spans(source)
-    .map((span) => {
-      const text = source.slice(span.start, span.end);
-      return span.kind === "comment" ? blank(text) : text;
-    })
-    .join("");
+  return blankRanges(source, commentRanges(parse(source)));
 }
 
 /**
  * Source with everything that is not code blanked out, so an index into it is an
  * index into the original and every character it still shows is code. This is
- * what the parenthesis counting below reads: a string holding a bracket and a
- * pattern such as /\(/ both carry parentheses that balance nothing.
+ * what the call counting below reads: a string holding a call and a pattern such
+ * as /expect\(/ both name calls that happen nowhere.
  */
 function codeMask(source: string): string {
-  return spans(source)
-    .map((span) => {
-      const text = source.slice(span.start, span.end);
-      return span.kind === "code" ? text : blank(text);
-    })
-    .join("");
+  const file = parse(source);
+  return blankRanges(source, [...commentRanges(file), ...literalRanges(file)]);
 }
 
 /**
@@ -218,34 +180,29 @@ function normalizeComment(source: string): string {
 }
 
 /**
- * The argument text of every call to the named callee, sliced on balanced parentheses
- * so each call site can be judged on its own arguments instead of on whether the file
- * mentions an option somewhere.
+ * The argument text of every call to the named callee, so each call site can be
+ * judged on its own arguments instead of on whether the file mentions an option
+ * somewhere.
+ *
+ * The callee is matched as the tree writes it, so `userEvent.setup` finds the
+ * method and never a bare `setup`, and a call named inside a string or a comment
+ * is not a call expression and so is not found at all.
  */
 function callArguments(source: string, callee: string): string[] {
-  // Matched and counted over the mask so a call named inside a string is not
-  // found and a bracket inside one does not close the slice, then sliced out of
-  // the source so the caller reads the arguments as written.
-  const mask = codeMask(source);
-  const pattern = new RegExp(`${callee}\\s*\\(`, "g");
+  const file = parse(source);
   const found: string[] = [];
-  let match: RegExpExecArray | null;
 
-  while ((match = pattern.exec(mask)) !== null) {
-    const start = match.index + match[0].length;
-    let index = start;
-    let depth = 1;
-
-    while (index < mask.length && depth > 0) {
-      const character = mask[index];
-      if (character === "(") depth += 1;
-      else if (character === ")") depth -= 1;
-      index += 1;
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node) && node.expression.getText(file) === callee) {
+      found.push(
+        node.arguments.map((argument) => argument.getText(file)).join(", "),
+      );
     }
 
-    found.push(source.slice(start, index - 1));
-  }
+    node.forEachChild(visit);
+  };
 
+  file.forEachChild(visit);
   return found;
 }
 
@@ -918,7 +875,7 @@ describe("toolchain baseline", () => {
 
       // Judged per call site: one bound session elsewhere in the file says nothing
       // about this one.
-      for (const args of callArguments(source, "userEvent\\.setup")) {
+      for (const args of callArguments(source, "userEvent.setup")) {
         if (!BINDS_CLOCK.test(args) && !DISABLES_DELAY.test(args)) {
           offenders.push(
             `${name}: opens an input session that is not bound to the fake clock`,
