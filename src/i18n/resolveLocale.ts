@@ -81,7 +81,10 @@ const RESOLVED_LOCALES = {
  * in a record keyed by the closed union.
  */
 export function isCatalogId(value: unknown): value is CatalogId {
-  return CATALOG_IDS.some((id) => id === value);
+  // Widened for the search alone. The array is a closed tuple of catalog ids,
+  // so its own includes rejects an unknown argument outright, and the whole
+  // point here is to ask about one.
+  return (CATALOG_IDS as readonly unknown[]).includes(value);
 }
 
 /** Whether a value names something the picker can be set to. */

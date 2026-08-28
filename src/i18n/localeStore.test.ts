@@ -194,7 +194,7 @@ describe("the locale store", () => {
         const afterFirst = added.mock.calls.length;
 
         withSubscriber(() => {
-          expect(added.mock.calls.length).toBe(afterFirst);
+          expect(added.mock.calls).toHaveLength(afterFirst);
         });
       });
     });

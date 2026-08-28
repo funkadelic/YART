@@ -39,13 +39,17 @@ export function Footer() {
         {catalog
           .attribution(SOURCE_NAME, LICENSE_NAME)
           .split(EMBEDDED_NAMES)
-          .map((part, at) => {
+          .map((part) => {
             const href = LINK_URLS[part];
 
+            // The part itself is the key. The split alternates run of text
+            // with identifier, so no two siblings carry the same string, and
+            // the position a part sits at is exactly what a translation is
+            // free to move.
             return href === undefined ? (
               part
             ) : (
-              <a key={at} href={href}>
+              <a key={part} href={href}>
                 {part}
               </a>
             );

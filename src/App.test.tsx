@@ -187,7 +187,7 @@ describe("App", () => {
         `Error: ${es.datasetError.transport("es-ES", 0)}`,
       ),
     ).toBeInTheDocument();
-    expect(getCitiesSeam.mock.calls.length).toBe(callsBefore);
+    expect(getCitiesSeam.mock.calls).toHaveLength(callsBefore);
   });
 
   it("issues one search after the debounce window rather than one per keystroke", async () => {
