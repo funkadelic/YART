@@ -875,6 +875,27 @@ const PROVENANCE_REGENERATION =
   "committed one.";
 
 /**
+ * The ceiling on what the catalogs reach, written out here for the same reason
+ * the provenance sentences above are: a rewrite in either document that carries
+ * it cannot move both sides of the assertion at once.
+ *
+ * Two documents rather than one because the question arrives from two
+ * directions. A reader evaluating the internationalization opens the README; a
+ * reader wondering why a country name is still English is already looking at the
+ * module that defines the city type. Stating it twice is deliberate, and this is
+ * what stops the two from becoming two different statements.
+ */
+const SOURCE_FORM_CEILING =
+  "City and country names stay in their source form in every locale: the " +
+  "dataset carries a name and an ascii name and nothing else, so a reader of " +
+  "the French interface still reads the English country name. Translating " +
+  "them would need a translated column and a regenerated asset, which is a " +
+  "data pipeline rather than an internationalization change.";
+
+/** The two documents that carry that ceiling: the prose one and the code one. */
+const SOURCE_FORM_DOCUMENTS = ["README.md", "src/data/worldcities/cities.ts"];
+
+/**
  * A literal expression's value, built from the tree rather than evaluated.
  *
  * The parity guard below compares two copies of one rule that cannot import
@@ -2013,6 +2034,27 @@ describe("toolchain baseline", () => {
       alternatives,
       `${DIRECTIONAL_GLYPH_COMPONENT} chooses between two elements on a condition`,
     ).toEqual([]);
+  });
+
+  // The dataset ceiling is written twice on purpose, once where a reader
+  // evaluating this project reads and once where a reader of the code asks the
+  // question. Two copies of one fact is how the provenance account came to have
+  // a corrected half and a disproved half sitting beside each other, so this
+  // pair is held from one literal in the same idiom. The code copy is a block
+  // comment, so the comparison strips the leading asterisks: a guard that failed
+  // on markup would be a guard nobody keeps.
+  it("keeps one account of the dataset ceiling in the README and the data module", () => {
+    for (const name of SOURCE_FORM_DOCUMENTS) {
+      const source = readFileSync(join(projectRoot, name), "utf8");
+      const text = name.endsWith(".md")
+        ? normalizeProse(source)
+        : normalizeComment(source);
+
+      expect(
+        text,
+        `${name} no longer carries: ${SOURCE_FORM_CEILING}`,
+      ).toContain(SOURCE_FORM_CEILING);
+    }
   });
 
   // The footer carries this same attribution and has its own test. The README

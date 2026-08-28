@@ -13,6 +13,10 @@ A React and TypeScript single-page app for browsing a large dataset in the brows
   - [Shareable links](#shareable-links)
   - [Theme](#theme)
   - [Accessibility](#accessibility)
+- [Internationalization](#internationalization)
+  - [What ships](#what-ships)
+  - [Why there is no internationalization library](#why-there-is-no-internationalization-library)
+  - [What stays in the source language](#what-stays-in-the-source-language)
 - [Stack](#stack)
   - [Build target](#build-target)
 - [Data attribution](#data-attribution)
@@ -80,6 +84,40 @@ A React and TypeScript single-page app for browsing a large dataset in the brows
 - Every foreground and background pair is checked against the WCAG contrast ratio in both themes, computed from the shipped stylesheet rather than from a copy of it
 
 Every push sweeps the running app for violations of a set of automated rules and fails on any of them, once against a simulated DOM and once in a real browser across both themes and a paged table. Contrast is the reason the second run exists: measuring it needs a layout engine, which the simulated DOM does not have. Automated rules cannot establish conformance, so the sweeps catch regressions rather than prove the list above.
+
+## Internationalization
+
+### What ships
+
+- Four catalogs: English, Spanish, French, and a right-to-left pseudo-locale. The pseudo-locale is not a language. It is readable English padded and wrapped in direction marks, and it ships so that the direction and the truncation have something to prove themselves against, because the other three all read left to right
+- A language picker in the header, offering the machine's own preference first and then each catalog named in its own language, so a reader who cannot read the interface in front of them can still find their own
+- Every reader-facing string comes from a catalog, the failure messages and the licence attribution included. One key union is derived from the base catalog, so a missing or misspelled key fails the type check rather than rendering at runtime
+- The document's language and direction follow the resolved locale, and both are stamped before the first paint, so no wrong-language and no wrong-direction frame is ever shown
+- Collation and number formatting follow it too: the city name column sorts by the reader's own language rules and the population column is grouped the way that language groups digits
+- Direction-dependent geometry is written on the inline axis, so one stylesheet serves both directions
+
+### Why there is no internationalization library
+
+The strings resolve through typed catalogs and the platform's own `Intl` namespace. Nothing was installed for it. Three general-purpose libraries were evaluated first, and their weight against what this application actually ships is the argument:
+
+| Library                             | Added weight, minified and gzipped               |
+| ----------------------------------- | ------------------------------------------------ |
+| `react-i18next` with `i18next`      | about 22.2 kB                                    |
+| `react-intl` (FormatJS)             | about 18 to 19 kB                                |
+| `@lingui/core` with `@lingui/react` | about 10.4 kB                                    |
+| `typesafe-i18n`                     | small, plus a generator watching the source tree |
+
+The production script this application ships was 66.77 kB gzipped when those numbers were taken, on 2026-08-28, so the three add between roughly a sixth and a third again of the compressed JavaScript a reader downloads. What they buy for it is a message format that translation vendors consume, plus runtime language detection and a plugin ecosystem. These forty-odd strings across four catalogs never leave this repository and are written by the same person who writes the code, so the interchange format is the whole benefit and it goes unclaimed. Two of the three would also cost message arguments their type checking, or add a build step to get it back, in a tree where `satisfies` already gives it for nothing.
+
+Rerun `npm run build` to check the ratio for yourself; the numbers above are a measurement with a date on it, not a standing claim.
+
+The answer would change for a locale with more plural categories than the four shipped catalogs need, which is the point at which a real message formatter starts earning its keep.
+
+### What stays in the source language
+
+City and country names stay in their source form in every locale: the dataset carries a name and an ascii name and nothing else, so a reader of the French interface still reads the English country name. Translating them would need a translated column and a regenerated asset, which is a data pipeline rather than an internationalization change.
+
+The static head of the document stays in the base language too. Its title, its description, its two social strings and its no-script paragraph are all served before any module can run, and no catalog can reach them without script.
 
 ## Stack
 

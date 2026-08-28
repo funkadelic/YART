@@ -19,6 +19,17 @@ import citiesUrl from "./cities.json?url";
  * - 2 rows have no upstream id and are assigned 1 and 2. Every real id is
  *   >= 1004003059, so these cannot collide.
  * - 2 rows have an empty city_ascii and fall back to the city name.
+ *
+ * City and country names stay in their source form in every locale: the dataset
+ * carries a name and an ascii name and nothing else, so a reader of the French
+ * interface still reads the English country name. Translating them would need a
+ * translated column and a regenerated asset, which is a data pipeline rather
+ * than an internationalization change.
+ *
+ * That is stated here as well as in the README because this is the file a reader
+ * asking why a name is not translated is already looking at. The two copies are
+ * held together by a guard in src/toolchain.test.ts, so neither can be reworded
+ * on its own.
  */
 export interface City {
   id: number;
