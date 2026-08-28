@@ -908,6 +908,63 @@ function schemaKeys(): string[] {
     .toSorted();
 }
 
+/** The one module allowed to ask the platform for a locale. */
+const FORMATTER_MODULE = "src/i18n/format.ts";
+
+/**
+ * The value-level locale-aware helpers on strings, numbers and dates.
+ *
+ * Every one of these reads a locale from the machine when it is called with no
+ * argument, which is the defect this phase exists to close: four independent
+ * defaults where the application resolves exactly one locale. They are also
+ * expensive in the same way the constructors are, because each call builds a
+ * formatter and throws it away.
+ */
+const LOCALE_AWARE_METHODS = new Set([
+  "localeCompare",
+  "toLocaleString",
+  "toLocaleDateString",
+  "toLocaleTimeString",
+  "toLocaleLowerCase",
+  "toLocaleUpperCase",
+]);
+
+/**
+ * Every place a file asks the platform for a locale: a construction of an
+ * internationalization namespace constructor, or a call to one of the
+ * value-level helpers above.
+ *
+ * Asked of the tree rather than of the text, which is this file's own standard
+ * and is load-bearing twice over here. A namespace named inside a block comment
+ * is not a call site, and this guard is worthless if the paragraph explaining
+ * why the rule exists can fail it. A type annotation naming the same
+ * constructor is not one either: the comparator's fourth parameter is declared
+ * as a collator and constructs nothing, which is the entire point of it being a
+ * parameter.
+ */
+function localeCallSites(file: ts.SourceFile): string[] {
+  const found: string[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isNewExpression(node) || ts.isCallExpression(node)) {
+      const callee = node.expression;
+
+      if (ts.isPropertyAccessExpression(callee)) {
+        if (callee.expression.getText(file) === "Intl") {
+          found.push(`Intl.${callee.name.text}`);
+        } else if (LOCALE_AWARE_METHODS.has(callee.name.text)) {
+          found.push(callee.name.text);
+        }
+      }
+    }
+
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
+  return found;
+}
+
 describe("toolchain baseline", () => {
   // This guard used to ban a list of names belonging to the runner that was
   // removed, and nothing else. A second runner arriving with a config of its own
@@ -1776,5 +1833,57 @@ describe("toolchain baseline", () => {
       read,
       "fewer documents carrying the address invariant were found than are committed",
     ).toBeGreaterThanOrEqual(COMMITTED_ADDRESS_DOCUMENTS);
+  });
+  // The application resolves one locale and four surfaces follow it: the
+  // catalog, the document element, the ordering of text and the grouping of
+  // numbers. A fifth surface asking the platform for a locale of its own would
+  // reintroduce the defect this phase closed, and would do it invisibly, since
+  // a machine whose own preference is the base tag renders every one of them
+  // identically. Counting the call sites is the only thing that notices.
+  //
+  // Test files are excluded, and deliberately. A test asserting a formatted
+  // string has to compute the expectation through the platform rather than type
+  // it, because the French group separator is a narrow no-break space and a
+  // typed literal fails on a difference no terminal renders. So the ban is on
+  // shipped call sites, not on the name.
+  it("asks the platform for a locale in exactly one module", () => {
+    const sources = findSourceFiles(join(projectRoot, "src"));
+
+    expect(
+      sources.length,
+      "the source walk found no module under src/, so this guard read nothing",
+    ).toBeGreaterThan(0);
+
+    const holders = new Map<string, string[]>();
+
+    for (const path of sources) {
+      const name = relative(projectRoot, path).split(sep).join("/");
+      const calls = localeCallSites(parse(readFileSync(path, "utf8")));
+
+      if (calls.length > 0) holders.set(name, calls);
+    }
+
+    // The inline script resolves a locale of its own before any module loads,
+    // so it is walked here too. It reaches its answer through a literal map
+    // rather than through the platform, so it should contribute nothing, and if
+    // it ever grows a call this is where that shows up.
+    const stamped = localeCallSites(inlineScript());
+    if (stamped.length > 0) holders.set("index.html", stamped);
+
+    expect(
+      [...holders.keys()].toSorted(),
+      "something other than the formatter module asks the platform for a locale",
+    ).toEqual([FORMATTER_MODULE]);
+
+    // Without this the assertion above passes just as happily on a formatter
+    // module that constructs nothing at all, which is the shape this guard
+    // would take the day someone deleted the caches it exists to protect.
+    expect(
+      required(
+        holders.get(FORMATTER_MODULE),
+        `the call sites in ${FORMATTER_MODULE}`,
+      ).toSorted(),
+      "the formatter module no longer builds the three cached instances",
+    ).toEqual(["Intl.Collator", "Intl.NumberFormat", "Intl.PluralRules"]);
   });
 });
