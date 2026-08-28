@@ -253,7 +253,7 @@ function directUserEventCalls(file: ts.SourceFile): ts.CallExpression[] {
  * cannot stand in for the property itself, and an option belonging to some other
  * call cannot answer for this one.
  */
-function bindsClock(call: ts.CallExpression, file: ts.SourceFile): boolean {
+function bindsClock(call: ts.CallExpression): boolean {
   const [options] = call.arguments;
 
   if (options === undefined || !ts.isObjectLiteralExpression(options)) {
@@ -261,12 +261,23 @@ function bindsClock(call: ts.CallExpression, file: ts.SourceFile): boolean {
   }
 
   return options.properties.some((property) => {
-    const key = property.name?.getText(file);
+    const name = property.name;
 
-    if (key === "advanceTimers") return true;
+    // A spread names no property to read and a computed key is not known here,
+    // so neither can answer for one. Everything else is read through the name's
+    // own text rather than through its source, because the source of a quoted
+    // key carries the quotation marks and the key does not.
+    if (
+      name === undefined ||
+      !(ts.isIdentifier(name) || ts.isStringLiteralLike(name))
+    ) {
+      return false;
+    }
+
+    if (name.text === "advanceTimers") return true;
 
     return (
-      key === "delay" &&
+      name.text === "delay" &&
       ts.isPropertyAssignment(property) &&
       property.initializer.kind === ts.SyntaxKind.NullKeyword
     );
@@ -945,7 +956,7 @@ describe("toolchain baseline", () => {
       // Judged per call site: one bound session elsewhere in the file says nothing
       // about this one.
       for (const call of findCalls(tree, "userEvent.setup")) {
-        if (!bindsClock(call, tree)) {
+        if (!bindsClock(call)) {
           offenders.push(
             `${name}: opens an input session that is not bound to the fake clock`,
           );
