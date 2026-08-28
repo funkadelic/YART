@@ -2,11 +2,21 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { en } from "../../i18n/catalogs/en";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { RootLayout } from "./RootLayout";
 import { CityTable } from "../CityTable";
 
 const THROWN_MESSAGE = "a render threw this";
+
+// The copy the layout hands down, read from the base catalog rather than
+// restated, so a reworded fallback moves both sides at once. The boundary is a
+// class and cannot read a catalog itself, which is the whole reason it takes
+// these as props.
+const FALLBACK_LABELS = {
+  message: en.renderFailure,
+  action: en.renderFailureRetry,
+};
 
 // The flag is module-local rather than a prop so the same component instance
 // can throw on one render and succeed on the next, which is what the recovery
@@ -34,7 +44,7 @@ describe("ErrorBoundary", () => {
       .mockImplementation(() => {});
 
     render(
-      <ErrorBoundary>
+      <ErrorBoundary labels={FALLBACK_LABELS}>
         <ThrowingChild />
       </ErrorBoundary>,
     );
@@ -54,7 +64,7 @@ describe("ErrorBoundary", () => {
       .mockImplementation(() => {});
 
     render(
-      <ErrorBoundary>
+      <ErrorBoundary labels={FALLBACK_LABELS}>
         <ThrowingChild />
       </ErrorBoundary>,
     );
@@ -68,7 +78,7 @@ describe("ErrorBoundary", () => {
     shouldThrow = false;
 
     const { container } = render(
-      <ErrorBoundary>
+      <ErrorBoundary labels={FALLBACK_LABELS}>
         <ThrowingChild />
       </ErrorBoundary>,
     );
@@ -86,7 +96,7 @@ describe("ErrorBoundary", () => {
     const user = userEvent.setup();
 
     render(
-      <ErrorBoundary>
+      <ErrorBoundary labels={FALLBACK_LABELS}>
         <ThrowingChild />
       </ErrorBoundary>,
     );
@@ -108,7 +118,7 @@ describe("ErrorBoundary", () => {
     const user = userEvent.setup();
 
     render(
-      <ErrorBoundary>
+      <ErrorBoundary labels={FALLBACK_LABELS}>
         <ThrowingChild />
       </ErrorBoundary>,
     );

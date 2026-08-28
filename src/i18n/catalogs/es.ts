@@ -49,6 +49,18 @@ const TEXTO_DE_ERROR: DatasetErrorText = {
  * survive for anything that wants to read them.
  */
 export const es = {
+  appTitle: "Lista de ciudades",
+  themeGroup: "Tema",
+  themeLight: "Claro",
+  themeDark: "Oscuro",
+  themeSystem: "Sistema",
+  languageName: "Idioma",
+  languageSystem: "Sistema",
+  renderFailure:
+    "Esta parte de la página no se pudo mostrar. Los datos de las ciudades siguen cargados, así que volver a mostrarla puede funcionar.",
+  renderFailureRetry: "Mostrar de nuevo",
+  attribution: (source: string, license: string) =>
+    `Datos de ciudades de ${source}, con licencia ${license}. Modificado: columnas no utilizadas eliminadas, filas ordenadas por población.`,
   columnName: "Ciudad",
   columnCountry: "País",
   columnCapital: "Capital",

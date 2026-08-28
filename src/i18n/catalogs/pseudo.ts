@@ -97,6 +97,17 @@ const DATASET_ERROR_TEXT: DatasetErrorText = {
  * here could only ever drift from them.
  */
 export const pseudo = {
+  appTitle: pseudoize(en.appTitle),
+  themeGroup: pseudoize(en.themeGroup),
+  themeLight: pseudoize(en.themeLight),
+  themeDark: pseudoize(en.themeDark),
+  themeSystem: pseudoize(en.themeSystem),
+  languageName: pseudoize(en.languageName),
+  languageSystem: pseudoize(en.languageSystem),
+  renderFailure: pseudoize(en.renderFailure),
+  renderFailureRetry: pseudoize(en.renderFailureRetry),
+  attribution: (source: string, license: string) =>
+    pseudoize(en.attribution(source, license)),
   columnName: pseudoize(en.columnName),
   columnCountry: pseudoize(en.columnCountry),
   columnCapital: pseudoize(en.columnCapital),

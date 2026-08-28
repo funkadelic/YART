@@ -94,6 +94,18 @@ const DATASET_ERROR_TEXT: DatasetErrorText = {
  * so the signature says which entries are locale-sensitive and which are copy.
  */
 export const en = {
+  appTitle: "City List",
+  themeGroup: "Theme",
+  themeLight: "Light",
+  themeDark: "Dark",
+  themeSystem: "System",
+  languageName: "Language",
+  languageSystem: "System",
+  renderFailure:
+    "This part of the page could not be displayed. The city data is still loaded, so showing it again may work.",
+  renderFailureRetry: "Show it again",
+  attribution: (source: string, license: string) =>
+    `City data from ${source}, licensed ${license}. Modified: unused columns removed, rows ordered by population.`,
   columnName: "City",
   columnCountry: "Country",
   columnCapital: "Capital",

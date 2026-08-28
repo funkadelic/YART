@@ -135,6 +135,25 @@ describe("the catalogs", () => {
     }
   });
 
+  // The attribution sentence is a licence obligation rather than copy: it has to
+  // credit the creator, link the source, link the licence and say the work was
+  // changed, in every language. The two identifiers travel through it as
+  // arguments and a translation that dropped either one would leave the footer
+  // with a link it never rendered.
+  it("carries both attribution identifiers in every catalog", () => {
+    for (const id of CATALOG_IDS) {
+      const sentence = CATALOGS[id].attribution(
+        "simplemaps.com World Cities",
+        "CC BY 4.0",
+      );
+
+      expect(sentence, `the ${id} catalog`).toContain(
+        "simplemaps.com World Cities",
+      );
+      expect(sentence, `the ${id} catalog`).toContain("CC BY 4.0");
+    }
+  });
+
   // The record of plural forms in each catalog is total over the categories its
   // own tag reports, and nothing in the type system can check that: the category
   // set is CLDR data rather than a type, so the selection narrows the platform's

@@ -56,7 +56,7 @@ const App = () => {
             error: new DatasetError(
               "unexpected",
               0,
-              "An unexpected error occurred",
+              "The search rejected with something that was not an error",
             ),
           });
         }
@@ -99,7 +99,7 @@ const App = () => {
 
   return (
     <RootLayout>
-      <h1>City List</h1>
+      <h1>{catalog.appTitle}</h1>
       <CityTable
         data={cities}
         onSearchChange={handleSearchChange}

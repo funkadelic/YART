@@ -67,6 +67,18 @@ const TEXTE_ERREUR: DatasetErrorText = {
  * looks like a typo.
  */
 export const fr = {
+  appTitle: "Liste des villes",
+  themeGroup: "Thème",
+  themeLight: "Clair",
+  themeDark: "Sombre",
+  themeSystem: "Système",
+  languageName: "Langue",
+  languageSystem: "Système",
+  renderFailure:
+    "Cette partie de la page n'a pas pu être affichée. Les données des villes sont toujours chargées, donc l'afficher à nouveau peut fonctionner.",
+  renderFailureRetry: "Afficher à nouveau",
+  attribution: (source: string, license: string) =>
+    `Données des villes de ${source}, sous licence ${license}. Modifié${NARROW_NO_BREAK_SPACE}: colonnes inutilisées supprimées, lignes triées par population.`,
   columnName: "Ville",
   columnCountry: "Pays",
   columnCapital: "Capitale",

@@ -147,6 +147,10 @@ describe("App", () => {
       await screen.findByText("Error: An unexpected error occurred"),
     ).toBeInTheDocument();
     expect(screen.queryByText(bareRejection)).not.toBeInTheDocument();
+    // The container synthesizes an error to carry the code. Its message is
+    // developer-facing like every other one, and worded so it cannot be
+    // mistaken for the sentence the catalog supplies.
+    expect(document.body).not.toHaveTextContent("was not an error");
     expect(
       screen.queryByText("Downloading the city data..."),
     ).not.toBeInTheDocument();

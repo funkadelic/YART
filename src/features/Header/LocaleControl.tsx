@@ -18,13 +18,12 @@ import styles from "./LocaleControl.module.scss";
  * The option list is built from the shipped ids rather than written out, so a
  * catalog added later appears here without this file being edited.
  *
- * Its own two strings are English literals rather than catalog entries, which is
- * deliberate and temporary: they move into the catalogs with the rest of the
- * chrome, and inventing keys for them here would put two of the catalog's keys
- * in a different plan from the other twenty.
+ * Its own two strings come from the catalog like every other word on the page.
+ * The autonyms below do not, and must not: a reader who cannot read the
+ * interface in front of them still has to find their own language in the list.
  */
 export function LocaleControl() {
-  const { choice, setChoice } = useLocale();
+  const { catalog, choice, setChoice } = useLocale();
 
   // Document-global, so a constant here would give a second mounted control the
   // same id and bind both labels to the first select.
@@ -36,7 +35,7 @@ export function LocaleControl() {
           sighted reader needs no visible label, but the control still has to
           have a name in the accessibility tree. */}
       <label className={styles.label} htmlFor={selectId}>
-        Language
+        {catalog.languageName}
       </label>
       {/* A closed list, and the store rejects anything that is not on it, so
           nothing outside the shipped ids can become the chosen locale. */}
@@ -48,7 +47,7 @@ export function LocaleControl() {
           setChoice(event.target.value);
         }}
       >
-        <option value="system">System</option>
+        <option value="system">{catalog.languageSystem}</option>
         {CATALOG_IDS.map((id) => (
           <option key={id} value={id}>
             {AUTONYMS[id]}

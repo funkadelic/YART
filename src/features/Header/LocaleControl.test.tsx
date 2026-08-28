@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { CityTable } from "../CityTable";
+import { en } from "../../i18n/catalogs/en";
 import { fr } from "../../i18n/catalogs/fr";
 import { LOCALE_STORAGE_KEY } from "../../i18n/resolveLocale";
 import { LocaleControl } from "./LocaleControl";
@@ -19,9 +20,14 @@ const OPTION_NAMES = [
   "Pseudo (RTL)",
 ];
 
-/** The picker itself, found by the name its off-screen label gives it. */
+/**
+ * The picker itself, found by its role alone. Its name now follows the chosen
+ * language, so finding it by an English name would fail in exactly the cases
+ * that choose another one. That the control has a name at all, and that the name
+ * is translated, is asserted on its own below.
+ */
 function picker(): HTMLSelectElement {
-  return screen.getByRole("combobox", { name: /language/i });
+  return screen.getByRole("combobox");
 }
 
 /** What the document element is carrying, which is what the page renders from. */
@@ -44,7 +50,21 @@ describe("LocaleControl", () => {
   it("names the control, so the picker is not an unlabelled dropdown", () => {
     render(<LocaleControl />);
 
-    expect(picker()).toHaveAccessibleName(/language/i);
+    expect(picker()).toHaveAccessibleName(en.languageName);
+  });
+
+  it("names itself, and the machine, in the chosen language", () => {
+    localStorage.setItem(LOCALE_STORAGE_KEY, "fr");
+
+    render(<LocaleControl />);
+
+    expect(picker()).toHaveAccessibleName(fr.languageName);
+    // The option naming the machine is copy. The autonyms beside it are not,
+    // and stay in the language each of them names.
+    expect(screen.getByRole("option", { name: fr.languageSystem })).toHaveValue(
+      "system",
+    );
+    expect(screen.getByRole("option", { name: "Español" })).toBeInTheDocument();
   });
 
   it("follows the machine by default", () => {
