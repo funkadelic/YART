@@ -184,6 +184,8 @@ const BASE_COLUMNS = buildCityColumns(en, "en-US");
 export type CityColumnId = (typeof BASE_COLUMNS)[number]["id"];
 ```
 
+Three of the five columns are shown. `src/features/CityTable/cityColumns.ts` has the whole build.
+
 Call the builder from a component body, never bare during render, and key the memo on exactly the catalog and the tag. A new array identity re-sorts the whole collection and re-slices the page, which over fifty thousand rows is the most expensive thing the container can do by accident.
 
 Every string that names what the rows are comes from the same place, because a shared component carrying one collection's nouns would be shared in name only.
@@ -202,6 +204,8 @@ export function buildTableLabels(
   };
 }
 ```
+
+Five of the entries are shown. The rest, the retry and error copy, the sort announcements and summary, and the whole pagination slice, are built the same way in `src/features/CityTable/cityLabels.ts`; the type is what makes a missing one a compile error.
 
 An entry that weaves a value takes that value rather than an already-composed phrase. A caller handing over a finished word has made a grammatical decision one layer too early, which is what made the old sort summary untranslatable.
 
