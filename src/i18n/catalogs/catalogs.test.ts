@@ -1,12 +1,24 @@
 import { describe, expect, it } from "vitest";
 
-import { CATALOG_IDS } from "../resolveLocale";
+import { required } from "../../test/required";
+import { numberFormatFor, pluralRulesFor } from "../format";
+import { CATALOG_IDS, resolveLocale } from "../resolveLocale";
 import { AUTONYMS, CATALOGS } from "./index";
 import { en } from "./en";
 import { pseudoize } from "./pseudo";
 
 /** The base catalog's key set, which every other catalog is held to. */
 const BASE_KEYS = Object.keys(en).sort();
+
+/**
+ * Counts wide enough to reach every plural category any shipped tag reports.
+ * Zero and one separate French from the other two, and the round million is the
+ * only value that reaches the third category Spanish and French both have.
+ */
+const PROBE_COUNTS = [0, 1, 2, 1000000];
+
+/** A count large enough that every shipped tag groups it, and groups it differently. */
+const GROUPED = 1234567;
 
 describe("the catalogs", () => {
   // The type check already fails on a missing or misspelled key, which is the
@@ -52,6 +64,61 @@ describe("the catalogs", () => {
         catalog.caption("en-US", 500, "not sorted"),
         `the ${id} catalog`,
       ).toMatch(/500(?=.*not sorted)/s);
+    }
+  });
+
+  // The record of plural forms in each catalog is total over the categories its
+  // own tag reports, and nothing in the type system can check that: the category
+  // set is CLDR data rather than a type, so the selection narrows the platform's
+  // answer to what the catalog declared. This is what makes that narrowing
+  // sound. A missing arm shows up as the word undefined inside a sentence a
+  // reader would have been shown.
+  it("declares a plural form for every category its own tag reports", () => {
+    for (const id of CATALOG_IDS) {
+      const { tag } = resolveLocale(id, []);
+      const rules = pluralRulesFor(tag);
+      const categories = rules.resolvedOptions().pluralCategories;
+
+      expect(categories.length, `the ${id} catalog`).toBeGreaterThanOrEqual(2);
+
+      for (const category of categories) {
+        const count = required(
+          PROBE_COUNTS.find((probe) => rules.select(probe) === category),
+          `a count selecting ${category} under ${tag}`,
+        );
+        const catalog = CATALOGS[id];
+
+        expect(
+          catalog.results(tag, count, count),
+          `the ${id} catalog at ${category}`,
+        ).not.toContain("undefined");
+        expect(
+          catalog.caption(tag, count, "not sorted"),
+          `the ${id} catalog at ${category}`,
+        ).not.toContain("undefined");
+      }
+    }
+  });
+
+  // Grouped through the platform on the resolved tag rather than by hand, and
+  // asserted against a string computed at test time rather than typed. The
+  // French group separator is a narrow no-break space, and a typed literal
+  // holding an ordinary one fails on a difference no terminal renders.
+  it("groups every count it weaves in on its own tag", () => {
+    for (const id of CATALOG_IDS) {
+      const { tag } = resolveLocale(id, []);
+      const grouped = numberFormatFor(tag).format(GROUPED);
+      const catalog = CATALOGS[id];
+
+      expect(
+        catalog.results(tag, GROUPED, GROUPED),
+        `the ${id} catalog`,
+      ).toContain(grouped);
+      expect(
+        catalog.caption(tag, GROUPED, "not sorted"),
+        `the ${id} catalog`,
+      ).toContain(grouped);
+      expect(grouped, `the ${id} catalog`).not.toBe(String(GROUPED));
     }
   });
 

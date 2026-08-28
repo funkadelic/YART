@@ -1,4 +1,19 @@
+import { numberFormatFor, selectPlural } from "../format";
 import type { Catalog } from "./en";
+
+/**
+ * The nouns the two woven sentences below pluralize, total over the three
+ * categories the Spanish tag reports.
+ *
+ * The many form is spelled out rather than shared with the other form, even
+ * though Spanish inflects them the same way. The category exists because
+ * Spanish treats round millions differently in compact notation, and writing
+ * the arm out is what makes the record total by construction rather than by a
+ * reader remembering that two of the three happen to agree today.
+ */
+const CIUDAD = { one: "ciudad", many: "ciudades", other: "ciudades" };
+const RESULTADO = { one: "resultado", many: "resultados", other: "resultados" };
+const ENTRADA = { one: "entrada", many: "entradas", other: "entradas" };
 
 /**
  * The Spanish catalog.
@@ -11,8 +26,11 @@ export const es = {
   loading: "Descargando los datos de las ciudades...",
   empty: "No se encontraron ciudades",
   emptyAnnouncement: "No se encontraron ciudades para esa búsqueda",
-  results: (tag: string, shown: number, total: number) =>
-    `Mostrando ${shown} ciudades de ${total} resultados en total`,
+  results: (tag: string, shown: number, total: number) => {
+    const number = numberFormatFor(tag);
+
+    return `Mostrando ${number.format(shown)} ${selectPlural(tag, shown, CIUDAD)} de ${number.format(total)} ${selectPlural(tag, total, RESULTADO)} en total`;
+  },
   caption: (tag: string, total: number, sortSummary: string) =>
-    `Datos de ciudades con ${total} entradas, actualmente ${sortSummary}`,
+    `Datos de ciudades con ${numberFormatFor(tag).format(total)} ${selectPlural(tag, total, ENTRADA)}, actualmente ${sortSummary}`,
 } satisfies Catalog;

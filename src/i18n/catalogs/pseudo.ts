@@ -61,6 +61,11 @@ export function pseudoize(message: string): string {
  * The pseudo-locale catalog. The two function-valued entries pseudo-translate
  * the base catalog's result rather than a template, so the numbers woven into
  * the sentence land inside the brackets where a truncation would cut them.
+ *
+ * It declares no plural nouns of its own, and that is not an omission. Its
+ * strings really are English and its resolved tag really is the English one, so
+ * the base catalog's two categories are its two categories, and a second set
+ * here could only ever drift from them.
  */
 export const pseudo = {
   loading: pseudoize(en.loading),
