@@ -38,7 +38,7 @@ const TEXTO_DE_ERROR: DatasetErrorText = {
     `No se pudieron descargar los datos de las ciudades (estado ${numberFormatFor(tag).format(status)}).`,
   notJson: () =>
     "Los datos de las ciudades se descargaron, pero no se pudieron leer como JSON.",
-  unexpected: () => "Se produjo un error inesperado",
+  unexpected: () => "Se produjo un error inesperado.",
 };
 
 /**

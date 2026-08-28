@@ -49,7 +49,7 @@ describe("datasetErrorText", () => {
 
   it("falls to the unexpected sentence for a failure carrying no code", () => {
     expect(datasetErrorText(new Error("Failed to fetch"), en, "en-US")).toBe(
-      "An unexpected error occurred",
+      "An unexpected error occurred.",
     );
   });
 

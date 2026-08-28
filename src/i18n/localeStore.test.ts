@@ -247,6 +247,18 @@ describe("the locale store", () => {
       });
     });
 
+    it("re-reads when another document clears storage", () => {
+      localStorage.setItem(LOCALE_STORAGE_KEY, "fr");
+
+      withSubscriber((notifications) => {
+        localStorage.clear();
+        window.dispatchEvent(new StorageEvent("storage", { key: null }));
+
+        expect(getChoiceSnapshot()).toBe("system");
+        expect(notifications()).toBe(1);
+      });
+    });
+
     it("ignores a write to any other key", () => {
       localStorage.setItem(LOCALE_STORAGE_KEY, "fr");
 

@@ -117,8 +117,9 @@ export function useTheme() {
     const handleStorageChange = (event: StorageEvent) => {
       // This key only, and only a write from another document: the event does
       // not fire in the tab that made it, which is why the setter below does
-      // not have to guard against reacting to itself.
-      if (event.key === THEME_STORAGE_KEY) {
+      // not have to guard against reacting to itself. A null key is a clear()
+      // rather than a write, and it takes this key with it.
+      if (event.key === null || event.key === THEME_STORAGE_KEY) {
         setChoiceState(readStoredChoice());
       }
     };

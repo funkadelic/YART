@@ -57,9 +57,12 @@ function notify(): void {
  * value the event carries, and ignore every other key: the event does not fire
  * in the document that made the write, which is why the setter below does not
  * have to guard against reacting to itself.
+ *
+ * A null key is a clear() rather than a write, and it takes this key with it, so
+ * it counts the same as a write to this key.
  */
 function handleStorage(event: StorageEvent): void {
-  if (event.key === LOCALE_STORAGE_KEY) {
+  if (event.key === null || event.key === LOCALE_STORAGE_KEY) {
     choice = readStoredChoice();
     notify();
   }

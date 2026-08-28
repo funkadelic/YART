@@ -75,7 +75,7 @@ const DATASET_ERROR_TEXT: DatasetErrorText = {
   status: (tag, status) =>
     `The city data could not be downloaded (status ${numberFormatFor(tag).format(status)}).`,
   notJson: () => "The city data was downloaded but could not be read as JSON.",
-  unexpected: () => "An unexpected error occurred",
+  unexpected: () => "An unexpected error occurred.",
 };
 
 /**

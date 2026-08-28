@@ -237,6 +237,18 @@ describe("useTheme", () => {
       expect(result.current.choice).toBe("system");
     });
 
+    it("re-reads when another document clears storage", () => {
+      localStorage.setItem(THEME_STORAGE_KEY, "dark");
+      const { result } = renderTheme();
+
+      act(() => {
+        localStorage.clear();
+        window.dispatchEvent(new StorageEvent("storage", { key: null }));
+      });
+
+      expect(result.current.choice).toBe("system");
+    });
+
     it("ignores a write to any other key", () => {
       localStorage.setItem(THEME_STORAGE_KEY, "dark");
       const { result } = renderTheme();

@@ -49,7 +49,7 @@ const TEXTE_ERREUR: DatasetErrorText = {
     `Les données des villes n'ont pas pu être téléchargées (statut ${numberFormatFor(tag).format(status)}).`,
   notJson: () =>
     "Les données des villes ont été téléchargées, mais n'ont pas pu être lues au format JSON.",
-  unexpected: () => "Une erreur inattendue s'est produite",
+  unexpected: () => "Une erreur inattendue s'est produite.",
 };
 
 /**

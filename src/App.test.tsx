@@ -131,7 +131,7 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByText("Error: An unexpected error occurred"),
+      await screen.findByText("Error: An unexpected error occurred."),
     ).toBeInTheDocument();
     expect(document.body).not.toHaveTextContent(failure.message);
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
@@ -144,7 +144,7 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByText("Error: An unexpected error occurred"),
+      await screen.findByText("Error: An unexpected error occurred."),
     ).toBeInTheDocument();
     expect(screen.queryByText(bareRejection)).not.toBeInTheDocument();
     // The container synthesizes an error to carry the code. Its message is

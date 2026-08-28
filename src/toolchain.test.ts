@@ -342,9 +342,14 @@ function findTestFiles(directory: string): string[] {
 
 /**
  * Every module under a directory that is not a test file, so a guard can ask a
- * question of the application rather than of the suite. The complement of
- * findTestFiles over the same walk, because a call site written into a test is a
- * test double and a call site written into a module is the application doing it.
+ * question of the application rather than of the suite, because a call site
+ * written into a test is a test double and a call site written into a module is
+ * the application doing it.
+ *
+ * Not quite the complement of findTestFiles: a `.test-d.ts` is in neither walk.
+ * The runner never collects one, so it is not a file findTestFiles describes,
+ * and `tsc` is the only thing that reads it, so a literal or an Intl call
+ * written there ships to nobody and is not the application doing it either.
  */
 function findSourceFiles(directory: string): string[] {
   const found: string[] = [];
@@ -357,7 +362,7 @@ function findSourceFiles(directory: string): string[] {
       found.push(...findSourceFiles(path));
     } else if (
       /\.[cm]?[jt]sx?$/.test(entry.name) &&
-      !/\.(test|spec)\.[cm]?[jt]sx?$/.test(entry.name)
+      !/\.(test|spec)(-d)?\.[cm]?[jt]sx?$/.test(entry.name)
     ) {
       found.push(path);
     }
