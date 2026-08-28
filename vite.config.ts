@@ -36,14 +36,20 @@ function contentSecurityPolicy(): Plugin {
           ...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g),
         ];
 
-        if (inline.length !== 1) {
+        // A length check narrows neither the match nor its capture group, so
+        // the guard reads the group itself. Hashing an undefined would name a
+        // script the document does not carry, and the browser refuses the real
+        // one, which brings back the flash the inline script exists to prevent.
+        const source = inline[0]?.[1];
+
+        if (inline.length !== 1 || source === undefined) {
           throw new Error(
             `expected exactly one inline script to hash, found ${inline.length}`,
           );
         }
 
         const digest = createHash("sha256")
-          .update(inline[0][1], "utf8")
+          .update(source, "utf8")
           .digest("base64");
 
         return [
