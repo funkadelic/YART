@@ -1,5 +1,5 @@
 import { numberFormatFor, selectPlural } from "../format";
-import type { Catalog } from "./en";
+import type { Catalog, SortedDirection } from "./en";
 
 /**
  * The nouns the two woven sentences below pluralize, total over the three
@@ -14,6 +14,12 @@ import type { Catalog } from "./en";
 const CIUDAD = { one: "ciudad", many: "ciudades", other: "ciudades" };
 const RESULTADO = { one: "resultado", many: "resultados", other: "resultados" };
 const ENTRADA = { one: "entrada", many: "entradas", other: "entradas" };
+
+/** The two sort directions, in the words the sentences below weave in. */
+const DIRECCION: Readonly<Record<SortedDirection, string>> = {
+  asc: "ascendente",
+  desc: "descendente",
+};
 
 /**
  * The Spanish catalog.
@@ -38,4 +44,23 @@ export const es = {
   },
   caption: (tag: string, total: number, sortSummary: string) =>
     `Datos de ciudades con ${numberFormatFor(tag).format(total)} ${selectPlural(tag, total, ENTRADA)}, actualmente ${sortSummary}`,
+  error: (message: string) => `Error: ${message}`,
+  retry: "Reintentar",
+  sortedAnnouncement: (columnLabel: string, direction: SortedDirection) =>
+    `Tabla ordenada por ${columnLabel} en orden ${DIRECCION[direction]}`,
+  sortClearedAnnouncement: "Orden de la tabla eliminado",
+  unsorted: "sin ordenar",
+  sortSummary: (columnLabel: string, direction: SortedDirection) =>
+    `ordenada por ${columnLabel} en orden ${DIRECCION[direction]}`,
+  pageSize: "Por página:",
+  paginationNavigation: "Navegación de páginas de la tabla",
+  firstPage: "Ir a la primera página",
+  previousPage: "Ir a la página anterior",
+  nextPage: "Ir a la página siguiente",
+  lastPage: "Ir a la última página",
+  pageStatus: (tag: string, page: number, totalPages: number) => {
+    const number = numberFormatFor(tag);
+
+    return `Página ${number.format(page)} de ${number.format(totalPages)}`;
+  },
 } satisfies Catalog;

@@ -3,19 +3,29 @@ import type { Column } from "./column";
 import type { TableState } from "./tableState";
 import { TableHead } from "./TableHead";
 import { TableBody } from "./TableBody";
-import { Pagination } from "./Pagination";
+import { Pagination, type PaginationLabels } from "./Pagination";
 import { useSortedRows } from "../../hooks/useSortedRows";
 import { usePaginatedRows } from "../../hooks/usePaginatedRows";
 import styles from "./DataTable.module.scss";
 
+export type { PaginationLabels };
+
 /**
- * Every rendered string that names what the rows are.
+ * Every string this table and the controls under it render.
  *
  * They arrive as a prop because a table that renders any collection is the one
  * thing that cannot know what the collection is called, and a shared component
- * carrying one collection's nouns would be shared in name only. Two of the five
- * are functions because they weave counts into a sentence; supplying the object
- * from module scope keeps those two closures stable across renders.
+ * carrying one collection's nouns would be shared in name only. The same
+ * argument is what grew the object from the five entries it opened with to every
+ * word below: a component holding one reader's language is shared in name only
+ * too. Nothing in this file is a literal a reader sees.
+ *
+ * Several entries are functions because they weave a value into a sentence.
+ * None of them takes a word: a caller handing over an already-composed phrase
+ * has made the grammatical decision one layer too early, which is exactly the
+ * defect the two sort entries below were rewritten to remove. The object is
+ * expected to hold one identity per language, so those closures stay stable
+ * across renders.
  */
 export interface DataTableLabels {
   /** Shown in place of the whole view until the rows have arrived once. */
@@ -28,6 +38,26 @@ export interface DataTableLabels {
   readonly results: (shown: number, total: number) => string;
   /** The row count and an already-composed description of the sort. */
   readonly caption: (total: number, sortSummary: string) => string;
+  /** The failure, with the message the request produced woven into it. */
+  readonly error: (message: string) => string;
+  /** Names the control that reissues a failed request. */
+  readonly retry: string;
+  /** What the sort region announces once a column is sorted. */
+  readonly sortedAnnouncement: (
+    columnLabel: string,
+    direction: "asc" | "desc",
+  ) => string;
+  /** What it announces when a sort is taken off again. */
+  readonly sortClearedAnnouncement: string;
+  /** The caption's phrase for a table nothing is sorted by. */
+  readonly unsorted: string;
+  /** The caption's phrase for a table sorted by a column. */
+  readonly sortSummary: (
+    columnLabel: string,
+    direction: "asc" | "desc",
+  ) => string;
+  /** Handed on whole to the page controls below the table. */
+  readonly pagination: PaginationLabels;
 }
 
 export interface DataTableProps<T, Id extends string> {
@@ -50,7 +80,10 @@ export interface DataTableProps<T, Id extends string> {
   readonly loading: boolean;
   // False until the underlying collection has arrived at least once.
   readonly datasetReady: boolean;
-  readonly error: Error | null;
+  // The text of the failure rather than the failure itself. A component tier
+  // that renders a message cannot narrow an error object, which also means a
+  // preserved cause has no path to the screen from here.
+  readonly errorMessage: string | null;
   // Optional so the table stays usable on its own, without a container to
   // re-run the request behind it.
   readonly onRetry?: (() => void) | undefined;
@@ -70,18 +103,20 @@ export interface DataTableProps<T, Id extends string> {
  * own.
  */
 function ErrorRegion({
-  error,
+  message,
+  labels,
   onRetry,
 }: {
-  readonly error: Error;
+  readonly message: string;
+  readonly labels: DataTableLabels;
   readonly onRetry?: (() => void) | undefined;
 }) {
   return (
     <div className={styles.error} role="alert">
-      Error: {error.message}
+      {labels.error(message)}
       {onRetry ? (
         <button type="button" className={styles.retryButton} onClick={onRetry}>
-          Try again
+          {labels.retry}
         </button>
       ) : null}
     </div>
@@ -101,16 +136,19 @@ function ErrorRegion({
  * what just changed announces something that did not happen.
  */
 function sortAnnouncement(
+  labels: DataTableLabels,
   sortDirection: "asc" | "desc" | null,
   hasSorted: boolean,
-  activeLabel: string | undefined,
+  activeLabel: string,
 ): string {
   if (!hasSorted) return "";
   if (sortDirection && activeLabel) {
-    const order = sortDirection === "asc" ? "ascending" : "descending";
-    return `Table sorted by ${activeLabel} in ${order} order`;
+    // The direction travels as the value it is rather than as a word chosen
+    // here. The word it turns into is a fact about a language, and the
+    // suffixed token this replaced was a word in exactly one of them.
+    return labels.sortedAnnouncement(activeLabel, sortDirection);
   }
-  return "Table sort cleared";
+  return labels.sortClearedAnnouncement;
 }
 
 /**
@@ -138,11 +176,12 @@ function resultsAnnouncement(
  * sentence rather than the words the live region announces.
  */
 function sortSummary(
+  labels: DataTableLabels,
   sortDirection: "asc" | "desc" | null,
-  activeLabel: string | undefined,
+  activeLabel: string,
 ): string {
-  if (!sortDirection) return "not sorted";
-  return `sorted by ${activeLabel} ${sortDirection}ending`;
+  if (!sortDirection) return labels.unsorted;
+  return labels.sortSummary(activeLabel, sortDirection);
 }
 
 /**
@@ -168,7 +207,7 @@ export function DataTable<T, Id extends string>({
   onPageSizeChange,
   loading,
   datasetReady,
-  error,
+  errorMessage,
   onRetry,
   labels,
 }: DataTableProps<T, Id>) {
@@ -189,16 +228,20 @@ export function DataTable<T, Id extends string>({
   // The announcements name what is on screen, and what is on screen is the
   // column label. state.sortColumnId is the descriptor's id, which is not the name of
   // anything the reader can see.
-  const activeLabel = columns.find(
-    (column) => column.id === state.sortColumnId,
-  )?.label;
+  // Empty rather than absent when no column matches, so the two composers
+  // below hand a string to the catalog. The empty string is falsy exactly
+  // where the missing label was, which is what the announcement's guard reads.
+  const activeLabel =
+    columns.find((column) => column.id === state.sortColumnId)?.label ?? "";
 
   // The four views the table can show, chosen once here rather than through a
   // stack of conditional expressions inside the markup. The order is the
   // precedence: a failure outranks a pending load, and both outrank a result.
   let body: ReactNode;
-  if (error) {
-    body = <ErrorRegion error={error} onRetry={onRetry} />;
+  if (errorMessage !== null) {
+    body = (
+      <ErrorRegion message={errorMessage} labels={labels} onRetry={onRetry} />
+    );
   } else if (!datasetReady) {
     // The whole view is replaced until the collection has arrived once, the
     // first paint before the request even starts included: the empty result
@@ -219,7 +262,7 @@ export function DataTable<T, Id extends string>({
             <caption className={styles.srOnly}>
               {labels.caption(
                 sortedRows.length,
-                sortSummary(state.sortDirection, activeLabel),
+                sortSummary(labels, state.sortDirection, activeLabel),
               )}
             </caption>
             <TableHead
@@ -251,7 +294,12 @@ export function DataTable<T, Id extends string>({
     <>
       {/* a11y: Live region for announcing sort changes */}
       <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
-        {sortAnnouncement(state.sortDirection, state.hasSorted, activeLabel)}
+        {sortAnnouncement(
+          labels,
+          state.sortDirection,
+          state.hasSorted,
+          activeLabel,
+        )}
       </div>
       {/* a11y: mounted unconditionally rather than inside the branch that
           renders the table. A live region created with its message already in
@@ -263,7 +311,7 @@ export function DataTable<T, Id extends string>({
       <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
         {resultsAnnouncement(
           labels,
-          !error && !loading && datasetReady,
+          errorMessage === null && !loading && datasetReady,
           paginatedData.length,
           sortedRows.length,
         )}

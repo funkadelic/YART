@@ -64,6 +64,39 @@ describe("the catalogs", () => {
         catalog.caption("en-US", 500, "not sorted"),
         `the ${id} catalog`,
       ).toMatch(/500(?=.*not sorted)/s);
+      expect(catalog.error("it went wrong"), `the ${id} catalog`).toContain(
+        "it went wrong",
+      );
+      expect(
+        catalog.sortedAnnouncement("Population", "asc"),
+        `the ${id} catalog`,
+      ).toContain("Population");
+      expect(
+        catalog.sortSummary("Population", "asc"),
+        `the ${id} catalog`,
+      ).toContain("Population");
+      expect(catalog.pageStatus("en-US", 2, 3), `the ${id} catalog`).toMatch(
+        /2(?=.*3)/s,
+      );
+    }
+  });
+
+  // The direction arrives at these two entries as a value so that each language
+  // can spell the pair out. A catalog that ignored it would render one word for
+  // both states, which typechecks, renders, and tells a reader the opposite of
+  // what the table is doing half the time.
+  it("says something different for each sort direction in every catalog", () => {
+    for (const id of CATALOG_IDS) {
+      const catalog = CATALOGS[id];
+
+      expect(
+        catalog.sortedAnnouncement("Population", "asc"),
+        `the ${id} catalog`,
+      ).not.toBe(catalog.sortedAnnouncement("Population", "desc"));
+      expect(
+        catalog.sortSummary("Population", "asc"),
+        `the ${id} catalog`,
+      ).not.toBe(catalog.sortSummary("Population", "desc"));
     }
   });
 
@@ -116,6 +149,10 @@ describe("the catalogs", () => {
       ).toContain(grouped);
       expect(
         catalog.caption(tag, GROUPED, "not sorted"),
+        `the ${id} catalog`,
+      ).toContain(grouped);
+      expect(
+        catalog.pageStatus(tag, 1, GROUPED),
         `the ${id} catalog`,
       ).toContain(grouped);
       expect(grouped, `the ${id} catalog`).not.toBe(String(GROUPED));

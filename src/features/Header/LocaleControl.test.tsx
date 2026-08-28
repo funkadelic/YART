@@ -124,7 +124,7 @@ describe("LocaleControl", () => {
           onSearchChange={() => {}}
           loading={false}
           datasetReady={false}
-          error={null}
+          errorMessage={null}
         />
       </>,
     );

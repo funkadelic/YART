@@ -38,7 +38,10 @@ interface CityTableProps {
   readonly loading: boolean;
   // False until the underlying collection has arrived at least once.
   readonly datasetReady: boolean;
-  readonly error: Error | null;
+  // The text of the failure rather than the failure itself, which is the shape
+  // the table below takes: nothing under this component narrows an error, so a
+  // preserved cause cannot reach a reader by accident.
+  readonly errorMessage: string | null;
   // Optional so the table stays usable on its own, without a container to
   // re-run the request behind it.
   readonly onRetry?: () => void;
@@ -60,7 +63,7 @@ export function CityTable({
   onSearchChange,
   loading,
   datasetReady,
-  error,
+  errorMessage,
   onRetry,
 }: CityTableProps) {
   // The one place below the header that subscribes to the locale. Everything
@@ -286,7 +289,7 @@ export function CityTable({
         onPageSizeChange={handlePageSizeChange}
         loading={loading}
         datasetReady={datasetReady}
-        error={error}
+        errorMessage={errorMessage}
         onRetry={onRetry}
         labels={labels}
       />

@@ -15,6 +15,29 @@ const RESULT = { one: "result", other: "results" };
 const ENTRY = { one: "entry", other: "entries" };
 
 /**
+ * Which way a sorted column runs.
+ *
+ * Declared here rather than imported from the table, because a catalog names
+ * words and must not learn what a table is. It is the same pair of tokens the
+ * sort state travels as, and it arrives at the two entries below as a value
+ * precisely so that no sentence has to build a word out of it.
+ */
+export type SortedDirection = "asc" | "desc";
+
+/**
+ * The two directions, as the words the sentences below weave in.
+ *
+ * A record rather than a suffix appended to the token, and the difference is
+ * the whole reason this file changed: "ascend" plus "ing" is a word in exactly
+ * one language, and a sentence assembled that way cannot be translated at all.
+ * Every language spells the pair out here and reads it by key.
+ */
+const DIRECTION: Readonly<Record<SortedDirection, string>> = {
+  asc: "ascending",
+  desc: "descending",
+};
+
+/**
  * The base catalog: every string the city table shows that names what its rows
  * are or what a column of them holds, in the language the rest of the tree is
  * checked against.
@@ -22,12 +45,12 @@ const ENTRY = { one: "entry", other: "entries" };
  * The wording is the wording the table already shipped, up to the two nouns
  * that now follow their count and the two counts that are now grouped.
  *
- * The two function-valued entries take the resolved language tag as their first
- * parameter, and that parameter is the whole reason they are functions rather
- * than templates: the count a reader sees is grouped by the tag's own rule, and
+ * The entries taking the resolved language tag as their first parameter take it
+ * for one reason: the count a reader sees is grouped by that tag's own rule, and
  * the noun beside it is selected over the categories the tag reports. Neither
  * decision can be made where the sentence is assembled, because that is one
- * layer below the locale by construction.
+ * layer below the locale by construction. An entry needing neither takes no tag,
+ * so the signature says which entries are locale-sensitive and which are copy.
  */
 export const en = {
   columnName: "City",
@@ -45,6 +68,25 @@ export const en = {
   },
   caption: (tag: string, total: number, sortSummary: string) =>
     `City data with ${numberFormatFor(tag).format(total)} ${selectPlural(tag, total, ENTRY)}, currently ${sortSummary}`,
+  error: (message: string) => `Error: ${message}`,
+  retry: "Try again",
+  sortedAnnouncement: (columnLabel: string, direction: SortedDirection) =>
+    `Table sorted by ${columnLabel} in ${DIRECTION[direction]} order`,
+  sortClearedAnnouncement: "Table sort cleared",
+  unsorted: "not sorted",
+  sortSummary: (columnLabel: string, direction: SortedDirection) =>
+    `sorted by ${columnLabel} ${DIRECTION[direction]}`,
+  pageSize: "Per page:",
+  paginationNavigation: "Table pagination navigation",
+  firstPage: "Go to first page",
+  previousPage: "Go to previous page",
+  nextPage: "Go to next page",
+  lastPage: "Go to last page",
+  pageStatus: (tag: string, page: number, totalPages: number) => {
+    const number = numberFormatFor(tag);
+
+    return `Page ${number.format(page)} of ${number.format(totalPages)}`;
+  },
 };
 
 /**

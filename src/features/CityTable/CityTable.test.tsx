@@ -75,7 +75,7 @@ const defaultProps = {
   loading: false,
   // The honest default for a fixture that already carries rows.
   datasetReady: true,
-  error: null,
+  errorMessage: null,
 };
 
 describe("CityTable", () => {
@@ -146,8 +146,7 @@ describe("CityTable", () => {
     });
 
     it("shows search input even when there's an error", () => {
-      const error = new Error("Test error");
-      render(<CityTable {...defaultProps} error={error} />);
+      render(<CityTable {...defaultProps} errorMessage="Test error" />);
 
       expect(
         screen.getByRole("textbox", { name: "Search" }),
@@ -231,8 +230,9 @@ describe("CityTable", () => {
     });
 
     it("shows error state", () => {
-      const error = new Error("Failed to fetch cities");
-      render(<CityTable {...defaultProps} error={error} />);
+      render(
+        <CityTable {...defaultProps} errorMessage="Failed to fetch cities" />,
+      );
 
       expect(
         screen.getByText("Error: Failed to fetch cities"),
@@ -260,13 +260,12 @@ describe("CityTable", () => {
     it("offers a retry control in the error region when a handler is given", async () => {
       const user = userEvent.setup();
       const onRetry = vi.fn();
-      const error = new Error("The city data could not be downloaded.");
 
       render(
         <CityTable
           {...defaultProps}
           data={[]}
-          error={error}
+          errorMessage="The city data could not be downloaded."
           onRetry={onRetry}
         />,
       );
@@ -277,9 +276,13 @@ describe("CityTable", () => {
     });
 
     it("offers no retry control when no handler is given", () => {
-      const error = new Error("The city data could not be downloaded.");
-
-      render(<CityTable {...defaultProps} data={[]} error={error} />);
+      render(
+        <CityTable
+          {...defaultProps}
+          data={[]}
+          errorMessage="The city data could not be downloaded."
+        />,
+      );
 
       expect(
         screen.getByText("Error: The city data could not be downloaded."),

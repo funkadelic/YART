@@ -1,4 +1,4 @@
-import { en, type Catalog } from "./en";
+import { en, type Catalog, type SortedDirection } from "./en";
 
 /**
  * The right-to-left pseudo-locale.
@@ -80,4 +80,20 @@ export const pseudo = {
     pseudoize(en.results(tag, shown, total)),
   caption: (tag: string, total: number, sortSummary: string) =>
     pseudoize(en.caption(tag, total, sortSummary)),
+  error: (message: string) => pseudoize(en.error(message)),
+  retry: pseudoize(en.retry),
+  sortedAnnouncement: (columnLabel: string, direction: SortedDirection) =>
+    pseudoize(en.sortedAnnouncement(columnLabel, direction)),
+  sortClearedAnnouncement: pseudoize(en.sortClearedAnnouncement),
+  unsorted: pseudoize(en.unsorted),
+  sortSummary: (columnLabel: string, direction: SortedDirection) =>
+    pseudoize(en.sortSummary(columnLabel, direction)),
+  pageSize: pseudoize(en.pageSize),
+  paginationNavigation: pseudoize(en.paginationNavigation),
+  firstPage: pseudoize(en.firstPage),
+  previousPage: pseudoize(en.previousPage),
+  nextPage: pseudoize(en.nextPage),
+  lastPage: pseudoize(en.lastPage),
+  pageStatus: (tag: string, page: number, totalPages: number) =>
+    pseudoize(en.pageStatus(tag, page, totalPages)),
 } satisfies Catalog;

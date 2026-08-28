@@ -9,6 +9,32 @@ import {
 import { PAGE_SIZE_OPTIONS } from "./tableState";
 import styles from "./Pagination.module.scss";
 
+/**
+ * Every string the page controls render.
+ *
+ * A slice of the table's own labels object rather than a second prop the caller
+ * assembles, so one object reaches the table and the table hands this part of it
+ * on. Each of the four action entries is used twice, once as the tooltip and
+ * once as the accessible name, which is what stops a translation moving one and
+ * leaving the other behind.
+ */
+export interface PaginationLabels {
+  /** Names the control choosing how many rows a page holds. */
+  readonly pageSize: string;
+  /** The accessible name of the landmark the page controls sit in. */
+  readonly navigation: string;
+  /** Names the control jumping to the first page. */
+  readonly firstPage: string;
+  /** Names the control stepping one page back. */
+  readonly previousPage: string;
+  /** Names the control stepping one page on. */
+  readonly nextPage: string;
+  /** Names the control jumping to the last page. */
+  readonly lastPage: string;
+  /** Where the reader is, as the live region beside the controls reports it. */
+  readonly pageStatus: (page: number, totalPages: number) => string;
+}
+
 interface PaginationProps {
   readonly page: number;
   readonly totalPages: number;

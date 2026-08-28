@@ -85,7 +85,7 @@ const App = () => {
         onSearchChange={handleSearchChange}
         loading={loading}
         datasetReady={datasetReady}
-        error={error}
+        errorMessage={error?.message ?? null}
         onRetry={handleRetry}
       />
     </RootLayout>

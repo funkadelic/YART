@@ -176,7 +176,7 @@ describe("ErrorBoundary mounted in the layout", () => {
           onSearchChange={() => {}}
           loading={false}
           datasetReady={false}
-          error={new Error("The city data could not be read.")}
+          errorMessage="The city data could not be read."
           onRetry={() => {}}
         />
       </RootLayout>,
