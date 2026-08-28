@@ -94,5 +94,14 @@ export default defineConfig([
     files: ["**/*.{js,mjs,cjs}"],
     extends: [tseslint.configs.disableTypeChecked],
   },
+  // Recommended as of the next major, enabled ahead of it. A symptom error
+  // that drops the one it was raised from costs the reader the stack that
+  // says where the failure started, and the data module already carries the
+  // original as a cause at every boundary it wraps.
+  {
+    rules: {
+      "preserve-caught-error": "error",
+    },
+  },
   prettierConfig, // must go last
 ]);

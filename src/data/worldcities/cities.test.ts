@@ -90,7 +90,9 @@ async function rejectionOf(load: () => Promise<unknown>): Promise<Error> {
     await load();
   } catch (error) {
     if (error instanceof Error) return error;
-    throw new Error(`The load rejected with a non-error: ${String(error)}`);
+    throw new Error(`The load rejected with a non-error: ${String(error)}`, {
+      cause: error,
+    });
   }
 
   throw new Error("The load resolved when it was expected to reject.");
