@@ -196,13 +196,15 @@ function normalizeProse(source: string): string {
 }
 
 /**
- * A block comment handed to normalizeProse with the leading asterisk stripped from
- * every line. The third copy of the provenance paragraph lived in a comment, where
- * every line begins with an asterisk, so an absence assertion that skipped the strip
- * would pass on a reintroduced copy for the wrong reason.
+ * A comment handed to normalizeProse with its markers stripped from every line, the
+ * block form's asterisk and the line form's pair of slashes alike. The third copy of
+ * the provenance paragraph lived in a block comment, so an absence assertion that
+ * skipped the strip would pass on a reintroduced copy for the wrong reason; the
+ * amended address invariant is carried in line comments, so a presence assertion that
+ * skipped them would fail on markup rather than on the prose it is reading.
  */
 function normalizeComment(source: string): string {
-  return normalizeProse(source.replace(/^[ \t]*\*[ ]?/gm, ""));
+  return normalizeProse(source.replace(/^[ \t]*(?:\*|\/\/)[ ]?/gm, ""));
 }
 
 /** Whether a node is a call to the named callee, matched as the tree writes it. */
@@ -332,6 +334,32 @@ function findTestFiles(directory: string): string[] {
       found.push(...findTestFiles(join(directory, entry.name)));
     } else if (/\.(test|spec)\.[cm]?[jt]sx?$/.test(entry.name)) {
       found.push(join(directory, entry.name));
+    }
+  }
+
+  return found;
+}
+
+/**
+ * Every module under a directory that is not a test file, so a guard can ask a
+ * question of the application rather than of the suite. The complement of
+ * findTestFiles over the same walk, because a call site written into a test is a
+ * test double and a call site written into a module is the application doing it.
+ */
+function findSourceFiles(directory: string): string[] {
+  const found: string[] = [];
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      if (SKIPPED_DIRECTORIES.has(entry.name)) continue;
+      found.push(...findSourceFiles(path));
+    } else if (
+      /\.[cm]?[jt]sx?$/.test(entry.name) &&
+      !/\.(test|spec)\.[cm]?[jt]sx?$/.test(entry.name)
+    ) {
+      found.push(path);
     }
   }
 
@@ -746,6 +774,139 @@ function moduleSource(path: string): ts.SourceFile {
 
 const THEME_MODULE = "src/theme/resolveTheme.ts";
 const LOCALE_MODULE = "src/i18n/resolveLocale.ts";
+
+// The one module allowed to write the address, and the module that owns which
+// keys the address may carry.
+const ADDRESS_WRITER = "src/features/CityTable/CityTable.tsx";
+const SCHEMA_MODULE = "src/components/DataTable/tableStateUrl.ts";
+
+/**
+ * The four keys the query string owns, sorted.
+ *
+ * Pinned as a set rather than asserted as a floor, because the risk this guards
+ * runs in the other direction: a fifth entry for the locale would make the
+ * reader's language part of the view state a link reproduces, which is the one
+ * thing the amendment below says the address deliberately does not do.
+ */
+const SCHEMA_KEYS = ["page", "q", "size", "sort"];
+
+/**
+ * The account of what a link does and does not reproduce, written out here for
+ * the same reason the provenance sentences above are: a rewrite in any document
+ * that carries it cannot move both sides of the assertion at once.
+ *
+ * The statement is amended rather than new. Following the reader's locale is
+ * what made the previous wording false, so the wording moved in the same change
+ * set that made it move, and this is the first machine check it has had.
+ */
+const ADDRESS_INVARIANT =
+  "One address is one view, per resolved locale: the query string carries " +
+  "the search term, the sort column and direction, the page and the page " +
+  "size, and the resolved locale is deliberately not among them, so two " +
+  "readers opening the same link see the same rows in the order and the " +
+  "number format their own locale produces. Putting the locale in the " +
+  "address would force the sender's language on the recipient and would " +
+  "make the locale part of the table's view state";
+
+/**
+ * Every document that carries that account, most-consulted first.
+ *
+ * The first two are committed. The last two are the generated project
+ * instructions and the codebase map they are generated from, and this
+ * repository keeps both out of version control, so they are asserted where they
+ * exist and skipped where they do not rather than failing a fresh clone for
+ * missing a file it was never given. The count below is what stops that
+ * tolerance from quietly emptying the loop.
+ */
+const ADDRESS_DOCUMENTS = [
+  "README.md",
+  ADDRESS_WRITER,
+  ".claude/CLAUDE.md",
+  ".planning/codebase/ARCHITECTURE.md",
+];
+
+/** How many of those documents are committed, and therefore always readable. */
+const COMMITTED_ADDRESS_DOCUMENTS = 2;
+
+/**
+ * Every history-mutating call this file performs, one entry per call site, named
+ * by the method rather than by the receiver.
+ *
+ * Asked of the tree rather than of the text, so a method named inside a string or
+ * a comment is not a call. Matched on the property being called rather than on
+ * the whole callee as written, because the invariant is about the mutation
+ * happening at all: a destructured binding or a receiver held in a local is the
+ * same second writer under a different spelling.
+ */
+function historyMutations(file: ts.SourceFile): string[] {
+  const found: string[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const callee = node.expression;
+      const name = ts.isPropertyAccessExpression(callee)
+        ? callee.name.text
+        : ts.isIdentifier(callee)
+          ? callee.text
+          : undefined;
+
+      if (name === "replaceState" || name === "pushState") found.push(name);
+    }
+
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
+  return found;
+}
+
+/**
+ * The keys the query-string schema declares, sorted, read out of the schema's own
+ * property names.
+ *
+ * Read from the construct rather than from a token search, and read as names
+ * rather than through literalValue over the whole array, because each entry also
+ * carries a parse and a serialize function and a literal evaluator would refuse
+ * the array outright.
+ */
+function schemaKeys(): string[] {
+  const file = moduleSource(SCHEMA_MODULE);
+  let entries: readonly ts.Expression[] | undefined;
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "PARAM_SCHEMA" &&
+      node.initializer &&
+      ts.isArrayLiteralExpression(node.initializer)
+    ) {
+      entries = node.initializer.elements;
+    }
+
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
+
+  return required(entries, `PARAM_SCHEMA in ${SCHEMA_MODULE}`)
+    .map((entry) => {
+      const key = ts.isObjectLiteralExpression(entry)
+        ? entry.properties.find(
+            (property): property is ts.PropertyAssignment =>
+              ts.isPropertyAssignment(property) &&
+              ts.isIdentifier(property.name) &&
+              property.name.text === "key",
+          )
+        : undefined;
+
+      return literalValue(
+        required(key?.initializer, `a schema entry's key in ${SCHEMA_MODULE}`),
+        file,
+      ) as string;
+    })
+    .toSorted();
+}
 
 describe("toolchain baseline", () => {
   // This guard used to ban a list of names belonging to the runner that was
@@ -1541,5 +1702,79 @@ describe("toolchain baseline", () => {
         `README says ${label} ${named.get(label) ?? "nothing"} against ${name}@${version ?? "nothing"}`,
       ).toBe((version ?? "").split(".")[0]);
     }
+  });
+  // The address design had four invariants and no machine check of any of them:
+  // the single writer, the absence of a push, the guarded write and the omitted
+  // defaults were prose, plus behavior tests that would still pass beside a
+  // second writer nobody noticed. Following the reader's locale is what made the
+  // headline statement move, so the statement is amended and guarded in the same
+  // change set rather than left to be discovered wrong later.
+  //
+  // Three questions, all asked of constructs. Whether anything but the one
+  // component mutates history, whether the query string still owns exactly the
+  // four keys it owned, and whether every document a reader consults for the
+  // design still says the same thing about what a link reproduces. A token
+  // search would pass on all three from a mention inside a comment.
+  it("keeps one address writer, four query keys, and one account of what a link carries", () => {
+    const sources = findSourceFiles(join(projectRoot, "src"));
+
+    expect(
+      sources.length,
+      "the source walk found no module under src/, so this guard read nothing",
+    ).toBeGreaterThan(0);
+
+    const writers: string[] = [];
+    const pushes: string[] = [];
+
+    for (const path of sources) {
+      const name = relative(projectRoot, path).split(sep).join("/");
+
+      for (const method of historyMutations(
+        parse(readFileSync(path, "utf8")),
+      )) {
+        if (method === "replaceState") writers.push(name);
+        else pushes.push(name);
+      }
+    }
+
+    expect(
+      writers.toSorted(),
+      "the address is written from somewhere other than exactly the one writer",
+    ).toEqual([ADDRESS_WRITER]);
+
+    // Separate from the count above so the failure says which rule broke. A push
+    // fills the back stack with positions the reader never asked to record, which
+    // is a different defect from a second writer arguing over the query string.
+    expect(
+      pushes.toSorted(),
+      "a history push appeared under src/, so Back no longer leaves the site",
+    ).toEqual([]);
+
+    expect(
+      schemaKeys(),
+      "the query-string schema owns a different set of keys than it did",
+    ).toEqual(SCHEMA_KEYS);
+
+    let read = 0;
+
+    for (const name of ADDRESS_DOCUMENTS) {
+      const path = join(projectRoot, name);
+      if (!existsSync(path)) continue;
+
+      read += 1;
+
+      expect(
+        normalizeComment(readFileSync(path, "utf8")),
+        `${name} no longer carries: ${ADDRESS_INVARIANT}`,
+      ).toContain(ADDRESS_INVARIANT);
+    }
+
+    // Without this the loop above passes vacuously the day someone renames the
+    // README or moves the writer, which is the failure mode a tolerance for
+    // missing files always brings with it.
+    expect(
+      read,
+      "fewer documents carrying the address invariant were found than are committed",
+    ).toBeGreaterThanOrEqual(COMMITTED_ADDRESS_DOCUMENTS);
   });
 });
