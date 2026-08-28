@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { DATASET_ERROR_CODES } from "../../api/getCities";
 import { required } from "../../test/required";
 import { numberFormatFor, pluralRulesFor } from "../format";
 import { CATALOG_IDS, resolveLocale } from "../resolveLocale";
@@ -78,6 +79,40 @@ describe("the catalogs", () => {
       expect(catalog.pageStatus("en-US", 2, 3), `the ${id} catalog`).toMatch(
         /2(?=.*3)/s,
       );
+    }
+  });
+
+  // Every failure the loader can report has a sentence in every catalog, and a
+  // missing arm is a reader shown the word undefined at the moment the
+  // application has already failed. The type check catches an absent key; this
+  // catches an entry present and empty, and it walks the code tuple rather than
+  // restating it, so a code added to the loader arrives here on its own.
+  it("says something for every dataset failure in every catalog", () => {
+    for (const id of CATALOG_IDS) {
+      const catalog = CATALOGS[id];
+
+      for (const code of DATASET_ERROR_CODES) {
+        expect(
+          catalog.datasetError[code]("en-US", 7).trim(),
+          `the ${id} catalog, ${code}`,
+        ).not.toBe("");
+      }
+    }
+  });
+
+  // The three sentences that name a number are the ones a translation can
+  // quietly drop: the row failures and the status failure all read fluently
+  // without it and tell the reader nothing.
+  it("weaves the detail into every dataset failure that names one", () => {
+    for (const id of CATALOG_IDS) {
+      const catalog = CATALOGS[id];
+
+      for (const code of ["rowShape", "rowFieldType", "status"] as const) {
+        expect(
+          catalog.datasetError[code]("en-US", 404),
+          `the ${id} catalog, ${code}`,
+        ).toContain("404");
+      }
     }
   });
 

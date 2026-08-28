@@ -1,5 +1,5 @@
 import { numberFormatFor, selectPlural } from "../format";
-import type { Catalog, SortedDirection } from "./en";
+import type { Catalog, DatasetErrorText, SortedDirection } from "./en";
 
 /**
  * The nouns the two woven sentences below pluralize, total over the three
@@ -33,6 +33,25 @@ const ORDRE: Readonly<Record<SortedDirection, string>> = {
  */
 const NARROW_NO_BREAK_SPACE = "\u202F";
 
+/** Ce qui est annoncé au lecteur quand les données ne peuvent pas être chargées. */
+const TEXTE_ERREUR: DatasetErrorText = {
+  notAnObject: () => "Les données des villes n'ont pas pu être lues.",
+  missingRows: () => "Le tableau de lignes est absent des données des villes.",
+  columnOrder: () =>
+    "Les données des villes ont un ordre de colonnes inattendu et n'ont pas été chargées.",
+  rowShape: (tag, at) =>
+    `La ligne ${numberFormatFor(tag).format(at)} des données des villes n'a pas 7 champs et n'a pas été chargée.`,
+  rowFieldType: (tag, at) =>
+    `La ligne ${numberFormatFor(tag).format(at)} des données des villes a un champ de type incorrect et n'a pas été chargée.`,
+  transport: () =>
+    "Les données des villes n'ont pas pu être téléchargées. Vérifiez votre connexion et réessayez.",
+  status: (tag, status) =>
+    `Les données des villes n'ont pas pu être téléchargées (statut ${numberFormatFor(tag).format(status)}).`,
+  notJson: () =>
+    "Les données des villes ont été téléchargées, mais n'ont pas pu être lues au format JSON.",
+  unexpected: () => "Une erreur inattendue s'est produite",
+};
+
 /**
  * The French catalog.
  *
@@ -64,6 +83,7 @@ export const fr = {
   caption: (tag: string, total: number, sortSummary: string) =>
     `Données des villes avec ${numberFormatFor(tag).format(total)} ${selectPlural(tag, total, ENTREE)}, actuellement ${sortSummary}`,
   error: (message: string) => `Erreur${NARROW_NO_BREAK_SPACE}: ${message}`,
+  datasetError: TEXTE_ERREUR,
   retry: "Réessayer",
   sortedAnnouncement: (columnLabel: string, direction: SortedDirection) =>
     `Tableau trié par ${columnLabel} en ordre ${ORDRE[direction]}`,

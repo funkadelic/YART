@@ -1,9 +1,20 @@
-import type { City } from "../data/worldcities/cities";
-import { loadCities } from "../data/worldcities/cities";
+import type { City, DatasetErrorCode } from "../data/worldcities/cities";
+import {
+  DATASET_ERROR_CODES,
+  DatasetError,
+  loadCities,
+} from "../data/worldcities/cities";
 
 // Re-exported so no consumer's import path changes: the definition moved, the
 // import site did not.
 export type { City };
+
+// The failure vocabulary reaches the rest of the tree through this seam too, so
+// the loader keeps exactly one consumer. The application layer and the catalogs
+// need the code to choose a sentence; neither has any business reaching past
+// this module to get it.
+export type { DatasetErrorCode };
+export { DATASET_ERROR_CODES, DatasetError };
 
 export interface GetCitiesParams {
   searchTerm?: string;

@@ -1,4 +1,9 @@
-import { en, type Catalog, type SortedDirection } from "./en";
+import {
+  en,
+  type Catalog,
+  type DatasetErrorText,
+  type SortedDirection,
+} from "./en";
 
 /**
  * The right-to-left pseudo-locale.
@@ -58,6 +63,30 @@ export function pseudoize(message: string): string {
 }
 
 /**
+ * The dataset failure sentences, each derived from the base catalog's own so
+ * this record cannot drift from the copy it pseudo-translates. Written out
+ * entry by entry like every other entry in this file, rather than built from
+ * the code tuple, because a construction would need a cast to be typed and the
+ * cast is what would hide a missing arm.
+ */
+const DATASET_ERROR_TEXT: DatasetErrorText = {
+  notAnObject: (tag, detail) =>
+    pseudoize(en.datasetError.notAnObject(tag, detail)),
+  missingRows: (tag, detail) =>
+    pseudoize(en.datasetError.missingRows(tag, detail)),
+  columnOrder: (tag, detail) =>
+    pseudoize(en.datasetError.columnOrder(tag, detail)),
+  rowShape: (tag, detail) => pseudoize(en.datasetError.rowShape(tag, detail)),
+  rowFieldType: (tag, detail) =>
+    pseudoize(en.datasetError.rowFieldType(tag, detail)),
+  transport: (tag, detail) => pseudoize(en.datasetError.transport(tag, detail)),
+  status: (tag, detail) => pseudoize(en.datasetError.status(tag, detail)),
+  notJson: (tag, detail) => pseudoize(en.datasetError.notJson(tag, detail)),
+  unexpected: (tag, detail) =>
+    pseudoize(en.datasetError.unexpected(tag, detail)),
+};
+
+/**
  * The pseudo-locale catalog. Every function-valued entry pseudo-translates the
  * base catalog's result rather than a template, so the values woven into a
  * sentence land inside the brackets where a truncation would cut them.
@@ -81,6 +110,7 @@ export const pseudo = {
   caption: (tag: string, total: number, sortSummary: string) =>
     pseudoize(en.caption(tag, total, sortSummary)),
   error: (message: string) => pseudoize(en.error(message)),
+  datasetError: DATASET_ERROR_TEXT,
   retry: pseudoize(en.retry),
   sortedAnnouncement: (columnLabel: string, direction: SortedDirection) =>
     pseudoize(en.sortedAnnouncement(columnLabel, direction)),

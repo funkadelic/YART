@@ -27,9 +27,40 @@ let fetchSpy: ReturnType<typeof stubDatasetFetchFromDisk>;
  * that asserts a request count starts here, or it is counting what an earlier
  * case already loaded.
  */
-async function freshGetCities() {
+async function freshApi() {
   vi.resetModules();
-  return (await import("./getCities")).getCities;
+  return await import("./getCities");
+}
+
+/** The seam alone, for the cases that need nothing else from the module. */
+async function freshGetCities() {
+  return (await freshApi()).getCities;
+}
+
+/**
+ * The dataset error a call rejected with, so its code can be asserted beside
+ * the message it already asserts. The code is what chooses the sentence a
+ * reader is shown, and a code on the wrong throw produces a fluent sentence
+ * about the wrong failure, which no message assertion can see.
+ */
+async function datasetRejection(
+  api: typeof import("./getCities"),
+  call: Promise<unknown>,
+): Promise<InstanceType<typeof api.DatasetError>> {
+  try {
+    await call;
+  } catch (error) {
+    // The class is read off the freshly loaded module rather than the one
+    // imported at the top of this file. Every case here resets the module
+    // registry, so a class imported once stops recognizing its own instances.
+    if (error instanceof api.DatasetError) return error;
+    throw new Error(
+      `The call rejected with something other than a dataset error: ${String(error)}`,
+      { cause: error },
+    );
+  }
+
+  throw new Error("The call resolved when it was expected to reject.");
 }
 
 /**
@@ -150,15 +181,18 @@ describe("getCities", () => {
     const failure = new Error("The connection was refused");
     vi.spyOn(globalThis, "fetch").mockRejectedValue(failure);
 
-    const coldGetCities = await freshGetCities();
+    const api = await freshApi();
 
     // The injected text does not reach the seam: the loader replaces a
     // transport failure with copy a reader can act on and keeps the original as
     // the cause, which is asserted where the wrap lives rather than here. The
     // same holds for every load-failure assertion below.
-    await expect(coldGetCities()).rejects.toThrow(
+    const rejection = await datasetRejection(api, api.getCities());
+
+    expect(rejection.message).toBe(
       "The city data could not be downloaded. Check your connection and try again.",
     );
+    expect(rejection.code).toBe("transport");
   });
 
   it("rejects with a message naming the status when the response is not ok", async () => {
@@ -166,11 +200,15 @@ describe("getCities", () => {
       new Response("", { status: 404 }),
     );
 
-    const coldGetCities = await freshGetCities();
+    const api = await freshApi();
 
-    await expect(coldGetCities()).rejects.toThrow(
+    const rejection = await datasetRejection(api, api.getCities());
+
+    expect(rejection.message).toBe(
       "The city data could not be downloaded (status 404).",
     );
+    expect(rejection.code).toBe("status");
+    expect(rejection.detail).toBe(404);
   });
 });
 

@@ -1,3 +1,4 @@
+import type { DatasetErrorCode } from "../../api/getCities";
 import { numberFormatFor, selectPlural } from "../format";
 
 /**
@@ -38,6 +39,46 @@ const DIRECTION: Readonly<Record<SortedDirection, string>> = {
 };
 
 /**
+ * What a reader is told when the city data cannot be loaded, one sentence per
+ * failure code.
+ *
+ * Total over the code union rather than defaulted, so a code added to the loader
+ * without a sentence in all four catalogs fails the type check instead of
+ * rendering the word undefined at the moment the application has already
+ * failed. There is no fallback arm here and so no branch the coverage gate
+ * cannot reach.
+ *
+ * Every entry has the same signature and most ignore both arguments, which is
+ * what keeps the lookup one call with no branch. The three that use the second
+ * one weave a row index or a response status and group it on the resolved tag,
+ * like every other number this application shows.
+ *
+ * The field count in the two row sentences is written out rather than passed
+ * in. It is a fact about the asset's shape rather than a quantity a reader's
+ * locale groups, and the detail slot is already carrying the row.
+ */
+export type DatasetErrorText = Readonly<
+  Record<DatasetErrorCode, (tag: string, detail: number) => string>
+>;
+
+const DATASET_ERROR_TEXT: DatasetErrorText = {
+  notAnObject: () => "The city data could not be read.",
+  missingRows: () => "The city data is missing its rows array.",
+  columnOrder: () =>
+    "The city data has an unexpected column order and was not loaded.",
+  rowShape: (tag, at) =>
+    `City row ${numberFormatFor(tag).format(at)} does not have 7 fields and was not loaded.`,
+  rowFieldType: (tag, at) =>
+    `City row ${numberFormatFor(tag).format(at)} has a field of the wrong type and was not loaded.`,
+  transport: () =>
+    "The city data could not be downloaded. Check your connection and try again.",
+  status: (tag, status) =>
+    `The city data could not be downloaded (status ${numberFormatFor(tag).format(status)}).`,
+  notJson: () => "The city data was downloaded but could not be read as JSON.",
+  unexpected: () => "An unexpected error occurred",
+};
+
+/**
  * The base catalog: every string the city table shows that names what its rows
  * are or what a column of them holds, in the language the rest of the tree is
  * checked against.
@@ -69,6 +110,7 @@ export const en = {
   caption: (tag: string, total: number, sortSummary: string) =>
     `City data with ${numberFormatFor(tag).format(total)} ${selectPlural(tag, total, ENTRY)}, currently ${sortSummary}`,
   error: (message: string) => `Error: ${message}`,
+  datasetError: DATASET_ERROR_TEXT,
   retry: "Try again",
   sortedAnnouncement: (columnLabel: string, direction: SortedDirection) =>
     `Table sorted by ${columnLabel} in ${DIRECTION[direction]} order`,
