@@ -179,24 +179,63 @@ function normalizeComment(source: string): string {
   return normalizeProse(source.replace(/^[ \t]*\*[ ]?/gm, ""));
 }
 
+/** Whether a node is a call to the named callee, matched as the tree writes it. */
+function isCallTo(
+  node: ts.Node,
+  callee: string,
+  file: ts.SourceFile,
+): node is ts.CallExpression {
+  return ts.isCallExpression(node) && node.expression.getText(file) === callee;
+}
+
 /**
- * The argument text of every call to the named callee, so each call site can be
- * judged on its own arguments instead of on whether the file mentions an option
- * somewhere.
+ * Whether the subtree performs a call to the named callee.
  *
- * The callee is matched as the tree writes it, so `userEvent.setup` finds the
- * method and never a bare `setup`, and a call named inside a string or a comment
- * is not a call expression and so is not found at all.
+ * Asked of the tree rather than of the text, because the question is whether the
+ * call happens. A name written inside a string is not a call, and a teardown hook
+ * that only mentions the restore has not performed one.
  */
-function callArguments(source: string, callee: string): string[] {
-  const file = parse(source);
-  const found: string[] = [];
+function containsCall(
+  node: ts.Node,
+  callee: string,
+  file: ts.SourceFile,
+): boolean {
+  if (isCallTo(node, callee, file)) return true;
+
+  return (
+    ts.forEachChild(node, (child) => containsCall(child, callee, file)) ?? false
+  );
+}
+
+/** Every call to the named callee, so each call site can be judged on its own. */
+function findCalls(file: ts.SourceFile, callee: string): ts.CallExpression[] {
+  const found: ts.CallExpression[] = [];
 
   const visit = (node: ts.Node): void => {
-    if (ts.isCallExpression(node) && node.expression.getText(file) === callee) {
-      found.push(
-        node.arguments.map((argument) => argument.getText(file)).join(", "),
-      );
+    if (isCallTo(node, callee, file)) found.push(node);
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
+  return found;
+}
+
+/**
+ * Every call to a method on the input library's default export other than the
+ * session opener. Matched on the property being called rather than on a pattern
+ * over the source, so a method named inside a string is not one of these.
+ */
+function directUserEventCalls(file: ts.SourceFile): ts.CallExpression[] {
+  const found: ts.CallExpression[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isPropertyAccessExpression(node.expression) &&
+      node.expression.expression.getText(file) === "userEvent" &&
+      node.expression.name.text !== "setup"
+    ) {
+      found.push(node);
     }
 
     node.forEachChild(visit);
@@ -204,6 +243,34 @@ function callArguments(source: string, callee: string): string[] {
 
   file.forEachChild(visit);
   return found;
+}
+
+/**
+ * Whether an input session is bound to the fake clock, either by being handed a
+ * clock advance or by having its delay switched off.
+ *
+ * Read off the options object's own properties, so a key spelled inside a string
+ * cannot stand in for the property itself, and an option belonging to some other
+ * call cannot answer for this one.
+ */
+function bindsClock(call: ts.CallExpression, file: ts.SourceFile): boolean {
+  const [options] = call.arguments;
+
+  if (options === undefined || !ts.isObjectLiteralExpression(options)) {
+    return false;
+  }
+
+  return options.properties.some((property) => {
+    const key = property.name?.getText(file);
+
+    if (key === "advanceTimers") return true;
+
+    return (
+      key === "delay" &&
+      ts.isPropertyAssignment(property) &&
+      property.initializer.kind === ts.SyntaxKind.NullKeyword
+    );
+  });
 }
 
 const SKIPPED_DIRECTORIES = new Set([
@@ -289,9 +356,13 @@ const MOVING_QUERY =
 const FAKES_CLOCK = /\buseFakeTimers\s*\(/;
 const CONFIGURES_CLOCK = /\bfakeTimers\s*:/;
 const IMPORTS_USER_EVENT = /from\s+["']@testing-library\/user-event["']/;
-const BINDS_CLOCK = /\badvanceTimers\b/;
-const DISABLES_DELAY = /\bdelay\s*:\s*null\b/;
-const DIRECT_USER_EVENT_CALL = /\buserEvent\.(?!setup\b)[A-Za-z]\w*\s*\(/;
+
+/**
+ * The two clock calls, named as the tree writes them. The guard below asks the
+ * tree whether each one happens rather than asking the text whether it appears.
+ */
+const FAKE_CLOCK_CALL = "vi.useFakeTimers";
+const REAL_CLOCK_CALL = "vi.useRealTimers";
 
 // A test file that mounts more than it asserts is spending its runtime producing
 // coverage rather than evidence, and the coverage gate cannot tell the two apart.
@@ -848,17 +919,20 @@ describe("toolchain baseline", () => {
 
     for (const file of scannedFiles) {
       const source = stripComments(readFileSync(file, "utf8"));
-      if (!FAKES_CLOCK.test(source)) continue;
+      const tree = parse(source);
+      if (!containsCall(tree, FAKE_CLOCK_CALL, tree)) continue;
 
       const name = relative(projectRoot, file);
 
       // Required inside the teardown hook rather than anywhere in the file, since a
       // restore that only ever runs on the happy path is not a restore.
-      if (
-        !callArguments(source, "afterEach").some((body) =>
-          /useRealTimers/.test(body),
-        )
-      ) {
+      const restores = findCalls(tree, "afterEach").some((call) =>
+        call.arguments.some((argument) =>
+          containsCall(argument, REAL_CLOCK_CALL, tree),
+        ),
+      );
+
+      if (!restores) {
         offenders.push(`${name}: never restores the clock in an afterEach`);
       }
 
@@ -867,7 +941,7 @@ describe("toolchain baseline", () => {
       // The library's direct entry points construct their own session with a no-op
       // clock advance, so they wait on a real timer the frozen clock never fires.
       // There is no argument to correct; the session form is the only bindable one.
-      if (DIRECT_USER_EVENT_CALL.test(source)) {
+      if (directUserEventCalls(tree).length > 0) {
         offenders.push(
           `${name}: calls the input library directly, which cannot be bound to a fake clock`,
         );
@@ -875,8 +949,8 @@ describe("toolchain baseline", () => {
 
       // Judged per call site: one bound session elsewhere in the file says nothing
       // about this one.
-      for (const args of callArguments(source, "userEvent.setup")) {
-        if (!BINDS_CLOCK.test(args) && !DISABLES_DELAY.test(args)) {
+      for (const call of findCalls(tree, "userEvent.setup")) {
+        if (!bindsClock(call, tree)) {
           offenders.push(
             `${name}: opens an input session that is not bound to the fake clock`,
           );
