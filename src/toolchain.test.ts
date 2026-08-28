@@ -965,6 +965,69 @@ function localeCallSites(file: ts.SourceFile): string[] {
   return found;
 }
 
+/** The layer that renders any collection, and so may name none of them. */
+const SHARED_COMPONENT_DIRECTORY = "src/components";
+
+/**
+ * The attributes whose string value a reader perceives.
+ *
+ * Two attributes carrying string values in that directory are deliberately not
+ * here. The sort state attribute takes one of three values the standard itself
+ * defines, and the live region's politeness setting takes one of two. Both are
+ * specification tokens rather than copy: assistive technology matches on them,
+ * so translating either would not localize anything, it would break the feature.
+ * They are English because the specification is, which is a different fact from
+ * a component holding a word for a reader.
+ */
+const READER_FACING_ATTRIBUTES = new Set([
+  "aria-label",
+  "title",
+  "placeholder",
+  "alt",
+]);
+
+/**
+ * Every string a reader could read out of a component: text rendered between
+ * tags, and a literal on one of the attributes above.
+ *
+ * Parsed rather than searched, which is this file's standard and is what makes
+ * the guard survivable. Every component in that directory carries paragraphs of
+ * prose explaining itself, and a search would fail on the explanation of the
+ * rule as readily as on a violation of it, at which point the guard gets
+ * deleted rather than obeyed. An attribute whose value is an expression is not
+ * a literal and is not collected: reading a string out of a prop is the shape
+ * this rule exists to require.
+ */
+function readerFacingLiterals(file: ts.SourceFile): string[] {
+  const found: string[] = [];
+
+  const visit = (node: ts.Node): void => {
+    // Whitespace between elements is text too, so the letter is what separates
+    // a rendered word from the indentation around it.
+    if (ts.isJsxText(node) && /\p{L}/u.test(node.text)) {
+      found.push(node.text.trim());
+    }
+
+    if (ts.isJsxAttribute(node)) {
+      const name = node.name.getText(file);
+      const value = node.initializer;
+
+      if (
+        READER_FACING_ATTRIBUTES.has(name) &&
+        value !== undefined &&
+        ts.isStringLiteralLike(value)
+      ) {
+        found.push(`${name}="${value.text}"`);
+      }
+    }
+
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
+  return found;
+}
+
 describe("toolchain baseline", () => {
   // This guard used to ban a list of names belonging to the runner that was
   // removed, and nothing else. A second runner arriving with a config of its own
@@ -1885,5 +1948,37 @@ describe("toolchain baseline", () => {
       ).toSorted(),
       "the formatter module no longer builds the three cached instances",
     ).toEqual(["Intl.Collator", "Intl.NumberFormat", "Intl.PluralRules"]);
+  });
+
+  // The shared component layer renders any collection for any reader, and a
+  // literal there is a claim about which. The layer already may not import a
+  // domain type or the locale layer, and both of those are lint rules over
+  // imports; a hardcoded sentence needs no import and would pass them both.
+  // Every word that layer shows now arrives in a labels object, and this is
+  // what keeps the next one arriving the same way: a second locale added to a
+  // component still holding a literal is a second set of literals.
+  it("renders no reader-facing literal in the shared component layer", () => {
+    const components = findSourceFiles(
+      join(projectRoot, SHARED_COMPONENT_DIRECTORY),
+    );
+
+    expect(
+      components.length,
+      "the walk found no component, so this guard read nothing",
+    ).toBeGreaterThan(0);
+
+    const holders = new Map<string, string[]>();
+
+    for (const path of components) {
+      const name = relative(projectRoot, path).split(sep).join("/");
+      const literals = readerFacingLiterals(parse(readFileSync(path, "utf8")));
+
+      if (literals.length > 0) holders.set(name, literals);
+    }
+
+    expect(
+      Object.fromEntries(holders),
+      "a component under the shared layer carries a string a reader can read",
+    ).toEqual({});
   });
 });
