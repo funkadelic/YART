@@ -68,6 +68,11 @@ export function pseudoize(message: string): string {
  * here could only ever drift from them.
  */
 export const pseudo = {
+  columnName: pseudoize(en.columnName),
+  columnCountry: pseudoize(en.columnCountry),
+  columnCapital: pseudoize(en.columnCapital),
+  columnCountryCode: pseudoize(en.columnCountryCode),
+  columnPopulation: pseudoize(en.columnPopulation),
   loading: pseudoize(en.loading),
   empty: pseudoize(en.empty),
   emptyAnnouncement: pseudoize(en.emptyAnnouncement),

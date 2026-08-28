@@ -4,8 +4,26 @@ import type { City } from "../api/getCities";
 import { cityRowId } from "../features/CityTable/cityColumns";
 import { CITY_FIXTURE } from "../test/cityFixture";
 import { required } from "../test/required";
+import { collatorFor } from "../i18n/format";
 import { compareIdentities } from "./DataTable/sortRows";
 import { compareValues } from "./compareRows";
+
+/**
+ * The collator every case below that does not name a locale orders text with.
+ * It is the base tag rather than no tag at all: the comparator no longer holds
+ * one, so every caller states which reader's ordering it is asking about, and a
+ * test is a caller like any other.
+ */
+const EN = collatorFor("en-US");
+
+/**
+ * A pair whose order genuinely depends on the collator's tag. Spanish treats
+ * the tilde as its own letter, so it sorts after every plain n; the root
+ * collation English and French inherit treats it as a variant of n and decides
+ * the pair on the following character instead.
+ */
+const TILDE = "ñu";
+const PLAIN = "nz";
 
 const BLANK_CAPITAL = CITY_FIXTURE.filter((city) => city.capital === "");
 const PRIMARY_CAPITAL = CITY_FIXTURE.filter(
@@ -53,7 +71,7 @@ function rowWithCapital(id: number, capital: unknown): City {
  */
 function byColumn(column: keyof City, direction: "asc" | "desc") {
   return (a: City, b: City): number => {
-    const comparison = compareValues(a[column], b[column], direction);
+    const comparison = compareValues(a[column], b[column], direction, EN);
     return comparison !== 0
       ? comparison
       : compareIdentities(cityRowId(a), cityRowId(b));
@@ -77,20 +95,20 @@ describe("compareValues", () => {
 
   it("orders a blank value last when sorting ascending", () => {
     expect(
-      compareValues(BLANK.capital, PRIMARY.capital, "asc"),
+      compareValues(BLANK.capital, PRIMARY.capital, "asc", EN),
     ).toBeGreaterThan(0);
-    expect(compareValues(PRIMARY.capital, BLANK.capital, "asc")).toBeLessThan(
-      0,
-    );
+    expect(
+      compareValues(PRIMARY.capital, BLANK.capital, "asc", EN),
+    ).toBeLessThan(0);
   });
 
   it("orders a blank value last when sorting descending as well", () => {
     expect(
-      compareValues(BLANK.capital, PRIMARY.capital, "desc"),
+      compareValues(BLANK.capital, PRIMARY.capital, "desc", EN),
     ).toBeGreaterThan(0);
-    expect(compareValues(PRIMARY.capital, BLANK.capital, "desc")).toBeLessThan(
-      0,
-    );
+    expect(
+      compareValues(PRIMARY.capital, BLANK.capital, "desc", EN),
+    ).toBeLessThan(0);
   });
 
   it("reports two blank values as equal in both directions", () => {
@@ -100,16 +118,16 @@ describe("compareValues", () => {
     const first = required(BLANK_CAPITAL[0], "the first blank-capital row");
     const second = required(BLANK_CAPITAL[1], "the second blank-capital row");
 
-    expect(compareValues(first.capital, second.capital, "asc")).toBe(0);
-    expect(compareValues(first.capital, second.capital, "desc")).toBe(0);
+    expect(compareValues(first.capital, second.capital, "asc", EN)).toBe(0);
+    expect(compareValues(first.capital, second.capital, "desc", EN)).toBe(0);
   });
 
   it("treats a zero as the smallest number rather than as a blank", () => {
     expect(
-      compareValues(ZERO.population, LARGEST_POPULATION.population, "asc"),
+      compareValues(ZERO.population, LARGEST_POPULATION.population, "asc", EN),
     ).toBeLessThan(0);
     expect(
-      compareValues(ZERO.population, LARGEST_POPULATION.population, "desc"),
+      compareValues(ZERO.population, LARGEST_POPULATION.population, "desc", EN),
     ).toBeGreaterThan(0);
   });
 
@@ -120,13 +138,13 @@ describe("compareValues", () => {
       "the second primary-capital row",
     );
 
-    expect(compareValues(first.capital, second.capital, "asc")).toBe(0);
-    expect(compareValues(first.capital, second.capital, "desc")).toBe(0);
+    expect(compareValues(first.capital, second.capital, "asc", EN)).toBe(0);
+    expect(compareValues(first.capital, second.capital, "desc", EN)).toBe(0);
   });
 
   it("gives a string paired with a number a defined order", () => {
-    const forward = compareValues("primary", 42, "asc");
-    const backward = compareValues(42, "primary", "asc");
+    const forward = compareValues("primary", 42, "asc", EN);
+    const backward = compareValues(42, "primary", "asc", EN);
 
     expect(forward).not.toBe(0);
     expect(Math.sign(backward)).toBe(-Math.sign(forward));
@@ -146,8 +164,18 @@ describe("compareValues", () => {
       [ten, five],
       [nine, five],
     ] as const) {
-      const forward = compareValues(pair[0].capital, pair[1].capital, "asc");
-      const backward = compareValues(pair[1].capital, pair[0].capital, "asc");
+      const forward = compareValues(
+        pair[0].capital,
+        pair[1].capital,
+        "asc",
+        EN,
+      );
+      const backward = compareValues(
+        pair[1].capital,
+        pair[0].capital,
+        "asc",
+        EN,
+      );
       expect(Math.sign(backward)).toBe(-Math.sign(forward));
     }
 
@@ -188,10 +216,10 @@ describe("compareValues", () => {
     const rows = [notANumber, small, large];
 
     expect(
-      compareValues(notANumber.capital, small.capital, "asc"),
+      compareValues(notANumber.capital, small.capital, "asc", EN),
     ).toBeGreaterThan(0);
     expect(
-      compareValues(notANumber.capital, small.capital, "desc"),
+      compareValues(notANumber.capital, small.capital, "desc", EN),
     ).toBeGreaterThan(0);
 
     // Blank last, both directions, and the same order whichever way the rows
@@ -210,20 +238,20 @@ describe("compareValues", () => {
     // zero, so a tiebreak downstream of this function would never run and the
     // order would be left to the sort. Comparing rather than subtracting is
     // what makes the pair come back as the tie it is.
-    expect(compareValues(Infinity, Infinity, "asc")).toBe(0);
-    expect(compareValues(Infinity, Infinity, "desc")).toBe(0);
-    expect(compareValues(-Infinity, -Infinity, "asc")).toBe(0);
+    expect(compareValues(Infinity, Infinity, "asc", EN)).toBe(0);
+    expect(compareValues(Infinity, Infinity, "desc", EN)).toBe(0);
+    expect(compareValues(-Infinity, -Infinity, "asc", EN)).toBe(0);
 
     // And the ordinary ordering against a finite value still holds.
-    expect(compareValues(Infinity, 5, "asc")).toBeGreaterThan(0);
-    expect(compareValues(-Infinity, 5, "asc")).toBeLessThan(0);
+    expect(compareValues(Infinity, 5, "asc", EN)).toBeGreaterThan(0);
+    expect(compareValues(-Infinity, 5, "asc", EN)).toBeLessThan(0);
   });
 
   it("treats null and undefined as blank on either side", () => {
-    expect(compareValues(null, "primary", "asc")).toBeGreaterThan(0);
-    expect(compareValues(null, "primary", "desc")).toBeGreaterThan(0);
-    expect(compareValues(undefined, "primary", "asc")).toBeGreaterThan(0);
-    expect(compareValues("primary", undefined, "desc")).toBeLessThan(0);
+    expect(compareValues(null, "primary", "asc", EN)).toBeGreaterThan(0);
+    expect(compareValues(null, "primary", "desc", EN)).toBeGreaterThan(0);
+    expect(compareValues(undefined, "primary", "asc", EN)).toBeGreaterThan(0);
+    expect(compareValues("primary", undefined, "desc", EN)).toBeLessThan(0);
   });
 
   it("produces the same order every time the same set is sorted", () => {
@@ -247,12 +275,34 @@ describe("compareValues", () => {
     expect(sortedIds([FIRST_CITY], "name", "asc")).toEqual([FIRST_CITY.id]);
   });
 
-  it("agrees in sign with the per-call comparison it replaces", () => {
+  // The reason the collator is a parameter at all. Under the previous
+  // module-scope constant this pair had exactly one order, whichever the
+  // machine running the code happened to produce, and no argument could change
+  // it.
+  it("orders a pair differently under two tags", () => {
+    const spanish = compareValues(TILDE, PLAIN, "asc", collatorFor("es-ES"));
+    const english = compareValues(TILDE, PLAIN, "asc", collatorFor("en-US"));
+    const french = compareValues(TILDE, PLAIN, "asc", collatorFor("fr-FR"));
+
+    expect(Math.sign(spanish)).toBe(-Math.sign(english));
+    expect(Math.sign(french)).toBe(Math.sign(english));
+
+    // And the direction flip still applies to whichever order the tag gave.
+    expect(
+      Math.sign(compareValues(TILDE, PLAIN, "desc", collatorFor("es-ES"))),
+    ).toBe(-Math.sign(spanish));
+  });
+
+  // Naming the base tag where the collator previously named nothing moves no
+  // row. The runner's own default resolves to the base tag, so the two answers
+  // are the same answer here, and a machine where they were not is a machine
+  // this suite would have been reporting a different order on all along.
+  it("agrees in sign with the locale-less comparison it replaces", () => {
     for (const left of COLLATION_SAMPLE) {
       for (const right of COLLATION_SAMPLE) {
         if (left === right) continue;
 
-        const comparison = compareValues(left, right, "asc");
+        const comparison = compareValues(left, right, "asc", EN);
 
         expect(Math.sign(comparison)).toBe(
           Math.sign(left.localeCompare(right)),

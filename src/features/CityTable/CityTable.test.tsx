@@ -1,9 +1,24 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CityTable } from "./CityTable";
 import type { City } from "../../api/getCities";
+import { fr } from "../../i18n/catalogs/fr";
+import { numberFormatFor } from "../../i18n/format";
+import { setLocaleChoice } from "../../i18n/localeStore";
 import { required } from "../../test/required";
+import { buildCityColumns } from "./cityColumns";
+
+// A spy over the real builder rather than a replacement for it, so every case
+// in this file goes on exercising the shipping columns. The one thing a spy can
+// see that the rendered output cannot is how many times the array was built,
+// which is the whole content of the claim that its identity follows the locale
+// and nothing else.
+vi.mock("./cityColumns", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./cityColumns")>();
+
+  return { ...actual, buildCityColumns: vi.fn(actual.buildCityColumns) };
+});
 
 // Mock data for testing
 const mockCities: City[] = [
@@ -946,6 +961,84 @@ describe("CityTable", () => {
       expect(screen.getAllByText("JPN")).toHaveLength(2); // Tokyo and Osaka both in Japan
       expect(screen.getByText("IDN")).toBeInTheDocument(); // Jakarta in Indonesia
       expect(screen.getAllByText("IND")).toHaveLength(2); // Mumbai and New Delhi both in India
+    });
+  });
+
+  describe("Locale", () => {
+    /** Tokyo's population, which is the largest the fixture carries. */
+    const LARGEST = required(mockCities[0], "the first fixture row").population;
+
+    /**
+     * Testing Library collapses every run of whitespace in the text it matches
+     * against, and the French group separator is a narrow no-break space, which
+     * is whitespace. The default normalizer would therefore rewrite the very
+     * character being asserted about. Trimming and nothing else is what leaves
+     * the separator intact on both sides of the comparison.
+     */
+    const asWritten = { normalizer: (text: string) => text.trim() };
+
+    // Both expected strings are computed through the platform rather than
+    // typed. The separator above is invisible in every terminal a failure is
+    // read in, so a typed literal holding an ordinary space fails on a
+    // difference nobody can see.
+    it("groups the population column on the resolved locale", () => {
+      setLocaleChoice("fr");
+
+      render(<CityTable {...defaultProps} />);
+
+      const french = numberFormatFor("fr-FR").format(LARGEST);
+      const english = numberFormatFor("en-US").format(LARGEST);
+
+      expect(french).not.toBe(english);
+      expect(screen.getByText(french, asWritten)).toBeInTheDocument();
+      expect(screen.queryByText(english, asWritten)).not.toBeInTheDocument();
+    });
+
+    it("takes its column labels from the catalog", () => {
+      setLocaleChoice("fr");
+
+      render(<CityTable {...defaultProps} />);
+
+      expect(screen.getByText(fr.columnName)).toBeInTheDocument();
+      expect(screen.getByText(fr.columnCountryCode)).toBeInTheDocument();
+      expect(screen.queryByText("Country Code")).not.toBeInTheDocument();
+    });
+
+    // The array identity is what the sort and page memos downstream depend on:
+    // a build on a render where the locale did not move would re-sort the whole
+    // collection and re-slice the page for nothing. A second call to the
+    // builder is exactly what a changed identity looks like from here, which is
+    // why the count is the assertion.
+    it("builds the column array once per locale and not once per render", () => {
+      const built = vi.mocked(buildCityColumns);
+
+      // Pinned before the first render rather than left to the machine, so the
+      // store has nothing left to settle on once the table is mounted.
+      setLocaleChoice("en");
+
+      const { rerender } = render(<CityTable {...defaultProps} />);
+
+      expect(built).toHaveBeenCalledTimes(1);
+
+      rerender(<CityTable {...defaultProps} />);
+      rerender(<CityTable {...defaultProps} />);
+
+      expect(built).toHaveBeenCalledTimes(1);
+
+      act(() => {
+        setLocaleChoice("fr");
+      });
+
+      expect(built).toHaveBeenCalledTimes(2);
+
+      // Narrowed rather than read straight: a recorded result is either a
+      // return or a throw, so its value is untyped until it is treated as the
+      // opaque thing this assertion actually needs.
+      const [first, second] = built.mock.results.map(
+        (call) => call.value as unknown,
+      );
+
+      expect(second).not.toBe(first);
     });
   });
 });

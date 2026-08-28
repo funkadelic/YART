@@ -15,8 +15,9 @@ const RESULT = { one: "result", other: "results" };
 const ENTRY = { one: "entry", other: "entries" };
 
 /**
- * The base catalog: every string the shared table renders that names what its
- * rows are, in the language the rest of the tree is checked against.
+ * The base catalog: every string the city table shows that names what its rows
+ * are or what a column of them holds, in the language the rest of the tree is
+ * checked against.
  *
  * The wording is the wording the table already shipped, up to the two nouns
  * that now follow their count and the two counts that are now grouped.
@@ -29,6 +30,11 @@ const ENTRY = { one: "entry", other: "entries" };
  * layer below the locale by construction.
  */
 export const en = {
+  columnName: "City",
+  columnCountry: "Country",
+  columnCapital: "Capital",
+  columnCountryCode: "Country Code",
+  columnPopulation: "Population",
   loading: "Downloading the city data...",
   empty: "No cities found",
   emptyAnnouncement: "No cities found for that search",

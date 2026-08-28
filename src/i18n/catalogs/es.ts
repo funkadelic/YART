@@ -23,6 +23,11 @@ const ENTRADA = { one: "entrada", many: "entradas", other: "entradas" };
  * survive for anything that wants to read them.
  */
 export const es = {
+  columnName: "Ciudad",
+  columnCountry: "País",
+  columnCapital: "Capital",
+  columnCountryCode: "Código de país",
+  columnPopulation: "Población",
   loading: "Descargando los datos de las ciudades...",
   empty: "No se encontraron ciudades",
   emptyAnnouncement: "No se encontraron ciudades para esa búsqueda",

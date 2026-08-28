@@ -2,6 +2,7 @@ import { renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { columns } from "../components/DataTable/column";
+import { collatorFor } from "../i18n/format";
 import { useSortedRows } from "./useSortedRows";
 import { required } from "../test/required";
 
@@ -10,7 +11,12 @@ interface Widget {
   name: string;
 }
 
-const col = columns<Widget>();
+/**
+ * A collator on the base tag, because the factory no longer holds one and every
+ * caller states which reader's ordering it is building for. Nothing in this
+ * file depends on which tag it is; it depends on there being exactly one.
+ */
+const col = columns<Widget>(collatorFor("en-US"));
 
 const WIDGET_COLUMNS = [col.key("name", { label: "Name" })];
 

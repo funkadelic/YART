@@ -17,7 +17,7 @@ import { useLocale } from "../../hooks/useLocale";
 import { buildTableLabels } from "./cityLabels";
 import {
   CITY_COLUMN_IDS,
-  cityColumns,
+  buildCityColumns,
   cityRowId,
   type CityColumnId,
 } from "./cityColumns";
@@ -74,6 +74,14 @@ export function CityTable({
   // change otherwise. That is exactly what a memo keyed on the catalog and the
   // tag gives, and a module-scope constant cannot give it at all.
   const labels = useMemo(() => buildTableLabels(catalog, tag), [catalog, tag]);
+
+  // The other documented exception to module-scope construction, and it keys on
+  // exactly the two values the labels above key on. That is a requirement
+  // rather than a symmetry: a column array whose identity moved on a render
+  // where the labels did not would re-sort the whole collection and re-slice
+  // the page for nothing, which over fifty thousand rows is the most expensive
+  // thing this component can do by accident.
+  const columns = useMemo(() => buildCityColumns(catalog, tag), [catalog, tag]);
 
   // Initialized from whatever the address carries, so the first render is
   // already the restored view: a link naming a page never paints the first one
@@ -270,7 +278,7 @@ export function CityTable({
       />
       <DataTable
         rows={data}
-        columns={cityColumns}
+        columns={columns}
         getRowId={cityRowId}
         state={tableState}
         onSortChange={handleSort}

@@ -22,7 +22,7 @@ const ENTREE = { one: "entrée", many: "entrées", other: "entrées" };
  * survive for anything that wants to read them.
  *
  * French typography puts a narrow no-break space, U+202F, before a colon, a
- * semicolon, an exclamation mark and a question mark. None of the five entries
+ * semicolon, an exclamation mark and a question mark. None of the entries
  * below ends in one yet, so none carries the character today. When one does, the
  * space is a translation requirement rather than a stray character: it will look
  * like a typo to a reviewer and to the formatter, and it is neither. The same
@@ -30,6 +30,11 @@ const ENTREE = { one: "entrée", many: "entrées", other: "entrées" };
  * by the formatter rather than by hand, which is why no test here types one.
  */
 export const fr = {
+  columnName: "Ville",
+  columnCountry: "Pays",
+  columnCapital: "Capitale",
+  columnCountryCode: "Code pays",
+  columnPopulation: "Population",
   loading: "Téléchargement des données des villes...",
   empty: "Aucune ville trouvée",
   emptyAnnouncement: "Aucune ville trouvée pour cette recherche",
