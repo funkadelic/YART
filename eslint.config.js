@@ -7,6 +7,23 @@ import reactHooks from "eslint-plugin-react-hooks";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import { defineConfig } from "eslint/config";
 
+// src/test/ is excluded from coverage, and unlike the other three exclude
+// patterns its contents actually execute. Nothing but the runner's own
+// structure keeps a module with real logic from being placed there and imported
+// by the app, which would put executing application code outside the measured
+// set with every guard still green.
+//
+// Declared once rather than written into each block below, because
+// no-restricted-imports is configured per rule and not per pattern: a later
+// block naming the rule replaces the earlier configuration outright for the
+// files it matches, so a second block that forgot this group would silently
+// unrestrict it for exactly those files.
+const TEST_SCAFFOLDING_IMPORT = {
+  group: ["**/test/**"],
+  message:
+    "src/test/ holds test scaffolding and is excluded from coverage. Importing it from application code moves executing code outside the coverage gate.",
+};
+
 export default defineConfig([
   // Build output, not authored source. `eslint .` walks the working tree, so
   // without this the gate reports parse errors for an emitted bundle and a
@@ -61,24 +78,37 @@ export default defineConfig([
   // depends on the surrounding markup, which is what makes them noisy in a tree
   // this small rather than more careful.
   jsxA11y.flatConfigs.recommended,
-  // src/test/ is excluded from coverage, and unlike the other three exclude
-  // patterns its contents actually execute. Nothing but the runner's own
-  // structure keeps a module with real logic from being placed there and
-  // imported by the app, which would put executing application code outside
-  // the measured set with every guard still green. Test files are exempt
-  // because importing that scaffolding is what it is for.
+  // Test files are exempt from the scaffolding restriction because importing
+  // that scaffolding is what it is for.
   {
     files: ["src/**/*.{ts,tsx}"],
     ignores: ["src/**/*.test.{ts,tsx}", "src/**/*.test-d.ts", "src/test/**"],
     rules: {
       "no-restricted-imports": [
         "error",
+        { patterns: [TEST_SCAFFOLDING_IMPORT] },
+      ],
+    },
+  },
+  // The shared components take every rendered string as a prop, which is the
+  // one property that lets them show something other than cities. A component
+  // reaching the locale layer directly would weld the table to this app's copy
+  // and to this app's idea of a catalog, and it would do so invisibly: the tree
+  // still renders, the tests still pass, and the layer rule is gone. Cheaper to
+  // fail here than to catch in review every time.
+  {
+    files: ["src/components/**/*.{ts,tsx}"],
+    ignores: ["src/**/*.test.{ts,tsx}", "src/**/*.test-d.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
         {
           patterns: [
+            TEST_SCAFFOLDING_IMPORT,
             {
-              group: ["**/test/**"],
+              group: ["**/i18n/**", "**/useLocale*"],
               message:
-                "src/test/ holds test scaffolding and is excluded from coverage. Importing it from application code moves executing code outside the coverage gate.",
+                "src/components/ takes its strings as props so that it stays reusable. Pass them in through the labels prop instead of reaching for a catalog here.",
             },
           ],
         },

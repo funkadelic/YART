@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { City } from "../../api/getCities";
 import { DataTable } from "../../components/DataTable/DataTable";
@@ -13,11 +13,12 @@ import {
 } from "../../components/DataTable/tableStateUrl";
 import { SearchInput } from "../../components/SearchInput";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
+import { useLocale } from "../../hooks/useLocale";
+import { buildTableLabels } from "./cityLabels";
 import {
   CITY_COLUMN_IDS,
   cityColumns,
   cityRowId,
-  cityTableLabels,
   type CityColumnId,
 } from "./cityColumns";
 import styles from "./CityTable.module.scss";
@@ -62,6 +63,18 @@ export function CityTable({
   error,
   onRetry,
 }: CityTableProps) {
+  // The one place below the header that subscribes to the locale. Everything
+  // under src/components/ takes its strings as props and never learns that a
+  // locale exists, which is what keeps the shared table shared.
+  const { catalog, tag } = useLocale();
+
+  // The deliberate exception to the rule that label objects are built at module
+  // scope. The table holds this object across renders and two of its entries are
+  // closures, so its identity has to change when the locale does and must not
+  // change otherwise. That is exactly what a memo keyed on the catalog and the
+  // tag gives, and a module-scope constant cannot give it at all.
+  const labels = useMemo(() => buildTableLabels(catalog, tag), [catalog, tag]);
+
   // Initialized from whatever the address carries, so the first render is
   // already the restored view: a link naming a page never paints the first one
   // for a frame on the way there. Reading it here rather than in an effect is
@@ -259,7 +272,7 @@ export function CityTable({
         datasetReady={datasetReady}
         error={error}
         onRetry={onRetry}
-        labels={cityTableLabels}
+        labels={labels}
       />
     </div>
   );
