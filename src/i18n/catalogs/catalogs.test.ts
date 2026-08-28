@@ -237,8 +237,10 @@ describe("the pseudo-locale", () => {
   it("isolates the readable run", () => {
     const rendered = pseudoize("hello");
 
-    expect(rendered.indexOf("⁦")).toBeLessThan(rendered.indexOf("hello"));
-    expect(rendered.indexOf("⁩")).toBeGreaterThan(rendered.indexOf("hello"));
+    expect(rendered.indexOf("\u2066")).toBeLessThan(rendered.indexOf("hello"));
+    expect(rendered.indexOf("\u2069")).toBeGreaterThan(
+      rendered.indexOf("hello"),
+    );
   });
 
   it("pads by roughly a third, which is about what a real translation costs", () => {

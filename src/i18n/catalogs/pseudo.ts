@@ -24,9 +24,11 @@ import {
  * than committed as a transformed literal, so this file cannot drift from the
  * copy it pseudo-translates.
  *
- * This file contains bidirectional control characters by design. Review tooling
- * that flags them is firing correctly, and this is the one file in the tree
- * where they belong.
+ * The two bidirectional control characters this file needs are written as
+ * escapes rather than as glyphs. They are invisible either way, and a raw one
+ * in source is the shape a hidden-character attack takes, so tooling flags it
+ * and is right to. The escape says the same thing in characters a reviewer can
+ * see.
  */
 
 /**
@@ -37,10 +39,10 @@ import {
  * An isolate rather than a directional mark, because a mark states a direction
  * at a point and cannot bound a run.
  */
-const FIRST_STRONG_ISOLATE = "⁦";
+const FIRST_STRONG_ISOLATE = "\u2066";
 
 /** Closes the run the isolate above opened. */
-const POP_DIRECTIONAL_ISOLATE = "⁩";
+const POP_DIRECTIONAL_ISOLATE = "\u2069";
 
 /** What the padding is made of. Visibly filler, so nobody reads it as copy. */
 const PADDING_CHARACTER = "~";
