@@ -625,6 +625,128 @@ const PROVENANCE_REGENERATION =
   "id, so a regenerated file is not expected to be byte-identical to the " +
   "committed one.";
 
+/**
+ * A literal expression's value, built from the tree rather than evaluated.
+ *
+ * The parity guard below compares two copies of one rule that cannot import
+ * each other, so both sides have to be read as written. Importing the module
+ * side would report what it evaluates to, which is not the same question: a
+ * reader looking at index.html and at the module is comparing literals, and a
+ * literal is what the guard has to compare too. Anything that is not a string,
+ * an array or an object of those throws, so a rule that grows a computed value
+ * fails here rather than being silently skipped.
+ */
+function literalValue(node: ts.Node, file: ts.SourceFile): unknown {
+  if (
+    ts.isAsExpression(node) ||
+    ts.isSatisfiesExpression(node) ||
+    ts.isParenthesizedExpression(node)
+  ) {
+    return literalValue(node.expression, file);
+  }
+
+  if (ts.isStringLiteralLike(node)) return node.text;
+
+  if (ts.isArrayLiteralExpression(node)) {
+    return node.elements.map((element) => literalValue(element, file));
+  }
+
+  if (ts.isObjectLiteralExpression(node)) {
+    const value: Record<string, unknown> = {};
+
+    for (const property of node.properties) {
+      if (!ts.isPropertyAssignment(property)) {
+        throw new Error(`${property.getText(file)} is not a plain property`);
+      }
+
+      const name = property.name;
+
+      if (!ts.isIdentifier(name) && !ts.isStringLiteral(name)) {
+        throw new Error(`${name.getText(file)} is not a plain property name`);
+      }
+
+      value[name.text] = literalValue(property.initializer, file);
+    }
+
+    return value;
+  }
+
+  throw new Error(`${node.getText(file)} is not a literal`);
+}
+
+/**
+ * The value a named variable is declared with, found anywhere in the file.
+ *
+ * Anywhere rather than at the top level, because one of the two files read
+ * below wraps everything it declares in an immediately invoked function.
+ */
+function declaredLiteral(
+  file: ts.SourceFile,
+  name: string,
+  where: string,
+): unknown {
+  let initializer: ts.Expression | undefined;
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === name &&
+      node.initializer
+    ) {
+      initializer = node.initializer;
+    }
+
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
+
+  return literalValue(required(initializer, `${name} in ${where}`), file);
+}
+
+/** The first argument of every call to the named callee, as written. */
+function firstArguments(file: ts.SourceFile, callee: string): string[] {
+  return findCalls(file, callee).map(
+    (call) =>
+      literalValue(
+        required(call.arguments[0], `an argument to ${callee}`),
+        file,
+      ) as string,
+  );
+}
+
+/**
+ * The one inline script index.html carries, parsed.
+ *
+ * Matched with the expression the policy plugin in vite.config.ts uses to find
+ * the script it hashes, so this guard reads exactly the script that ships. That
+ * plugin already throws unless there is exactly one; asserting it here as well
+ * means the guard says which of the two failed rather than reporting a parse of
+ * the wrong script.
+ */
+function inlineScript(): ts.SourceFile {
+  const html = readFileSync(join(projectRoot, "index.html"), "utf8");
+  const found = [
+    ...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g),
+  ];
+
+  expect(
+    found.length,
+    "index.html carries something other than exactly one inline script",
+  ).toBe(1);
+
+  return parse(required(found[0]?.[1], "the inline script's body"));
+}
+
+/** A module of this tree, parsed, for the literals a reader sees in it. */
+function moduleSource(path: string): ts.SourceFile {
+  return parse(readFileSync(join(projectRoot, path), "utf8"));
+}
+
+const THEME_MODULE = "src/theme/resolveTheme.ts";
+const LOCALE_MODULE = "src/i18n/resolveLocale.ts";
+
 describe("toolchain baseline", () => {
   // This guard used to ban a list of names belonging to the runner that was
   // removed, and nothing else. A second runner arriving with a config of its own
@@ -887,6 +1009,116 @@ describe("toolchain baseline", () => {
         `the manifest names the icon ${icon.src ?? ""}, which public/ does not carry`,
       ).toBe(true);
     }
+  });
+
+  // The theme rule is written twice, once in a module and once as a literal
+  // inside the blocking inline script, because that script runs before anything
+  // importable and cannot import the module. This repository's own constraints
+  // recorded that hazard and recorded that nothing asserted the two copies
+  // agreed. Stamping the locale from the same script doubles it, so both rules
+  // are held here instead of one being documented and neither being checked.
+  //
+  // Both sides are read as written rather than imported. A reader comparing
+  // index.html with the module compares literals, so the guard compares literals
+  // too, and set equality rather than substring presence: a guard that searched
+  // index.html for the storage key would pass on the mention of it in the
+  // comment above the script.
+  describe("the inline script and the resolvers", () => {
+    it("agrees on both storage keys", () => {
+      expect(
+        new Set(firstArguments(inlineScript(), "localStorage.getItem")),
+      ).toEqual(
+        new Set([
+          declaredLiteral(
+            moduleSource(THEME_MODULE),
+            "THEME_STORAGE_KEY",
+            THEME_MODULE,
+          ),
+          declaredLiteral(
+            moduleSource(LOCALE_MODULE),
+            "LOCALE_STORAGE_KEY",
+            LOCALE_MODULE,
+          ),
+        ]),
+      );
+    });
+
+    it("agrees on the media query", () => {
+      expect(firstArguments(inlineScript(), "window.matchMedia")).toEqual([
+        declaredLiteral(
+          moduleSource(THEME_MODULE),
+          "PREFERS_DARK_QUERY",
+          THEME_MODULE,
+        ),
+      ]);
+    });
+
+    it("accepts exactly the explicit theme words the module declares", () => {
+      const declared = declaredLiteral(
+        moduleSource(THEME_MODULE),
+        "THEME_CHOICES",
+        THEME_MODULE,
+      ) as string[];
+
+      expect(
+        new Set(
+          declaredLiteral(
+            inlineScript(),
+            "THEME_WORDS",
+            "index.html",
+          ) as string[],
+        ),
+        // The default is the key not being there, so the script must not accept
+        // the word for it any more than the module's own reader does.
+      ).toEqual(new Set(declared.filter((word) => word !== "system")));
+    });
+
+    it("agrees on which catalogs a preference list may select", () => {
+      expect(
+        new Set(
+          declaredLiteral(
+            inlineScript(),
+            "NEGOTIABLE",
+            "index.html",
+          ) as string[],
+        ),
+      ).toEqual(
+        new Set(
+          declaredLiteral(
+            moduleSource(LOCALE_MODULE),
+            "NEGOTIABLE_CATALOG_IDS",
+            LOCALE_MODULE,
+          ) as string[],
+        ),
+      );
+    });
+
+    it("agrees on the tag and the direction of every catalog", () => {
+      const resolved = declaredLiteral(
+        moduleSource(LOCALE_MODULE),
+        "RESOLVED_LOCALES",
+        LOCALE_MODULE,
+      ) as Record<string, { catalog: string; tag: string; dir: string }>;
+
+      // The script stamps two attributes and has no use for the third field, so
+      // it carries two. Compared field by field rather than whole, so the guard
+      // states which of the two rules drifted.
+      expect(declaredLiteral(inlineScript(), "LOCALES", "index.html")).toEqual(
+        Object.fromEntries(
+          Object.entries(resolved).map(([id, locale]) => [
+            id,
+            { tag: locale.tag, dir: locale.dir },
+          ]),
+        ),
+      );
+
+      // The field the script does not carry, checked on the module side alone:
+      // an entry naming a catalog other than its own key would send a reader to
+      // a catalog the rest of the record says they did not ask for.
+      for (const [id, locale] of Object.entries(resolved)) {
+        expect(locale.catalog, `the ${id} entry`).toBe(id);
+      }
+    });
   });
 
   // browserslist is pinned to explicit versions like the rest of the manifest. A

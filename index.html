@@ -21,30 +21,48 @@
     />
     <meta name="twitter:card" content="summary" />
     <!--
-      Stamps the theme onto the document element before first paint, so no
-      wrong-theme frame is ever shown. Blocking and classic on purpose: a
-      type="module" attribute, a defer or an async would each defer this past
-      paint, and each would fail silently.
+      Stamps the theme and the locale onto the document element before first
+      paint, so neither a wrong-theme frame nor a wrong-direction frame is ever
+      shown. A right-to-left reader would otherwise get one left-to-right frame
+      on every load, on exactly the surface direction exists for. Blocking and
+      classic on purpose: a type="module" attribute, a defer or an async would
+      each defer this past paint, and each would fail silently.
 
-      The resolve rule below is duplicated from src/theme/resolveTheme.ts. That
-      module cannot be imported from here, because anything importable runs too
-      late. A change to one needs the same change to the other, and nothing
-      asserts that they agree.
+      One script rather than two, because the policy plugin in vite.config.ts
+      throws unless the document carries exactly one inline script to hash.
+
+      Both resolve rules below are duplicated, from src/theme/resolveTheme.ts and
+      from src/i18n/resolveLocale.ts. Neither module can be imported from here,
+      because anything importable runs too late. A change to one needs the same
+      change to the other, and the parity guard in src/toolchain.test.ts fails
+      when the two stop agreeing about either rule.
 
       Being inline, this script needs a Content-Security-Policy that allows it
       before it can run under one. The app ships as a static bundle with no
       server of its own, so there is no policy here to set; whoever sets one on
       the host has to add this script's sha256 to script-src, or the script is
-      dropped and the wrong-theme flash it exists to prevent comes back with no
-      error to report it.
+      dropped and the flashes it exists to prevent come back with no error to
+      report them.
     -->
     <script>
       (function () {
+        // The vocabulary both halves below match against, written out because
+        // this script cannot import the modules that declare it. The parity
+        // guard reads these three declarations and the module's own.
+        var THEME_WORDS = ["light", "dark"];
+        var LOCALES = {
+          en: { tag: "en-US", dir: "ltr" },
+          es: { tag: "es-ES", dir: "ltr" },
+          fr: { tag: "fr-FR", dir: "ltr" },
+          "ar-XB": { tag: "en-US", dir: "rtl" },
+        };
+        var NEGOTIABLE = ["en", "es", "fr"];
+
         var theme = null;
         try {
-          var stored = localStorage.getItem("yart-theme");
-          if (stored === "light" || stored === "dark") {
-            theme = stored;
+          var storedTheme = localStorage.getItem("yart-theme");
+          if (THEME_WORDS.indexOf(storedTheme) !== -1) {
+            theme = storedTheme;
           }
         } catch (error) {
           // Reading storage throws outright, rather than returning null, when
@@ -69,6 +87,37 @@
         // user agent paints its canvas and scrollbars from the operating system
         // for that window rather than from the resolved choice.
         document.documentElement.style.colorScheme = theme;
+
+        var catalog = null;
+        try {
+          var storedLocale = localStorage.getItem("yart-locale");
+          // An own property only, so a stored value naming something every
+          // object carries cannot reach the lookup at the end of this script.
+          if (Object.prototype.hasOwnProperty.call(LOCALES, storedLocale)) {
+            catalog = storedLocale;
+          }
+        } catch (error) {
+          // Its own try, for the same reason the theme read has one: an
+          // unreadable store says nothing about what the reader wants.
+        }
+        if (catalog === null) {
+          // The same lookup rule the module performs: each preference in order,
+          // truncated to its primary subtag, against the catalogs a preference
+          // list is allowed to select. The pseudo-locale is not among them.
+          var preferences = navigator.languages || [];
+          for (var index = 0; index < preferences.length; index += 1) {
+            var wanted = String(preferences[index]).split("-")[0].toLowerCase();
+            if (NEGOTIABLE.indexOf(wanted) !== -1) {
+              catalog = wanted;
+              break;
+            }
+          }
+        }
+        if (catalog === null) {
+          catalog = "en";
+        }
+        document.documentElement.setAttribute("lang", LOCALES[catalog].tag);
+        document.documentElement.setAttribute("dir", LOCALES[catalog].dir);
       })();
     </script>
     <title>Yet Another React Table (YART)</title>

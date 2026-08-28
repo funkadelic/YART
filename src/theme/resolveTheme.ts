@@ -2,7 +2,18 @@
 // selector can match. Everything the inline script in index.html duplicates by
 // hand is declared here.
 
-export type ThemeChoice = "light" | "dark" | "system";
+/**
+ * Every state the theme control offers, in the order it offers them.
+ *
+ * A value rather than a bare union, so the accepted set has one definition that
+ * both the hook's stored-choice check and the parity guard in
+ * src/toolchain.test.ts can read. The locale's own vocabulary derives its union
+ * from a tuple the same way, for the same reason.
+ */
+export const THEME_CHOICES = ["light", "dark", "system"] as const;
+
+/** The literal union of the words above, formed with no assertion anywhere. */
+export type ThemeChoice = (typeof THEME_CHOICES)[number];
 
 export type ResolvedTheme = "light" | "dark";
 
@@ -19,8 +30,9 @@ export const PREFERS_DARK_QUERY = "(prefers-color-scheme: dark)";
  *
  * This same rule is written a second time, as a literal, inside the blocking
  * inline script in index.html. It has to be: that script runs before any module
- * loads, so it cannot import this function. A change to either one needs the same
- * change to the other, and nothing in the suite asserts that they agree.
+ * loads, so it cannot import this function. A change to either one needs the
+ * same change to the other, and the parity guard in src/toolchain.test.ts is
+ * what fails when they stop agreeing.
  */
 export function resolveTheme(
   choice: ThemeChoice,

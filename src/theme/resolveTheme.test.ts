@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   PREFERS_DARK_QUERY,
+  THEME_CHOICES,
   THEME_STORAGE_KEY,
   resolveTheme,
   type ThemeChoice,
@@ -44,5 +45,13 @@ describe("theme constants", () => {
   it("keeps the storage key and the media query as plain literals", () => {
     expect(THEME_STORAGE_KEY).toBe("yart-theme");
     expect(PREFERS_DARK_QUERY).toBe("(prefers-color-scheme: dark)");
+  });
+
+  // The vocabulary the hook's stored-choice check and the parity guard both
+  // read. Pinned here so adding a fourth state, or dropping one, is a decision
+  // rather than a diff nobody noticed: the inline script accepts exactly the
+  // non-default members of this tuple and the guard holds it to that.
+  it("keeps the three states and their order", () => {
+    expect(THEME_CHOICES).toEqual(["light", "dark", "system"]);
   });
 });

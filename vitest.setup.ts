@@ -66,6 +66,11 @@ afterEach(() => {
     if (typeof document !== "undefined") {
       document.documentElement.removeAttribute("data-theme");
       document.documentElement.style.removeProperty("color-scheme");
+      // The locale's half of the same leak: one case choosing a language would
+      // otherwise leave the next case reading a document already stamped with
+      // it. The storage clear below covers the stored choice behind them.
+      document.documentElement.removeAttribute("lang");
+      document.documentElement.removeAttribute("dir");
       window.history.replaceState(null, "", "/");
     }
 

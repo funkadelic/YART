@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 
 import {
   PREFERS_DARK_QUERY,
+  THEME_CHOICES,
   THEME_STORAGE_KEY,
   resolveTheme,
 } from "../theme/resolveTheme";
@@ -13,6 +14,12 @@ import type { ThemeChoice } from "../theme/resolveTheme";
  * from an older build and a hostile one are the same case, and both render the
  * default rather than an undefined theme.
  *
+ * Membership is tested against the declared vocabulary rather than against two
+ * words written out again here, so the accepted set has one definition. The
+ * default word is excluded on its own line: the key holding it is already
+ * treated as absent, because the default has exactly one representation and it
+ * is the key not being there.
+ *
  * The property access is what throws when site data is blocked, so neither a
  * typeof guard nor optional chaining substitutes for the catch. Unguarded, the
  * throw happens inside a state initializer, which unmounts the whole tree over a
@@ -21,9 +28,12 @@ import type { ThemeChoice } from "../theme/resolveTheme";
 function readStoredChoice(): ThemeChoice {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
+    const explicit = THEME_CHOICES.find(
+      (choice) => choice !== "system" && choice === stored,
+    );
 
-    if (stored === "light" || stored === "dark") {
-      return stored;
+    if (explicit) {
+      return explicit;
     }
   } catch {
     // An unreadable store is an absent one.
@@ -93,8 +103,8 @@ function subscribePrefersDark(onStoreChange: () => void): () => void {
  * The rule that turns a choice plus a preference into a theme is written a
  * second time, as a literal, inside the blocking inline script in index.html.
  * That script runs before any module loads, so it cannot import this. A change
- * to either one needs the same change to the other, and nothing in the suite
- * asserts that they agree.
+ * to either one needs the same change to the other, and the parity guard in
+ * src/toolchain.test.ts is what fails when they stop agreeing.
  */
 export function useTheme() {
   const [choice, setChoiceState] = useState<ThemeChoice>(readStoredChoice);
