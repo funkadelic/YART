@@ -1,5 +1,8 @@
 import type { CatalogId } from "../resolveLocale";
 import { en, type Catalog } from "./en";
+import { es } from "./es";
+import { fr } from "./fr";
+import { pseudo } from "./pseudo";
 
 /**
  * Every catalog, by id.
@@ -7,16 +10,12 @@ import { en, type Catalog } from "./en";
  * Total over the closed union rather than looked up with a fallback, so a value
  * that somehow reached here unchecked still cannot find a missing arm, and a
  * catalog added later cannot be forgotten here without failing the type check.
- *
- * The three catalogs beside the base one are not written yet, so every id reads
- * the base for the moment. A hole would be the one shape this record exists to
- * rule out.
  */
 export const CATALOGS: Readonly<Record<CatalogId, Catalog>> = {
   en,
-  es: en,
-  fr: en,
-  "ar-XB": en,
+  es,
+  fr,
+  "ar-XB": pseudo,
 };
 
 /**
