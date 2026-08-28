@@ -1,7 +1,8 @@
 # Yet Another React Table (YART)
 
-A React and TypeScript prototype for browsing a large dataset in the browser:
-search, sort, and paginate a list of world cities without a table library.
+A React and TypeScript single-page app for browsing a large dataset in the
+browser: search, sort, and paginate a list of world cities without a table
+library.
 
 **[Live demo](https://funkadelic.github.io/YART/)**, published from `main` by the
 pipeline once every gate passes.
@@ -480,8 +481,9 @@ nothing extra.
 
 ## Notes and next steps
 
-This is a prototype, not production code. Things worth doing before it
-ships:
+There is no server. `getCities` fakes network latency over an array held in
+memory, so everything below is what a real backend would change. Worth doing
+before it ships:
 
 - The dataset arrives as a separate content-hashed JSON asset rather than being
   compiled into the bundle, but filtering and sorting still run over the whole
