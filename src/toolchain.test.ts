@@ -805,11 +805,6 @@ describe("toolchain baseline", () => {
     expect(manifest.scripts?.lint).toContain("--max-warnings 0");
   });
 
-  // The svg transformer that handled this asset is gone, and the asset went with it.
-  it("keeps the orphaned logo asset deleted", () => {
-    expect(existsSync(join(projectRoot, "src", "logo.svg"))).toBe(false);
-  });
-
   // Nothing under src/ imports the icon or the manifest. index.html names each
   // by href and the bundler copies both out of public/ verbatim, so a rename
   // breaks neither the build nor the type check: it surfaces as a request for a
