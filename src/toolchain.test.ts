@@ -35,6 +35,24 @@ const manifest = JSON.parse(
 ) as Manifest;
 
 /**
+ * The four entries in the README's Stack list that carry a version, mapped to
+ * the package the manifest pins.
+ *
+ * A major rather than the exact pin, because the manifest is pinned exactly and
+ * a patch bump would otherwise falsify the prose on a change nobody reads the
+ * README for. Only these four carry one: they answer the question a reviewer
+ * opens the list with, which is which generation of each this tree is on. The
+ * rest of the list is commodity tooling whose version answers nothing, and a
+ * version there would be one more copy to keep honest for no reader's benefit.
+ */
+const README_STACK_MAJORS: Readonly<Record<string, string>> = {
+  React: "react",
+  TypeScript: "typescript",
+  Vite: "vite",
+  Vitest: "vitest",
+};
+
+/**
  * The file parsed once, as TSX so a JSX tag and a generic arrow both read the
  * way the tree writes them.
  *
@@ -1246,6 +1264,50 @@ describe("toolchain baseline", () => {
         dataModule,
         `src/data/worldcities/cities.ts has grown a copy of the provenance: ${sentence}`,
       ).not.toContain(sentence);
+    }
+  });
+  // The README names a major for four packages and the manifest owns the real
+  // version, which is two copies of one fact with nothing holding them
+  // together. That is how a README goes stale without a single failing check,
+  // so the majors are read back out of the prose and compared here. The set is
+  // asserted before the values: without it, deleting a version from the list
+  // would leave this passing over whatever remained.
+  it("agrees with the manifest on every major the README stack list names", () => {
+    const readme = readFileSync(join(projectRoot, "README.md"), "utf8");
+    const section = /\n## Stack\n([\s\S]*?)\n### /.exec(readme)?.[1];
+
+    expect(section, "the README has no Stack section").toBeDefined();
+
+    // A bullet opening with a link and following it with a bare number. The
+    // link text is captured rather than assumed, so a renamed label fails the
+    // set comparison below instead of dropping out of it in silence.
+    const named = new Map<string, string>();
+
+    for (const line of (section ?? "").split("\n")) {
+      const bullet = /^- \[([^\]]+)\]\([^)]+\) (\d+)\b/.exec(line);
+      if (bullet?.[1] !== undefined && bullet[2] !== undefined) {
+        named.set(bullet[1], bullet[2]);
+      }
+    }
+
+    expect(
+      [...named.keys()].sort(),
+      "the versioned entries in the README stack list are not the ones this test knows about",
+    ).toEqual(Object.keys(README_STACK_MAJORS).sort());
+
+    const pinned: Record<string, string | undefined> = {
+      ...(manifest.dependencies as Record<string, string> | undefined),
+      ...(manifest.devDependencies as Record<string, string> | undefined),
+    };
+
+    for (const [label, name] of Object.entries(README_STACK_MAJORS)) {
+      const version = pinned[name];
+
+      expect(version, `${name} is not pinned in the manifest`).toBeDefined();
+      expect(
+        named.get(label),
+        `README says ${label} ${named.get(label) ?? "nothing"} against ${name}@${version ?? "nothing"}`,
+      ).toBe((version ?? "").split(".")[0]);
     }
   });
 });
