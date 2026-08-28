@@ -366,6 +366,227 @@ function findSourceFiles(directory: string): string[] {
   return found;
 }
 
+/**
+ * Every stylesheet under a directory, both dialects, so a rule asked of the
+ * styling can be asked of all of it rather than of the dialect that happened to
+ * be checked. The global sheet is plain CSS and every component sheet is SCSS.
+ */
+function findStyleSheets(directory: string): string[] {
+  const found: string[] = [];
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      if (SKIPPED_DIRECTORIES.has(entry.name)) continue;
+      found.push(...findStyleSheets(path));
+    } else if (/\.(css|scss)$/.test(entry.name)) {
+      found.push(path);
+    }
+  }
+
+  return found;
+}
+
+/** One declaration as written, with the property and the value already split. */
+interface StyleDeclaration {
+  readonly property: string;
+  readonly value: string;
+}
+
+/** A stylesheet reduced to the two constructs the guards below ask about. */
+interface StyleSheetParts {
+  readonly declarations: readonly StyleDeclaration[];
+  readonly selectors: readonly string[];
+}
+
+/**
+ * A stylesheet split into its declarations and its selectors.
+ *
+ * Constructs rather than raw text, which is this file's standard and is
+ * load-bearing here twice over. Every sheet in this tree carries paragraphs
+ * explaining itself, and the rules below are exactly the sort a comment states
+ * in order to say why it is being obeyed: a text search would go red on the
+ * explanation as readily as on a violation, at which point the guard gets
+ * deleted rather than kept. Quoted runs are carried through rather than
+ * dropped, because a selector matching an attribute value is a quoted run and
+ * one guard below reads it.
+ *
+ * At-rules are not declarations: an include, a use and a media prelude all end
+ * in a semicolon or open a block, and none of them sets a property.
+ */
+function styleSheetParts(source: string): StyleSheetParts {
+  const declarations: StyleDeclaration[] = [];
+  const selectors: string[] = [];
+  let buffer = "";
+  let index = 0;
+
+  const flushDeclaration = (): void => {
+    const text = buffer.trim();
+    buffer = "";
+
+    if (text === "" || text.startsWith("@")) return;
+
+    const colon = text.indexOf(":");
+
+    if (colon === -1) return;
+
+    declarations.push({
+      property: text.slice(0, colon).trim().toLowerCase(),
+      value: text
+        .slice(colon + 1)
+        .trim()
+        .toLowerCase(),
+    });
+  };
+
+  while (index < source.length) {
+    const character = source[index];
+    const following = source[index + 1];
+
+    if (character === '"' || character === "'") {
+      const close = source.indexOf(character, index + 1);
+      const end = close === -1 ? source.length : close + 1;
+
+      buffer += source.slice(index, end);
+      index = end;
+      continue;
+    }
+
+    if (character === "/" && following === "/") {
+      const end = source.indexOf("\n", index);
+
+      index = end === -1 ? source.length : end;
+      continue;
+    }
+
+    if (character === "/" && following === "*") {
+      const end = source.indexOf("*/", index + 2);
+
+      index = end === -1 ? source.length : end + 2;
+      continue;
+    }
+
+    if (character === "{") {
+      selectors.push(buffer.trim());
+      buffer = "";
+      index += 1;
+      continue;
+    }
+
+    if (character === "}" || character === ";") {
+      flushDeclaration();
+      index += 1;
+      continue;
+    }
+
+    buffer += character;
+    index += 1;
+  }
+
+  return { declarations, selectors };
+}
+
+/**
+ * The physical properties that name one end of the inline axis, so a sheet
+ * declaring one serves a left-to-right document and silently mis-serves a
+ * right-to-left one.
+ *
+ * The block axis is deliberately absent. Top and bottom mean the same thing
+ * whichever way the text runs, so banning them would be churn rather than a
+ * rule.
+ */
+const PHYSICAL_INLINE_PROPERTIES: ReadonlySet<string> = new Set([
+  "left",
+  "right",
+  "margin-left",
+  "margin-right",
+  "padding-left",
+  "padding-right",
+  "border-left",
+  "border-right",
+  "border-left-color",
+  "border-left-style",
+  "border-left-width",
+  "border-right-color",
+  "border-right-style",
+  "border-right-width",
+]);
+
+/**
+ * The properties whose value, rather than whose name, can name one end of the
+ * inline axis. Each has a logical pair, start and end, that follows the
+ * document instead.
+ */
+const PHYSICAL_INLINE_VALUED_PROPERTIES: ReadonlySet<string> = new Set([
+  "text-align",
+  "float",
+  "clear",
+]);
+
+/** The component holding the four glyphs that mean a direction. */
+const DIRECTIONAL_GLYPH_COMPONENT = "src/components/DataTable/Pagination.tsx";
+
+/** Whether a node is JSX, in any of the three shapes the grammar allows. */
+function isJsx(node: ts.Node): boolean {
+  return (
+    ts.isJsxElement(node) ||
+    ts.isJsxSelfClosingElement(node) ||
+    ts.isJsxFragment(node)
+  );
+}
+
+/**
+ * Whether a statement's own return is JSX, ignoring any nested function.
+ *
+ * A callback declared inside the branch returns whatever it returns, which is
+ * not the branch returning it, so the walk stops at a function boundary.
+ */
+function returnsJsx(node: ts.Node): boolean {
+  if (ts.isFunctionLike(node)) return false;
+
+  if (ts.isReturnStatement(node)) {
+    return node.expression !== undefined && isJsx(node.expression);
+  }
+
+  return ts.forEachChild(node, returnsJsx) ?? false;
+}
+
+/**
+ * Every conditional in a file that picks between two pieces of JSX: a ternary
+ * with an element either side, or an if whose two branches each return one.
+ *
+ * A guarded render, which is the shape the table already uses, has JSX on one
+ * side and nothing on the other and is not one of these.
+ */
+function jsxAlternatives(file: ts.SourceFile): string[] {
+  const found: string[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isConditionalExpression(node) &&
+      isJsx(node.whenTrue) &&
+      isJsx(node.whenFalse)
+    ) {
+      found.push(node.condition.getText(file));
+    }
+
+    if (
+      ts.isIfStatement(node) &&
+      node.elseStatement !== undefined &&
+      returnsJsx(node.thenStatement) &&
+      returnsJsx(node.elseStatement)
+    ) {
+      found.push(node.expression.getText(file));
+    }
+
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
+  return found;
+}
+
 const scannedFiles = findTestFiles(projectRoot).filter(
   (file) => file !== guardFile,
 );
@@ -1721,6 +1942,77 @@ describe("toolchain baseline", () => {
     ).toBeGreaterThan(0);
 
     expect(globalSheets("src/a11y.browser.test.tsx")).toEqual(shipped);
+  });
+
+  // Direction-dependent geometry is written once, on the inline axis, so one
+  // stylesheet serves both directions and there is no second artifact to keep in
+  // step. Five declarations in this tree were physical and were rewritten; a
+  // sixth arriving is invisible to every other check here, and is exactly the
+  // kind of thing that is correct in the browser the author happens to use.
+  //
+  // A test rather than a lint rule because the standard configuration in use
+  // carries no such rule, and the plugin that does is a new dependency for five
+  // declarations. This file already walks the tree and already parses what it
+  // asks about, so the guard costs a function rather than an install.
+  it("keeps direction-dependent geometry on the inline axis in every stylesheet", () => {
+    const sheets = findStyleSheets(join(projectRoot, "src"));
+
+    expect(
+      sheets.length,
+      "src/ carries no stylesheet, so this guard is reading nothing",
+    ).toBeGreaterThan(0);
+
+    const offenders = sheets.flatMap((sheet) => {
+      const name = relative(projectRoot, sheet);
+
+      return styleSheetParts(readFileSync(sheet, "utf8"))
+        .declarations.filter(
+          ({ property, value }) =>
+            PHYSICAL_INLINE_PROPERTIES.has(property) ||
+            (PHYSICAL_INLINE_VALUED_PROPERTIES.has(property) &&
+              /\b(?:left|right)\b/.test(value)),
+        )
+        .map(({ property, value }) => `${name}: ${property}: ${value}`);
+    });
+
+    expect(offenders).toEqual([]);
+  });
+
+  // The two ways the rule above is most likely to be undone. Each is otherwise a
+  // sentence in a plan with nothing behind it.
+  //
+  // The mirror rule that turns the four page glyphs is written on the direction
+  // attribute for a measured reason: :dir() landed in Chrome 120 and this
+  // application's floor is 111, so the pseudo-class ships inert in the very
+  // browsers the floor exists to name. It is also the tidier-looking spelling,
+  // which is precisely why a later reader substitutes it.
+  it("selects direction on the attribute rather than on the pseudo-class", () => {
+    const offenders = findStyleSheets(join(projectRoot, "src"))
+      .filter((sheet) => sheet.endsWith(".scss"))
+      .flatMap((sheet) =>
+        styleSheetParts(readFileSync(sheet, "utf8"))
+          .selectors.filter((selector) => selector.includes(":dir("))
+          .map((selector) => `${relative(projectRoot, sheet)}: ${selector}`),
+      );
+
+    expect(offenders).toEqual([]);
+  });
+
+  // The other substitution: a branch in the component choosing between two glyph
+  // components on the direction, which is a prop and a coverage line for what one
+  // declaration does. A returning branch is invisible to the stylesheet guard
+  // above because it is not CSS, and invisible to the shared layer's literal
+  // guard because a glyph component is neither a text child nor a string, so it
+  // is asserted here or nowhere.
+  it("picks the page glyphs with a stylesheet rather than with a branch", () => {
+    const alternatives = jsxAlternatives(
+      moduleSource(DIRECTIONAL_GLYPH_COMPONENT),
+    );
+
+    expect(
+      alternatives,
+      `${DIRECTIONAL_GLYPH_COMPONENT} chooses between two elements on a condition`,
+    ).toEqual([]);
   });
 
   // The footer carries this same attribution and has its own test. The README
