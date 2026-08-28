@@ -32,6 +32,7 @@ import {
   rmSync,
   statSync,
 } from "node:fs";
+import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { build } from "vite";
@@ -139,6 +140,41 @@ it(
         preload ?? "",
         "the preload carries no crossorigin, so the dataset downloads twice",
       ).toContain("crossorigin");
+
+      // The policy names the inline theme script by hash, and a hash taken over
+      // anything but the script the shell ships silently drops it: the browser
+      // reports a refusal nobody reads, the theme lands after first paint, and
+      // the page still works. Recomputed here from the built shell rather than
+      // trusted, so a transform that touches the script after the hash is taken
+      // fails this rather than the reader's first frame.
+      const shell = readFileSync(join(outDir, "index.html"), "utf8");
+      const policy =
+        /<meta[^>]*http-equiv="Content-Security-Policy"[^>]*>/.exec(shell)?.[0];
+
+      expect(policy, "the built shell carries no policy").toBeDefined();
+
+      const inline = [
+        ...shell.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g),
+      ];
+
+      expect(inline, "the built shell has no inline script").toHaveLength(1);
+
+      const script = inline[0]?.[1] ?? "";
+
+      expect(script, "the inline script is empty").not.toBe("");
+      expect(
+        policy ?? "",
+        "the policy does not name the inline script this shell carries",
+      ).toContain(
+        `sha256-${createHash("sha256").update(script, "utf8").digest("base64")}`,
+      );
+
+      // A policy delivered this way governs only what follows it, so one placed
+      // after the script it names is a policy the script never sees.
+      expect(
+        shell.indexOf("Content-Security-Policy"),
+        "the policy is declared after the script it names",
+      ).toBeLessThan(shell.indexOf("<script"));
     } finally {
       // Assigning undefined would store the string "undefined" rather than
       // clearing the variable, so an absent NODE_ENV has to be deleted.

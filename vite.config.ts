@@ -1,7 +1,79 @@
 import { playwright } from "@vitest/browser-playwright";
 import react from "@vitejs/plugin-react";
 import { defaultExclude, defineConfig } from "vitest/config";
+import { createHash } from "node:crypto";
+
 import type { Plugin } from "vite";
+
+/**
+ * Adds a Content-Security-Policy to the built shell.
+ *
+ * Delivered as a meta element because the app ships as a static bundle to a
+ * host whose response headers it does not control. That costs three directives
+ * a header would carry: frame-ancestors, report-uri and sandbox are all ignored
+ * in a policy delivered this way, so clickjacking stays outside what this can
+ * express.
+ *
+ * The theme script in index.html is inline and blocking, which a policy has to
+ * name by hash or drop. Dropping it brings back the wrong-theme flash it exists
+ * to prevent, with nothing reporting that it happened, so the hash is computed
+ * here from the script the shell actually carries. Writing it into index.html
+ * by hand would leave two things to change together, and the failure of not
+ * doing so is silent in exactly the same way.
+ *
+ * Build only, so the dev server is unaffected: it serves styles as injected
+ * style elements, which this policy does not allow and which the built page
+ * never contains.
+ */
+function contentSecurityPolicy(): Plugin {
+  return {
+    name: "yart-content-security-policy",
+    apply: "build",
+    transformIndexHtml: {
+      order: "post",
+      handler(html) {
+        const inline = [
+          ...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g),
+        ];
+
+        if (inline.length !== 1) {
+          throw new Error(
+            `expected exactly one inline script to hash, found ${inline.length}`,
+          );
+        }
+
+        const digest = createHash("sha256")
+          .update(inline[0][1], "utf8")
+          .digest("base64");
+
+        return [
+          {
+            tag: "meta",
+            // Before the script it names, because a policy delivered this way
+            // governs only what follows it in the document.
+            injectTo: "head-prepend",
+            attrs: {
+              "http-equiv": "Content-Security-Policy",
+              content: [
+                // Everything the page does not do is denied by the default, so
+                // a directive below is a statement that the page needs it.
+                "default-src 'none'",
+                `script-src 'sha256-${digest}' 'self'`,
+                "style-src 'self'",
+                "img-src 'self'",
+                // The dataset, which is the only request the running page makes.
+                "connect-src 'self'",
+                "manifest-src 'self'",
+                "base-uri 'none'",
+                "form-action 'none'",
+              ].join("; "),
+            },
+          },
+        ];
+      },
+    },
+  };
+}
 
 /**
  * Adds a preload for the dataset asset to the built shell.
@@ -106,7 +178,7 @@ export default defineConfig({
   // through the lint plugin's dependency edge rather than this one and was here
   // before this bump as well. Adopting the compiler is a change of its own with
   // its own gate run, so the option stays unset and the peers stay uninstalled.
-  plugins: [react(), preloadDataset()],
+  plugins: [react(), preloadDataset(), contentSecurityPolicy()],
   // Relative rather than the literal repository subpath the site is published
   // under. One build has to serve from two addresses: the root, which is where
   // `vite preview` serves it and therefore where both browser suites drive it,
