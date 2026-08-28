@@ -6,11 +6,39 @@ search, sort, and paginate a list of world cities without a table library.
 **[Live demo](https://funkadelic.github.io/YART/)**, published from `main` by the
 pipeline once every gate passes.
 
+## Contents
+
+- [Features](#features)
+  - [Search](#search)
+  - [Sorting](#sorting)
+  - [Pagination](#pagination)
+  - [Shareable links](#shareable-links)
+  - [Theme](#theme)
+  - [Accessibility](#accessibility)
+- [Stack](#stack)
+  - [Build target](#build-target)
+- [Data attribution](#data-attribution)
+- [Getting started](#getting-started)
+- [Usage](#usage)
+  - [Props](#props)
+  - [Why `getRowId` must be injective](#why-getrowid-must-be-injective)
+  - [Why the container debounces](#why-the-container-debounces)
+- [Configuring](#configuring)
+  - [Columns](#columns)
+  - [Sort comparison](#sort-comparison)
+  - [Page size options](#page-size-options)
+- [Testing](#testing)
+- [Scripts](#scripts)
+- [Notes and next steps](#notes-and-next-steps)
+- [License](#license)
+
 ## Features
 
 ### Search
 
-- Search cities by city name or country name
+- Search cities by city name, ascii name, country name, or country code
+- The Capital column is rendered but not searched, because its only values are
+  the upstream classification codes `primary`, `admin`, and `minor`
 - Empty state when a search matches nothing
 - A failed dataset load replaces the table with the message and a retry control
 - Search is debounced by 150ms after the last keystroke, using a hand-rolled
@@ -82,8 +110,11 @@ regressions rather than prove the list above.
 - [Vite](https://vitejs.dev/)
 - [Vitest](https://vitest.dev) and [Testing Library](https://testing-library.com/)
 - [Playwright](https://playwright.dev) for the end-to-end suite
+- [Sass](https://sass-lang.com/) for the CSS Modules stylesheets
 - [React Icons](https://react-icons.github.io/react-icons/)
-- [ESLint](https://eslint.org/) and [Prettier](https://prettier.io/)
+- [axe-core](https://github.com/dequelabs/axe-core) for the accessibility sweeps
+- [ESLint](https://eslint.org/), [Stylelint](https://stylelint.io/), and
+  [Prettier](https://prettier.io/)
 
 ### Build target
 
@@ -126,8 +157,12 @@ one. `src/data/worldcities/license.txt` records the same provenance.
 
 ## Getting started
 
+Node 24 is required, and `.npmrc` sets `engine-strict=true`, so an older runtime
+fails the install instead of warning. `.nvmrc` names the version for a version
+manager to pick up.
+
 ```sh
-npm install
+npm ci
 npm run dev
 ```
 
@@ -173,9 +208,8 @@ export const cityColumns = [
 export type CityColumnId = (typeof cityColumns)[number]["id"];
 ```
 
-Every string that names what the rows are comes from the same place, for the
-same reason: a shared component carrying one collection's nouns would be shared
-in name only.
+Every string that names what the rows are comes from the same place, because a
+shared component carrying one collection's nouns would be shared in name only.
 
 ```tsx
 export const cityTableLabels: DataTableLabels = {
@@ -281,9 +315,8 @@ one term that typing settles on drives the page reset, the address write, and
 the request behind it. Swapping the 150ms delay for 300ms, or replacing the
 simulated API with a real endpoint, touches no table code.
 
-`useDebouncedCallback` debounces the call rather than a value, which is what
-keeps it usable straight from an event handler. It hands back a scheduler and a
-cancel:
+`useDebouncedCallback` debounces the call rather than a value, so it stays
+usable straight from an event handler. It hands back a scheduler and a cancel:
 
 ```tsx
 const { schedule, cancel } = useDebouncedCallback(
@@ -292,9 +325,9 @@ const { schedule, cancel } = useDebouncedCallback(
 );
 ```
 
-The cancel is not decoration. A back navigation landing inside the window would
-otherwise let the term the reader typed a moment ago land on top of the view
-they navigated back to.
+Cancelling covers a back navigation that lands inside the window. Without it,
+the term the reader typed a moment ago lands on top of the view they navigated
+back to.
 
 ## Configuring
 
@@ -368,8 +401,8 @@ down. 10 is the default:
 
 Changing the page size, the sort, or the query returns to page 1, so no rows are
 silently skipped. `applyTableAction` applies that reset once for all three
-rather than in each of their branches. The pagination controls hide entirely
-when there is only one page.
+rather than in each of their branches. The first, previous, next, and last
+controls hide when there is only one page; the page size select stays.
 
 The page position is clamped where it is read, not where it is stored. A result
 set that narrows renders the last available page; one that widens again restores
@@ -414,21 +447,21 @@ the network as a separate content-hashed asset.
 
 ## Scripts
 
-| Script                    | What it does                                                        |
-| ------------------------- | ------------------------------------------------------------------- |
-| `npm run dev`             | Start the dev server with hot reload                                |
-| `npm run build`           | Build the production bundle                                         |
-| `npm run preview`         | Serve the built bundle locally                                      |
-| `npm test`                | Run the test suite once                                             |
-| `npm run test:watch`      | Run the test suite in watch mode                                    |
-| `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%    |
-| `npm run test:browser`    | Run the accessibility checks in a real Chromium                     |
-| `npm run test:e2e`        | Run the end-to-end suite in a real Chromium against a built bundle  |
-| `npm run typecheck`       | Check types without emitting output                                 |
-| `npm run lint`            | Run ESLint (`lint:fix` to autofix)                                  |
-| `npm run format`          | Run Prettier                                                        |
-| `npm run format:check`    | Check formatting without rewriting anything                         |
-| `npm run generate:cities` | Regenerate the committed dataset asset from the upstream CSV export |
+| Script                    | What it does                                                          |
+| ------------------------- | --------------------------------------------------------------------- |
+| `npm run dev`             | Start the dev server with hot reload                                  |
+| `npm run build`           | Build the production bundle                                           |
+| `npm run preview`         | Serve the built bundle locally                                        |
+| `npm test`                | Run the test suite once                                               |
+| `npm run test:watch`      | Run the test suite in watch mode                                      |
+| `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%      |
+| `npm run test:browser`    | Run the accessibility checks in a real Chromium                       |
+| `npm run test:e2e`        | Run the end-to-end suite in a real Chromium against a built bundle    |
+| `npm run typecheck`       | Check types without emitting output                                   |
+| `npm run lint`            | Run ESLint then Stylelint; a warning fails it (`lint:fix` to autofix) |
+| `npm run format`          | Run Prettier                                                          |
+| `npm run format:check`    | Check formatting without rewriting anything                           |
+| `npm run generate:cities` | Regenerate the committed dataset asset from the upstream CSV export   |
 
 `npm run test:browser` and `npm run test:e2e` both drive a real Chromium.
 `npm ci` downloads neither that browser nor the system libraries it needs, so a
@@ -443,8 +476,7 @@ the command to run.
 
 Both are optional for ordinary development. `npm test` runs the same
 accessibility checks as `npm run test:browser` against a simulated DOM and needs
-nothing extra; neither of those two is a conformance claim, and both catch
-regressions against a set of automated rules.
+nothing extra.
 
 ## Notes and next steps
 
@@ -465,4 +497,4 @@ The source in this repository is MIT licensed; see `LICENSE`.
 
 The city dataset is not covered by that license. It is redistributed from
 SimpleMaps under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and
-keeps those terms, which is what the Data attribution section above is for.
+keeps those terms, which the Data attribution section above states.
