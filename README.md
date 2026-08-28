@@ -57,7 +57,8 @@ A React and TypeScript single-page app for browsing a large dataset in the brows
 
 - The search term, the sort, the page, and the page size all live in the query string, so a view can be copied out of the address bar and reopened as itself
 - Four keys: `q`, `sort`, `page`, and `size`. A descending sort is the column id behind a hyphen, so `?sort=-population` is population, largest first
-- A value equal to its default is left out, so the plain view is a bare path and one view has exactly one address
+- A value equal to its default is left out, so the plain view is a bare path
+- One address is one view, per resolved locale: the query string carries the search term, the sort column and direction, the page and the page size, and the resolved locale is deliberately not among them, so two readers opening the same link see the same rows in the order and the number format their own locale produces. Putting the locale in the address would force the sender's language on the recipient and would make the locale part of the table's view state
 - Every parameter is validated on its own and falls back on its own, so `?page=0&size=25` still opens at 25 rows a page
 - Written with `replaceState` rather than `pushState`, so one Back press leaves the site instead of walking back through positions nobody asked to record
 - Parameters the app does not own, a tracking tag for instance, survive the write untouched

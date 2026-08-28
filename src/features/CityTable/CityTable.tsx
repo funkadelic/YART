@@ -112,6 +112,14 @@ export function CityTable({
   // stripped the moment it arrives, a hostile link is canonicalized on arrival,
   // and a change driven by a back navigation cannot loop, because by then the
   // address already says what the state says.
+  //
+  // One address is one view, per resolved locale: the query string carries
+  // the search term, the sort column and direction, the page and the page
+  // size, and the resolved locale is deliberately not among them, so two
+  // readers opening the same link see the same rows in the order and the
+  // number format their own locale produces. Putting the locale in the
+  // address would force the sender's language on the recipient and would
+  // make the locale part of the table's view state.
   useEffect(() => {
     const next = serializeTableState(tableState, window.location.search);
     if (next === window.location.search) return;
