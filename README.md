@@ -387,6 +387,8 @@ The assertions read `aria-sort`, the same attribute a screen reader announces, s
 
 A second suite under `e2e/` runs in a real browser against a production build, covering four things a simulated DOM cannot show: that reopening a link restores the search, sort and page it carries; that Back and Forward move through history the way the shareable-link design intends; that the theme and the language are stamped before the first paint rather than after the page loads; and that the dataset arrives over the network as a separate content-hashed asset.
 
+The pipeline sends three reports to [Codecov](https://codecov.io/gh/funkadelic/YART): the coverage the hundred percent gate is measured on, a JUnit report from each of the three suites, and the size of every emitted asset. A test that fails intermittently is flagged as a flake. The asset sizes come from Codecov's standalone analyzer, which reports assets and not individual modules.
+
 ## Scripts
 
 | Script                    | What it does                                                          |
@@ -410,6 +412,8 @@ A second suite under `e2e/` runs in a real browser against a production build, c
 `npm run test:e2e` serves a production build rather than making one, so run `npm run build` first. Without a build it stops in well under a second and names the command to run.
 
 Both are optional for ordinary development. `npm test` runs the same accessibility checks as `npm run test:browser` against a simulated DOM and needs nothing extra.
+
+The three suites CI runs each write a JUnit report into `junit/`, which is gitignored. Nothing local reads them; they exist for the upload.
 
 ## Notes and next steps
 

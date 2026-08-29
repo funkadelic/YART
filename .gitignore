@@ -44,8 +44,14 @@ src/__screenshots__/
 # What the end-to-end runner writes. The traces and screenshots under
 # test-results/ come from failures alone and are evidence of that run rather
 # than of this tree; the bookkeeping file beside them is rewritten on every run,
-# green included. No reporter is configured, so playwright-report/ is not
-# written at all: the entry is kept so an ad-hoc run asking for the HTML
-# reporter cannot leave a committable directory behind.
+# green included. The configured reporters are list and junit, and the junit one
+# names its own output file, so playwright-report/ is still not written: the
+# entry is kept so an ad-hoc run asking for the HTML reporter cannot leave a
+# committable directory behind.
 /test-results
 /playwright-report
+
+# The JUnit reports all three suites write for the Codecov upload. Outside
+# test-results/, which the end-to-end runner clears before every run, and
+# rewritten each time rather than describing this tree.
+/junit
