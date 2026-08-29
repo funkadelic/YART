@@ -48,8 +48,10 @@ export default defineConfig({
   // The JUnit report feeds Codecov test analytics. It goes outside
   // test-results/ because this runner clears that directory before every run,
   // which would take the two Vitest reports written earlier in the pipeline
-  // with it.
-  reporter: [["list"], ["junit", { outputFile: "junit/e2e.xml" }]],
+  // with it. The file name carries junit because the uploader matches on the
+  // name and ignores the directory; measured, a name without it uploads
+  // nothing and still reports success.
+  reporter: [["list"], ["junit", { outputFile: "junit/e2e.junit.xml" }]],
   // ponytail: one worker, because every spec pulls the same multi-megabyte
   // dataset asset over the preview server. Raise it when the spec count makes
   // the wall clock matter.

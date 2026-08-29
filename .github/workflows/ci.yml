@@ -109,6 +109,11 @@ jobs:
       # reports named, so a run that stopped early uploads what it wrote, and the
       # file check skips the step when it wrote nothing.
       #
+      # Every report carries junit in its file name because the uploader matches
+      # names against *junit*.xml and reads the directory name as nothing.
+      # Measured: without it the step finds zero files, uploads nothing, and
+      # still exits green under fail_ci_if_error.
+      #
       # The same action as the step above; codecov/test-results-action would be a
       # second action to pin for an input this one already takes.
       - name: Upload test results to Codecov

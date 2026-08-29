@@ -60,9 +60,9 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --project=jsdom",
-    "test:coverage": "vitest run --project=jsdom --coverage --reporter=default --reporter=junit --outputFile.junit=junit/jsdom.xml",
+    "test:coverage": "vitest run --project=jsdom --coverage --reporter=default --reporter=junit --outputFile.junit=junit/jsdom.junit.xml",
     "test:watch": "vitest --project=jsdom",
-    "test:browser": "vitest run --project=browser --reporter=default --reporter=junit --outputFile.junit=junit/browser.xml",
+    "test:browser": "vitest run --project=browser --reporter=default --reporter=junit --outputFile.junit=junit/browser.junit.xml",
     "test:e2e": "playwright test",
     "prepare": "husky"
   },
