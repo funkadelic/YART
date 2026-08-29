@@ -1,5 +1,7 @@
 # Yet Another React Table (YART)
 
+[![codecov](https://codecov.io/gh/funkadelic/YART/branch/main/graph/badge.svg)](https://codecov.io/gh/funkadelic/YART)
+
 A React and TypeScript single-page app for browsing a large dataset in the browser: search, sort, and paginate a list of world cities without a table library.
 
 **[Live demo](https://funkadelic.github.io/YART/)**, published from `main` by the pipeline once every gate passes.
