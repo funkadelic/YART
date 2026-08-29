@@ -104,6 +104,39 @@ jobs:
           # Otherwise the pull request waits on a status that never arrives.
           fail_ci_if_error: true
 
+      # Runs even after a red step, because a failed suite is the run flake
+      # detection needs to see. The directory is searched rather than the three
+      # reports named, so a run that stopped early uploads what it wrote, and the
+      # file check skips the step when it wrote nothing.
+      #
+      # The same action as the step above; codecov/test-results-action would be a
+      # second action to pin for an input this one already takes.
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() && github.actor != 'dependabot[bot]' && hashFiles('junit/*.xml') != '' }}
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          report_type: test_results
+          directory: junit
+          fail_ci_if_error: true
+
+      # The CLI rather than @codecov/vite-plugin, which peers vite 4, 5 and 6 and
+      # will not install beside this tree's vite 8 (upstream issue #264). It
+      # reports asset sizes and not the per-module breakdown the plugin gets from
+      # bundler hooks.
+      #
+      # Without the normalize pattern every build reports a full set of new
+      # assets, because the assets here are content-hashed and the analyzer's
+      # fallback matcher only recognizes a hex hash. Keep the pattern in step with
+      # the bundler's asset file names.
+      - name: Upload bundle stats to Codecov
+        if: github.actor != 'dependabot[bot]'
+        run: >-
+          npx bundle-analyzer ./dist
+          --bundle-name=yart
+          --upload-token=${{ secrets.CODECOV_TOKEN }}
+          --normalize-assets-pattern="[name]-[hash].js"
+
       # After the sweeps, so a failing test reports as itself rather than as an
       # absent coverage report. Skipped for the updater, whose empty token would
       # fail the job; a version bump touches no source for the scan to read.

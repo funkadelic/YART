@@ -14,6 +14,7 @@
     "react-icons": "5.7.0"
   },
   "devDependencies": {
+    "@codecov/bundle-analyzer": "2.0.1",
     "@eslint/js": "9.39.5",
     "@playwright/test": "1.62.1",
     "@testing-library/jest-dom": "7.0.1",
@@ -59,9 +60,9 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --project=jsdom",
-    "test:coverage": "vitest run --project=jsdom --coverage",
+    "test:coverage": "vitest run --project=jsdom --coverage --reporter=default --reporter=junit --outputFile.junit=junit/jsdom.xml",
     "test:watch": "vitest --project=jsdom",
-    "test:browser": "vitest run --project=browser",
+    "test:browser": "vitest run --project=browser --reporter=default --reporter=junit --outputFile.junit=junit/browser.xml",
     "test:e2e": "playwright test",
     "prepare": "husky"
   },
