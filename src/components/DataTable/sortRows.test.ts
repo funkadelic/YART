@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { collatorFor } from "../../i18n/format";
 import { columns } from "./column";
 import { compareIdentities, sortRows } from "./sortRows";
 
@@ -14,7 +15,12 @@ interface Part {
   weight: number;
 }
 
-const col = columns<Part>();
+/**
+ * A collator on the base tag, because the factory no longer holds one and every
+ * caller states which reader's ordering it is building for. Nothing in this
+ * file depends on which tag it is; it depends on there being exactly one.
+ */
+const col = columns<Part>(collatorFor("en-US"));
 
 const REGION = col.key("region", { label: "Region" });
 const WEIGHT = col.key("weight", { label: "Weight" });

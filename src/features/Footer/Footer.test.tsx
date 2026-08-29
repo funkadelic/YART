@@ -1,6 +1,14 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+
+import { en } from "../../i18n/catalogs/en";
+import { es } from "../../i18n/catalogs/es";
+import { LOCALE_STORAGE_KEY } from "../../i18n/resolveLocale";
 import { Footer } from "./Footer";
+
+/** The two identifiers the sentence carries verbatim in every language. */
+const SOURCE_NAME = "simplemaps.com World Cities";
+const LICENSE_NAME = "CC BY 4.0";
 
 /**
  * The footer attribution is a licence obligation, not decoration. This file is
@@ -12,6 +20,12 @@ import { Footer } from "./Footer";
  * structure, so a later phase can restyle the footer without touching this file.
  * Accessible-name matching normalizes whitespace, so a line wrap in the JSX
  * cannot flap these.
+ *
+ * The sentence itself is asserted against the catalog entry rather than against
+ * a literal restating it. A literal here would be a second copy of the copy, and
+ * the two would drift the first time a word changed. What is asserted is the
+ * obligation: whatever the sentence says, both identifiers are in it and both
+ * are links, in every language.
  */
 
 /** Rendered text with runs of whitespace collapsed, so JSX line wrapping is invisible. */
@@ -37,13 +51,34 @@ describe("Footer", () => {
     );
   });
 
-  it("states that the data was modified and names both modifications", () => {
+  it("renders the catalog's whole attribution sentence, modifications included", () => {
     const { container } = render(<Footer />);
 
     expect(normalize(container.textContent)).toBe(
-      "City data from simplemaps.com World Cities, licensed CC BY 4.0. " +
-        "Modified: unused columns removed, rows ordered by population.",
+      normalize(en.attribution(SOURCE_NAME, LICENSE_NAME)),
     );
+    expect(normalize(container.textContent)).toContain("Modified:");
+  });
+
+  it("carries the same four obligations in a second language", () => {
+    localStorage.setItem(LOCALE_STORAGE_KEY, "es");
+
+    const { container } = render(<Footer />);
+
+    expect(normalize(container.textContent)).toBe(
+      normalize(es.attribution(SOURCE_NAME, LICENSE_NAME)),
+    );
+    // The sentence is translated; the source name, the licence identifier and
+    // both addresses are not. They are identifiers rather than copy.
+    expect(screen.getByRole("link", { name: SOURCE_NAME })).toHaveAttribute(
+      "href",
+      "https://simplemaps.com/data/world-cities",
+    );
+    expect(screen.getByRole("link", { name: LICENSE_NAME })).toHaveAttribute(
+      "href",
+      "https://creativecommons.org/licenses/by/4.0/",
+    );
+    expect(normalize(container.textContent)).toContain("Modificado:");
   });
 
   it("keeps the attribution in the accessibility tree", () => {

@@ -2,6 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
+import { es } from "../../i18n/catalogs/es";
+import { LOCALE_STORAGE_KEY } from "../../i18n/resolveLocale";
 import { setPrefersDark } from "../../test/matchMediaStub";
 import { THEME_STORAGE_KEY } from "../../theme/resolveTheme";
 import { Header } from "./Header";
@@ -31,6 +33,24 @@ describe("ThemeControl", () => {
     for (const name of OPTION_NAMES) {
       expect(screen.getByRole("radio", { name })).toBeInTheDocument();
     }
+  });
+
+  // The three option names and the group's own name are copy, not state tokens:
+  // the value the control writes stays the English word either way, which is
+  // what the document element is stamped with and what storage holds.
+  it("names the group and its three options in the chosen language", () => {
+    localStorage.setItem(LOCALE_STORAGE_KEY, "es");
+
+    render(<ThemeControl />);
+
+    expect(screen.getByRole("radiogroup")).toHaveAccessibleName(es.themeGroup);
+    for (const name of [es.themeLight, es.themeDark, es.themeSystem]) {
+      expect(screen.getByRole("radio", { name })).toBeInTheDocument();
+    }
+    expect(screen.getByRole("radio", { name: es.themeSystem })).toHaveAttribute(
+      "value",
+      "system",
+    );
   });
 
   it("names the group, so the options are not three loose controls", () => {

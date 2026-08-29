@@ -196,13 +196,15 @@ function normalizeProse(source: string): string {
 }
 
 /**
- * A block comment handed to normalizeProse with the leading asterisk stripped from
- * every line. The third copy of the provenance paragraph lived in a comment, where
- * every line begins with an asterisk, so an absence assertion that skipped the strip
- * would pass on a reintroduced copy for the wrong reason.
+ * A comment handed to normalizeProse with its markers stripped from every line, the
+ * block form's asterisk and the line form's pair of slashes alike. The third copy of
+ * the provenance paragraph lived in a block comment, so an absence assertion that
+ * skipped the strip would pass on a reintroduced copy for the wrong reason; the
+ * amended address invariant is carried in line comments, so a presence assertion that
+ * skipped them would fail on markup rather than on the prose it is reading.
  */
 function normalizeComment(source: string): string {
-  return normalizeProse(source.replace(/^[ \t]*\*[ ]?/gm, ""));
+  return normalizeProse(source.replace(/^[ \t]*(?:\*|\/\/)[ ]?/gm, ""));
 }
 
 /** Whether a node is a call to the named callee, matched as the tree writes it. */
@@ -335,6 +337,258 @@ function findTestFiles(directory: string): string[] {
     }
   }
 
+  return found;
+}
+
+/**
+ * Every module under a directory that is not a test file, so a guard can ask a
+ * question of the application rather than of the suite, because a call site
+ * written into a test is a test double and a call site written into a module is
+ * the application doing it.
+ *
+ * Not quite the complement of findTestFiles: a `.test-d.ts` is in neither walk.
+ * The runner never collects one, so it is not a file findTestFiles describes,
+ * and `tsc` is the only thing that reads it, so a literal or an Intl call
+ * written there ships to nobody and is not the application doing it either.
+ */
+function findSourceFiles(directory: string): string[] {
+  const found: string[] = [];
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      if (SKIPPED_DIRECTORIES.has(entry.name)) continue;
+      found.push(...findSourceFiles(path));
+    } else if (
+      /\.[cm]?[jt]sx?$/.test(entry.name) &&
+      !/\.(test|spec)(-d)?\.[cm]?[jt]sx?$/.test(entry.name)
+    ) {
+      found.push(path);
+    }
+  }
+
+  return found;
+}
+
+/**
+ * Every stylesheet under a directory, both dialects, so a rule asked of the
+ * styling can be asked of all of it rather than of the dialect that happened to
+ * be checked. The global sheet is plain CSS and every component sheet is SCSS.
+ */
+function findStyleSheets(directory: string): string[] {
+  const found: string[] = [];
+
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      if (SKIPPED_DIRECTORIES.has(entry.name)) continue;
+      found.push(...findStyleSheets(path));
+    } else if (/\.(css|scss)$/.test(entry.name)) {
+      found.push(path);
+    }
+  }
+
+  return found;
+}
+
+/** One declaration as written, with the property and the value already split. */
+interface StyleDeclaration {
+  readonly property: string;
+  readonly value: string;
+}
+
+/** A stylesheet reduced to the two constructs the guards below ask about. */
+interface StyleSheetParts {
+  readonly declarations: readonly StyleDeclaration[];
+  readonly selectors: readonly string[];
+}
+
+/**
+ * A stylesheet split into its declarations and its selectors.
+ *
+ * Constructs rather than raw text, which is this file's standard and is
+ * load-bearing here twice over. Every sheet in this tree carries paragraphs
+ * explaining itself, and the rules below are exactly the sort a comment states
+ * in order to say why it is being obeyed: a text search would go red on the
+ * explanation as readily as on a violation, at which point the guard gets
+ * deleted rather than kept. Quoted runs are carried through rather than
+ * dropped, because a selector matching an attribute value is a quoted run and
+ * one guard below reads it.
+ *
+ * At-rules are not declarations: an include, a use and a media prelude all end
+ * in a semicolon or open a block, and none of them sets a property.
+ */
+function styleSheetParts(source: string): StyleSheetParts {
+  const declarations: StyleDeclaration[] = [];
+  const selectors: string[] = [];
+  let buffer = "";
+  let index = 0;
+
+  const flushDeclaration = (): void => {
+    const text = buffer.trim();
+    buffer = "";
+
+    if (text === "" || text.startsWith("@")) return;
+
+    const colon = text.indexOf(":");
+
+    if (colon === -1) return;
+
+    declarations.push({
+      property: text.slice(0, colon).trim().toLowerCase(),
+      value: text
+        .slice(colon + 1)
+        .trim()
+        .toLowerCase(),
+    });
+  };
+
+  while (index < source.length) {
+    const character = source[index];
+    const following = source[index + 1];
+
+    if (character === '"' || character === "'") {
+      const close = source.indexOf(character, index + 1);
+      const end = close === -1 ? source.length : close + 1;
+
+      buffer += source.slice(index, end);
+      index = end;
+      continue;
+    }
+
+    if (character === "/" && following === "/") {
+      const end = source.indexOf("\n", index);
+
+      index = end === -1 ? source.length : end;
+      continue;
+    }
+
+    if (character === "/" && following === "*") {
+      const end = source.indexOf("*/", index + 2);
+
+      index = end === -1 ? source.length : end + 2;
+      continue;
+    }
+
+    if (character === "{") {
+      selectors.push(buffer.trim());
+      buffer = "";
+      index += 1;
+      continue;
+    }
+
+    if (character === "}" || character === ";") {
+      flushDeclaration();
+      index += 1;
+      continue;
+    }
+
+    buffer += character;
+    index += 1;
+  }
+
+  return { declarations, selectors };
+}
+
+/**
+ * The physical properties that name one end of the inline axis, so a sheet
+ * declaring one serves a left-to-right document and silently mis-serves a
+ * right-to-left one.
+ *
+ * The block axis is deliberately absent. Top and bottom mean the same thing
+ * whichever way the text runs, so banning them would be churn rather than a
+ * rule.
+ */
+const PHYSICAL_INLINE_PROPERTIES: ReadonlySet<string> = new Set([
+  "left",
+  "right",
+  "margin-left",
+  "margin-right",
+  "padding-left",
+  "padding-right",
+  "border-left",
+  "border-right",
+  "border-left-color",
+  "border-left-style",
+  "border-left-width",
+  "border-right-color",
+  "border-right-style",
+  "border-right-width",
+]);
+
+/**
+ * The properties whose value, rather than whose name, can name one end of the
+ * inline axis. Each has a logical pair, start and end, that follows the
+ * document instead.
+ */
+const PHYSICAL_INLINE_VALUED_PROPERTIES: ReadonlySet<string> = new Set([
+  "text-align",
+  "float",
+  "clear",
+]);
+
+/** The component holding the four glyphs that mean a direction. */
+const DIRECTIONAL_GLYPH_COMPONENT = "src/components/DataTable/Pagination.tsx";
+
+/** Whether a node is JSX, in any of the three shapes the grammar allows. */
+function isJsx(node: ts.Node): boolean {
+  return (
+    ts.isJsxElement(node) ||
+    ts.isJsxSelfClosingElement(node) ||
+    ts.isJsxFragment(node)
+  );
+}
+
+/**
+ * Whether a statement's own return is JSX, ignoring any nested function.
+ *
+ * A callback declared inside the branch returns whatever it returns, which is
+ * not the branch returning it, so the walk stops at a function boundary.
+ */
+function returnsJsx(node: ts.Node): boolean {
+  if (ts.isFunctionLike(node)) return false;
+
+  if (ts.isReturnStatement(node)) {
+    return node.expression !== undefined && isJsx(node.expression);
+  }
+
+  return ts.forEachChild(node, returnsJsx) ?? false;
+}
+
+/**
+ * Every conditional in a file that picks between two pieces of JSX: a ternary
+ * with an element either side, or an if whose two branches each return one.
+ *
+ * A guarded render, which is the shape the table already uses, has JSX on one
+ * side and nothing on the other and is not one of these.
+ */
+function jsxAlternatives(file: ts.SourceFile): string[] {
+  const found: string[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isConditionalExpression(node) &&
+      isJsx(node.whenTrue) &&
+      isJsx(node.whenFalse)
+    ) {
+      found.push(node.condition.getText(file));
+    }
+
+    if (
+      ts.isIfStatement(node) &&
+      node.elseStatement !== undefined &&
+      returnsJsx(node.thenStatement) &&
+      returnsJsx(node.elseStatement)
+    ) {
+      found.push(node.expression.getText(file));
+    }
+
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
   return found;
 }
 
@@ -625,6 +879,402 @@ const PROVENANCE_REGENERATION =
   "id, so a regenerated file is not expected to be byte-identical to the " +
   "committed one.";
 
+/**
+ * The ceiling on what the catalogs reach, written out here for the same reason
+ * the provenance sentences above are: a rewrite in either document that carries
+ * it cannot move both sides of the assertion at once.
+ *
+ * Two documents rather than one because the question arrives from two
+ * directions. A reader evaluating the internationalization opens the README; a
+ * reader wondering why a country name is still English is already looking at the
+ * module that defines the city type. Stating it twice is deliberate, and this is
+ * what stops the two from becoming two different statements.
+ */
+const SOURCE_FORM_CEILING =
+  "City and country names stay in their source form in every locale: the " +
+  "dataset carries a name and an ascii name and nothing else, so a reader of " +
+  "the French interface still reads the English country name. Translating " +
+  "them would need a translated column and a regenerated asset, which is a " +
+  "data pipeline rather than an internationalization change.";
+
+/** The two documents that carry that ceiling: the prose one and the code one. */
+const SOURCE_FORM_DOCUMENTS = ["README.md", "src/data/worldcities/cities.ts"];
+
+/**
+ * A literal expression's value, built from the tree rather than evaluated.
+ *
+ * The parity guard below compares two copies of one rule that cannot import
+ * each other, so both sides have to be read as written. Importing the module
+ * side would report what it evaluates to, which is not the same question: a
+ * reader looking at index.html and at the module is comparing literals, and a
+ * literal is what the guard has to compare too. Anything that is not a string,
+ * an array or an object of those throws, so a rule that grows a computed value
+ * fails here rather than being silently skipped.
+ */
+function literalValue(node: ts.Node, file: ts.SourceFile): unknown {
+  if (
+    ts.isAsExpression(node) ||
+    ts.isSatisfiesExpression(node) ||
+    ts.isParenthesizedExpression(node)
+  ) {
+    return literalValue(node.expression, file);
+  }
+
+  if (ts.isStringLiteralLike(node)) return node.text;
+
+  if (ts.isArrayLiteralExpression(node)) {
+    return node.elements.map((element) => literalValue(element, file));
+  }
+
+  if (ts.isObjectLiteralExpression(node)) {
+    const value: Record<string, unknown> = {};
+
+    for (const property of node.properties) {
+      if (!ts.isPropertyAssignment(property)) {
+        throw new Error(`${property.getText(file)} is not a plain property`);
+      }
+
+      const name = property.name;
+
+      if (!ts.isIdentifier(name) && !ts.isStringLiteral(name)) {
+        throw new Error(`${name.getText(file)} is not a plain property name`);
+      }
+
+      value[name.text] = literalValue(property.initializer, file);
+    }
+
+    return value;
+  }
+
+  throw new Error(`${node.getText(file)} is not a literal`);
+}
+
+/**
+ * The value a named variable is declared with, found anywhere in the file.
+ *
+ * Anywhere rather than at the top level, because one of the two files read
+ * below wraps everything it declares in an immediately invoked function.
+ */
+function declaredLiteral(
+  file: ts.SourceFile,
+  name: string,
+  where: string,
+): unknown {
+  let initializer: ts.Expression | undefined;
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === name &&
+      node.initializer
+    ) {
+      initializer = node.initializer;
+    }
+
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
+
+  return literalValue(required(initializer, `${name} in ${where}`), file);
+}
+
+/** The first argument of every call to the named callee, as written. */
+function firstArguments(file: ts.SourceFile, callee: string): string[] {
+  return findCalls(file, callee).map(
+    (call) =>
+      literalValue(
+        required(call.arguments[0], `an argument to ${callee}`),
+        file,
+      ) as string,
+  );
+}
+
+/**
+ * The one inline script index.html carries, parsed.
+ *
+ * Matched with the expression the policy plugin in vite.config.ts uses to find
+ * the script it hashes, so this guard reads exactly the script that ships. That
+ * plugin already throws unless there is exactly one; asserting it here as well
+ * means the guard says which of the two failed rather than reporting a parse of
+ * the wrong script.
+ */
+function inlineScript(): ts.SourceFile {
+  const html = readFileSync(join(projectRoot, "index.html"), "utf8");
+  const found = [
+    ...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g),
+  ];
+
+  expect(
+    found.length,
+    "index.html carries something other than exactly one inline script",
+  ).toBe(1);
+
+  return parse(required(found[0]?.[1], "the inline script's body"));
+}
+
+/** A module of this tree, parsed, for the literals a reader sees in it. */
+function moduleSource(path: string): ts.SourceFile {
+  return parse(readFileSync(join(projectRoot, path), "utf8"));
+}
+
+const THEME_MODULE = "src/theme/resolveTheme.ts";
+const LOCALE_MODULE = "src/i18n/resolveLocale.ts";
+
+// The one module allowed to write the address, and the module that owns which
+// keys the address may carry.
+const ADDRESS_WRITER = "src/features/CityTable/CityTable.tsx";
+const SCHEMA_MODULE = "src/components/DataTable/tableStateUrl.ts";
+
+/**
+ * The four keys the query string owns, sorted.
+ *
+ * Pinned as a set rather than asserted as a floor, because the risk this guards
+ * runs in the other direction: a fifth entry for the locale would make the
+ * reader's language part of the view state a link reproduces, which is the one
+ * thing the amendment below says the address deliberately does not do.
+ */
+const SCHEMA_KEYS = ["page", "q", "size", "sort"];
+
+/**
+ * The account of what a link does and does not reproduce, written out here for
+ * the same reason the provenance sentences above are: a rewrite in any document
+ * that carries it cannot move both sides of the assertion at once.
+ *
+ * The statement is amended rather than new. Following the reader's locale is
+ * what made the previous wording false, so the wording moved in the same change
+ * set that made it move, and this is the first machine check it has had.
+ */
+const ADDRESS_INVARIANT =
+  "One address is one view, per resolved locale: the query string carries " +
+  "the search term, the sort column and direction, the page and the page " +
+  "size, and the resolved locale is deliberately not among them, so two " +
+  "readers opening the same link see the same rows in the order and the " +
+  "number format their own locale produces. Putting the locale in the " +
+  "address would force the sender's language on the recipient and would " +
+  "make the locale part of the table's view state";
+
+/**
+ * Every document that carries that account, most-consulted first.
+ *
+ * The first two are committed. The last two are the generated project
+ * instructions and the codebase map they are generated from, and this
+ * repository keeps both out of version control, so they are asserted where they
+ * exist and skipped where they do not rather than failing a fresh clone for
+ * missing a file it was never given. The count below is what stops that
+ * tolerance from quietly emptying the loop.
+ */
+const ADDRESS_DOCUMENTS = [
+  "README.md",
+  ADDRESS_WRITER,
+  ".claude/CLAUDE.md",
+  ".planning/codebase/ARCHITECTURE.md",
+];
+
+/** How many of those documents are committed, and therefore always readable. */
+const COMMITTED_ADDRESS_DOCUMENTS = 2;
+
+/**
+ * Every history-mutating call this file performs, one entry per call site, named
+ * by the method rather than by the receiver.
+ *
+ * Asked of the tree rather than of the text, so a method named inside a string or
+ * a comment is not a call. Matched on the property being called rather than on
+ * the whole callee as written, because the invariant is about the mutation
+ * happening at all: a destructured binding or a receiver held in a local is the
+ * same second writer under a different spelling.
+ */
+function historyMutations(file: ts.SourceFile): string[] {
+  const found: string[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const callee = node.expression;
+      const name = ts.isPropertyAccessExpression(callee)
+        ? callee.name.text
+        : ts.isIdentifier(callee)
+          ? callee.text
+          : undefined;
+
+      if (name === "replaceState" || name === "pushState") found.push(name);
+    }
+
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
+  return found;
+}
+
+/**
+ * The keys the query-string schema declares, sorted, read out of the schema's own
+ * property names.
+ *
+ * Read from the construct rather than from a token search, and read as names
+ * rather than through literalValue over the whole array, because each entry also
+ * carries a parse and a serialize function and a literal evaluator would refuse
+ * the array outright.
+ */
+function schemaKeys(): string[] {
+  const file = moduleSource(SCHEMA_MODULE);
+  let entries: readonly ts.Expression[] | undefined;
+
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "PARAM_SCHEMA" &&
+      node.initializer &&
+      ts.isArrayLiteralExpression(node.initializer)
+    ) {
+      entries = node.initializer.elements;
+    }
+
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
+
+  return required(entries, `PARAM_SCHEMA in ${SCHEMA_MODULE}`)
+    .map((entry) => {
+      const key = ts.isObjectLiteralExpression(entry)
+        ? entry.properties.find(
+            (property): property is ts.PropertyAssignment =>
+              ts.isPropertyAssignment(property) &&
+              ts.isIdentifier(property.name) &&
+              property.name.text === "key",
+          )
+        : undefined;
+
+      return literalValue(
+        required(key?.initializer, `a schema entry's key in ${SCHEMA_MODULE}`),
+        file,
+      ) as string;
+    })
+    .toSorted();
+}
+
+/** The one module allowed to ask the platform for a locale. */
+const FORMATTER_MODULE = "src/i18n/format.ts";
+
+/**
+ * The value-level locale-aware helpers on strings, numbers and dates.
+ *
+ * Every one of these reads a locale from the machine when it is called with no
+ * argument, which is the defect this phase exists to close: four independent
+ * defaults where the application resolves exactly one locale. They are also
+ * expensive in the same way the constructors are, because each call builds a
+ * formatter and throws it away.
+ */
+const LOCALE_AWARE_METHODS = new Set([
+  "localeCompare",
+  "toLocaleString",
+  "toLocaleDateString",
+  "toLocaleTimeString",
+  "toLocaleLowerCase",
+  "toLocaleUpperCase",
+]);
+
+/**
+ * Every place a file asks the platform for a locale: a construction of an
+ * internationalization namespace constructor, or a call to one of the
+ * value-level helpers above.
+ *
+ * Asked of the tree rather than of the text, which is this file's own standard
+ * and is load-bearing twice over here. A namespace named inside a block comment
+ * is not a call site, and this guard is worthless if the paragraph explaining
+ * why the rule exists can fail it. A type annotation naming the same
+ * constructor is not one either: the comparator's fourth parameter is declared
+ * as a collator and constructs nothing, which is the entire point of it being a
+ * parameter.
+ */
+function localeCallSites(file: ts.SourceFile): string[] {
+  const found: string[] = [];
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isNewExpression(node) || ts.isCallExpression(node)) {
+      const callee = node.expression;
+
+      if (ts.isPropertyAccessExpression(callee)) {
+        if (callee.expression.getText(file) === "Intl") {
+          found.push(`Intl.${callee.name.text}`);
+        } else if (LOCALE_AWARE_METHODS.has(callee.name.text)) {
+          found.push(callee.name.text);
+        }
+      }
+    }
+
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
+  return found;
+}
+
+/** The layer that renders any collection, and so may name none of them. */
+const SHARED_COMPONENT_DIRECTORY = "src/components";
+
+/**
+ * The attributes whose string value a reader perceives.
+ *
+ * Two attributes carrying string values in that directory are deliberately not
+ * here. The sort state attribute takes one of three values the standard itself
+ * defines, and the live region's politeness setting takes one of two. Both are
+ * specification tokens rather than copy: assistive technology matches on them,
+ * so translating either would not localize anything, it would break the feature.
+ * They are English because the specification is, which is a different fact from
+ * a component holding a word for a reader.
+ */
+const READER_FACING_ATTRIBUTES = new Set([
+  "aria-label",
+  "title",
+  "placeholder",
+  "alt",
+]);
+
+/**
+ * Every string a reader could read out of a component: text rendered between
+ * tags, and a literal on one of the attributes above.
+ *
+ * Parsed rather than searched, which is this file's standard and is what makes
+ * the guard survivable. Every component in that directory carries paragraphs of
+ * prose explaining itself, and a search would fail on the explanation of the
+ * rule as readily as on a violation of it, at which point the guard gets
+ * deleted rather than obeyed. An attribute whose value is an expression is not
+ * a literal and is not collected: reading a string out of a prop is the shape
+ * this rule exists to require.
+ */
+function readerFacingLiterals(file: ts.SourceFile): string[] {
+  const found: string[] = [];
+
+  const visit = (node: ts.Node): void => {
+    // Whitespace between elements is text too, so the letter is what separates
+    // a rendered word from the indentation around it.
+    if (ts.isJsxText(node) && /\p{L}/u.test(node.text)) {
+      found.push(node.text.trim());
+    }
+
+    if (ts.isJsxAttribute(node)) {
+      const name = node.name.getText(file);
+      const value = node.initializer;
+
+      if (
+        READER_FACING_ATTRIBUTES.has(name) &&
+        value !== undefined &&
+        ts.isStringLiteralLike(value)
+      ) {
+        found.push(`${name}="${value.text}"`);
+      }
+    }
+
+    node.forEachChild(visit);
+  };
+
+  file.forEachChild(visit);
+  return found;
+}
+
 describe("toolchain baseline", () => {
   // This guard used to ban a list of names belonging to the runner that was
   // removed, and nothing else. A second runner arriving with a config of its own
@@ -887,6 +1537,116 @@ describe("toolchain baseline", () => {
         `the manifest names the icon ${icon.src ?? ""}, which public/ does not carry`,
       ).toBe(true);
     }
+  });
+
+  // The theme rule is written twice, once in a module and once as a literal
+  // inside the blocking inline script, because that script runs before anything
+  // importable and cannot import the module. This repository's own constraints
+  // recorded that hazard and recorded that nothing asserted the two copies
+  // agreed. Stamping the locale from the same script doubles it, so both rules
+  // are held here instead of one being documented and neither being checked.
+  //
+  // Both sides are read as written rather than imported. A reader comparing
+  // index.html with the module compares literals, so the guard compares literals
+  // too, and set equality rather than substring presence: a guard that searched
+  // index.html for the storage key would pass on the mention of it in the
+  // comment above the script.
+  describe("the inline script and the resolvers", () => {
+    it("agrees on both storage keys", () => {
+      expect(
+        new Set(firstArguments(inlineScript(), "localStorage.getItem")),
+      ).toEqual(
+        new Set([
+          declaredLiteral(
+            moduleSource(THEME_MODULE),
+            "THEME_STORAGE_KEY",
+            THEME_MODULE,
+          ),
+          declaredLiteral(
+            moduleSource(LOCALE_MODULE),
+            "LOCALE_STORAGE_KEY",
+            LOCALE_MODULE,
+          ),
+        ]),
+      );
+    });
+
+    it("agrees on the media query", () => {
+      expect(firstArguments(inlineScript(), "window.matchMedia")).toEqual([
+        declaredLiteral(
+          moduleSource(THEME_MODULE),
+          "PREFERS_DARK_QUERY",
+          THEME_MODULE,
+        ),
+      ]);
+    });
+
+    it("accepts exactly the explicit theme words the module declares", () => {
+      const declared = declaredLiteral(
+        moduleSource(THEME_MODULE),
+        "THEME_CHOICES",
+        THEME_MODULE,
+      ) as string[];
+
+      expect(
+        new Set(
+          declaredLiteral(
+            inlineScript(),
+            "THEME_WORDS",
+            "index.html",
+          ) as string[],
+        ),
+        // The default is the key not being there, so the script must not accept
+        // the word for it any more than the module's own reader does.
+      ).toEqual(new Set(declared.filter((word) => word !== "system")));
+    });
+
+    it("agrees on which catalogs a preference list may select", () => {
+      expect(
+        new Set(
+          declaredLiteral(
+            inlineScript(),
+            "NEGOTIABLE",
+            "index.html",
+          ) as string[],
+        ),
+      ).toEqual(
+        new Set(
+          declaredLiteral(
+            moduleSource(LOCALE_MODULE),
+            "NEGOTIABLE_CATALOG_IDS",
+            LOCALE_MODULE,
+          ) as string[],
+        ),
+      );
+    });
+
+    it("agrees on the tag and the direction of every catalog", () => {
+      const resolved = declaredLiteral(
+        moduleSource(LOCALE_MODULE),
+        "RESOLVED_LOCALES",
+        LOCALE_MODULE,
+      ) as Record<string, { catalog: string; tag: string; dir: string }>;
+
+      // The script stamps two attributes and has no use for the third field, so
+      // it carries two. Compared field by field rather than whole, so the guard
+      // states which of the two rules drifted.
+      expect(declaredLiteral(inlineScript(), "LOCALES", "index.html")).toEqual(
+        Object.fromEntries(
+          Object.entries(resolved).map(([id, locale]) => [
+            id,
+            { tag: locale.tag, dir: locale.dir },
+          ]),
+        ),
+      );
+
+      // The field the script does not carry, checked on the module side alone:
+      // an entry naming a catalog other than its own key would send a reader to
+      // a catalog the rest of the record says they did not ask for.
+      for (const [id, locale] of Object.entries(resolved)) {
+        expect(locale.catalog, `the ${id} entry`).toBe(id);
+      }
+    });
   });
 
   // browserslist is pinned to explicit versions like the rest of the manifest. A
@@ -1210,6 +1970,98 @@ describe("toolchain baseline", () => {
     expect(globalSheets("src/a11y.browser.test.tsx")).toEqual(shipped);
   });
 
+  // Direction-dependent geometry is written once, on the inline axis, so one
+  // stylesheet serves both directions and there is no second artifact to keep in
+  // step. Five declarations in this tree were physical and were rewritten; a
+  // sixth arriving is invisible to every other check here, and is exactly the
+  // kind of thing that is correct in the browser the author happens to use.
+  //
+  // A test rather than a lint rule because the standard configuration in use
+  // carries no such rule, and the plugin that does is a new dependency for five
+  // declarations. This file already walks the tree and already parses what it
+  // asks about, so the guard costs a function rather than an install.
+  it("keeps direction-dependent geometry on the inline axis in every stylesheet", () => {
+    const sheets = findStyleSheets(join(projectRoot, "src"));
+
+    expect(
+      sheets.length,
+      "src/ carries no stylesheet, so this guard is reading nothing",
+    ).toBeGreaterThan(0);
+
+    const offenders = sheets.flatMap((sheet) => {
+      const name = relative(projectRoot, sheet);
+
+      return styleSheetParts(readFileSync(sheet, "utf8"))
+        .declarations.filter(
+          ({ property, value }) =>
+            PHYSICAL_INLINE_PROPERTIES.has(property) ||
+            (PHYSICAL_INLINE_VALUED_PROPERTIES.has(property) &&
+              /\b(?:left|right)\b/.test(value)),
+        )
+        .map(({ property, value }) => `${name}: ${property}: ${value}`);
+    });
+
+    expect(offenders).toEqual([]);
+  });
+
+  // The two ways the rule above is most likely to be undone. Each is otherwise a
+  // sentence in a plan with nothing behind it.
+  //
+  // The mirror rule that turns the four page glyphs is written on the direction
+  // attribute for a measured reason: :dir() landed in Chrome 120 and this
+  // application's floor is 111, so the pseudo-class ships inert in the very
+  // browsers the floor exists to name. It is also the tidier-looking spelling,
+  // which is precisely why a later reader substitutes it.
+  it("selects direction on the attribute rather than on the pseudo-class", () => {
+    const offenders = findStyleSheets(join(projectRoot, "src"))
+      .filter((sheet) => sheet.endsWith(".scss"))
+      .flatMap((sheet) =>
+        styleSheetParts(readFileSync(sheet, "utf8"))
+          .selectors.filter((selector) => selector.includes(":dir("))
+          .map((selector) => `${relative(projectRoot, sheet)}: ${selector}`),
+      );
+
+    expect(offenders).toEqual([]);
+  });
+
+  // The other substitution: a branch in the component choosing between two glyph
+  // components on the direction, which is a prop and a coverage line for what one
+  // declaration does. A returning branch is invisible to the stylesheet guard
+  // above because it is not CSS, and invisible to the shared layer's literal
+  // guard because a glyph component is neither a text child nor a string, so it
+  // is asserted here or nowhere.
+  it("picks the page glyphs with a stylesheet rather than with a branch", () => {
+    const alternatives = jsxAlternatives(
+      moduleSource(DIRECTIONAL_GLYPH_COMPONENT),
+    );
+
+    expect(
+      alternatives,
+      `${DIRECTIONAL_GLYPH_COMPONENT} chooses between two elements on a condition`,
+    ).toEqual([]);
+  });
+
+  // The dataset ceiling is written twice on purpose, once where a reader
+  // evaluating this project reads and once where a reader of the code asks the
+  // question. Two copies of one fact is how the provenance account came to have
+  // a corrected half and a disproved half sitting beside each other, so this
+  // pair is held from one literal in the same idiom. The code copy is a block
+  // comment, so the comparison strips the leading asterisks: a guard that failed
+  // on markup would be a guard nobody keeps.
+  it("keeps one account of the dataset ceiling in the README and the data module", () => {
+    for (const name of SOURCE_FORM_DOCUMENTS) {
+      const source = readFileSync(join(projectRoot, name), "utf8");
+      const text = name.endsWith(".md")
+        ? normalizeProse(source)
+        : normalizeComment(source);
+
+      expect(
+        text,
+        `${name} no longer carries: ${SOURCE_FORM_CEILING}`,
+      ).toContain(SOURCE_FORM_CEILING);
+    }
+  });
+
   // The footer carries this same attribution and has its own test. The README
   // copy has nothing watching it, so a documentation rewrite could drop the
   // source link, the license link, or the record of what was changed, and the
@@ -1309,5 +2161,163 @@ describe("toolchain baseline", () => {
         `README says ${label} ${named.get(label) ?? "nothing"} against ${name}@${version ?? "nothing"}`,
       ).toBe((version ?? "").split(".")[0]);
     }
+  });
+  // The address design had four invariants and no machine check of any of them:
+  // the single writer, the absence of a push, the guarded write and the omitted
+  // defaults were prose, plus behavior tests that would still pass beside a
+  // second writer nobody noticed. Following the reader's locale is what made the
+  // headline statement move, so the statement is amended and guarded in the same
+  // change set rather than left to be discovered wrong later.
+  //
+  // Three questions, all asked of constructs. Whether anything but the one
+  // component mutates history, whether the query string still owns exactly the
+  // four keys it owned, and whether every document a reader consults for the
+  // design still says the same thing about what a link reproduces. A token
+  // search would pass on all three from a mention inside a comment.
+  it("keeps one address writer, four query keys, and one account of what a link carries", () => {
+    const sources = findSourceFiles(join(projectRoot, "src"));
+
+    expect(
+      sources.length,
+      "the source walk found no module under src/, so this guard read nothing",
+    ).toBeGreaterThan(0);
+
+    const writers: string[] = [];
+    const pushes: string[] = [];
+
+    for (const path of sources) {
+      const name = relative(projectRoot, path).split(sep).join("/");
+
+      for (const method of historyMutations(
+        parse(readFileSync(path, "utf8")),
+      )) {
+        if (method === "replaceState") writers.push(name);
+        else pushes.push(name);
+      }
+    }
+
+    expect(
+      writers.toSorted(),
+      "the address is written from somewhere other than exactly the one writer",
+    ).toEqual([ADDRESS_WRITER]);
+
+    // Separate from the count above so the failure says which rule broke. A push
+    // fills the back stack with positions the reader never asked to record, which
+    // is a different defect from a second writer arguing over the query string.
+    expect(
+      pushes.toSorted(),
+      "a history push appeared under src/, so Back no longer leaves the site",
+    ).toEqual([]);
+
+    expect(
+      schemaKeys(),
+      "the query-string schema owns a different set of keys than it did",
+    ).toEqual(SCHEMA_KEYS);
+
+    let read = 0;
+
+    for (const name of ADDRESS_DOCUMENTS) {
+      const path = join(projectRoot, name);
+      if (!existsSync(path)) continue;
+
+      read += 1;
+
+      expect(
+        normalizeComment(readFileSync(path, "utf8")),
+        `${name} no longer carries: ${ADDRESS_INVARIANT}`,
+      ).toContain(ADDRESS_INVARIANT);
+    }
+
+    // Without this the loop above passes vacuously the day someone renames the
+    // README or moves the writer, which is the failure mode a tolerance for
+    // missing files always brings with it.
+    expect(
+      read,
+      "fewer documents carrying the address invariant were found than are committed",
+    ).toBeGreaterThanOrEqual(COMMITTED_ADDRESS_DOCUMENTS);
+  });
+  // The application resolves one locale and four surfaces follow it: the
+  // catalog, the document element, the ordering of text and the grouping of
+  // numbers. A fifth surface asking the platform for a locale of its own would
+  // reintroduce the defect this phase closed, and would do it invisibly, since
+  // a machine whose own preference is the base tag renders every one of them
+  // identically. Counting the call sites is the only thing that notices.
+  //
+  // Test files are excluded, and deliberately. A test asserting a formatted
+  // string has to compute the expectation through the platform rather than type
+  // it, because the French group separator is a narrow no-break space and a
+  // typed literal fails on a difference no terminal renders. So the ban is on
+  // shipped call sites, not on the name.
+  it("asks the platform for a locale in exactly one module", () => {
+    const sources = findSourceFiles(join(projectRoot, "src"));
+
+    expect(
+      sources.length,
+      "the source walk found no module under src/, so this guard read nothing",
+    ).toBeGreaterThan(0);
+
+    const holders = new Map<string, string[]>();
+
+    for (const path of sources) {
+      const name = relative(projectRoot, path).split(sep).join("/");
+      const calls = localeCallSites(parse(readFileSync(path, "utf8")));
+
+      if (calls.length > 0) holders.set(name, calls);
+    }
+
+    // The inline script resolves a locale of its own before any module loads,
+    // so it is walked here too. It reaches its answer through a literal map
+    // rather than through the platform, so it should contribute nothing, and if
+    // it ever grows a call this is where that shows up.
+    const stamped = localeCallSites(inlineScript());
+    if (stamped.length > 0) holders.set("index.html", stamped);
+
+    expect(
+      [...holders.keys()].toSorted(),
+      "something other than the formatter module asks the platform for a locale",
+    ).toEqual([FORMATTER_MODULE]);
+
+    // Without this the assertion above passes just as happily on a formatter
+    // module that constructs nothing at all, which is the shape this guard
+    // would take the day someone deleted the caches it exists to protect.
+    expect(
+      required(
+        holders.get(FORMATTER_MODULE),
+        `the call sites in ${FORMATTER_MODULE}`,
+      ).toSorted(),
+      "the formatter module no longer builds the three cached instances",
+    ).toEqual(["Intl.Collator", "Intl.NumberFormat", "Intl.PluralRules"]);
+  });
+
+  // The shared component layer renders any collection for any reader, and a
+  // literal there is a claim about which. The layer already may not import a
+  // domain type or the locale layer, and both of those are lint rules over
+  // imports; a hardcoded sentence needs no import and would pass them both.
+  // Every word that layer shows now arrives in a labels object, and this is
+  // what keeps the next one arriving the same way: a second locale added to a
+  // component still holding a literal is a second set of literals.
+  it("renders no reader-facing literal in the shared component layer", () => {
+    const components = findSourceFiles(
+      join(projectRoot, SHARED_COMPONENT_DIRECTORY),
+    );
+
+    expect(
+      components.length,
+      "the walk found no component, so this guard read nothing",
+    ).toBeGreaterThan(0);
+
+    const holders = new Map<string, string[]>();
+
+    for (const path of components) {
+      const name = relative(projectRoot, path).split(sep).join("/");
+      const literals = readerFacingLiterals(parse(readFileSync(path, "utf8")));
+
+      if (literals.length > 0) holders.set(name, literals);
+    }
+
+    expect(
+      Object.fromEntries(holders),
+      "a component under the shared layer carries a string a reader can read",
+    ).toEqual({});
   });
 });

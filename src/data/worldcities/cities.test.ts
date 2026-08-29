@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 
-import type { City } from "../../api/getCities";
+import type { City, DatasetErrorCode } from "../../api/getCities";
 import { CITY_FIXTURE_ENVELOPE } from "../../test/cityFixture";
 import { stubDatasetFetch } from "../../test/fetchStub";
 
@@ -32,9 +32,14 @@ const SEARCH_KEY_SEPARATOR = "\u0000";
  * returns an already-populated cache and never reaches the parse boundary at
  * all.
  */
-async function freshLoadCities() {
+async function freshCities() {
   vi.resetModules();
-  return (await import("./cities")).loadCities;
+  return await import("./cities");
+}
+
+/** The loader alone, for the cases that need nothing else from the module. */
+async function freshLoadCities() {
+  return (await freshCities()).loadCities;
 }
 
 interface Envelope {
@@ -63,18 +68,34 @@ function rowAt(payload: Envelope, at: number): unknown[] {
 }
 
 /**
- * The message a load rejected with. Resolving is itself a failure here, and it
- * is reported as one rather than left to a later assertion on an undefined
- * value.
+ * The message and the code a load rejected with. Resolving is itself a failure
+ * here, and it is reported as one rather than left to a later assertion on an
+ * undefined value.
+ *
+ * The two travel together because they are asserted together everywhere: a
+ * failure is the pair, and reading only one of them leaves the other free to
+ * drift.
  */
-async function rejectionMessage(payload: unknown): Promise<string> {
+async function rejection(
+  payload: unknown,
+): Promise<{ message: string; code: DatasetErrorCode | undefined }> {
   stubDatasetFetch(payload);
-  const loadCities = await freshLoadCities();
+  const cities = await freshCities();
 
   try {
-    await loadCities();
+    await cities.loadCities();
   } catch (error) {
-    return error instanceof Error ? error.message : String(error);
+    // The class is read off the freshly loaded module rather than imported at
+    // the top of this file. Every case here resets the module registry, which
+    // hands the loader a new class object each time, and a class imported once
+    // would stop recognizing its own instances after the first reset.
+    if (error instanceof cities.DatasetError) {
+      return { message: error.message, code: error.code };
+    }
+    return {
+      message: error instanceof Error ? error.message : String(error),
+      code: undefined,
+    };
   }
 
   throw new Error("The load resolved when it was expected to reject.");
@@ -85,14 +106,17 @@ async function rejectionMessage(payload: unknown): Promise<string> {
  * Resolving is itself a failure here, and it is reported as one rather than left
  * to a later assertion on an undefined value.
  */
-async function rejectionOf(load: () => Promise<unknown>): Promise<Error> {
+async function rejectionOf(
+  cities: typeof import("./cities"),
+): Promise<InstanceType<typeof cities.DatasetError>> {
   try {
-    await load();
+    await cities.loadCities();
   } catch (error) {
-    if (error instanceof Error) return error;
-    throw new Error(`The load rejected with a non-error: ${String(error)}`, {
-      cause: error,
-    });
+    if (error instanceof cities.DatasetError) return error;
+    throw new Error(
+      `The load rejected with something other than a dataset error: ${String(error)}`,
+      { cause: error },
+    );
   }
 
   throw new Error("The load resolved when it was expected to reject.");
@@ -100,42 +124,48 @@ async function rejectionOf(load: () => Promise<unknown>): Promise<Error> {
 
 describe("loadCities payload validation", () => {
   it("rejects a payload that is not an object", async () => {
-    expect(await rejectionMessage("the city data, honestly")).toBe(
-      "The city data could not be read.",
-    );
+    expect(await rejection("the city data, honestly")).toEqual({
+      message: "The city data could not be read.",
+      code: "notAnObject",
+    });
   });
 
   it("rejects a null payload", async () => {
-    expect(await rejectionMessage(null)).toBe(
-      "The city data could not be read.",
-    );
+    expect(await rejection(null)).toEqual({
+      message: "The city data could not be read.",
+      code: "notAnObject",
+    });
   });
 
   it("rejects a payload with no rows array", async () => {
     const payload = envelope();
     delete (payload as Partial<Envelope>).rows;
 
-    expect(await rejectionMessage(payload)).toBe(
-      "The city data is missing its rows array.",
-    );
+    expect(await rejection(payload)).toEqual({
+      message: "The city data is missing its rows array.",
+      code: "missingRows",
+    });
   });
 
   it("rejects a payload whose rows is an object rather than an array", async () => {
     const payload = envelope();
     payload.rows = { 0: rowAt(envelope(), 0) };
 
-    expect(await rejectionMessage(payload)).toBe(
-      "The city data is missing its rows array.",
-    );
+    expect(await rejection(payload)).toEqual({
+      message: "The city data is missing its rows array.",
+      code: "missingRows",
+    });
   });
 
   it("rejects a payload with no columns array", async () => {
     const payload = envelope();
     delete (payload as Partial<Envelope>).columns;
 
-    expect(await rejectionMessage(payload)).toBe(
-      "The city data has an unexpected column order and was not loaded.",
-    );
+    expect(await rejection(payload)).toEqual({
+      message:
+        "The city data has an unexpected column order and was not loaded.",
+      code: "columnOrder",
+    });
   });
 
   it("rejects a payload whose columns are transposed", async () => {
@@ -143,72 +173,94 @@ describe("loadCities payload validation", () => {
     const columns = columnsOf(payload);
     [columns[1], columns[2]] = [columns[2], columns[1]];
 
-    expect(await rejectionMessage(payload)).toBe(
-      "The city data has an unexpected column order and was not loaded.",
-    );
+    expect(await rejection(payload)).toEqual({
+      message:
+        "The city data has an unexpected column order and was not loaded.",
+      code: "columnOrder",
+    });
   });
 
   it("rejects a payload whose columns are short by one", async () => {
     const payload = envelope();
     payload.columns = columnsOf(payload).slice(0, 6);
 
-    expect(await rejectionMessage(payload)).toBe(
-      "The city data has an unexpected column order and was not loaded.",
-    );
+    expect(await rejection(payload)).toEqual({
+      message:
+        "The city data has an unexpected column order and was not loaded.",
+      code: "columnOrder",
+    });
   });
 
   it("rejects a row that is not an array, naming its index", async () => {
     const payload = envelope();
     rowsOf(payload)[3] = "Manila, Philippines, 24922000";
 
-    expect(await rejectionMessage(payload)).toBe(
-      "City row 3 does not have 7 fields and was not loaded.",
-    );
+    expect(await rejection(payload)).toEqual({
+      message: "City row 3 does not have 7 fields and was not loaded.",
+      code: "rowShape",
+    });
   });
 
   it("rejects a row with one field too few, naming its index", async () => {
     const payload = envelope();
     rowsOf(payload)[2] = rowAt(payload, 2).slice(0, 6);
 
-    expect(await rejectionMessage(payload)).toBe(
-      "City row 2 does not have 7 fields and was not loaded.",
-    );
+    expect(await rejection(payload)).toEqual({
+      message: "City row 2 does not have 7 fields and was not loaded.",
+      code: "rowShape",
+    });
   });
 
   it("rejects a row with one field too many, naming its index", async () => {
     const payload = envelope();
     rowsOf(payload)[4] = [...rowAt(payload, 4), "admin"];
 
-    expect(await rejectionMessage(payload)).toBe(
-      "City row 4 does not have 7 fields and was not loaded.",
-    );
+    expect(await rejection(payload)).toEqual({
+      message: "City row 4 does not have 7 fields and was not loaded.",
+      code: "rowShape",
+    });
   });
 
   it("rejects a row whose id is the string form of its number", async () => {
     const payload = envelope();
     rowAt(payload, 5)[0] = String(rowAt(payload, 5)[0]);
 
-    expect(await rejectionMessage(payload)).toBe(
-      "City row 5 has a field of the wrong type and was not loaded.",
-    );
+    expect(await rejection(payload)).toEqual({
+      message: "City row 5 has a field of the wrong type and was not loaded.",
+      code: "rowFieldType",
+    });
   });
 
   it("rejects a row whose population is null", async () => {
     const payload = envelope();
     rowAt(payload, 6)[6] = null;
 
-    expect(await rejectionMessage(payload)).toBe(
-      "City row 6 has a field of the wrong type and was not loaded.",
-    );
+    expect(await rejection(payload)).toEqual({
+      message: "City row 6 has a field of the wrong type and was not loaded.",
+      code: "rowFieldType",
+    });
   });
 
   it("rejects a row whose name is a number", async () => {
     const payload = envelope();
     rowAt(payload, 1)[1] = 1360771077;
 
-    expect(await rejectionMessage(payload)).toBe(
-      "City row 1 has a field of the wrong type and was not loaded.",
-    );
+    expect(await rejection(payload)).toEqual({
+      message: "City row 1 has a field of the wrong type and was not loaded.",
+      code: "rowFieldType",
+    });
+  });
+
+  it("carries the failing row's index as the detail, not only in the message", async () => {
+    const payload = envelope();
+    rowsOf(payload)[3] = "Manila, Philippines, 24922000";
+    stubDatasetFetch(payload);
+    const cities = await freshCities();
+
+    const error = await rejectionOf(cities);
+
+    expect(error.code).toBe("rowShape");
+    expect(error.detail).toBe(3);
   });
 });
 
@@ -220,16 +272,17 @@ describe("loadCities transport", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("the city data, honestly", { status: 500 }),
     );
-    const loadCities = await freshLoadCities();
+    const cities = await freshCities();
 
-    let message = "";
-    try {
-      await loadCities();
-    } catch (error) {
-      message = error instanceof Error ? error.message : String(error);
-    }
+    const error = await rejectionOf(cities);
 
-    expect(message).toBe("The city data could not be downloaded (status 500).");
+    expect(error.message).toBe(
+      "The city data could not be downloaded (status 500).",
+    );
+    expect(error.code).toBe("status");
+    // The status travels as the detail, which is what lets the sentence a
+    // reader is shown name it without parsing it back out of the message.
+    expect(error.detail).toBe(500);
   });
 
   it("rejects a request that never reaches the host with copy written for a reader", async () => {
@@ -239,13 +292,14 @@ describe("loadCities transport", () => {
     // the loader, so a rename cannot move both sides at once.
     const transportFailure = new Error("Failed to fetch");
     vi.spyOn(globalThis, "fetch").mockRejectedValue(transportFailure);
-    const loadCities = await freshLoadCities();
+    const cities = await freshCities();
 
-    const error = await rejectionOf(loadCities);
+    const error = await rejectionOf(cities);
 
     expect(error.message).toBe(
       "The city data could not be downloaded. Check your connection and try again.",
     );
+    expect(error.code).toBe("transport");
     expect(error.message).not.toContain("Failed to fetch");
     // The reader sees the authored sentence, a developer still has the reason.
     expect(error.cause).toBe(transportFailure);
@@ -261,13 +315,14 @@ describe("loadCities transport", () => {
         { status: 200, headers: { "content-type": "text/html" } },
       ),
     );
-    const loadCities = await freshLoadCities();
+    const cities = await freshCities();
 
-    const error = await rejectionOf(loadCities);
+    const error = await rejectionOf(cities);
 
     expect(error.message).toBe(
       "The city data was downloaded but could not be read as JSON.",
     );
+    expect(error.code).toBe("notJson");
     expect(error.message).not.toContain("Unexpected token");
     expect(error.cause).toBeInstanceOf(Error);
   });

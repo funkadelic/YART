@@ -4,16 +4,27 @@ import styles from "./RootLayout.module.css";
 
 import type { ReactNode } from "react";
 
-// The fallback shows authored copy and nothing else. A render-time throw's own
-// message is whatever the engine produced, so it would be noise on screen and
-// mild information disclosure, and the surrounding sentence would have to work
-// as a frame around an arbitrary string.
-const FALLBACK_MESSAGE =
-  "This part of the page could not be displayed. The city data is still loaded, so showing it again may work.";
-const RECOVERY_LABEL = "Show it again";
+/**
+ * The fallback's two strings.
+ *
+ * They arrive as props rather than being read from the catalog here, and the
+ * reason is the class: this is the only render-fallback mechanism React offers
+ * and it can only be a class component, so it cannot call a hook. Its parent is
+ * the locale subscriber and hands the copy down.
+ *
+ * The fallback shows this authored copy and nothing else. A render-time throw's
+ * own message is whatever the engine produced, so it would be noise on screen
+ * and mild information disclosure, and the surrounding sentence would have to
+ * work as a frame around an arbitrary string.
+ */
+export interface ErrorBoundaryLabels {
+  readonly message: string;
+  readonly action: string;
+}
 
 export interface ErrorBoundaryProps {
   children: ReactNode;
+  labels: ErrorBoundaryLabels;
 }
 
 interface ErrorBoundaryState {
@@ -49,13 +60,13 @@ export class ErrorBoundary extends Component<
       // gone. Same reasoning the inline error region already records.
       return (
         <div className={styles.fallback} role="alert">
-          <p>{FALLBACK_MESSAGE}</p>
+          <p>{this.props.labels.message}</p>
           <button
             type="button"
             className={styles.fallbackButton}
             onClick={this.handleReset}
           >
-            {RECOVERY_LABEL}
+            {this.props.labels.action}
           </button>
         </div>
       );

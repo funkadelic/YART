@@ -13,6 +13,9 @@ A React and TypeScript single-page app for browsing a large dataset in the brows
   - [Shareable links](#shareable-links)
   - [Theme](#theme)
   - [Accessibility](#accessibility)
+- [Internationalization](#internationalization)
+  - [What ships](#what-ships)
+  - [What stays in the source language](#what-stays-in-the-source-language)
 - [Stack](#stack)
   - [Build target](#build-target)
 - [Data attribution](#data-attribution)
@@ -57,7 +60,8 @@ A React and TypeScript single-page app for browsing a large dataset in the brows
 
 - The search term, the sort, the page, and the page size all live in the query string, so a view can be copied out of the address bar and reopened as itself
 - Four keys: `q`, `sort`, `page`, and `size`. A descending sort is the column id behind a hyphen, so `?sort=-population` is population, largest first
-- A value equal to its default is left out, so the plain view is a bare path and one view has exactly one address
+- A value equal to its default is left out, so the plain view is a bare path
+- One address is one view, per resolved locale: the query string carries the search term, the sort column and direction, the page and the page size, and the resolved locale is deliberately not among them, so two readers opening the same link see the same rows in the order and the number format their own locale produces. Putting the locale in the address would force the sender's language on the recipient and would make the locale part of the table's view state
 - Every parameter is validated on its own and falls back on its own, so `?page=0&size=25` still opens at 25 rows a page
 - Written with `replaceState` rather than `pushState`, so one Back press leaves the site instead of walking back through positions nobody asked to record
 - Parameters the app does not own, a tracking tag for instance, survive the write untouched
@@ -78,7 +82,24 @@ A React and TypeScript single-page app for browsing a large dataset in the brows
 - The theme control is three native radios, so the arrow keys move between them and the whole group is a single tab stop
 - Every foreground and background pair is checked against the WCAG contrast ratio in both themes, computed from the shipped stylesheet rather than from a copy of it
 
-Every push sweeps the running app for violations of a set of automated rules and fails on any of them, once against a simulated DOM and once in a real browser across both themes and a paged table. Contrast is the reason the second run exists: measuring it needs a layout engine, which the simulated DOM does not have. Automated rules cannot establish conformance, so the sweeps catch regressions rather than prove the list above.
+Every push sweeps the running app for violations of a set of automated rules and fails on any of them, once against a simulated DOM and once in a real browser across both themes, a paged table and a right-to-left reading direction. Contrast is the reason the second run exists: measuring it needs a layout engine, which the simulated DOM does not have. Automated rules cannot establish conformance, so the sweeps catch regressions rather than prove the list above.
+
+## Internationalization
+
+### What ships
+
+- Four catalogs: English, Spanish, French, and a right-to-left pseudo-locale. The pseudo-locale is readable English, padded and wrapped in direction marks. It ships so the direction and the truncation can be tested, because the other three all read left to right
+- A language picker in the header, offering the machine's own preference first and then each catalog named in its own language, so a reader who cannot read the interface in front of them can still find their own
+- Every reader-facing string comes from a catalog, the failure messages and the licence attribution included. One key union is derived from the base catalog, so a missing or misspelled key fails the type check rather than rendering at runtime
+- The document's language and direction follow the resolved locale, and both are stamped before the first paint, so no wrong-language and no wrong-direction frame is ever shown
+- Collation and number formatting follow it too: the city name column sorts by the reader's own language rules and the population column is grouped the way that language groups digits
+- Direction-dependent geometry is written on the inline axis, so one stylesheet serves both directions
+
+### What stays in the source language
+
+City and country names stay in their source form in every locale: the dataset carries a name and an ascii name and nothing else, so a reader of the French interface still reads the English country name. Translating them would need a translated column and a regenerated asset, which is a data pipeline rather than an internationalization change.
+
+The static head of the document stays in the base language too. Its title, its description, its two social strings and its no-script paragraph are all served before any module can run, and no catalog can reach them without script.
 
 ## Stack
 
@@ -136,37 +157,57 @@ Start with the columns. `columns<T>()` is curried because TypeScript infers all 
 
 ```tsx
 import { columns } from "./components/DataTable/column";
+import { collatorFor, numberFormatFor } from "./i18n/format";
 
-const col = columns<City>();
+// A builder rather than a constant, because both halves of a column follow the
+// reader: the label comes out of the catalog and the population cell is grouped
+// by the reader's own rule. The collator is fused into the default comparator
+// here, which is what keeps the sort module free of any of this.
+export function buildCityColumns(catalog: Catalog, tag: string) {
+  const col = columns<City>(collatorFor(tag));
+  const number = numberFormatFor(tag);
 
-// Module scope, not a component body. Rebuilding the array on every render
-// hands the table a new one on every keystroke and defeats the memos below it.
-export const cityColumns = [
-  col.key("name", { label: "City" }),
-  col.key("country", { label: "Country" }),
-  col.key("population", {
-    label: "Population",
-    renderCell: (value) => value.toLocaleString(),
-  }),
-];
+  return [
+    col.key("name", { label: catalog.columnName }),
+    col.key("country", { label: catalog.columnCountry }),
+    col.key("population", {
+      label: catalog.columnPopulation,
+      renderCell: (value) => number.format(value),
+    }),
+  ];
+}
 
-// The literal union of the ids above, with no assertion written anywhere.
-export type CityColumnId = (typeof cityColumns)[number]["id"];
+// The literal union of the ids above, with no assertion written anywhere. It
+// comes off one base build kept at module scope for this purpose alone: which
+// columns exist is the same in every language, only what they are called moves.
+const BASE_COLUMNS = buildCityColumns(en, "en-US");
+export type CityColumnId = (typeof BASE_COLUMNS)[number]["id"];
 ```
+
+Three of the five columns are shown. `src/features/CityTable/cityColumns.ts` has the whole build.
+
+Call the builder from a component body, never bare during render, and key the memo on exactly the catalog and the tag. A new array identity re-sorts the whole collection and re-slices the page, which over fifty thousand rows is the most expensive thing the container can do by accident.
 
 Every string that names what the rows are comes from the same place, because a shared component carrying one collection's nouns would be shared in name only.
 
 ```tsx
-export const cityTableLabels: DataTableLabels = {
-  loading: "Downloading the city data...",
-  empty: "No cities found",
-  emptyAnnouncement: "No cities found for that search",
-  results: (shown, total) =>
-    `Showing ${shown} cities out of ${total} total results`,
-  caption: (total, sortSummary) =>
-    `City data with ${total} entries, currently ${sortSummary}`,
-};
+export function buildTableLabels(
+  catalog: Catalog,
+  tag: string,
+): DataTableLabels {
+  return {
+    loading: catalog.loading,
+    empty: catalog.empty,
+    emptyAnnouncement: catalog.emptyAnnouncement,
+    results: (shown, total) => catalog.results(tag, shown, total),
+    caption: (total, sortSummary) => catalog.caption(tag, total, sortSummary),
+  };
+}
 ```
+
+Five of the entries are shown. The rest, the retry and error copy, the sort announcements and summary, and the whole pagination slice, are built the same way in `src/features/CityTable/cityLabels.ts`; the type is what makes a missing one a compile error.
+
+An entry that weaves a value takes that value rather than an already-composed phrase. A caller handing over a finished word has made a grammatical decision one layer too early, which is what made the old sort summary untranslatable.
 
 Then hold the state and hand it down:
 
@@ -278,8 +319,8 @@ Both accept `renderCell` and `compare`. Each is handed the column's value alread
 
 ```tsx
 col.key("population", {
-  label: "Population",
-  renderCell: (value) => value.toLocaleString(),
+  label: catalog.columnPopulation,
+  renderCell: (value) => numberFormatFor(tag).format(value),
   compare: (a, b, direction) => (direction === "asc" ? a - b : b - a),
 });
 ```
@@ -342,7 +383,7 @@ it("sorts by population descending on the second activation", async () => {
 
 The assertions read `aria-sort`, the same attribute a screen reader announces, so a passing test is evidence the announcement is right.
 
-A second suite under `e2e/` runs in a real browser against a production build, covering four things a simulated DOM cannot show: that reopening a link restores the search, sort and page it carries; that Back and Forward move through history the way the shareable-link design intends; that the theme is stamped before the first paint rather than after the page loads; and that the dataset arrives over the network as a separate content-hashed asset.
+A second suite under `e2e/` runs in a real browser against a production build, covering four things a simulated DOM cannot show: that reopening a link restores the search, sort and page it carries; that Back and Forward move through history the way the shareable-link design intends; that the theme and the language are stamped before the first paint rather than after the page loads; and that the dataset arrives over the network as a separate content-hashed asset.
 
 ## Scripts
 

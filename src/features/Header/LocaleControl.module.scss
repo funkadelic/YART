@@ -1,0 +1,29 @@
+@use "../../styles/visually-hidden" as *;
+
+.control {
+  display: flex;
+  align-items: center;
+}
+
+// The options name themselves, so the label is off screen rather than absent:
+// the control still has to carry a name in the accessibility tree.
+.label {
+  @include visually-hidden;
+}
+
+.select {
+  padding: var(--space-1) var(--space-2-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  background-color: var(--color-surface-raised);
+  cursor: pointer;
+}
+
+// a11y: restated here rather than left to the global rule, so the one control
+// this adds is not the one control whose ring the border swallows.
+.select:focus-visible {
+  outline: 2px solid var(--color-focus-ring);
+  outline-offset: 2px;
+}

@@ -1,4 +1,5 @@
 import styles from "./Header.module.css";
+import { LocaleControl } from "./LocaleControl";
 import { ThemeControl } from "./ThemeControl";
 
 export function Header() {
@@ -18,8 +19,15 @@ export function Header() {
           strokeLinecap="round"
         />
       </svg>
+      {/* The wordmark stays untranslated for the same reason the two names in
+          the footer do. It is what the app calls itself, not copy about it. */}
       <span className={styles.title}>YART</span>
+      {/* The theme control pins itself to the trailing edge with an automatic
+          margin, so the picker follows it rather than preceding it: the two read
+          as one group at the end of the bar instead of one control stranded
+          beside the title. */}
       <ThemeControl />
+      <LocaleControl />
     </header>
   );
 }

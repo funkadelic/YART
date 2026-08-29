@@ -44,6 +44,14 @@ export function sortRows<T, Id extends string>(
  * as text the way their subjects sort is therefore the caller's job, and the
  * caller is the only one who knows what a row's identity means.
  *
+ * Deliberately not collated, and that is the one thing to keep true here. The
+ * column comparator above orders text by the reader's resolved locale, which is
+ * what a reader expects of the values they can see. An identity is not a value
+ * they can see: it decides every pair the column left tied, so collating it
+ * would let the same data come out in two orders for two readers with every
+ * visible value equal. Ordering identities as plain text is what keeps that one
+ * rule the same for everyone.
+ *
  * Exported so a caller reproducing the table's order compares identities the
  * way the table does, rather than restating the rule and drifting from it.
  */

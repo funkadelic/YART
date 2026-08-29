@@ -52,6 +52,22 @@
   }
 }
 
+// The four page glyphs turn with the document.
+// Flex reverses where the buttons sit and never what the glyphs point at, so
+// under a right-to-left document the chevron meaning "next" still points the
+// way a reader of that document came from. Mirroring the glyph is the whole
+// correction: the icons are already hidden from the accessibility tree, so
+// nothing a screen reader announces changes.
+// Selected on the direction attribute rather than the :dir() pseudo-class. That
+// pseudo-class landed in Chrome 120 and this application's floor is 111, so the
+// pseudo-class version would ship inert in the very browsers the floor exists
+// to name. A rule rather than a branch in the component: two icon components
+// chosen on direction would be a prop and a coverage line for what one
+// declaration does.
+[dir="rtl"] .navButton svg {
+  transform: scaleX(-1);
+}
+
 // responsive styles
 @media (width <= 768px) {
   .paginationContainer {

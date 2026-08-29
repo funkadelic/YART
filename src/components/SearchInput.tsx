@@ -2,10 +2,23 @@ import { FiSearch } from "react-icons/fi";
 
 import styles from "./SearchInput.module.scss";
 
+/**
+ * The two strings this control shows.
+ *
+ * One object rather than two loose props, so the pair moves together when the
+ * language does and a caller cannot supply half of it.
+ */
+export interface SearchInputLabels {
+  /** The accessible name: what the control does, not what it searches. */
+  readonly name: string;
+  /** The placeholder: what the collection being searched is called. */
+  readonly placeholder: string;
+}
+
 interface SearchInputProps {
   readonly value: string;
   readonly onChange: (term: string) => void;
-  readonly placeholder: string;
+  readonly labels: SearchInputLabels;
 }
 
 /**
@@ -16,16 +29,15 @@ interface SearchInputProps {
  * conversion happens here, at the only place that knows an input event exists,
  * which keeps the callback signature free of the DOM.
  *
- * a11y: the accessible name is the single word "Search", which describes what
- * the control does rather than what it searches, so it is fixed here. The
- * placeholder is a prop because that text names the collection being searched
- * and only the caller knows it.
+ * a11y: the accessible name describes what the control does rather than what it
+ * searches, which is why it is one word and not the name of a collection. That
+ * is still true and is now a catalog entry rather than a literal: the reason it
+ * was fixed here was that it never varies by caller, and the reason it is no
+ * longer fixed here is that it does vary by language. The placeholder sits
+ * beside it because that text names the collection being searched, which only
+ * the caller knows.
  */
-export function SearchInput({
-  value,
-  onChange,
-  placeholder,
-}: SearchInputProps) {
+export function SearchInput({ value, onChange, labels }: SearchInputProps) {
   /**
    * Reports every keystroke upward. Debouncing belongs to whoever owns the
    * request, not to the control.
@@ -39,9 +51,9 @@ export function SearchInput({
       <div className={styles.searchInput}>
         <FiSearch className={styles.searchIcon} />
         <input
-          aria-label="Search"
+          aria-label={labels.name}
           type="text"
-          placeholder={placeholder}
+          placeholder={labels.placeholder}
           value={value}
           onChange={handleSearchChange}
         />

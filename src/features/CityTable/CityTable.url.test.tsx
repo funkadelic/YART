@@ -44,7 +44,7 @@ const defaultProps = {
   loading: false,
   // The honest default for a fixture that already carries rows.
   datasetReady: true,
-  error: null,
+  errorMessage: null,
 };
 
 /** Puts a query in the address the way a shared link delivers one. */

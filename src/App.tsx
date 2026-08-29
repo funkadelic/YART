@@ -1,7 +1,9 @@
 import { useEffect, useCallback, useReducer, useState } from "react";
 
-import { getCities } from "./api/getCities";
+import { DatasetError, getCities } from "./api/getCities";
 import { INITIAL_APP_STATE, applyAppAction } from "./appState";
+import { useLocale } from "./hooks/useLocale";
+import { datasetErrorText } from "./i18n/datasetErrorText";
 
 import { RootLayout } from "./features/RootLayout";
 import { CityTable, parseSearchTerm } from "./features/CityTable";
@@ -21,6 +23,7 @@ const App = () => {
   );
   const [{ cities, error, loading, datasetReady, retryAttempt }, dispatch] =
     useReducer(applyAppAction, INITIAL_APP_STATE);
+  const { catalog, tag } = useLocale();
 
   useEffect(() => {
     // The asynchronous work sits directly in the effect rather than behind a
@@ -44,9 +47,17 @@ const App = () => {
         if (err instanceof Error) {
           dispatch({ type: "failed", error: err });
         } else {
+          // A rejection carrying no error at all, which the loader never
+          // produces and a stubbed seam can. It enters state as a dataset
+          // error so what the reducer holds is always something the translator
+          // below has a sentence for.
           dispatch({
             type: "failed",
-            error: new Error("An unexpected error occurred"),
+            error: new DatasetError(
+              "unexpected",
+              0,
+              "The search rejected with something that was not an error",
+            ),
           });
         }
       })
@@ -77,15 +88,24 @@ const App = () => {
     dispatch({ type: "retry" });
   }, []);
 
+  // Derived here, during render, rather than at the catch above, and that is
+  // the whole reason this line is not two lines further up. The catch is inside
+  // the fetch effect, so reading the catalog there would make the locale a
+  // dependency of the effect and a reader changing language would re-issue the
+  // search. Here the catalog is already in scope and the effect's dependencies
+  // are untouched.
+  const errorMessage =
+    error === null ? null : datasetErrorText(error, catalog, tag);
+
   return (
     <RootLayout>
-      <h1>City List</h1>
+      <h1>{catalog.appTitle}</h1>
       <CityTable
         data={cities}
         onSearchChange={handleSearchChange}
         loading={loading}
         datasetReady={datasetReady}
-        error={error}
+        errorMessage={errorMessage}
         onRetry={handleRetry}
       />
     </RootLayout>

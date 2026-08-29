@@ -6,6 +6,7 @@
 // block, or renaming the file to the ordinary test suffix, would collect it and
 // fail it for declaring no suite.
 
+import { collatorFor } from "../../i18n/format";
 import { columns } from "./column";
 import type { DataTableProps } from "./DataTable";
 
@@ -47,7 +48,12 @@ interface Widget {
   qty: number;
 }
 
-const widget = columns<Widget>();
+/**
+ * A collator on the base tag, because the factory no longer holds one and every
+ * caller states which reader's ordering it is building for. Nothing in this
+ * file depends on which tag it is; it depends on there being exactly one.
+ */
+const widget = columns<Widget>(collatorFor("en-US"));
 
 export const widgetColumns = [
   widget.key("sku", { label: "SKU" }),

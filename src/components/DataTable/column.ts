@@ -40,6 +40,12 @@ export interface Column<T, Id extends string = string> {
  * Blanks sort last in both directions, which is a rule a direction-free
  * comparator cannot express: negating it puts every blank first on descending,
  * and on real data that is a first page of empty cells.
+ *
+ * ponytail: a caller-supplied comparator keeps the three parameters it has
+ * always had and never receives the collator, so a caller that wants to collate
+ * text itself has to reach for one of its own. Nothing in this tree does. The
+ * day one does, the collator arrives the same way the accessor does: fused in
+ * at construction, one line below.
  */
 export interface ColumnOptions<T, V> {
   readonly label: string;
@@ -66,8 +72,16 @@ export interface ColumnOptions<T, V> {
  * scalar string parameter already infers a literal from a literal argument.
  * It changes inference only for a parameter that takes an array or object,
  * which is not this signature.
+ *
+ * The collator is supplied here rather than reaching the comparison some other
+ * way, and it is what makes the column array the carrier of the reader's
+ * locale. The array is rebuilt per locale anyway, for its labels and for the
+ * cells that format a number, so fusing the collator in at construction costs
+ * one parameter and leaves the sort module, its hook and the table's own prop
+ * surface entirely untouched. A collator is a platform value, so taking one
+ * here leaves this layer's dependency set exactly as it was.
  */
-export function columns<T>() {
+export function columns<T>(collator: Intl.Collator) {
   /**
    * The one place where the accessor is fused into the renderer and the
    * comparator, so the two public methods below differ only in how they read a
@@ -90,7 +104,8 @@ export function columns<T>() {
         : (row) => String(read(row)),
       compare: compare
         ? (a, b, direction) => compare(read(a), read(b), direction)
-        : (a, b, direction) => compareValues(read(a), read(b), direction),
+        : (a, b, direction) =>
+            compareValues(read(a), read(b), direction, collator),
     };
   }
 

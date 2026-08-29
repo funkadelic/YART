@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { City } from "../../api/getCities";
 import { DataTable } from "../../components/DataTable/DataTable";
@@ -13,11 +13,12 @@ import {
 } from "../../components/DataTable/tableStateUrl";
 import { SearchInput } from "../../components/SearchInput";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
+import { useLocale } from "../../hooks/useLocale";
+import { buildSearchLabels, buildTableLabels } from "./cityLabels";
 import {
   CITY_COLUMN_IDS,
-  cityColumns,
+  buildCityColumns,
   cityRowId,
-  cityTableLabels,
   type CityColumnId,
 } from "./cityColumns";
 import styles from "./CityTable.module.scss";
@@ -37,7 +38,10 @@ interface CityTableProps {
   readonly loading: boolean;
   // False until the underlying collection has arrived at least once.
   readonly datasetReady: boolean;
-  readonly error: Error | null;
+  // The text of the failure rather than the failure itself, which is the shape
+  // the table below takes: nothing under this component narrows an error, so a
+  // preserved cause cannot reach a reader by accident.
+  readonly errorMessage: string | null;
   // Optional so the table stays usable on its own, without a container to
   // re-run the request behind it.
   readonly onRetry?: () => void;
@@ -59,9 +63,35 @@ export function CityTable({
   onSearchChange,
   loading,
   datasetReady,
-  error,
+  errorMessage,
   onRetry,
 }: CityTableProps) {
+  // The one place below the header that subscribes to the locale. Everything
+  // under src/components/ takes its strings as props and never learns that a
+  // locale exists, which is what keeps the shared table shared.
+  const { catalog, tag } = useLocale();
+
+  // The deliberate exception to the rule that label objects are built at module
+  // scope. The table holds this object across renders and two of its entries are
+  // closures, so its identity has to change when the locale does and must not
+  // change otherwise. That is exactly what a memo keyed on the catalog and the
+  // tag gives, and a module-scope constant cannot give it at all.
+  const labels = useMemo(() => buildTableLabels(catalog, tag), [catalog, tag]);
+
+  // The search box's own two strings, built from the same catalog on the same
+  // render so the whole tree changes language at once. Keyed on the catalog
+  // alone because neither entry weaves a number, so the tag decides nothing
+  // here and listing it would claim a dependency this does not have.
+  const searchLabels = useMemo(() => buildSearchLabels(catalog), [catalog]);
+
+  // The other documented exception to module-scope construction, and it keys on
+  // exactly the two values the labels above key on. That is a requirement
+  // rather than a symmetry: a column array whose identity moved on a render
+  // where the labels did not would re-sort the whole collection and re-slice
+  // the page for nothing, which over fifty thousand rows is the most expensive
+  // thing this component can do by accident.
+  const columns = useMemo(() => buildCityColumns(catalog, tag), [catalog, tag]);
+
   // Initialized from whatever the address carries, so the first render is
   // already the restored view: a link naming a page never paints the first one
   // for a frame on the way there. Reading it here rather than in an effect is
@@ -99,6 +129,14 @@ export function CityTable({
   // stripped the moment it arrives, a hostile link is canonicalized on arrival,
   // and a change driven by a back navigation cannot loop, because by then the
   // address already says what the state says.
+  //
+  // One address is one view, per resolved locale: the query string carries
+  // the search term, the sort column and direction, the page and the page
+  // size, and the resolved locale is deliberately not among them, so two
+  // readers opening the same link see the same rows in the order and the
+  // number format their own locale produces. Putting the locale in the
+  // address would force the sender's language on the recipient and would
+  // make the locale part of the table's view state.
   useEffect(() => {
     const next = serializeTableState(tableState, window.location.search);
     if (next === window.location.search) return;
@@ -245,11 +283,11 @@ export function CityTable({
       <SearchInput
         value={searchInput}
         onChange={handleSearchChange}
-        placeholder="Search for a city"
+        labels={searchLabels}
       />
       <DataTable
         rows={data}
-        columns={cityColumns}
+        columns={columns}
         getRowId={cityRowId}
         state={tableState}
         onSortChange={handleSort}
@@ -257,9 +295,9 @@ export function CityTable({
         onPageSizeChange={handlePageSizeChange}
         loading={loading}
         datasetReady={datasetReady}
-        error={error}
+        errorMessage={errorMessage}
         onRetry={onRetry}
-        labels={cityTableLabels}
+        labels={labels}
       />
     </div>
   );

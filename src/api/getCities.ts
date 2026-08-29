@@ -5,6 +5,13 @@ import { loadCities } from "../data/worldcities/cities";
 // import site did not.
 export type { City };
 
+// The failure vocabulary reaches the rest of the tree through this seam too, so
+// the loader keeps exactly one consumer. The application layer and the catalogs
+// need the code to choose a sentence; neither has any business reaching past
+// this module to get it.
+export type { DatasetErrorCode } from "../data/worldcities/cities";
+export { DATASET_ERROR_CODES, DatasetError } from "../data/worldcities/cities";
+
 export interface GetCitiesParams {
   searchTerm?: string;
 }

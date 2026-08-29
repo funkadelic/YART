@@ -1,14 +1,10 @@
 import { Fragment, useId } from "react";
 
+import { useLocale } from "../../hooks/useLocale";
 import { useTheme } from "../../hooks/useTheme";
+import { THEME_CHOICES } from "../../theme/resolveTheme";
 import type { ThemeChoice } from "../../theme/resolveTheme";
 import styles from "./ThemeControl.module.scss";
-
-const OPTIONS: { value: ThemeChoice; label: string }[] = [
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-  { value: "system", label: "System" },
-];
 
 /**
  * The theme picker: three states, all visible at once, so choosing the operating
@@ -30,6 +26,17 @@ const OPTIONS: { value: ThemeChoice; label: string }[] = [
  */
 export function ThemeControl() {
   const { choice, setChoice } = useTheme();
+  const { catalog } = useLocale();
+
+  // The three states are offered in the order the theme vocabulary declares
+  // them, and each is named from the catalog. A record rather than a label
+  // beside each value, so the option list stays the one definition of what the
+  // states are and this is only how they are spelled.
+  const names: Readonly<Record<ThemeChoice, string>> = {
+    light: catalog.themeLight,
+    dark: catalog.themeDark,
+    system: catalog.themeSystem,
+  };
 
   // The id and the radio name are both document-global, so writing either as a
   // constant makes a second mounted control produce duplicate ids and put all
@@ -38,23 +45,24 @@ export function ThemeControl() {
   const groupName = useId();
 
   return (
-    <div className={styles.control} role="radiogroup" aria-label="Theme">
-      {OPTIONS.map((option) => (
-        <Fragment key={option.value}>
+    <div
+      className={styles.control}
+      role="radiogroup"
+      aria-label={catalog.themeGroup}
+    >
+      {THEME_CHOICES.map((value) => (
+        <Fragment key={value}>
           <input
             className={styles.input}
             type="radio"
-            id={`${groupName}-${option.value}`}
+            id={`${groupName}-${value}`}
             name={groupName}
-            value={option.value}
-            checked={choice === option.value}
-            onChange={() => setChoice(option.value)}
+            value={value}
+            checked={choice === value}
+            onChange={() => setChoice(value)}
           />
-          <label
-            className={styles.label}
-            htmlFor={`${groupName}-${option.value}`}
-          >
-            {option.label}
+          <label className={styles.label} htmlFor={`${groupName}-${value}`}>
+            {names[value]}
           </label>
         </Fragment>
       ))}

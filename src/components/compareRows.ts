@@ -1,14 +1,4 @@
 /**
- * One collator for the module's lifetime. Building one inside the comparison
- * would build roughly eight hundred thousand of them for a single sort of the
- * full dataset, which is the cost this replaces. No locale and no options are
- * supplied, so the ordering stays exactly the one the per-call comparison
- * already produced: fixing what a comparison costs is not a licence to change
- * what it decides.
- */
-const COLLATOR = new Intl.Collator();
-
-/**
  * A value carrying nothing to order by. A zero is deliberately not blank; the
  * dataset records hundreds of cities with no population as 0, and those rows
  * belong at the small end of a population sort rather than at the far end with
@@ -52,7 +42,11 @@ function rank(value: unknown): number {
  * types rather than by the values: without that, a numeric pair and a
  * stringified pair can each be decided by a different rule and produce a cycle.
  */
-function compareRanked(aValue: unknown, bValue: unknown): number {
+function compareRanked(
+  aValue: unknown,
+  bValue: unknown,
+  collator: Intl.Collator,
+): number {
   const aRank = rank(aValue);
   const bRank = rank(bValue);
   if (aRank !== bRank) return aRank - bRank;
@@ -69,7 +63,7 @@ function compareRanked(aValue: unknown, bValue: unknown): number {
     return aNumber < bNumber ? -1 : 1;
   }
 
-  return COLLATOR.compare(String(aValue), String(bValue));
+  return collator.compare(String(aValue), String(bValue));
 }
 
 /**
@@ -98,11 +92,21 @@ function compareRanked(aValue: unknown, bValue: unknown): number {
  * table-level prop, not a fact a column can know about itself. It now runs in
  * the sort module, after this function returns and never flipped, so the rule
  * itself is unchanged.
+ *
+ * The collator arrives as an argument, and it has no default. This module held
+ * one for its own lifetime while the ordering was whatever the machine running
+ * the code happened to prefer; text now collates by the reader's resolved
+ * locale, so the instance is a function of that locale and cannot be a constant
+ * here. A default would be the locale-less collator this parameter exists to
+ * remove, and it would hide a call site from the source guard that keeps every
+ * platform locale construction in one module. This layer still imports nothing
+ * from the locale layer: a collator handed in is a value, not a dependency.
  */
 export function compareValues(
   aValue: unknown,
   bValue: unknown,
   direction: "asc" | "desc",
+  collator: Intl.Collator,
 ): number {
   const aBlank = isBlank(aValue);
   const bBlank = isBlank(bValue);
@@ -110,7 +114,7 @@ export function compareValues(
 
   // Both blank compares equal: the arm above has already answered every pair
   // where only one of them is.
-  const comparison = aBlank ? 0 : compareRanked(aValue, bValue);
+  const comparison = aBlank ? 0 : compareRanked(aValue, bValue, collator);
 
   // Returned ahead of the flip so an equal pair comes back as a positive zero
   // in both directions. Negating zero gives negative zero, which every ordering

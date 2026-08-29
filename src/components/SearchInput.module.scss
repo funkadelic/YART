@@ -8,13 +8,16 @@
     margin: 0 auto;
 
     // Position the icon inside the search input.
-    // This offset and the input's left padding below were both off the scale,
-    // and are snapped onto it as a pair rather than one at a time: each moves by
-    // a hair, in opposite directions, and it is the pair that keeps the icon
-    // centred in the inset the padding reserves for it.
+    // This offset and the input's reading-start padding below were both off the
+    // scale, and are snapped onto it as a pair rather than one at a time: each
+    // moves by a hair, in opposite directions, and it is the pair that keeps the
+    // icon centred in the inset the padding reserves for it.
+    // Both are written on the inline axis, so the pair follows the document's
+    // direction and one stylesheet serves both. The block-axis properties below
+    // are left physical: they mean the same thing either way round.
     .searchIcon {
       position: absolute;
-      left: var(--space-4);
+      inset-inline-start: var(--space-4);
       top: 50%;
       transform: translateY(-50%);
       color: var(--color-text-muted);
@@ -24,8 +27,8 @@
     input {
       width: 100%;
       box-sizing: border-box; // ignore border & padding to determine width
-      padding: var(--space-2-5) var(--space-2-5) var(--space-2-5)
-        var(--space-11);
+      padding-block: var(--space-2-5);
+      padding-inline: var(--space-11) var(--space-2-5);
       border: 2px solid var(--color-border);
       border-radius: var(--radius-sm);
       font-size: var(--font-size-base);

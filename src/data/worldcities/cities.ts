@@ -19,6 +19,17 @@ import citiesUrl from "./cities.json?url";
  * - 2 rows have no upstream id and are assigned 1 and 2. Every real id is
  *   >= 1004003059, so these cannot collide.
  * - 2 rows have an empty city_ascii and fall back to the city name.
+ *
+ * City and country names stay in their source form in every locale: the dataset
+ * carries a name and an ascii name and nothing else, so a reader of the French
+ * interface still reads the English country name. Translating them would need a
+ * translated column and a regenerated asset, which is a data pipeline rather
+ * than an internationalization change.
+ *
+ * That is stated here as well as in the README because this is the file a reader
+ * asking why a name is not translated is already looking at. The two copies are
+ * held together by a guard in src/toolchain.test.ts, so neither can be reworded
+ * on its own.
  */
 export interface City {
   id: number;
@@ -28,6 +39,60 @@ export interface City {
   countryIso3: string;
   capital: string;
   population: number;
+}
+
+/**
+ * The ways loading the dataset can fail, as a closed set of codes.
+ *
+ * A code rather than a message, because the message below is English and the
+ * reader may not be. The application layer turns a code into the sentence a
+ * reader sees, and this module still imports nothing but its own asset: the
+ * codes are its own vocabulary in the way the city type is.
+ *
+ * Eight of the nine are thrown here. The ninth is the container's own fallback
+ * for a rejection that carries no error at all, which cannot originate here
+ * because nothing here rejects with a non-error.
+ *
+ * A tuple rather than a bare union, so the catalog test can walk the set rather
+ * than restate it.
+ */
+export const DATASET_ERROR_CODES = [
+  "notAnObject",
+  "missingRows",
+  "columnOrder",
+  "rowShape",
+  "rowFieldType",
+  "transport",
+  "status",
+  "notJson",
+  "unexpected",
+] as const;
+
+/** Which failure a dataset error is. */
+export type DatasetErrorCode = (typeof DATASET_ERROR_CODES)[number];
+
+/**
+ * A dataset failure, carrying the code that says which one it is.
+ *
+ * The message stays exactly what it was and stays English: it is the
+ * developer-facing text, the one a stack trace and a test assertion read. The
+ * preserved cause stays where it was attached. Neither reaches the screen.
+ *
+ * The detail is a single number and every failure carries one, including the
+ * six whose sentence ignores it. Uniform on purpose, so the lookup that turns a
+ * code into a sentence has one shape and no branch; the three that use it carry
+ * a row index or a response status.
+ */
+export class DatasetError extends Error {
+  constructor(
+    readonly code: DatasetErrorCode,
+    readonly detail: number,
+    message: string,
+    options?: ErrorOptions,
+  ) {
+    super(message, options);
+    this.name = "DatasetError";
+  }
 }
 
 /**
@@ -65,19 +130,28 @@ interface IndexedCity extends City {
 let cached: Promise<IndexedCity[]> | undefined;
 
 /**
- * The only place the untyped result of response.json() is narrowed. Every
- * message here reaches the inline error region verbatim, so each one is written
- * for a reader rather than for a log.
+ * The only place the untyped result of response.json() is narrowed. Each
+ * failure carries a code, and the sentence a reader is shown is chosen from
+ * that code one layer up; the message written here is the developer-facing
+ * text and no longer reaches the screen.
  */
 function parseCities(payload: unknown): IndexedCity[] {
   if (typeof payload !== "object" || payload === null) {
-    throw new Error("The city data could not be read.");
+    throw new DatasetError(
+      "notAnObject",
+      0,
+      "The city data could not be read.",
+    );
   }
 
   const { columns, rows } = payload as { columns?: unknown; rows?: unknown };
 
   if (!Array.isArray(rows)) {
-    throw new Error("The city data is missing its rows array.");
+    throw new DatasetError(
+      "missingRows",
+      0,
+      "The city data is missing its rows array.",
+    );
   }
 
   if (
@@ -85,14 +159,18 @@ function parseCities(payload: unknown): IndexedCity[] {
     columns.length !== COLUMNS.length ||
     columns.some((column, at) => column !== COLUMNS[at])
   ) {
-    throw new Error(
+    throw new DatasetError(
+      "columnOrder",
+      0,
       "The city data has an unexpected column order and was not loaded.",
     );
   }
 
   return (rows as unknown[]).map((row, at) => {
     if (!Array.isArray(row) || row.length !== COLUMNS.length) {
-      throw new Error(
+      throw new DatasetError(
+        "rowShape",
+        at,
         `City row ${at} does not have ${COLUMNS.length} fields and was not loaded.`,
       );
     }
@@ -109,7 +187,9 @@ function parseCities(payload: unknown): IndexedCity[] {
       typeof countryIso3 !== "string" ||
       typeof capital !== "string"
     ) {
-      throw new Error(
+      throw new DatasetError(
+        "rowFieldType",
+        at,
         `City row ${at} has a field of the wrong type and was not loaded.`,
       );
     }
@@ -151,14 +231,18 @@ export function loadCities(): Promise<IndexedCity[]> {
     // thrown while reading the response can be reported as a transport
     // failure.
     .catch((reason: unknown) => {
-      throw new Error(
+      throw new DatasetError(
+        "transport",
+        0,
         "The city data could not be downloaded. Check your connection and try again.",
         { cause: reason },
       );
     })
     .then((response) => {
       if (!response.ok) {
-        throw new Error(
+        throw new DatasetError(
+          "status",
+          response.status,
           `The city data could not be downloaded (status ${response.status}).`,
         );
       }
@@ -168,7 +252,9 @@ export function loadCities(): Promise<IndexedCity[]> {
       // the reader can act on. The status check stays ahead of this, so a
       // status failure is never reported as a parse failure.
       return response.json().catch((reason: unknown) => {
-        throw new Error(
+        throw new DatasetError(
+          "notJson",
+          0,
           "The city data was downloaded but could not be read as JSON.",
           { cause: reason },
         );

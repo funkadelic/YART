@@ -86,6 +86,13 @@ export default defineConfig({
     // That currently works because this is the runner's default, which is a
     // coincidence the spec should not be resting on.
     colorScheme: "light",
+    // Stated for the same reason, and now that the application follows the
+    // reader's locale it decides more than a colour. The negotiation walks the
+    // browser's own preference list, so on a machine preferring French every
+    // string these specs assert would arrive translated and every grouped count
+    // would carry a different separator. Pinning it makes the copy under test
+    // the copy the specs were written against.
+    locale: "en-US",
   },
   webServer: {
     // The port is explicit and strict because the preview server otherwise
