@@ -15,32 +15,20 @@ jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
-    # The Chromium install below now dominates the job: an apt dependency install
-    # plus a browser download, one to three minutes on a cold runner, against tens
-    # of seconds for everything that ran before it. The suite itself is not the
-    # cost, and the accessibility sweep is not either: the jsdom run takes seven
-    # seconds locally and the browser run two. Call a green job four minutes with a
-    # cold npm cache and a slow mirror, so ten is a little over double the headroom
-    # rather than the fifteen times over it this said when the job ended at the
-    # build. The runner's own per-test timeout already catches a deadlock inside a
-    # test. This covers the hangs it cannot see, in shared setup or teardown or in
-    # either install, which would otherwise hold a machine for the six-hour platform
-    # default.
+    # A green job runs about four minutes, most of it the Chromium install. Ten
+    # catches a hang in setup or in either install without holding the machine for
+    # the six-hour platform default.
     timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # Sonar decides what counts as new code from the commit history. A
-          # shallow clone leaves it with no blame to read, so every line in the
-          # pull request looks new and the new-code gate measures the wrong set.
+          # Sonar reads blame to decide what counts as new code. A shallow clone
+          # leaves it none, so every line looks new.
           fetch-depth: 0
 
-      # Only on a pull request: the action compares the head against the base,
-      # and a push has no base to compare against. Placed before the install so
-      # a dependency with a known advisory stops the run before the rest of the
-      # job spends anything on it, and so the finding arrives while the change
-      # is still under review rather than as an alert after the merge.
+      # Pull requests only, since a push has no base to diff against. Before the
+      # install, so a known advisory stops the job while the change is in review.
       - name: Dependency review
         if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
@@ -81,28 +69,21 @@ jobs:
       - name: Build
         run: npm run build
 
-      # The browser download is the most expensive thing in this job, so it sits
-      # behind every cheap gate: a failing lint, typecheck, format check, coverage
-      # run or build stops the job before a byte of it is fetched. The jsdom
-      # accessibility check already ran inside the Test step, so what follows is
-      # the real-engine half of the accessibility gate rather than the whole of it.
+      # The browser download is the most expensive thing here, so it sits behind
+      # every cheap gate. The jsdom half of the accessibility gate ran in Test.
       - name: Install Chromium
         run: npx playwright install --with-deps --only-shell chromium
 
       - name: Accessibility sweep
         run: npm run test:browser
 
-      # After the sweep, because both of the expensive things this step needs
-      # already exist by here: the browser binary the install above fetched, and
-      # the build the suite serves rather than produces. Placed before the scan
-      # for the same reason the sweep is, so a broken flow reports as itself.
+      # After the sweep, which leaves both things this needs in place: the browser
+      # binary and the build. Before the scan, so a broken flow reports as itself.
       - name: End-to-end sweep
         run: npm run test:e2e
 
-      # The traces and screenshots the sweep retains are worth keeping only if
-      # they can be reached, and a runner's filesystem is gone the moment the
-      # job ends. Conditioned on failure because that is the only case that
-      # writes any, and it runs even after the step above stops the job.
+      # A runner's filesystem is gone when the job ends. Only a failure writes
+      # traces, and failure() still runs after the step above stops the job.
       - name: Upload end-to-end failure artifacts
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -111,39 +92,39 @@ jobs:
           path: test-results/
           retention-days: 7
 
-      # Last, so a failing test or build reports as itself rather than as an
-      # absent coverage report.
-      #
-      # Skipped for the updater, which runs against the Dependabot secret store
-      # rather than the Actions one and so reads an empty token, failing the job
-      # on a permissions error that looks like a code problem. Nothing is lost:
-      # sonar.sources is src, and a version bump touches only the manifest and
-      # the lockfile, so a scan that did authenticate would have nothing to say.
+      # Sends the report the test step wrote, from here so a failing gate
+      # reports as itself. Skipped for the updater, which reads an empty token.
+      - name: Upload coverage to Codecov
+        if: github.actor != 'dependabot[bot]'
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/lcov.info
+          disable_search: true
+          # Otherwise the pull request waits on a status that never arrives.
+          fail_ci_if_error: true
+
+      # After the sweeps, so a failing test reports as itself rather than as an
+      # absent coverage report. Skipped for the updater, whose empty token would
+      # fail the job; a version bump touches no source for the scan to read.
       - name: SonarQube scan
         if: github.actor != 'dependabot[bot]'
         uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
-      # Last in the job, so the bundle handed to the deploy below is one that
-      # cleared every gate above it. A custom `if` carrying no status function
-      # keeps the implicit success(), so a red gate skips this step rather than
-      # uploading a build nobody vouched for. The condition is a push to the
-      # default branch: a pull request builds and is measured, and publishes
-      # nothing.
+      # Last, so the deploy gets a bundle that cleared every gate. The `if` carries
+      # no status function, which keeps the implicit success(). Pushes to main only,
+      # so a pull request builds and publishes nothing.
       - name: Upload Pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: dist
 
-  # A second job rather than a workflow of its own, because `needs` is what makes
-  # the publish wait on the whole gate. A separate workflow triggered on push
-  # would race it, and one triggered on workflow_run would deploy a commit the
-  # trigger payload describes rather than the one the artifact was built from.
-  #
-  # The write permissions live here rather than at workflow level, so the job
-  # that runs untrusted pull request code keeps the read-only token it has now.
+  # A job rather than its own workflow, because `needs` is what makes the publish
+  # wait on the gate. The write permissions sit here so the job running untrusted
+  # pull request code keeps its read-only token.
   deploy:
     name: Deploy
     needs: verify
@@ -157,8 +138,8 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      # Nothing is built here. The artifact the verify job uploaded is the one
-      # published, so the site and the gate cannot describe different commits.
+      # Publishes the artifact verify uploaded, so the site and the gate cannot
+      # describe different commits.
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5.0.0
