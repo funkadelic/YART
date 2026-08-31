@@ -129,11 +129,16 @@ interface IndexedCity extends City {
 
 /**
  * How long the whole download gets before a stall counts as a failure. Without
- * it a stalled request never rejects, so the reader waits on a spinner that has
- * nothing behind it. One constant to retune: it has to clear the compressed
- * asset over a slow link.
+ * it a stalled request never rejects and the reader waits on a spinner with
+ * nothing behind it.
+ *
+ * Deliberately generous, because this is a wall-clock deadline over a 3.3MB
+ * asset with no resume: a retry restarts the download from zero against the
+ * same budget, so a link too slow to finish inside it fails every attempt
+ * rather than merely being slow. A minute clears roughly 140kbps sustained,
+ * which is below any link that could have finished before this existed.
  */
-const LOAD_TIMEOUT_MS = 30_000;
+const LOAD_TIMEOUT_MS = 60_000;
 
 /**
  * A download that did not finish, whichever way it stopped. A stall and a
@@ -148,15 +153,6 @@ function transportError(cause: unknown): DatasetError {
     "The city data could not be downloaded. Check your connection and try again.",
     { cause },
   );
-}
-
-/**
- * Whether a rejection is the timeout signal firing. Read off the name rather
- * than through an instanceof, because the abort reason is a DOMException whose
- * prototype chain differs between the engines this runs in.
- */
-function isTimeout(reason: unknown): boolean {
-  return (reason as Partial<Error> | null)?.name === "TimeoutError";
 }
 
 let cached: Promise<IndexedCity[]> | undefined;
@@ -281,11 +277,14 @@ export function loadCities(): Promise<IndexedCity[]> {
       // the reader can act on. The status check stays ahead of this, so a
       // status failure is never reported as a parse failure.
       return response.json().catch((reason: unknown) => {
-        // The timeout covers the body too, so a stall after the headers have
-        // arrived lands here. That is a download that stopped, not a body the
-        // parser could not read, and reporting it as one would send the reader
-        // looking for a corrupt file.
-        if (isTimeout(reason)) {
+        // A body that is not JSON fails the parse and nothing else does, so
+        // the parse failure is the narrow case and everything else here is the
+        // download stopping partway: the timeout covers the body read, and a
+        // socket dropped after the headers arrived rejects here too. Both are
+        // failed downloads, and reporting either as an unreadable file would
+        // send the reader looking for a corrupt asset instead of at their
+        // connection.
+        if (!(reason instanceof SyntaxError)) {
           throw transportError(reason);
         }
         throw new DatasetError(
