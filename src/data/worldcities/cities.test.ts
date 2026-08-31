@@ -305,6 +305,52 @@ describe("loadCities transport", () => {
     expect(error.cause).toBe(transportFailure);
   });
 
+  it("arms a timeout on the request, so a stall rejects rather than hanging", async () => {
+    // A stalled request is the one failure that produces no rejection of its
+    // own: without the signal nothing settles, the download message renders
+    // forever, and the reader is never offered the retry. Both halves are
+    // asserted, that a signal was passed at all and that the rejection it
+    // eventually produces reads as a failed download.
+    const timeout = new DOMException(
+      "The operation was aborted due to timeout",
+      "TimeoutError",
+    );
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(timeout);
+    const cities = await freshCities();
+
+    const error = await rejectionOf(cities);
+
+    expect(fetchSpy.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    expect(error.message).toBe(
+      "The city data could not be downloaded. Check your connection and try again.",
+    );
+    expect(error.code).toBe("transport");
+    expect(error.cause).toBe(timeout);
+  });
+
+  it("reports a stall during the body read as a failed download, not a bad body", async () => {
+    // The signal covers the body read as well as the request, so a connection
+    // that dies after the headers arrive aborts the parse. Reported as a parse
+    // failure it would send the reader looking for a corrupt data file rather
+    // than at their connection.
+    const timeout = new DOMException(
+      "The operation was aborted due to timeout",
+      "TimeoutError",
+    );
+    const response = new Response("{");
+    vi.spyOn(response, "json").mockRejectedValue(timeout);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
+    const cities = await freshCities();
+
+    const error = await rejectionOf(cities);
+
+    expect(error.code).toBe("transport");
+    expect(error.message).toBe(
+      "The city data could not be downloaded. Check your connection and try again.",
+    );
+    expect(error.cause).toBe(timeout);
+  });
+
   it("rejects a success response carrying a page instead of the data file", async () => {
     // What a static host returns for a file it cannot find: the application's
     // own page, under a success status. The parser then reports a syntax error
