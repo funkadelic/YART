@@ -18,6 +18,13 @@ import { compareValues } from "../compareRows";
  * different value types that survives being passed around.
  */
 export interface Column<T, Id extends string = string> {
+  /**
+   * Unique within the array the column is rendered in. A repeat collides on
+   * the cell key React reconciles a row by and on the lookup that resolves the
+   * sort column. The builder below covers the array one builder produces, which
+   * is every array in this tree; concatenating two builders' output is not
+   * checked anywhere.
+   */
   readonly id: Id;
   readonly label: string;
   /**
@@ -80,19 +87,29 @@ export interface ColumnOptions<T, V> {
  * one parameter and leaves the sort module, its hook and the table's own prop
  * surface entirely untouched. A collator is a platform value, so taking one
  * here leaves this layer's dependency set exactly as it was.
+ *
+ * One builder builds one table's columns, and throws on an id it has already
+ * issued. A second, unrelated table takes a second builder.
  */
 export function columns<T>(collator: Intl.Collator) {
+  const issued = new Set<string>();
+
   /**
    * The one place where the accessor is fused into the renderer and the
    * comparator, so the two public methods below differ only in how they read a
-   * value. Supplying neither leaves the value stringified for display and
-   * ordered by the shared comparator.
+   * value. Supplying neither leaves the value stringified for display, blank
+   * if it is nullish, and ordered by the shared comparator.
    */
   function build<Id extends string, V>(
     id: Id,
     read: (row: T) => V,
     options: ColumnOptions<T, V>,
   ): Column<T, Id> {
+    if (issued.has(id)) {
+      throw new Error(`Duplicate column id: ${id}`);
+    }
+    issued.add(id);
+
     const { renderCell, compare } = options;
 
     return {
@@ -101,7 +118,13 @@ export function columns<T>(collator: Intl.Collator) {
       width: options.width,
       renderCell: renderCell
         ? (row) => renderCell(read(row), row)
-        : (row) => String(read(row)),
+        : (row) => {
+            // Nullish paints an empty cell rather than the word "null". NaN
+            // is not covered: the comparator calls it blank, but a cell reading
+            // "NaN" is worth seeing.
+            const value = read(row);
+            return value == null ? "" : String(value);
+          },
       compare: compare
         ? (a, b, direction) => compare(read(a), read(b), direction)
         : (a, b, direction) =>
