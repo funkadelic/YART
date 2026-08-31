@@ -127,6 +127,34 @@ interface IndexedCity extends City {
   searchKey: string;
 }
 
+/**
+ * How long the whole download gets before a stall counts as a failure. Without
+ * it a stalled request never rejects and the reader waits on a spinner with
+ * nothing behind it.
+ *
+ * Deliberately generous, because this is a wall-clock deadline over a 3.3MB
+ * asset with no resume: a retry restarts the download from zero against the
+ * same budget, so a link too slow to finish inside it fails every attempt
+ * rather than merely being slow. A minute clears roughly 140kbps sustained,
+ * which is below any link that could have finished before this existed.
+ */
+const LOAD_TIMEOUT_MS = 60_000;
+
+/**
+ * A download that did not finish, whichever way it stopped. A stall and a
+ * dropped connection are one failure to a reader, whose next move is the retry
+ * either way, so they share a code and a sentence rather than splitting the
+ * catalog.
+ */
+function transportError(cause: unknown): DatasetError {
+  return new DatasetError(
+    "transport",
+    0,
+    "The city data could not be downloaded. Check your connection and try again.",
+    { cause },
+  );
+}
+
 let cached: Promise<IndexedCity[]> | undefined;
 
 /**
@@ -223,7 +251,9 @@ function parseCities(payload: unknown): IndexedCity[] {
 export function loadCities(): Promise<IndexedCity[]> {
   if (cached) return cached;
 
-  const pending = fetch(citiesUrl)
+  const pending = fetch(citiesUrl, {
+    signal: AbortSignal.timeout(LOAD_TIMEOUT_MS),
+  })
     // The text a request carries when it never reaches the host is the
     // browser's own, it differs between browsers, and none of it tells the
     // reader what to do. It is replaced here and kept as the cause. This is
@@ -231,12 +261,7 @@ export function loadCities(): Promise<IndexedCity[]> {
     // thrown while reading the response can be reported as a transport
     // failure.
     .catch((reason: unknown) => {
-      throw new DatasetError(
-        "transport",
-        0,
-        "The city data could not be downloaded. Check your connection and try again.",
-        { cause: reason },
-      );
+      throw transportError(reason);
     })
     .then((response) => {
       if (!response.ok) {
@@ -252,6 +277,16 @@ export function loadCities(): Promise<IndexedCity[]> {
       // the reader can act on. The status check stays ahead of this, so a
       // status failure is never reported as a parse failure.
       return response.json().catch((reason: unknown) => {
+        // A body that is not JSON fails the parse and nothing else does, so
+        // the parse failure is the narrow case and everything else here is the
+        // download stopping partway: the timeout covers the body read, and a
+        // socket dropped after the headers arrived rejects here too. Both are
+        // failed downloads, and reporting either as an unreadable file would
+        // send the reader looking for a corrupt asset instead of at their
+        // connection.
+        if (!(reason instanceof SyntaxError)) {
+          throw transportError(reason);
+        }
         throw new DatasetError(
           "notJson",
           0,

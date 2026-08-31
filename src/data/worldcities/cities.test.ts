@@ -305,6 +305,54 @@ describe("loadCities transport", () => {
     expect(error.cause).toBe(transportFailure);
   });
 
+  it("arms a timeout on the request, so a stall rejects rather than hanging", async () => {
+    // A stalled request is the one failure that produces no rejection of its
+    // own: nothing settles, the download message renders forever, and the
+    // reader is never offered the retry. Asserting the signal is an AbortSignal
+    // would not say that, since a controller's signal that never fires is one
+    // too. What has to hold is that the signal handed to the request is a
+    // timeout, and that its budget is a plausible one.
+    const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify(CITY_FIXTURE_ENVELOPE)));
+    const loadCities = await freshLoadCities();
+
+    await loadCities();
+
+    const budget = timeoutSpy.mock.calls[0]?.[0];
+    // The band, rather than the value: a test naming the constant would only
+    // restate it, but a zero or a millisecond would fail every load and a day
+    // would be the hang this replaces.
+    expect(budget).toBeGreaterThanOrEqual(5_000);
+    expect(budget).toBeLessThanOrEqual(120_000);
+    // The signal the timeout produced is the signal the request carries.
+    expect(fetchSpy.mock.calls[0]?.[1]?.signal).toBe(
+      timeoutSpy.mock.results[0]?.value,
+    );
+  });
+
+  it("reports a body read that stopped as a failed download, not a bad body", async () => {
+    // A connection that dies after the headers arrive rejects the body read
+    // rather than the request, and so does the timeout signal, which covers
+    // the body too. Neither is a file the parser could not read, and reporting
+    // one as such sends the reader looking for a corrupt data file rather than
+    // at their connection.
+    const dropped = new TypeError("terminated");
+    const response = new Response("{");
+    vi.spyOn(response, "json").mockRejectedValue(dropped);
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
+    const cities = await freshCities();
+
+    const error = await rejectionOf(cities);
+
+    expect(error.code).toBe("transport");
+    expect(error.message).toBe(
+      "The city data could not be downloaded. Check your connection and try again.",
+    );
+    expect(error.cause).toBe(dropped);
+  });
+
   it("rejects a success response carrying a page instead of the data file", async () => {
     // What a static host returns for a file it cannot find: the application's
     // own page, under a success status. The parser then reports a syntax error
