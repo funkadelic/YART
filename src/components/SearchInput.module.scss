@@ -29,8 +29,8 @@
       box-sizing: border-box; // ignore border & padding to determine width
       padding-block: var(--space-2-5);
       padding-inline: var(--space-11) var(--space-2-5);
-      border: 2px solid var(--color-border);
-      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-md);
       font-size: var(--font-size-base);
 
       &::placeholder {
