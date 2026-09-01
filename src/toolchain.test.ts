@@ -781,6 +781,10 @@ const LAUNCH_CONFIG_FILES = [CONFIG_FILE, E2E_CONFIG_FILE];
 // zero matches from the second file and assert nothing at all about it.
 const LAUNCHED_BROWSER = /\bbrowser(?:Name)?\s*:\s*"([^"]*)"/g;
 
+// The workflow searches junit/ and passes only that directory, and the uploader
+// matches junit in the file name.
+const UPLOADED_REPORT_PATH = /^junit\/[^/]*junit[^/]*\.xml$/;
+
 /**
  * One coverage exclude pattern written in Sonar's dialect, which is the same
  * statement in a matcher with two fewer features: it expands no braces, and its
@@ -1391,6 +1395,43 @@ describe("toolchain baseline", () => {
       endToEnd as string,
       "the end-to-end script collects coverage, which writes a second report into the directory the static analysis import reads",
     ).not.toMatch(/(^|\s)--coverage\b/);
+  });
+
+  // A report the upload step cannot collect is skipped, so the pipeline stays
+  // green over an upload carrying nothing.
+  it("keeps every configured report on a path the upload step collects", () => {
+    // Comments blanked, because the prose above that reporter quotes these names
+    // and an unstripped read would take it for configuration.
+    const e2eConfig = stripComments(
+      readFileSync(join(projectRoot, E2E_CONFIG_FILE), "utf8"),
+    );
+    // The path is read off the reporter that writes it, so a script naming an
+    // output file it no longer produces reads as absent rather than as valid.
+    const scriptReport = (name: string) => {
+      const script = manifest.scripts?.[name] ?? "";
+      return /--reporter=junit\b/.test(script)
+        ? /--outputFile\.junit=(\S+)/.exec(script)?.[1]
+        : undefined;
+    };
+
+    const reports: [string, string | undefined][] = [
+      ["test:coverage", scriptReport("test:coverage")],
+      ["test:browser", scriptReport("test:browser")],
+      [
+        E2E_CONFIG_FILE,
+        /"junit"[^\]]*outputFile:\s*"([^"]*)"/.exec(e2eConfig)?.[1],
+      ],
+    ];
+
+    // Two assertions, because an absent value satisfies no positive match but the
+    // message still has to name which source writes nothing.
+    for (const [source, report] of reports) {
+      expect(report, `${source} writes no junit report`).toBeDefined();
+      expect(
+        report as string,
+        `${source} writes a report the upload step does not collect`,
+      ).toMatch(UPLOADED_REPORT_PATH);
+    }
   });
 
   // A gate nothing invokes is not a gate. Every project, config and spec file
