@@ -79,20 +79,6 @@ const RETIRED_TOKENS = [
   "--gray-900",
 ];
 
-// The four hex lengths CSS accepts, and nothing longer, so an identifier that
-// merely starts with hex digits is not mistaken for a colour.
-const HEX_COLOR = /#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})(?![0-9a-z-])/gi;
-
-// The other two forms CSS accepts for a fixed colour. A functional notation and
-// a named colour are as fixed as a hex is, and neither flips with the theme, so
-// a guard that reads hex alone waves both through. The boundaries exclude a
-// hyphen, so var(--gray-50) and white-space are read as the identifiers they
-// are rather than as colours.
-const COLOR_FUNCTION =
-  /(?<![\w-])(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix)[ \t]*\(/gi;
-const NAMED_COLOR =
-  /(?<![\w-])(red|blue|green|black|white|gray|grey|orange|teal|silver|transparent)(?![\w-])/gi;
-
 // Anchored to the start of a line, which is where a declaration sits. An
 // interpolation or a reference mid-value is a use, and there is nothing to use
 // once no file declares one.
@@ -171,17 +157,6 @@ function offScaleLengths(source: string): string[] {
       .map(([length]) => length),
     ...[...readable.matchAll(NON_REM_LENGTH)].map(([length]) => length),
   ];
-}
-
-/**
- * Every colour literal in a stylesheet, in each of the three forms CSS accepts
- * for one. All of them rather than the first, so a file that reintroduces five
- * reports five and is fixed once instead of five times.
- */
-function colourLiterals(source: string): string[] {
-  return [HEX_COLOR, COLOR_FUNCTION, NAMED_COLOR].flatMap((matcher) =>
-    [...source.matchAll(matcher)].map(([literal]) => literal),
-  );
 }
 
 /**
@@ -587,10 +562,11 @@ describe("the theme script in index.html", () => {
   });
 });
 
-// A string check rather than a parse: the CSS parser throws outright on the
-// inline comments in the table's stylesheet, and a guard written against the one
-// module file that happens to have none would look like it worked.
-describe("colour in the component stylesheets", () => {
+// The halves of the old colour guard stylelint has no rule for: declaring an
+// SCSS variable, and naming a token that no longer exists. A string check rather
+// than a parse, because the CSS parser throws outright on the inline comments in
+// the table's stylesheet.
+describe("stray declarations in the component stylesheets", () => {
   it("finds the stylesheets by walking rather than by a list", () => {
     expect(
       componentStylesheets.length,
@@ -598,7 +574,7 @@ describe("colour in the component stylesheets", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("leaves no colour literal, SCSS variable or retired token in any of them", () => {
+  it("leaves no SCSS variable or retired token in any of them", () => {
     const offenders: string[] = [];
 
     for (const file of componentStylesheets) {
@@ -606,10 +582,6 @@ describe("colour in the component stylesheets", () => {
       // prose and a declaration is judged as a declaration.
       const source = stripComments(readFileSync(file, "utf8"));
       const name = relative(projectRoot, file);
-
-      for (const literal of colourLiterals(source)) {
-        offenders.push(`${name}: holds the colour literal ${literal}`);
-      }
 
       for (const variable of source.matchAll(SCSS_VARIABLE)) {
         offenders.push(`${name}: declares ${variable[0].trim()}`);
@@ -705,36 +677,6 @@ describe("the focus ring", () => {
 // spelling below is one a real author reaches for and one an earlier revision of
 // these matchers passed, so the reach is asserted rather than assumed.
 describe("the reach of the guards", () => {
-  it("sees a colour literal in every form CSS accepts for one", () => {
-    for (const declaration of [
-      "color: #abc;",
-      "color: red;",
-      "background: rgb(1 2 3);",
-      "border-color: hsl(0 0% 0%);",
-      "background: transparent;",
-      "color: color-mix(in oklab, #fff, #000);",
-    ]) {
-      expect(
-        colourLiterals(declaration),
-        `${declaration} is invisible to the colour guard`,
-      ).not.toEqual([]);
-    }
-  });
-
-  it("reads a token reference and a property name as neither", () => {
-    for (const declaration of [
-      "color: var(--color-text);",
-      "background: var(--gray-50);",
-      "white-space: nowrap;",
-      "background-color: var(--color-surface);",
-    ]) {
-      expect(
-        colourLiterals(declaration),
-        `${declaration} is reported as a colour literal`,
-      ).toEqual([]);
-    }
-  });
-
   it("sees a length authored off the rem scale, whatever unit carries it", () => {
     for (const declaration of [
       "padding: 1.5em;",
