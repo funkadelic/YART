@@ -48,13 +48,6 @@
     font-variant-numeric: tabular-nums;
   }
 
-  // The header's control is a form widget, so it shrinks to its content and
-  // text-align never reaches it. The auto margin takes the leftover width and
-  // puts the button at the edge its cells sit at.
-  th.numeric button {
-    margin-inline-start: auto;
-  }
-
   tbody tr:last-child td {
     border-bottom: none; // last in row needs no border otherwise it will have thicker border due to the parent container border
   }
