@@ -2006,51 +2006,28 @@ describe("toolchain baseline", () => {
   // The application resolves one locale and four surfaces follow it: the
   // catalog, the document element, the ordering of text and the grouping of
   // numbers. A fifth surface asking the platform for a locale of its own would
-  // reintroduce the defect this phase closed, and would do it invisibly, since
-  // a machine whose own preference is the base tag renders every one of them
-  // identically. Counting the call sites is the only thing that notices.
+  // reintroduce the defect the locale layer closed, and would do it invisibly,
+  // since a machine whose own preference is the base tag renders every one of
+  // them identically.
   //
-  // Test files are excluded, and deliberately. A test asserting a formatted
-  // string has to compute the expectation through the platform rather than type
-  // it, because the French group separator is a narrow no-break space and a
-  // typed literal fails on a difference no terminal renders. So the ban is on
-  // shipped call sites, not on the name.
-  it("asks the platform for a locale in exactly one module", () => {
-    const sources = findSourceFiles(join(projectRoot, "src"));
+  // The modules under src/ are held by the no-restricted-syntax rules in
+  // eslint.config.js. Two halves of that rule are outside what a lint rule can
+  // reach, and both are here. ESLint does not lint HTML, so the inline script is
+  // asserted here or nowhere; and a disallow rule cannot say that the formatter
+  // module still builds anything, so it passes just as happily on a formatter
+  // module with its caches deleted.
+  it("asks the platform for a locale only where the lint rule cannot reach", () => {
+    // The inline script resolves a locale of its own before any module loads.
+    // It reaches its answer through a literal map rather than through the
+    // platform, so it should contribute nothing.
+    expect(
+      localeCallSites(inlineScript()),
+      "the inline script in index.html asks the platform for a locale",
+    ).toEqual([]);
 
     expect(
-      sources.length,
-      "the source walk found no module under src/, so this guard read nothing",
-    ).toBeGreaterThan(0);
-
-    const holders = new Map<string, string[]>();
-
-    for (const path of sources) {
-      const name = relative(projectRoot, path).split(sep).join("/");
-      const calls = localeCallSites(parse(readFileSync(path, "utf8")));
-
-      if (calls.length > 0) holders.set(name, calls);
-    }
-
-    // The inline script resolves a locale of its own before any module loads,
-    // so it is walked here too. It reaches its answer through a literal map
-    // rather than through the platform, so it should contribute nothing, and if
-    // it ever grows a call this is where that shows up.
-    const stamped = localeCallSites(inlineScript());
-    if (stamped.length > 0) holders.set("index.html", stamped);
-
-    expect(
-      [...holders.keys()].toSorted(),
-      "something other than the formatter module asks the platform for a locale",
-    ).toEqual([FORMATTER_MODULE]);
-
-    // Without this the assertion above passes just as happily on a formatter
-    // module that constructs nothing at all, which is the shape this guard
-    // would take the day someone deleted the caches it exists to protect.
-    expect(
-      required(
-        holders.get(FORMATTER_MODULE),
-        `the call sites in ${FORMATTER_MODULE}`,
+      localeCallSites(
+        parse(readFileSync(join(projectRoot, FORMATTER_MODULE), "utf8")),
       ).toSorted(),
       "the formatter module no longer builds the three cached instances",
     ).toEqual(["Intl.Collator", "Intl.NumberFormat", "Intl.PluralRules"]);

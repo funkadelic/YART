@@ -40,6 +40,30 @@ const READER_FACING_ATTRIBUTE = {
     "src/components/ renders any collection for any reader, so a string here is a claim about which reader. Add the entry to the catalogs and read it off DataTableLabels, PaginationLabels or SearchInputLabels.",
 };
 
+// Every way a file asks the platform for a locale: a namespace construction, and
+// a call to one of the six value-level helpers that read a locale from the
+// machine when called with no argument. A fifth surface resolving a locale of its
+// own reintroduces the defect the locale layer closed, and does it invisibly on a
+// machine whose own preference is the base tag.
+//
+// Matched on the tree rather than on the text, which matters twice here: a
+// namespace named inside a comment is not a call site, and a type annotation
+// naming the same constructor is not one either.
+const LOCALE_CALL_SITE = [
+  {
+    selector:
+      ':matches(NewExpression, CallExpression)[callee.object.name="Intl"]',
+    message:
+      "src/i18n/format.ts is the one module that builds a platform locale object, so its caches hold one instance per resolved tag. Reach for collatorFor, numberFormatFor or pluralRulesFor instead.",
+  },
+  {
+    selector:
+      "CallExpression[callee.property.name=/^(localeCompare|toLocaleString|toLocaleDateString|toLocaleTimeString|toLocaleLowerCase|toLocaleUpperCase)$/]",
+    message:
+      "This reads a locale from the machine rather than the one the application resolved, and builds a formatter per call. Take a collator or a formatter from src/i18n/format.ts instead.",
+  },
+];
+
 export default defineConfig([
   // Build output and test-runner output, not authored source. `eslint .` walks
   // the working tree, so without this the gate reports parse errors for an
@@ -132,6 +156,23 @@ export default defineConfig([
       ],
     },
   },
+  // The formatter module is exempt because it is the module the rule names. The
+  // test globs are exempt because a test asserting a formatted string has to
+  // compute its expectation through the platform rather than type it: the French
+  // group separator is a narrow no-break space, and a typed literal fails on a
+  // difference no terminal renders. So the ban is on shipped call sites.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: [
+      "src/i18n/format.ts",
+      "src/**/*.test.{ts,tsx}",
+      "src/**/*.test-d.ts",
+      "src/test/**",
+    ],
+    rules: {
+      "no-restricted-syntax": ["error", ...LOCALE_CALL_SITE],
+    },
+  },
   // The same layer rule one level down from the imports above: a hardcoded
   // sentence needs no import, so the two import rules cannot see it. ignoreProps
   // is deliberate, because the attribute half is narrower than every prop and is
@@ -144,7 +185,11 @@ export default defineConfig([
         "error",
         { noStrings: true, ignoreProps: true, allowedStrings: [] },
       ],
-      "no-restricted-syntax": ["error", READER_FACING_ATTRIBUTE],
+      "no-restricted-syntax": [
+        "error",
+        READER_FACING_ATTRIBUTE,
+        ...LOCALE_CALL_SITE,
+      ],
     },
   },
   // The type-aware rules need declarations to reason about, and the plain
