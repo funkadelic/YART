@@ -24,6 +24,22 @@ const TEST_SCAFFOLDING_IMPORT = {
     "src/test/ holds test scaffolding and is excluded from coverage. Importing it from application code moves executing code outside the coverage gate.",
 };
 
+// The four attributes whose string value a reader perceives. `aria-sort` and
+// `aria-live` carry strings in that layer too and are deliberately outside the
+// set: both take a value the standard defines and assistive technology matches
+// on, so translating either would break the feature rather than localize it.
+//
+// no-restricted-syntax is configured per rule and not per selector, exactly as
+// no-restricted-imports is above, so each selector set is declared once here and
+// composed per block below. A block that named the rule and forgot a set would
+// silently unrestrict it for every file that block matches.
+const READER_FACING_ATTRIBUTE = {
+  selector:
+    'JSXAttribute[name.name=/^(aria-label|title|placeholder|alt)$/][value.type="Literal"]',
+  message:
+    "src/components/ renders any collection for any reader, so a string here is a claim about which reader. Add the entry to the catalogs and read it off DataTableLabels, PaginationLabels or SearchInputLabels.",
+};
+
 export default defineConfig([
   // Build output and test-runner output, not authored source. `eslint .` walks
   // the working tree, so without this the gate reports parse errors for an
@@ -114,6 +130,21 @@ export default defineConfig([
           ],
         },
       ],
+    },
+  },
+  // The same layer rule one level down from the imports above: a hardcoded
+  // sentence needs no import, so the two import rules cannot see it. ignoreProps
+  // is deliberate, because the attribute half is narrower than every prop and is
+  // the selector beside it.
+  {
+    files: ["src/components/**/*.{ts,tsx}"],
+    ignores: ["src/**/*.test.{ts,tsx}", "src/**/*.test-d.ts"],
+    rules: {
+      "react/jsx-no-literals": [
+        "error",
+        { noStrings: true, ignoreProps: true, allowedStrings: [] },
+      ],
+      "no-restricted-syntax": ["error", READER_FACING_ATTRIBUTE],
     },
   },
   // The type-aware rules need declarations to reason about, and the plain
