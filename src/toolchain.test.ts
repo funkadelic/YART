@@ -492,43 +492,6 @@ function styleSheetParts(source: string): StyleSheetParts {
   return { declarations, selectors };
 }
 
-/**
- * The physical properties that name one end of the inline axis, so a sheet
- * declaring one serves a left-to-right document and silently mis-serves a
- * right-to-left one.
- *
- * The block axis is deliberately absent. Top and bottom mean the same thing
- * whichever way the text runs, so banning them would be churn rather than a
- * rule.
- */
-const PHYSICAL_INLINE_PROPERTIES: ReadonlySet<string> = new Set([
-  "left",
-  "right",
-  "margin-left",
-  "margin-right",
-  "padding-left",
-  "padding-right",
-  "border-left",
-  "border-right",
-  "border-left-color",
-  "border-left-style",
-  "border-left-width",
-  "border-right-color",
-  "border-right-style",
-  "border-right-width",
-]);
-
-/**
- * The properties whose value, rather than whose name, can name one end of the
- * inline axis. Each has a logical pair, start and end, that follows the
- * document instead.
- */
-const PHYSICAL_INLINE_VALUED_PROPERTIES: ReadonlySet<string> = new Set([
-  "text-align",
-  "float",
-  "clear",
-]);
-
 /** The component holding the four glyphs that mean a direction. */
 const DIRECTIONAL_GLYPH_COMPONENT = "src/components/DataTable/Pagination.tsx";
 
@@ -2011,41 +1974,8 @@ describe("toolchain baseline", () => {
     expect(globalSheets("src/a11y.browser.test.tsx")).toEqual(shipped);
   });
 
-  // Direction-dependent geometry is written once, on the inline axis, so one
-  // stylesheet serves both directions and there is no second artifact to keep in
-  // step. Five declarations in this tree were physical and were rewritten; a
-  // sixth arriving is invisible to every other check here, and is exactly the
-  // kind of thing that is correct in the browser the author happens to use.
-  //
-  // A test rather than a lint rule because the standard configuration in use
-  // carries no such rule, and the plugin that does is a new dependency for five
-  // declarations. This file already walks the tree and already parses what it
-  // asks about, so the guard costs a function rather than an install.
-  it("keeps direction-dependent geometry on the inline axis in every stylesheet", () => {
-    const sheets = findStyleSheets(join(projectRoot, "src"));
-
-    expect(
-      sheets.length,
-      "src/ carries no stylesheet, so this guard is reading nothing",
-    ).toBeGreaterThan(0);
-
-    const offenders = sheets.flatMap((sheet) => {
-      const name = relative(projectRoot, sheet);
-
-      return styleSheetParts(readFileSync(sheet, "utf8"))
-        .declarations.filter(
-          ({ property, value }) =>
-            PHYSICAL_INLINE_PROPERTIES.has(property) ||
-            (PHYSICAL_INLINE_VALUED_PROPERTIES.has(property) &&
-              /\b(?:left|right)\b/.test(value)),
-        )
-        .map(({ property, value }) => `${name}: ${property}: ${value}`);
-    });
-
-    expect(offenders).toEqual([]);
-  });
-
-  // The two ways the rule above is most likely to be undone. Each is otherwise a
+  // The two ways the inline-axis rule, now `property-disallowed-list` in
+  // `.stylelintrc.json`, is most likely to be undone. Each is otherwise a
   // sentence in a plan with nothing behind it.
   //
   // The mirror rule that turns the four page glyphs is written on the direction

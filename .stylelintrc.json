@@ -7,6 +7,37 @@
       {
         "message": "Class selectors are camelCase, so a component reads them back as styles.thisName rather than through a bracketed string"
       }
+    ],
+    "property-disallowed-list": [
+      [
+        "left",
+        "right",
+        "margin-left",
+        "margin-right",
+        "padding-left",
+        "padding-right",
+        "border-left",
+        "border-right",
+        "border-left-color",
+        "border-left-style",
+        "border-left-width",
+        "border-right-color",
+        "border-right-style",
+        "border-right-width"
+      ],
+      {
+        "message": "Inline-axis geometry is logical, so one stylesheet serves both reading directions: use inset-inline-start, margin-inline-end, padding-inline or border-inline-end"
+      }
+    ],
+    "declaration-property-value-disallowed-list": [
+      {
+        "text-align": ["/^(?:left|right)$/"],
+        "float": ["/^(?:left|right)$/"],
+        "clear": ["/^(?:left|right)$/"]
+      },
+      {
+        "message": "An inline-axis value follows the document rather than the page: use text-align: start, float: inline-start or clear: inline-end"
+      }
     ]
   }
 }
