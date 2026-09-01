@@ -317,6 +317,8 @@ col.accessor("total", (row) => row.qty * row.unitPrice, { label: "Total" });
 
 `key` is constrained to the row type's own string keys, so a misspelled field is a compile error rather than a column of `undefined`. `accessor` takes any id, because its value is computed and answers to no field.
 
+Ids have to be unique: one collides with another on the key React reconciles a row by, and on the lookup that resolves the sorted column. A builder throws on an id it has already issued, so one builder per column array and a second table takes a second builder.
+
 Both accept `renderCell` and `compare`. Each is handed the column's value already read, so neither has to know where it came from:
 
 ```tsx
@@ -327,7 +329,7 @@ col.key("population", {
 });
 ```
 
-Omit `renderCell` and the value is stringified. Omit `compare` and the shared comparator runs.
+Omit `renderCell` and the value is stringified, or left blank if it is nullish. Omit `compare` and the shared comparator runs.
 
 Adding or reordering a column is one edit to the array. The header and the cells both come from the descriptor, so there is no second place to keep in step.
 
