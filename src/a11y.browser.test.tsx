@@ -148,7 +148,7 @@ describe("accessibility in a real engine", () => {
     });
     await sweep("rtl");
 
-    // Two of the five rewritten declarations, read back as the engine resolved
+    // Two of the six rewritten declarations, read back as the engine resolved
     // them. These are the assertions jsdom cannot make: it has no layout engine,
     // so it resolves a logical property to nothing at all and a direction to
     // nothing either. Reverting either declaration turns this red.
@@ -169,21 +169,38 @@ describe("accessibility in a real engine", () => {
     expect(searchPadding.paddingRight).toBe(SEARCH_RESERVED_INSET);
     expect(searchPadding.paddingLeft).toBe(SEARCH_PLAIN_INSET);
 
-    const bodyRow = required(
-      screen.getAllByRole("row")[1],
-      "the first data row",
-    );
-    const bodyCells = within(bodyRow).getAllByRole("cell");
-    const separated = getComputedStyle(
-      required(bodyCells[0], "the first column's cell"),
+    // The number column, which is the last of the five. Its cells carry the
+    // alignment and its neighbours do not, so a class wired onto the wrong cell
+    // is caught here rather than merely rendering off-centre.
+    const bodyCells = within(
+      required(screen.getAllByRole("row")[1], "the first data row"),
+    ).getAllByRole("cell");
+
+    expect(
+      getComputedStyle(required(bodyCells[4], "the population cell")).textAlign,
+    ).toBe("end");
+    expect(
+      getComputedStyle(required(bodyCells[0], "the first column's cell"))
+        .textAlign,
+    ).toBe("start");
+
+    // Its header control is a form widget and shrinks to its content, so the
+    // automatic inline-start margin is the only thing carrying it to that same
+    // edge. Under this direction that margin resolves onto the right, which is
+    // the half a layout engine is needed to see.
+    const sortControl = getComputedStyle(
+      within(
+        required(
+          screen.getAllByRole("columnheader")[4],
+          "the population header cell",
+        ),
+      ).getByRole("button"),
     );
 
-    // The reading end is the left-hand side here, so the separator resolves onto
-    // the left edge and the right edge carries nothing.
-    expect(separated.borderLeftWidth).toBe("1px");
-    expect(separated.borderRightWidth).toBe("0px");
+    expect(sortControl.marginLeft).toBe("0px");
+    expect(Number.parseFloat(sortControl.marginRight)).toBeGreaterThan(0);
 
-    // The remaining two of the five, on the header's segmented control. Its
+    // The remaining two of the six, on the header's segmented control. Its
     // automatic margin resolves onto the reading-end side, so the control still
     // pins to the trailing edge; its separator hairlines fall between the labels
     // rather than doubling against the outer edge, which is what the reset on the
