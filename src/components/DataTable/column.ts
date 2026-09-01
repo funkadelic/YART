@@ -33,6 +33,11 @@ export interface Column<T, Id extends string = string> {
    * cost that buys.
    */
   readonly width?: string | undefined;
+  /**
+   * The column carries a number. It says what the value is, not how it is laid
+   * out; the table decides what that looks like.
+   */
+  readonly numeric?: boolean | undefined;
   readonly renderCell: (row: T) => ReactNode;
   readonly compare: (a: T, b: T, direction: "asc" | "desc") => number;
 }
@@ -57,6 +62,7 @@ export interface Column<T, Id extends string = string> {
 export interface ColumnOptions<T, V> {
   readonly label: string;
   readonly width?: string | undefined;
+  readonly numeric?: boolean | undefined;
   readonly renderCell?: ((value: V, row: T) => ReactNode) | undefined;
   readonly compare?:
     ((a: V, b: V, direction: "asc" | "desc") => number) | undefined;
@@ -116,6 +122,7 @@ export function columns<T>(collator: Intl.Collator) {
       id,
       label: options.label,
       width: options.width,
+      numeric: options.numeric,
       renderCell: renderCell
         ? (row) => renderCell(read(row), row)
         : (row) => {

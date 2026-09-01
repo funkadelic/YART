@@ -1,4 +1,5 @@
 import type { Column } from "./column";
+import styles from "./DataTable.module.scss";
 
 interface TableBodyProps<T, Id extends string> {
   readonly rows: readonly T[];
@@ -25,7 +26,12 @@ export function TableBody<T, Id extends string>({
       {rows.map((row) => (
         <tr key={getRowId(row)}>
           {columns.map((column) => (
-            <td key={column.id}>{column.renderCell(row)}</td>
+            <td
+              key={column.id}
+              className={column.numeric ? styles.numeric : undefined}
+            >
+              {column.renderCell(row)}
+            </td>
           ))}
         </tr>
       ))}
