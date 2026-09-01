@@ -22,8 +22,7 @@
 }
 
 // A form widget shrinks to its content, so the cell's text-align never reaches
-// it. The auto margin takes the leftover width and carries the button to the
-// reading end, matching the cells below it.
+// it. The auto margin carries the button to the reading end instead.
 .sortButtonNumeric {
   margin-inline-start: auto;
 }

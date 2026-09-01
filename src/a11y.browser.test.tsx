@@ -169,9 +169,8 @@ describe("accessibility in a real engine", () => {
     expect(searchPadding.paddingRight).toBe(SEARCH_RESERVED_INSET);
     expect(searchPadding.paddingLeft).toBe(SEARCH_PLAIN_INSET);
 
-    // The number column, which is the last of the five. Its cells carry the
-    // alignment and its neighbours do not, so a class wired onto the wrong cell
-    // is caught here rather than merely rendering off-centre.
+    // The number column, the last of the five. Its cells carry the alignment
+    // and its neighbors do not, so a class on the wrong cell fails here.
     const bodyCells = within(
       required(screen.getAllByRole("row")[1], "the first data row"),
     ).getAllByRole("cell");
@@ -184,10 +183,8 @@ describe("accessibility in a real engine", () => {
         .textAlign,
     ).toBe("start");
 
-    // Its header control is a form widget and shrinks to its content, so the
-    // automatic inline-start margin is the only thing carrying it to that same
-    // edge. Under this direction that margin resolves onto the right, which is
-    // the half a layout engine is needed to see.
+    // The header control shrinks to its content, so only the auto margin
+    // carries it to that edge. Under this direction it resolves onto the right.
     const sortControl = getComputedStyle(
       within(
         required(

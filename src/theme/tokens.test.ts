@@ -67,9 +67,8 @@ const RETIRED_TOKENS = [
   "--background-light-hover",
   "--accent-color",
   "--error-color",
-  // The flat gray ramp the --neutral- primitives replaced. Retired names rather
-  // than a retired tier: nothing declares one any more, so a reference resolves
-  // to nothing.
+  // The flat gray ramp the --neutral- primitives replaced. Nothing declares one
+  // any more, so a reference resolves to nothing.
   "--gray-50",
   "--gray-100",
   "--gray-400",
@@ -129,9 +128,8 @@ const PX_LENGTH = /(\d+(?:\.\d+)?)px/g;
 const NON_REM_LENGTH =
   /(?<![\w-])-?\d+(?:\.\d+)?(em|pt|pc|in|mm|cm|ex|ch)(?![\w-])/g;
 
-// The two corner radii, the control one and the container one, and nothing
-// beside them. Asserted as a count rather than skipped, so the exemption cannot
-// quietly become the global file's licence to hold an unrelated px length.
+// The control radius and the container one, and nothing beside them. A count
+// rather than a skip, so the exemption cannot grow to cover an unrelated px.
 const GLOBAL_PX_ALLOWANCE = 2;
 
 const SKIPPED_DIRECTORIES = new Set(["node_modules", "dist", "coverage"]);

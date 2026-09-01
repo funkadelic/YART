@@ -71,8 +71,8 @@
   --color-text: var(--neutral-950);
   --color-text-muted: var(--neutral-550);
 
-  /* Three edges, three weights: border is a container's own outline, rule
-     separates rows inside one, strong bounds a control the reader can press. */
+  /* border is a container's own outline, rule separates rows inside one, and
+     strong bounds a control the reader can press. */
   --color-border: var(--neutral-200);
   --color-border-strong: var(--neutral-450);
   --color-rule: var(--neutral-100);

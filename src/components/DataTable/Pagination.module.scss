@@ -13,9 +13,8 @@
     align-items: center;
     gap: var(--space-2);
 
-    // Every colour declared rather than left to the user agent: under
-    // color-scheme: dark the browser fills a native control with its own gray,
-    // which no contrast guard measures and the border then fails 3:1 against.
+    // Declared rather than left to the user agent: under color-scheme: dark
+    // the browser fills the control with its own gray and the border fails 3:1.
     select {
       padding: var(--space-1-5) var(--space-3);
       font-size: var(--font-size-sm);

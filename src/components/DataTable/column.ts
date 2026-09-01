@@ -34,8 +34,7 @@ export interface Column<T, Id extends string = string> {
    */
   readonly width?: string | undefined;
   /**
-   * The column carries a number. It says what the value is, not how it is laid
-   * out; the table decides what that looks like.
+   * The column carries a number. The table decides what that looks like.
    */
   readonly numeric?: boolean | undefined;
   readonly renderCell: (row: T) => ReactNode;

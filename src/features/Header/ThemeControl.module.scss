@@ -24,9 +24,8 @@
   cursor: pointer;
 }
 
-// The end segments paint an opaque fill into the control's rounded corners, so
-// they carry the radius themselves. Not overflow: hidden on the control, which
-// would clip the offset focus ring the label below draws.
+// The end segments fill opaquely into the control's corners, so they carry the
+// radius themselves. overflow: hidden here would clip the offset focus ring.
 .label:first-of-type {
   border-inline-start: 0;
   border-start-start-radius: var(--radius-sm);

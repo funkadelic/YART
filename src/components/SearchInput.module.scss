@@ -34,9 +34,7 @@
       font-size: var(--font-size-base);
 
       // Declared rather than left to the user agent: under color-scheme: dark
-      // the browser fills a text field with its own gray, which the border then
-      // fails 3:1 against and no contrast guard measures. The foreground goes
-      // with it, so neither half of the pair depends on that default.
+      // the browser fills the field with its own gray and the border fails 3:1.
       background-color: var(--color-surface-raised);
       color: var(--color-text);
 
