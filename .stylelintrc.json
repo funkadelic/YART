@@ -33,10 +33,22 @@
       {
         "text-align": ["/^(?:left|right)$/"],
         "float": ["/^(?:left|right)$/"],
-        "clear": ["/^(?:left|right)$/"]
+        "clear": ["/^(?:left|right)$/"],
+        "outline": [
+          "/(?<![\\w.-])(?:none|0(?:px|rem|em)?|transparent)(?![\\w.%-])/"
+        ],
+        "outline-style": [
+          "/(?<![\\w.-])(?:none|0(?:px|rem|em)?|transparent)(?![\\w.%-])/"
+        ],
+        "outline-width": [
+          "/(?<![\\w.-])(?:none|0(?:px|rem|em)?|transparent)(?![\\w.%-])/"
+        ],
+        "outline-color": [
+          "/(?<![\\w.-])(?:none|0(?:px|rem|em)?|transparent)(?![\\w.%-])/"
+        ]
       },
       {
-        "message": "An inline-axis value follows the document rather than the page: use text-align: start, float: inline-start or clear: inline-end"
+        "message": "Two kinds of value are disallowed on a property here. An inline-axis value follows the document rather than the page: use text-align: start, float: inline-start or clear: inline-end. And a value that cancels an outline removes the only keyboard affordance on that control: the focus ring is drawn once, globally, from the ring token, and no component cancels it"
       }
     ],
     "selector-disallowed-list": [

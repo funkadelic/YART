@@ -1,5 +1,12 @@
 // @vitest-environment node
 //
+// Token layering and contrast, the theme script's placement in index.html, and
+// the halves of the stylesheet rules stylelint has no way to express: an SCSS
+// variable declared in a component sheet, a reference to a retired token, the
+// global sheet's bounded px count, and the positive claim that the focus ring is
+// drawn. The negative rules moved to .stylelintrc.json, where a violation is
+// named at the line rather than at the end of a walk.
+//
 // The stylesheet is the single source of truth for every colour in the app, so
 // this guard reads the shipped file rather than a copy of its values. Node
 // rather than the DOM environment for two measured reasons: the runner replaces
@@ -84,20 +91,6 @@ const RETIRED_TOKENS = [
 // once no file declares one.
 const SCSS_VARIABLE = /^[ \t]*\$[\w-]+[ \t]*:/gm;
 
-// Matched on the property family, so outline-offset is not mistaken for a
-// suppression while the two longhands that cancel a ring are still seen. The
-// value runs to the next delimiter rather than to a required semicolon: the
-// last declaration in a block needs none, and !important sits between the two.
-const OUTLINE_DECLARATION =
-  /(?<![\w-])outline(?:-style|-width|-color)?[ \t]*:([^;}]*)/g;
-
-// A zero width, an absent style or an invisible colour each cancel the ring.
-// The zero is matched only as a whole number, so a 0.125rem ring reads as a
-// ring rather than as the absence of one. Its unit is optional and spelled out,
-// because a bare 0 and a 0 carrying any length unit are the same width.
-const RING_CANCELLING_VALUE =
-  /(?<![\w.-])(none|0(px|rem|em)?|transparent)(?![\w.%-])/i;
-
 // The control radius and the container one, and nothing beside them. A count
 // rather than a skip, so the exemption cannot grow to cover an unrelated px.
 // src/index.css declares the tokens the stylelint unit allowed-list holds the
@@ -124,25 +117,11 @@ function stripComments(source: string): string {
 }
 
 /**
- * The outline declarations in a stylesheet whose value cancels the focus ring,
- * returned whole so the failure message names the declaration that has to go.
- */
-function focusRingSuppressions(source: string): string[] {
-  return [...source.matchAll(OUTLINE_DECLARATION)]
-    .filter(([, value]) =>
-      RING_CANCELLING_VALUE.test(
-        required(value, "the outline declaration's value"),
-      ),
-    )
-    .map(([declaration]) => declaration.trim());
-}
-
-/**
  * Every stylesheet under src/, found by walking rather than by a list, so a
  * stylesheet added by a later component is covered the day it lands instead of
  * the day someone remembers to add it here. Every extension rather than the
- * module ones alone, because a shared partial and a global file are the two
- * places a rule would otherwise be free to break.
+ * module ones alone, because a shared partial is a place a rule would otherwise
+ * be free to break.
  */
 function findStylesheets(directory: string): string[] {
   const found: string[] = [];
@@ -159,12 +138,11 @@ function findStylesheets(directory: string): string[] {
   return found;
 }
 
-const stylesheets = findStylesheets(join(projectRoot, "src"));
-
-// The global file declares the hex primitives every other file reaches for
-// through a token, so it is the one exemption from the colour half of the guard
-// and from nothing else.
-const componentStylesheets = stylesheets.filter((file) => file !== cssPath);
+// The global file is read on its own terms below, by the two guards written
+// against it, so it is held out of the walk rather than exempted inside one.
+const componentStylesheets = findStylesheets(join(projectRoot, "src")).filter(
+  (file) => file !== cssPath,
+);
 
 /** Every declaration in the file, keyed by selector then by property. */
 function readBlocks(): Map<string, Map<string, string>> {
@@ -604,60 +582,5 @@ describe("the focus ring", () => {
       rule?.get("outline"),
       "the global focus rule does not draw its outline from the ring token",
     ).toContain("--color-focus-ring");
-  });
-
-  it("is suppressed by no stylesheet", () => {
-    const offenders: string[] = [];
-
-    // The global stylesheet is walked alongside the rest: a suppression there
-    // would cancel the rule from the same file that declares it.
-    for (const file of stylesheets) {
-      const source = stripComments(readFileSync(file, "utf8"));
-
-      for (const suppression of focusRingSuppressions(source)) {
-        offenders.push(
-          `${relative(projectRoot, file)}: cancels the focus ring with ${suppression}`,
-        );
-      }
-    }
-
-    expect(offenders).toEqual([]);
-  });
-});
-
-// The guards above read a clean tree, which is the one condition under which a
-// guard that matches nothing and a guard that works are indistinguishable. Each
-// spelling below is one a real author reaches for and one an earlier revision of
-// these matchers passed, so the reach is asserted rather than assumed.
-describe("the reach of the guards", () => {
-  it("sees a suppressed focus ring however it is spelled", () => {
-    for (const declaration of [
-      "outline: none;",
-      "outline: none !important;",
-      "outline-style: none;",
-      "a { color: var(--color-text); outline: none }",
-      "outline: 0 solid transparent;",
-      "outline-width: 0;",
-      "outline-width: 0rem;",
-      "outline-color: transparent;",
-    ]) {
-      expect(
-        focusRingSuppressions(declaration),
-        `${declaration} is invisible to the focus-ring guard`,
-      ).not.toEqual([]);
-    }
-  });
-
-  it("reads a drawn ring and an offset as neither", () => {
-    for (const declaration of [
-      "outline: 2px solid var(--color-focus-ring);",
-      "outline: 0.125rem solid var(--color-focus-ring);",
-      "outline-offset: 2px;",
-    ]) {
-      expect(
-        focusRingSuppressions(declaration),
-        `${declaration} is reported as a suppression`,
-      ).toEqual([]);
-    }
   });
 });
