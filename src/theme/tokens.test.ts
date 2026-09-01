@@ -329,26 +329,21 @@ function contrastRatio(a: string, b: string): number {
  * hover fill, only inherited body text does, and the focus ring sits outside the
  * border box on the parent surface rather than on the fill it surrounds.
  *
+ * Four text pairs are absent: axe decides them by value in the real-engine
+ * sweep, and CONTRAST-OVERLAP.md records that measurement per pair.
+ *
  * The two logo rows are measured by choice. The non-text contrast criterion
  * exempts logos and logotypes outright, so if a future surface change turns
  * either one red the correct answer is to drop the exempt pair deliberately,
  * never to lower a threshold to keep it.
  */
 const PAIRS: Array<[string, string, number]> = [
-  ["--color-text", "--color-surface", TEXT_CONTRAST_MINIMUM],
-  ["--color-text", "--color-surface-raised", TEXT_CONTRAST_MINIMUM],
   ["--color-text", "--color-surface-hover", TEXT_CONTRAST_MINIMUM],
-  ["--color-text-muted", "--color-surface", TEXT_CONTRAST_MINIMUM],
   ["--color-text-muted", "--color-surface-raised", TEXT_CONTRAST_MINIMUM],
   ["--color-accent", "--color-surface", TEXT_CONTRAST_MINIMUM],
   ["--color-accent", "--color-surface-raised", TEXT_CONTRAST_MINIMUM],
   ["--color-error", "--color-surface", TEXT_CONTRAST_MINIMUM],
   ["--color-error", "--color-surface-raised", TEXT_CONTRAST_MINIMUM],
-  // The selected segment of the theme control: the surface colour laid on the
-  // accent, which is the one pairing in the app that reads a background token as
-  // a foreground. Measured here rather than by hand, so a later accent change
-  // cannot quietly take the control's label below the text threshold.
-  ["--color-surface", "--color-accent", TEXT_CONTRAST_MINIMUM],
   ["--color-border-strong", "--color-surface", NON_TEXT_CONTRAST_MINIMUM],
   [
     "--color-border-strong",
