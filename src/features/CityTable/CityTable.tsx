@@ -23,11 +23,7 @@ import {
 } from "./cityColumns";
 import styles from "./CityTable.module.scss";
 
-/**
- * How long typing has to pause before the term is committed. The window is the
- * one the container applied before this component took the search box over, so
- * the move retunes nothing.
- */
+/** How long typing has to pause before the term is committed. */
 const SEARCH_DEBOUNCE_MS = 150;
 
 interface CityTableProps {
@@ -38,25 +34,17 @@ interface CityTableProps {
   readonly loading: boolean;
   // False until the underlying collection has arrived at least once.
   readonly datasetReady: boolean;
-  // The text of the failure rather than the failure itself, which is the shape
-  // the table below takes: nothing under this component narrows an error, so a
-  // preserved cause cannot reach a reader by accident.
+  // The text of the failure rather than the failure itself, so nothing below
+  // this component narrows an error and a cause cannot reach a reader.
   readonly errorMessage: string | null;
-  // Optional so the table stays usable on its own, without a container to
-  // re-run the request behind it.
+  // Optional so the table stays usable without a container behind it.
   readonly onRetry?: () => void;
 }
 
 /**
- * The city table: the shared table wired to the city columns, the city copy,
- * and the view state that drives them.
- *
- * Everything this application knows about cities that the table has to render
- * is assembled here, which is what leaves the shared component free of it.
- * The search box belongs to this component: it holds what is being typed and
- * the term that typing settles on, and it reports the settled term upward so
- * the container can issue the request behind it. Which fields a term matches is
- * still decided at the data layer.
+ * The shared table wired to the city columns, the city copy and the view state
+ * that drives them. The search box belongs here: it holds what is being typed
+ * and the term typing settles on, and reports the settled term upward.
  */
 export function CityTable({
   data,
@@ -67,45 +55,25 @@ export function CityTable({
   onRetry,
 }: CityTableProps) {
   // The one place below the header that subscribes to the locale. Everything
-  // under src/components/ takes its strings as props and never learns that a
-  // locale exists, which is what keeps the shared table shared.
+  // under src/components/ takes its strings as props.
   const { catalog, tag } = useLocale();
 
-  // The deliberate exception to the rule that label objects are built at module
-  // scope. The table holds this object across renders and two of its entries are
-  // closures, so its identity has to change when the locale does and must not
-  // change otherwise. That is exactly what a memo keyed on the catalog and the
-  // tag gives, and a module-scope constant cannot give it at all.
+  // The documented exception to module-scope label objects: the table holds
+  // this across renders and several entries are closures, so its identity has
+  // to move when the locale does and must not move otherwise.
   const labels = useMemo(() => buildTableLabels(catalog, tag), [catalog, tag]);
 
-  // The search box's own two strings, built from the same catalog on the same
-  // render so the whole tree changes language at once. Keyed on the catalog
-  // alone because neither entry weaves a number, so the tag decides nothing
-  // here and listing it would claim a dependency this does not have.
+  // Keyed on the catalog alone, because neither entry weaves a number and the
+  // tag decides nothing here.
   const searchLabels = useMemo(() => buildSearchLabels(catalog), [catalog]);
 
-  // The other documented exception to module-scope construction, and it keys on
-  // exactly the two values the labels above key on. That is a requirement
-  // rather than a symmetry: a column array whose identity moved on a render
-  // where the labels did not would re-sort the whole collection and re-slice
-  // the page for nothing, which over fifty thousand rows is the most expensive
-  // thing this component can do by accident.
+  // Keyed on exactly the two values the labels are, and that is a requirement
+  // rather than a symmetry: an array identity that moved on its own would
+  // re-sort fifty thousand rows for nothing.
   const columns = useMemo(() => buildCityColumns(catalog, tag), [catalog, tag]);
 
   // Initialized from whatever the address carries, so the first render is
-  // already the restored view: a link naming a page never paints the first one
-  // for a frame on the way there. Reading it here rather than in an effect is
-  // what buys that, and the initializer is pure, so the development-mode double
-  // invoke costs one extra parse.
-  //
-  // This component holds the view state rather than receiving it the way the
-  // shared table does, and the reason is measured rather than stylistic. About
-  // forty renders in the integration suite drive sorting and paging by clicking
-  // this component, and that suite is the accessibility regression record
-  // carried forward from an earlier phase. Hoisting the state would put a
-  // stateful wrapper under every one of them, at which point the suite asserts
-  // against the wrapper rather than against the application. Four test edits
-  // against roughly forty is the whole of the argument.
+  // already the restored view rather than the first page for a frame.
   const [tableState, setTableState] = useState<TableState<CityColumnId>>(
     () => ({
       ...DEFAULT_TABLE_STATE,
@@ -113,22 +81,13 @@ export function CityTable({
     }),
   );
 
-  // What is currently in the box, which is not yet what the table has been
-  // asked for. Seeded from the committed term, which the initializer above has
-  // already read out of the address, so a link carrying a term paints that term
-  // on the first render rather than filling the box in after mount. Declared
-  // next to the state it settles into so a reader meets the pair together.
+  // What is in the box, which is not yet what the table was asked for. Seeded
+  // from the committed term, so a link carrying one paints it on first render.
   const [searchInput, setSearchInput] = useState(tableState.query);
 
   // The only place in this application that writes the address, and it replaces
-  // rather than pushes, so one Back press leaves the site instead of stepping
-  // the reader back through positions they never asked to record.
-  //
-  // The comparison ahead of the write earns four things at once: a link that is
-  // already canonical is never rewritten, a parameter stating a default is
-  // stripped the moment it arrives, a hostile link is canonicalized on arrival,
-  // and a change driven by a back navigation cannot loop, because by then the
-  // address already says what the state says.
+  // rather than pushes. The comparison ahead of the write canonicalizes a
+  // hostile link on arrival and stops a back navigation looping.
   //
   // One address is one view, per resolved locale: the query string carries
   // the search term, the sort column and direction, the page and the page
@@ -141,19 +100,13 @@ export function CityTable({
     const next = serializeTableState(tableState, window.location.search);
     if (next === window.location.search) return;
 
-    // An empty query has to be written as the path. The empty string resolves
-    // to the current address and leaves the stale query exactly where it was,
-    // which is a write that reports success and changes nothing. The fragment
-    // rides along in both branches because a relative reference carrying a
-    // query but no fragment drops the fragment, and a shared link can carry one
-    // this application never put there.
+    // An empty query is written as the path: the empty string resolves to the
+    // current address and leaves the stale query where it was. The fragment
+    // rides along in both branches or a relative reference would drop it.
     //
-    // Guarded because no write to the address is worth the table. Browsers rate
-    // limit history mutation and throw rather than ignoring the call, and a held
-    // Enter key on the paging control reaches that ceiling in seconds over a
-    // collection with thousands of pages. A throw here is a throw in a
-    // commit-phase effect, so the boundary above would replace the whole view
-    // with the failure fallback over a link that failed to update.
+    // Guarded because no write to the address is worth the table. A browser
+    // that rate limits history mutation throws, and a throw in a commit-phase
+    // effect would replace the whole view with the failure fallback.
     try {
       window.history.replaceState(
         window.history.state,
@@ -167,8 +120,7 @@ export function CityTable({
     }
   }, [tableState]);
 
-  // The functional updater form is what keeps these dependency arrays empty, so
-  // the three callbacks keep one identity for the life of the table.
+  // The functional updater form is what keeps these dependency arrays empty.
   const handleSort = useCallback((columnId: CityColumnId) => {
     setTableState((state) =>
       applyTableAction(state, { type: "sort", columnId }),
@@ -185,28 +137,14 @@ export function CityTable({
     );
   }, []);
 
-  // This one carries a dependency where the three above carry none, so its
-  // identity is an argument rather than a guarantee: the only thing it depends
-  // on is the parent's callback, and that callback is itself memoized with an
-  // empty array, so in practice it is as stable as the three. Nothing below it
-  // inherits that argument, because the debounce reads its callback out of a
-  // ref rather than closing over it.
-  //
-  // Committing is the single point a pause in typing reaches. It moves the view
-  // state, which returns the reader to the first page because a new term is a
-  // different set of rows rather than a narrowing of the current one, and it
-  // reports the term upward so the request behind it is reissued.
+  // The single point a pause in typing reaches: it moves the view state, which
+  // returns the reader to the first page, and reports the term upward. Its one
+  // dependency does not reach the debounce, which reads its callback from a ref.
   const commitSearch = useCallback(
     (term: string) => {
-      // Canonicalized here, once, rather than at each of the three places that
-      // decide whether two terms are the same view. The search trims before it
-      // matches and the address trims before it writes, so a term differing
-      // only in edge whitespace selects the same rows at the same address;
-      // committing it verbatim is what makes the state disagree with both of
-      // them, and the disagreement costs the reader their position, strips the
-      // page from the address, and reissues a request for rows that did not
-      // change. The box goes on painting what was typed, because what is being
-      // typed is separate state from what typing settles on.
+      // Canonicalized once here, because the search trims before it matches
+      // and the address trims before it writes. The box goes on painting what
+      // was typed, which is separate state from what typing settles on.
       const settled = term.trim();
 
       setTableState((state) =>
@@ -220,21 +158,13 @@ export function CityTable({
   const { schedule: scheduleSearchCommit, cancel: cancelSearchCommit } =
     useDebouncedCallback(commitSearch, SEARCH_DEBOUNCE_MS);
 
-  // A history entry this application did not create can still carry a query it
-  // owns, so a traversal re-reads the whole view from the address and applies
-  // it in one write. Attached and detached symmetrically rather than assigned
-  // onto the window, so a second listener cannot silently replace this one.
-  //
-  // Declared after the scheduler rather than beside the write above, because it
-  // has to be able to cancel a commit the scheduler is still holding, and a
-  // dependency array is read during the render that declares it.
+  // A traversal re-reads the whole view from the address and applies it in one
+  // write. Declared after the scheduler, because it has to cancel a commit the
+  // scheduler is still holding.
   useEffect(() => {
     const handlePopState = () => {
-      // A traversal landing inside the debounce window would otherwise let the
-      // term the reader typed a moment ago land on top of the view they just
-      // navigated back to: the box would show the restored term while the rows,
-      // the position, and the address all carried the typed one. The keystrokes
-      // belong to the view the reader has left, so the commit goes with it.
+      // The keystrokes belong to the view the reader has left, so a commit
+      // still pending goes with it rather than landing on the restored view.
       cancelSearchCommit();
 
       const restored: TableState<CityColumnId> = {
@@ -244,20 +174,13 @@ export function CityTable({
 
       setTableState((state) => ({
         ...restored,
-        // A restored sort is still a first render, and announcing a sort to
-        // someone who has just opened a link announces something that did not
-        // just happen. Carrying the flag across means a traversal after a real
-        // sort still announces, while a cold one stays silent. It is the one
-        // field carried over, because it is the one field the address does not
-        // and will not hold.
+        // The one field carried over, because it is the one the address does
+        // not hold: a restored sort is still a first render and stays silent.
         hasSorted: state.hasSorted,
       }));
 
-      // The box and the request behind it both follow the term the traversal
-      // landed on. Reporting it upward rather than letting the container read
-      // the address for itself keeps the single writer single and the reader
-      // count at two, and it is why this handler depends on the parent's
-      // callback where the three above depend on nothing.
+      // Reported upward rather than read from the address by the container,
+      // which is what keeps the reader count at two.
       setSearchInput(restored.query);
       onSearchChange(restored.query);
     };
@@ -268,8 +191,7 @@ export function CityTable({
     };
   }, [onSearchChange, cancelSearchCommit]);
 
-  // The box repaints on every keystroke while the commit waits for the pause,
-  // so typing stays responsive and the table is asked once for what was typed.
+  // The box repaints on every keystroke while the commit waits for the pause.
   const handleSearchChange = useCallback(
     (term: string) => {
       setSearchInput(term);

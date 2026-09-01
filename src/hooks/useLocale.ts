@@ -8,10 +8,7 @@ import {
   subscribeLocale,
 } from "../i18n/localeStore";
 
-/**
- * Owns the reader's locale for one component. Many instances by construction:
- * it holds no state, so every subscriber resolves the identical value.
- */
+/** Many instances by construction, because it holds no state of its own. */
 export function useLocale() {
   const locale = useSyncExternalStore(subscribeLocale, getLocaleSnapshot);
   const choice = useSyncExternalStore(subscribeLocale, getChoiceSnapshot);

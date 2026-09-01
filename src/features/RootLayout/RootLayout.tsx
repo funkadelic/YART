@@ -11,10 +11,8 @@ interface RootLayoutProps {
 }
 
 export function RootLayout({ children }: RootLayoutProps) {
-  // The layout subscribes to the locale on the boundary's behalf. A class
-  // component cannot call a hook, and the boundary below has to be a class
-  // because that is the only render-fallback mechanism React offers, so its two
-  // strings are read here and handed down.
+  // Subscribed here on the boundary's behalf: a class cannot call a hook, and
+  // the boundary has to be a class.
   const { catalog } = useLocale();
 
   return (

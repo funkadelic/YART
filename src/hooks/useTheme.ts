@@ -8,10 +8,7 @@ import {
 } from "../theme/resolveTheme";
 import type { ThemeChoice } from "../theme/resolveTheme";
 
-/**
- * Reads the stored choice; anything but the two explicit words is absent. The
- * property access is what throws when site data is blocked, hence the catch.
- */
+/** Anything but the two explicit words is absent. The access can throw. */
 function readStoredChoice(): ThemeChoice {
   try {
     const stored = localStorage.getItem(THEME_STORAGE_KEY);
@@ -43,10 +40,7 @@ function readPrefersDark(): boolean {
   return window.matchMedia(PREFERS_DARK_QUERY).matches;
 }
 
-/**
- * Subscribes to the system preference. Through useSyncExternalStore rather than
- * an effect, which would leave a window for the preference to move.
- */
+/** Through useSyncExternalStore, not an effect, which leaves a window. */
 function subscribePrefersDark(onStoreChange: () => void): () => void {
   if (!supportsMediaQueries()) {
     return () => {};

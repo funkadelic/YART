@@ -3,17 +3,9 @@ import type { SearchInputLabels } from "../../components/SearchInput";
 import type { Catalog } from "../../i18n/catalogs/en";
 
 /**
- * The catalog, narrowed to the object the shared table takes.
- *
- * A catalog is a flat set of keys; the table's labels are a shape, with the page
- * controls' own strings nested where the table hands them on. This is where the
- * one becomes the other, and it is the only place the two vocabularies meet.
- *
- * The locale-sensitive entries take the resolved language tag ahead of the
- * arguments the table supplies, and closing that tag in here is what keeps the
- * table's own contract at the arity it has always had. An entry that needs no
- * tag is passed through by reference rather than wrapped in an arrow that would
- * only forward it, so the closure count stays at what the seam actually needs.
+ * The catalog, narrowed to the object the shared table takes: a flat set of
+ * keys becomes a shape. Closing the tag into the locale-sensitive entries here
+ * is what keeps the table's contract at the arity it has always had.
  */
 export function buildTableLabels(
   catalog: Catalog,
@@ -44,17 +36,7 @@ export function buildTableLabels(
   };
 }
 
-/**
- * The catalog, narrowed to the two strings the search box shows.
- *
- * Its own builder rather than a third field on the object above, because the box
- * is a sibling of the table rather than part of it: the table never sees these
- * two strings and has no business carrying them.
- *
- * No tag, and the absence is the point. Neither entry weaves a number or a
- * plural, so there is nothing here for a formatter to do, and taking a parameter
- * that changes nothing would put a second key on the memo that reads it.
- */
+/** The search box's own two strings. No tag: neither weaves a number. */
 export function buildSearchLabels(catalog: Catalog): SearchInputLabels {
   return {
     name: catalog.searchName,

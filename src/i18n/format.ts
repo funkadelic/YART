@@ -41,10 +41,7 @@ export function pluralRulesFor(tag: string): Intl.PluralRules {
   return cached(pluralRules, tag, (forTag) => new Intl.PluralRules(forTag));
 }
 
-/**
- * Picks a noun's form over the categories the tag reports. A
- * singular-or-other pair is wrong in half the shipped catalogs.
- */
+/** Over the categories the tag reports, not a singular-or-other pair. */
 export function selectPlural<Category extends Intl.LDMLPluralRule>(
   tag: string,
   count: number,

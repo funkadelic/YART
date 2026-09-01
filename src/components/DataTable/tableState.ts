@@ -15,10 +15,7 @@ export type TableAction<Id extends string> =
   | { readonly type: "pageSize"; readonly pageSize: number }
   | { readonly type: "query"; readonly query: string };
 
-/**
- * Where a table starts: what the serializer omits and the parser falls back to.
- * Typed over no column id, so it is assignable to a state over any id union.
- */
+/** Where a table starts. Typed over no id, so it fits any id union. */
 export const DEFAULT_TABLE_STATE: TableState<never> = {
   sortColumnId: null,
   sortDirection: null,

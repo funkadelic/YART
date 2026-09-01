@@ -1,9 +1,6 @@
 import type { Column } from "./column";
 
-/**
- * Orders rows by one column. Row identity is a table-level prop, so the
- * tiebreak lives here rather than inside a column's comparator.
- */
+/** Row identity is a table-level prop, so the tiebreak lives here. */
 export function sortRows<T, Id extends string>(
   rows: readonly T[],
   column: Column<T, Id> | undefined,
@@ -22,10 +19,7 @@ export function sortRows<T, Id extends string>(
   });
 }
 
-/**
- * Ascending, never flipped, and never collated: an identity is not a value the
- * reader sees, so collating it would give two readers two orders.
- */
+/** Never flipped and never collated: an identity is not a visible value. */
 export function compareIdentities(aId: string, bId: string): number {
   if (aId === bId) return 0;
   return aId < bId ? -1 : 1;

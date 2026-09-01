@@ -7,10 +7,7 @@ import {
 /** One key rather than two, so the invalid pair is unrepresentable. */
 const SORT_DESCENDING_PREFIX = "-";
 
-/**
- * One owned parameter. Parsing returns a partial so one key can carry two
- * coupled fields; serializing returns null for a defaulted value.
- */
+/** Parsing returns a partial; serializing returns null for a default. */
 interface UrlParamEntry {
   readonly key: string;
   readonly parse: <Id extends string>(

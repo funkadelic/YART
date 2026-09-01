@@ -5,10 +5,7 @@ export interface PaginateResult<T> {
   readonly effectivePage: number;
 }
 
-/**
- * Slices one page out of a collection. The position is an argument and the
- * clamp never leaves this function, so it can arrive from anywhere.
- */
+/** Slices one page. The position is an argument; the clamp stays here. */
 export function paginate<T>(
   rows: readonly T[],
   page: number,

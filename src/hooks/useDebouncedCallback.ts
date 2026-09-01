@@ -6,10 +6,7 @@ export interface DebouncedCallback<A extends unknown[]> {
   readonly cancel: () => void;
 }
 
-/**
- * Debounces a call rather than a value, and reads the callback from a ref when
- * the timer fires, which is what makes an inline arrow safe to pass.
- */
+/** Debounces a call, reading the callback from a ref when the timer fires. */
 export function useDebouncedCallback<A extends unknown[]>(
   callback: (...args: A) => void,
   delay: number,

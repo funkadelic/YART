@@ -10,10 +10,7 @@ import styles from "./DataTable.module.scss";
 
 export type { PaginationLabels };
 
-/**
- * Every string this table and the controls under it render. The entries that
- * weave a value take that value and never a word, which would decide grammar.
- */
+/** Entries that weave a value take the value, never an assembled word. */
 export interface DataTableLabels {
   /** Shown in place of the whole view until the rows have arrived once. */
   readonly loading: string;
