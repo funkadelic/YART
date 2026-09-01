@@ -118,10 +118,10 @@ const PX_LENGTH = /(\d+(?:\.\d+)?)px/g;
 const NON_REM_LENGTH =
   /(?<![\w-])-?\d+(?:\.\d+)?(em|pt|pc|in|mm|cm|ex|ch)(?![\w-])/g;
 
-// The corner radius, and nothing beside it. Asserted as a count rather than
-// skipped, so the exemption cannot quietly become the global file's licence to
-// hold a second px length.
-const GLOBAL_PX_ALLOWANCE = 1;
+// The two corner radii, the control one and the container one, and nothing
+// beside them. Asserted as a count rather than skipped, so the exemption cannot
+// quietly become the global file's licence to hold an unrelated px length.
+const GLOBAL_PX_ALLOWANCE = 2;
 
 const SKIPPED_DIRECTORIES = new Set(["node_modules", "dist", "coverage"]);
 
@@ -340,9 +340,13 @@ const PAIRS: Array<[string, string, number]> = [
   // a foreground. Measured here rather than by hand, so a later accent change
   // cannot quietly take the control's label below the text threshold.
   ["--color-surface", "--color-accent", TEXT_CONTRAST_MINIMUM],
-  ["--color-border", "--color-surface", NON_TEXT_CONTRAST_MINIMUM],
-  ["--color-border", "--color-surface-raised", NON_TEXT_CONTRAST_MINIMUM],
-  ["--color-border", "--color-surface-hover", NON_TEXT_CONTRAST_MINIMUM],
+  ["--color-border-strong", "--color-surface", NON_TEXT_CONTRAST_MINIMUM],
+  [
+    "--color-border-strong",
+    "--color-surface-raised",
+    NON_TEXT_CONTRAST_MINIMUM,
+  ],
+  ["--color-border-strong", "--color-surface-hover", NON_TEXT_CONTRAST_MINIMUM],
   ["--color-focus-ring", "--color-surface", NON_TEXT_CONTRAST_MINIMUM],
   ["--color-focus-ring", "--color-surface-raised", NON_TEXT_CONTRAST_MINIMUM],
   ["--color-brand", "--color-surface", NON_TEXT_CONTRAST_MINIMUM],
@@ -649,12 +653,12 @@ describe("length in the stylesheets", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("allows the global stylesheet the corner radius and nothing beside it", () => {
+  it("allows the global stylesheet the corner radii and nothing beside them", () => {
     const found = offScaleLengths(readFileSync(cssPath, "utf8"));
 
     expect(
       found,
-      `src/index.css holds ${String(found.length)} off-scale lengths rather than the radius alone: ${found.join(", ")}`,
+      `src/index.css holds ${String(found.length)} off-scale lengths rather than the radii alone: ${found.join(", ")}`,
     ).toHaveLength(GLOBAL_PX_ALLOWANCE);
   });
 });
