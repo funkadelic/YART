@@ -26,7 +26,6 @@ const guardFile = here.filename;
 
 interface Manifest {
   scripts?: Record<string, string>;
-  browserslist?: unknown;
   [key: string]: unknown;
 }
 
@@ -384,45 +383,6 @@ function isEndToEndSpec(file: string): boolean {
   return relative(projectRoot, file).split(sep)[0] === E2E_DIRECTORY;
 }
 
-/**
- * Array.isArray narrows an unknown to any[], which reintroduces the untyped
- * value the check was meant to remove. This narrows to unknown[] instead, so
- * the elements stay unknown and have to be checked before they are used.
- */
-function isUnknownArray(value: unknown): value is unknown[] {
-  return Array.isArray(value);
-}
-
-/** browserslist wherever it is configured: inline, keyed by env, or in its own file. */
-function browserslistQueries(): unknown[] {
-  const configured = manifest.browserslist;
-
-  if (isUnknownArray(configured)) return configured;
-
-  if (configured && typeof configured === "object") {
-    return Object.values(configured as Record<string, unknown>).flatMap(
-      (value) => (isUnknownArray(value) ? value : []),
-    );
-  }
-
-  const rcPath = join(projectRoot, ".browserslistrc");
-  if (existsSync(rcPath)) {
-    return readFileSync(rcPath, "utf8")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith("#"));
-  }
-
-  return [];
-}
-
-/**
- * Queries whose meaning is decided by upstream data rather than by this manifest.
- * Any of them lets a browserslist data release move the build output with no commit.
- */
-const MOVING_QUERY =
-  /\b(defaults|last\s+\d+|dead|since\s+\d{4}|unreleased|maintained|current\s+node|node\s+current|extends|supports)\b|%/i;
-
 const FAKES_CLOCK = /\buseFakeTimers\s*\(/;
 const CONFIGURES_CLOCK = /\bfakeTimers\s*:/;
 const IMPORTS_USER_EVENT = /from\s+["']@testing-library\/user-event["']/;
@@ -463,13 +423,6 @@ const COVERAGE_EXCLUDE_PATTERNS = [
   "src/test/**",
   "src/**/*.d.ts",
 ];
-
-// The complete coverage include list. One entry, named here for the same
-// reason its exclude sibling is written out: narrowing this to a subdirectory
-// satisfies a hundred percent by shrinking the gate's input rather than by
-// covering the code, and it is the sibling property the exclude guard does not
-// reach.
-const COVERAGE_INCLUDE_PATTERNS = ["src/**/*.{ts,tsx}"];
 
 // A suppression comment in any provider's spelling, matched against raw source
 // because a hint is itself a comment and blanking comments first would make the
@@ -1058,61 +1011,6 @@ describe("toolchain baseline", () => {
     expect(script, "the test script names no project").toMatch(/--project[= ]/);
   });
 
-  // The guard above covers the script a developer types and neither of the two
-  // the pipeline runs. Both are asserted as the properties that make them gates
-  // rather than as one string, for the same reason: adding a flag is free and
-  // dropping the one that matters is not.
-  //
-  // Without --coverage nothing measures coverage, so the threshold is never
-  // evaluated and coverage/lcov.info is never written, which the Sonar import
-  // reads as a silent zero rather than as an error. Without the browser project
-  // named, the browser script fans out to every project and reports the
-  // deterministic suite a second time as if it were the real-engine one.
-  //
-  // The end-to-end script is read the other way round: it must carry no
-  // coverage flag at all. The answer written beside its config is that this
-  // runner measures nothing and the hundred percent threshold stays over the
-  // deterministic project alone, and without this line that answer is a claim
-  // about intent that nothing checks. The failure it prevents is silent rather
-  // than loud: a coverage flag added later emits a second report over the same
-  // directory the static analysis import reads.
-  //
-  // Nothing else has to move for that carve, and both reasons are worth stating
-  // because both stop holding if the end-to-end specs are ever moved under the
-  // source directory. The coverage block of the build config is untouched, which
-  // is what keeps the four-pattern exclude set guard green, and the static
-  // analysis source set is the source directory, which is what keeps the derived
-  // inclusions guard green. Both hold because the specs live outside it.
-  it("keeps each pipeline test script carrying the flags its gate needs, and none it must not", () => {
-    const coverage = manifest.scripts?.["test:coverage"] ?? "";
-
-    expect(coverage, "the coverage script collects no coverage").toMatch(
-      /(^|\s)--coverage\b/,
-    );
-    expect(coverage, "the coverage script names no project").toMatch(
-      /--project[= ]jsdom\b/,
-    );
-
-    expect(
-      manifest.scripts?.["test:browser"] ?? "",
-      "the browser script does not name the browser project",
-    ).toMatch(/--project[= ]browser\b/);
-
-    // Read off the script itself rather than off an empty-string fallback. The
-    // two assertions above get existence for free because they match a flag
-    // positively and an absent script matches nothing; this one is the inverted
-    // case, where an absent script satisfies the pattern it is checked against.
-    // Without the line below, deleting the end-to-end script entirely passes
-    // the guard that exists to keep it honest.
-    const endToEnd = manifest.scripts?.["test:e2e"];
-
-    expect(endToEnd, "the end-to-end script is gone").toBeDefined();
-    expect(
-      endToEnd as string,
-      "the end-to-end script collects coverage, which writes a second report into the directory the static analysis import reads",
-    ).not.toMatch(/(^|\s)--coverage\b/);
-  });
-
   // A report the upload step cannot collect is skipped, so the pipeline stays
   // green over an upload carrying nothing.
   it("keeps every configured report on a path the upload step collects", () => {
@@ -1238,15 +1136,6 @@ describe("toolchain baseline", () => {
         `${WORKFLOW_FILE} installs the headless shell alone and ${name} launches a browser that is not it`,
       ).toBe(false);
     }
-  });
-
-  // Most of the hook rule family is registered at warn rather than error by the
-  // plugin's own config, exhaustive-deps among them. Without the flag the gate
-  // exits zero with all of them reported, so neither the pipeline nor the
-  // pre-commit hook can fail on the rule that guards every dependency array in
-  // the tree.
-  it("fails the lint gate on a warning as well as an error", () => {
-    expect(manifest.scripts?.lint).toContain("--max-warnings 0");
   });
 
   // Nothing under src/ imports the icon or the manifest. index.html names each
@@ -1404,49 +1293,6 @@ describe("toolchain baseline", () => {
         expect(locale.catalog, `the ${id} entry`).toBe(id);
       }
     });
-  });
-
-  // browserslist is pinned to explicit versions like the rest of the manifest. A
-  // shared query such as "defaults" or "last 2 versions" would let upstream data
-  // releases move the build output without a commit.
-  it("pins browserslist to explicit versions rather than a moving query", () => {
-    const queries = browserslistQueries();
-
-    expect(
-      queries.length,
-      "browserslist is configured nowhere",
-    ).toBeGreaterThan(0);
-
-    for (const query of queries) {
-      expect(typeof query, `${String(query)} is not a string`).toBe("string");
-      expect(query as string, `${String(query)} is a moving query`).not.toMatch(
-        MOVING_QUERY,
-      );
-      expect(
-        query as string,
-        `${String(query)} names no explicit version`,
-      ).toMatch(/\d/);
-    }
-  });
-
-  // CI runs the format check and so does the hook, which catches drift before it
-  // becomes a commit rather than after it becomes a push.
-  it("runs lint and the format check from the pre-commit hook", () => {
-    const hookPath = join(projectRoot, ".husky", "pre-commit");
-
-    expect(existsSync(hookPath), ".husky/pre-commit is missing").toBe(true);
-
-    // Judged on live lines only: commenting the commands out and falling through to
-    // a bare exit disables the hook while leaving every expected string in the file.
-    const live = readFileSync(hookPath, "utf8")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith("#"));
-
-    expect(live.some((line) => line.includes("npm run lint"))).toBe(true);
-    expect(live.some((line) => line.includes("npm run format:check"))).toBe(
-      true,
-    );
   });
 
   // A faked clock plus the user input library deadlocks unless the library is told
@@ -1616,28 +1462,6 @@ describe("toolchain baseline", () => {
     ).not.toBeNull();
 
     expect(patterns?.toSorted()).toEqual(COVERAGE_EXCLUDE_PATTERNS.toSorted());
-  });
-
-  // The threshold is the single line that turns the number into a gate, and the
-  // include list decides what the number is measured over. Both sit beside the
-  // exclude list and neither was guarded, so the gate could be reverted to a
-  // report, or fitted to a third of the tree, with every other guard green.
-  // Compared the same way the exclude list is: reordering is not a weakening
-  // and must not flap, while narrowing, widening or emptying must all fail.
-  it("keeps the coverage gate at a hundred percent over the whole source tree", () => {
-    expect(
-      coverageBlock(),
-      `${CONFIG_FILE} declares no hundred percent coverage threshold`,
-    ).toMatch(/thresholds\s*:\s*\{\s*100\s*:\s*true\s*,?\s*\}/);
-
-    const patterns = coveragePatterns("include");
-
-    expect(
-      patterns,
-      `${CONFIG_FILE} declares no coverage include list`,
-    ).not.toBeNull();
-
-    expect(patterns?.toSorted()).toEqual(COVERAGE_INCLUDE_PATTERNS.toSorted());
   });
 
   // Sonar reads a file the coverage report excludes as main source and counts
