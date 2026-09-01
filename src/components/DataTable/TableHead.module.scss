@@ -7,7 +7,7 @@
 .sortButton {
   font: inherit;
   font-size: var(--font-size-base);
-  font-weight: bold;
+  font-weight: 600;
   color: inherit;
   background: none;
   border: 0;
@@ -19,4 +19,10 @@
   &:hover {
     color: var(--color-accent);
   }
+}
+
+// A form widget shrinks to its content, so the cell's text-align never reaches
+// it. The auto margin carries the button to the reading end instead.
+.sortButtonNumeric {
+  margin-inline-start: auto;
 }

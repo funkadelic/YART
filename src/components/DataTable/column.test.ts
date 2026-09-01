@@ -36,11 +36,16 @@ describe("columns().key", () => {
   });
 
   it("carries its id and label through", () => {
-    const column = col().key("qty", { label: "Quantity", width: "8rem" });
+    const column = col().key("qty", {
+      label: "Quantity",
+      width: "8rem",
+      numeric: true,
+    });
 
     expect(column.id).toBe("qty");
     expect(column.label).toBe("Quantity");
     expect(column.width).toBe("8rem");
+    expect(column.numeric).toBe(true);
   });
 });
 

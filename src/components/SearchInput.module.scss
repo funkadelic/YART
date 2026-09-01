@@ -29,9 +29,14 @@
       box-sizing: border-box; // ignore border & padding to determine width
       padding-block: var(--space-2-5);
       padding-inline: var(--space-11) var(--space-2-5);
-      border: 2px solid var(--color-border);
-      border-radius: var(--radius-sm);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-md);
       font-size: var(--font-size-base);
+
+      // Declared rather than left to the user agent: under color-scheme: dark
+      // the browser fills the field with its own gray and the border fails 3:1.
+      background-color: var(--color-surface-raised);
+      color: var(--color-text);
 
       &::placeholder {
         color: var(--color-text-muted);

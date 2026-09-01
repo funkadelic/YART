@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   margin-inline-start: auto;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border-strong);
   border-radius: var(--radius-sm);
 }
 
@@ -17,15 +17,24 @@
 
 .label {
   padding: var(--space-1) var(--space-2-5);
-  border-inline-start: 1px solid var(--color-border);
+  border-inline-start: 1px solid var(--color-border-strong);
   font-size: var(--font-size-sm);
   color: var(--color-text);
   background-color: var(--color-surface-raised);
   cursor: pointer;
 }
 
+// The end segments fill opaquely into the control's corners, so they carry the
+// radius themselves. overflow: hidden here would clip the offset focus ring.
 .label:first-of-type {
   border-inline-start: 0;
+  border-start-start-radius: var(--radius-sm);
+  border-end-start-radius: var(--radius-sm);
+}
+
+.label:last-of-type {
+  border-start-end-radius: var(--radius-sm);
+  border-end-end-radius: var(--radius-sm);
 }
 
 .label:hover {

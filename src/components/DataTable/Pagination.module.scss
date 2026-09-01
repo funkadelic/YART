@@ -13,9 +13,16 @@
     align-items: center;
     gap: var(--space-2);
 
+    // Declared rather than left to the user agent: under color-scheme: dark
+    // the browser fills the control with its own gray and the border fails 3:1.
     select {
       padding: var(--space-1-5) var(--space-3);
       font-size: var(--font-size-sm);
+      color: var(--color-text);
+      background-color: var(--color-surface-raised);
+      border: 1px solid var(--color-border-strong);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
     }
   }
 
@@ -27,7 +34,7 @@
     // the next/prev/first/last buttons
     .navButton {
       background: var(--color-surface-raised);
-      border: 1px solid var(--color-border);
+      border: 1px solid var(--color-border-strong);
       padding: var(--space-1-5) var(--space-3);
       cursor: pointer;
       font-size: var(--font-size-sm);

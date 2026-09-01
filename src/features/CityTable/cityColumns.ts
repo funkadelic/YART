@@ -39,6 +39,7 @@ export function buildCityColumns(catalog: Catalog, tag: string) {
     col.key("countryIso3", { label: catalog.columnCountryCode }),
     col.key("population", {
       label: catalog.columnPopulation,
+      numeric: true,
       renderCell: (value) => number.format(value),
     }),
   ];

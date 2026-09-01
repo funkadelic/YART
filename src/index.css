@@ -3,21 +3,28 @@
    to be imported first. The layout's error fallback is below the table in the
    tree but above it in the DOM, and it needs these. */
 :root {
-  /* Primitives. Tailwind v3 default ramp steps, copied verbatim, plus the two
-     brand values the logo already carried. A component stylesheet never names
-     one of these directly; only the semantic tier below does. */
-  --gray-50: #f9fafb;
-  --gray-100: #f3f4f6;
-  --gray-400: #9ca3af;
-  --gray-500: #6b7280;
-  --gray-600: #4b5563;
-  --gray-700: #374151;
-  --gray-800: #1f2937;
-  --gray-900: #111827;
+  /* Primitives, authored for this app rather than borrowed from a framework
+     ramp. A component stylesheet never names one of these directly; only the
+     semantic tier below does. */
+  --neutral-25: #fbfbfc;
+  --neutral-50: #f4f5f7;
+  --neutral-100: #eceef1;
+  --neutral-150: #e8eaee;
+  --neutral-200: #e3e5e9;
+  --neutral-400: #9aa1ad;
+  --neutral-450: #868c96;
+  --neutral-500: #6a707a;
+  --neutral-550: #656a75;
+  --neutral-800: #262a31;
+  --neutral-850: #22262c;
+  --neutral-900: #1d2127;
+  --neutral-925: #16191e;
+  --neutral-950: #16181d;
+  --neutral-975: #0e1013;
   --white: #fff;
-  --teal-300: #5eead4;
-  --teal-400: #2dd4bf;
-  --teal-700: #0f766e;
+  --teal-300: #5ce0d0;
+  --teal-400: #45cfbf;
+  --teal-700: #0f7a72;
   --red-400: #f87171;
   --red-700: #b91c1c;
   --brand-orange: #f45d48;
@@ -25,7 +32,7 @@
   /* Theme invariant. Declared once and never overridden per theme, because a gap
      that changed width in the dark would be a bug rather than a theme. Spacing
      and type are authored in rem so the whole layout follows the reader's
-     browser font-size setting; hairlines and the corner radius stay in px,
+     browser font-size setting; hairlines and the corner radii stay in px,
      where growing with the reader's type would only distort the shape. */
   --space-1: 0.25rem;
   --space-1-5: 0.375rem;
@@ -45,7 +52,9 @@
   --font-size-xl: 1.25rem;
   --font-size-2xl: 1.5rem;
 
-  --radius-sm: 4px;
+  /* Two steps: sm on a control, md on a container that holds one. */
+  --radius-sm: 8px;
+  --radius-md: 10px;
 
   /* Declared alongside the tokens it belongs with, so a theme switch moves the
      native control and scrollbar appearance in the same place it moves the
@@ -56,12 +65,17 @@
   /* Semantic tier, light theme. Every declaration here is a bare var() onto a
      primitive with no fallback argument. A raw colour or a fallback would let a
      broken indirection ship a working page, so the token test rejects both. */
-  --color-surface: var(--gray-50);
+  --color-surface: var(--neutral-25);
   --color-surface-raised: var(--white);
-  --color-surface-hover: var(--gray-100);
-  --color-text: var(--gray-800);
-  --color-text-muted: var(--gray-600);
-  --color-border: var(--gray-500);
+  --color-surface-hover: var(--neutral-50);
+  --color-text: var(--neutral-950);
+  --color-text-muted: var(--neutral-550);
+
+  /* border is a container's own outline, rule separates rows inside one, and
+     strong bounds a control the reader can press. */
+  --color-border: var(--neutral-200);
+  --color-border-strong: var(--neutral-450);
+  --color-rule: var(--neutral-100);
   --color-accent: var(--teal-700);
   --color-error: var(--red-700);
   --color-focus-ring: var(--teal-700);
@@ -86,12 +100,14 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --color-surface: var(--gray-900);
-  --color-surface-raised: var(--gray-800);
-  --color-surface-hover: var(--gray-700);
-  --color-text: var(--gray-100);
-  --color-text-muted: var(--gray-400);
-  --color-border: var(--gray-400);
+  --color-surface: var(--neutral-975);
+  --color-surface-raised: var(--neutral-925);
+  --color-surface-hover: var(--neutral-900);
+  --color-text: var(--neutral-150);
+  --color-text-muted: var(--neutral-400);
+  --color-border: var(--neutral-800);
+  --color-border-strong: var(--neutral-500);
+  --color-rule: var(--neutral-850);
   --color-accent: var(--teal-400);
   --color-error: var(--red-400);
   --color-focus-ring: var(--teal-300);

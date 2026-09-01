@@ -1,6 +1,7 @@
 import { FiChevronUp, FiChevronDown } from "react-icons/fi";
 
 import type { Column } from "./column";
+import tableStyles from "./DataTable.module.scss";
 import styles from "./TableHead.module.scss";
 
 interface TableHeadProps<T, Id extends string> {
@@ -51,6 +52,7 @@ export function TableHead<T, Id extends string>({
             <th
               key={column.id}
               scope="col"
+              className={column.numeric ? tableStyles.numeric : undefined}
               style={{ width: column.width }}
               aria-sort={ariaSort(columnDirection)}
             >
@@ -63,7 +65,11 @@ export function TableHead<T, Id extends string>({
                 // itself; a manual key handler alongside it would fire twice.
                 <button
                   type="button"
-                  className={styles.sortButton}
+                  className={
+                    column.numeric
+                      ? `${styles.sortButton} ${styles.sortButtonNumeric}`
+                      : styles.sortButton
+                  }
                   onClick={() => onSortChange(column.id)}
                 >
                   {column.label}
