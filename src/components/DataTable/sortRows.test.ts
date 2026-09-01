@@ -16,14 +16,18 @@ interface Part {
 }
 
 /**
- * A collator on the base tag, because the factory no longer holds one and every
- * caller states which reader's ordering it is building for. Nothing in this
- * file depends on which tag it is; it depends on there being exactly one.
+ * A builder per column, because a builder rejects an id it has already issued
+ * and the recording column below describes the region column a second time.
+ * Every column here is handed to the sort on its own, never as an array.
+ *
+ * The collator is on the base tag, because the factory no longer holds one and
+ * every caller states which reader's ordering it is building for. Nothing in
+ * this file depends on which tag it is; it depends on there being exactly one.
  */
-const col = columns<Part>(collatorFor("en-US"));
+const col = () => columns<Part>(collatorFor("en-US"));
 
-const REGION = col.key("region", { label: "Region" });
-const WEIGHT = col.key("weight", { label: "Weight" });
+const REGION = col().key("region", { label: "Region" });
+const WEIGHT = col().key("weight", { label: "Weight" });
 
 /** Identity, as the module requires it: a string, unique per row. */
 const partId = (part: Part) => part.sku;
@@ -40,7 +44,7 @@ function part(sku: string, region: string, weight: number): Part {
 function recordingColumn() {
   const calls: Array<[string, string, string]> = [];
 
-  const column = col.key("region", {
+  const column = col().key("region", {
     label: "Region",
     compare: (a, b, direction) => {
       calls.push([a, b, direction]);
