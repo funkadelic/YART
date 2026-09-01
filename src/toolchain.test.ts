@@ -371,69 +371,6 @@ function findSourceFiles(directory: string): string[] {
   return found;
 }
 
-/** The component holding the four glyphs that mean a direction. */
-const DIRECTIONAL_GLYPH_COMPONENT = "src/components/DataTable/Pagination.tsx";
-
-/** Whether a node is JSX, in any of the three shapes the grammar allows. */
-function isJsx(node: ts.Node): boolean {
-  return (
-    ts.isJsxElement(node) ||
-    ts.isJsxSelfClosingElement(node) ||
-    ts.isJsxFragment(node)
-  );
-}
-
-/**
- * Whether a statement's own return is JSX, ignoring any nested function.
- *
- * A callback declared inside the branch returns whatever it returns, which is
- * not the branch returning it, so the walk stops at a function boundary.
- */
-function returnsJsx(node: ts.Node): boolean {
-  if (ts.isFunctionLike(node)) return false;
-
-  if (ts.isReturnStatement(node)) {
-    return node.expression !== undefined && isJsx(node.expression);
-  }
-
-  return ts.forEachChild(node, returnsJsx) ?? false;
-}
-
-/**
- * Every conditional in a file that picks between two pieces of JSX: a ternary
- * with an element either side, or an if whose two branches each return one.
- *
- * A guarded render, which is the shape the table already uses, has JSX on one
- * side and nothing on the other and is not one of these.
- */
-function jsxAlternatives(file: ts.SourceFile): string[] {
-  const found: string[] = [];
-
-  const visit = (node: ts.Node): void => {
-    if (
-      ts.isConditionalExpression(node) &&
-      isJsx(node.whenTrue) &&
-      isJsx(node.whenFalse)
-    ) {
-      found.push(node.condition.getText(file));
-    }
-
-    if (
-      ts.isIfStatement(node) &&
-      node.elseStatement !== undefined &&
-      returnsJsx(node.thenStatement) &&
-      returnsJsx(node.elseStatement)
-    ) {
-      found.push(node.expression.getText(file));
-    }
-
-    node.forEachChild(visit);
-  };
-
-  file.forEachChild(visit);
-  return found;
-}
-
 const scannedFiles = findTestFiles(projectRoot).filter(
   (file) => file !== guardFile,
 );
@@ -1788,24 +1725,6 @@ describe("toolchain baseline", () => {
     ).toBeGreaterThan(0);
 
     expect(globalSheets("src/a11y.browser.test.tsx")).toEqual(shipped);
-  });
-
-  // The way the mirror rule is undone in JavaScript rather than in CSS: a branch
-  // in the component choosing between two glyph components on the direction,
-  // which is a prop and a coverage line for what one declaration does. It is
-  // invisible to the stylelint rules that hold the stylesheets because it is not
-  // CSS, and invisible to the shared layer's literal guard because a glyph
-  // component is neither a text child nor a string, so it is asserted here or
-  // nowhere.
-  it("picks the page glyphs with a stylesheet rather than with a branch", () => {
-    const alternatives = jsxAlternatives(
-      moduleSource(DIRECTIONAL_GLYPH_COMPONENT),
-    );
-
-    expect(
-      alternatives,
-      `${DIRECTIONAL_GLYPH_COMPONENT} chooses between two elements on a condition`,
-    ).toEqual([]);
   });
 
   // The dataset ceiling is written twice on purpose, once where a reader

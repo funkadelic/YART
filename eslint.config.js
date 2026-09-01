@@ -64,6 +64,26 @@ const LOCALE_CALL_SITE = [
   },
 ];
 
+// The way the mirror rule is undone in JavaScript rather than in CSS: a branch
+// choosing between two glyph components on the reading direction. It is
+// invisible to the stylelint rules that hold the stylesheets, because it is not
+// CSS, and invisible to the literal rule above, because a glyph component is
+// neither a text child nor a string.
+const DIRECTION_BRANCH = [
+  {
+    selector:
+      "ConditionalExpression[consequent.type=/^JSX(Element|Fragment)$/][alternate.type=/^JSX(Element|Fragment)$/]",
+    message:
+      "Two glyph components chosen on a condition are a prop, a branch and a coverage line for what one transform: scaleX(-1) under an attribute selector already does. Mirror in the stylesheet.",
+  },
+  {
+    selector:
+      "IfStatement[alternate] ReturnStatement[argument.type=/^JSX(Element|Fragment)$/]",
+    message:
+      "Two glyph components returned from two branches are a prop, a branch and a coverage line for what one transform: scaleX(-1) under an attribute selector already does. Mirror in the stylesheet.",
+  },
+];
+
 export default defineConfig([
   // Build output and test-runner output, not authored source. `eslint .` walks
   // the working tree, so without this the gate reports parse errors for an
@@ -189,6 +209,22 @@ export default defineConfig([
         "error",
         READER_FACING_ATTRIBUTE,
         ...LOCALE_CALL_SITE,
+      ],
+    },
+  },
+  // The component holding the four glyphs that mean a direction. All three
+  // selector sets, because no-restricted-syntax is configured per rule: this
+  // block replaces the two above outright for this file, and naming only the
+  // direction set would unrestrict the other two for exactly the component most
+  // likely to regain a literal.
+  {
+    files: ["src/components/DataTable/Pagination.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        READER_FACING_ATTRIBUTE,
+        ...LOCALE_CALL_SITE,
+        ...DIRECTION_BRANCH,
       ],
     },
   },
