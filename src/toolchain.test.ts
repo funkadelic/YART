@@ -371,127 +371,6 @@ function findSourceFiles(directory: string): string[] {
   return found;
 }
 
-/**
- * Every stylesheet under a directory, both dialects, so a rule asked of the
- * styling can be asked of all of it rather than of the dialect that happened to
- * be checked. The global sheet is plain CSS and every component sheet is SCSS.
- */
-function findStyleSheets(directory: string): string[] {
-  const found: string[] = [];
-
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const path = join(directory, entry.name);
-
-    if (entry.isDirectory()) {
-      if (SKIPPED_DIRECTORIES.has(entry.name)) continue;
-      found.push(...findStyleSheets(path));
-    } else if (/\.(css|scss)$/.test(entry.name)) {
-      found.push(path);
-    }
-  }
-
-  return found;
-}
-
-/** One declaration as written, with the property and the value already split. */
-interface StyleDeclaration {
-  readonly property: string;
-  readonly value: string;
-}
-
-/** A stylesheet reduced to the two constructs the guards below ask about. */
-interface StyleSheetParts {
-  readonly declarations: readonly StyleDeclaration[];
-  readonly selectors: readonly string[];
-}
-
-/**
- * A stylesheet split into its declarations and its selectors.
- *
- * Constructs rather than raw text, which is this file's standard and is
- * load-bearing here twice over. Every sheet in this tree carries paragraphs
- * explaining itself, and the rules below are exactly the sort a comment states
- * in order to say why it is being obeyed: a text search would go red on the
- * explanation as readily as on a violation, at which point the guard gets
- * deleted rather than kept. Quoted runs are carried through rather than
- * dropped, because a selector matching an attribute value is a quoted run and
- * one guard below reads it.
- *
- * At-rules are not declarations: an include, a use and a media prelude all end
- * in a semicolon or open a block, and none of them sets a property.
- */
-function styleSheetParts(source: string): StyleSheetParts {
-  const declarations: StyleDeclaration[] = [];
-  const selectors: string[] = [];
-  let buffer = "";
-  let index = 0;
-
-  const flushDeclaration = (): void => {
-    const text = buffer.trim();
-    buffer = "";
-
-    if (text === "" || text.startsWith("@")) return;
-
-    const colon = text.indexOf(":");
-
-    if (colon === -1) return;
-
-    declarations.push({
-      property: text.slice(0, colon).trim().toLowerCase(),
-      value: text
-        .slice(colon + 1)
-        .trim()
-        .toLowerCase(),
-    });
-  };
-
-  while (index < source.length) {
-    const character = source[index];
-    const following = source[index + 1];
-
-    if (character === '"' || character === "'") {
-      const close = source.indexOf(character, index + 1);
-      const end = close === -1 ? source.length : close + 1;
-
-      buffer += source.slice(index, end);
-      index = end;
-      continue;
-    }
-
-    if (character === "/" && following === "/") {
-      const end = source.indexOf("\n", index);
-
-      index = end === -1 ? source.length : end;
-      continue;
-    }
-
-    if (character === "/" && following === "*") {
-      const end = source.indexOf("*/", index + 2);
-
-      index = end === -1 ? source.length : end + 2;
-      continue;
-    }
-
-    if (character === "{") {
-      selectors.push(buffer.trim());
-      buffer = "";
-      index += 1;
-      continue;
-    }
-
-    if (character === "}" || character === ";") {
-      flushDeclaration();
-      index += 1;
-      continue;
-    }
-
-    buffer += character;
-    index += 1;
-  }
-
-  return { declarations, selectors };
-}
-
 /** The component holding the four glyphs that mean a direction. */
 const DIRECTIONAL_GLYPH_COMPONENT = "src/components/DataTable/Pagination.tsx";
 
@@ -1974,33 +1853,13 @@ describe("toolchain baseline", () => {
     expect(globalSheets("src/a11y.browser.test.tsx")).toEqual(shipped);
   });
 
-  // The two ways the inline-axis rule, now `property-disallowed-list` in
-  // `.stylelintrc.json`, is most likely to be undone. Each is otherwise a
-  // sentence in a plan with nothing behind it.
-  //
-  // The mirror rule that turns the four page glyphs is written on the direction
-  // attribute for a measured reason: :dir() landed in Chrome 120 and this
-  // application's floor is 111, so the pseudo-class ships inert in the very
-  // browsers the floor exists to name. It is also the tidier-looking spelling,
-  // which is precisely why a later reader substitutes it.
-  it("selects direction on the attribute rather than on the pseudo-class", () => {
-    const offenders = findStyleSheets(join(projectRoot, "src"))
-      .filter((sheet) => sheet.endsWith(".scss"))
-      .flatMap((sheet) =>
-        styleSheetParts(readFileSync(sheet, "utf8"))
-          .selectors.filter((selector) => selector.includes(":dir("))
-          .map((selector) => `${relative(projectRoot, sheet)}: ${selector}`),
-      );
-
-    expect(offenders).toEqual([]);
-  });
-
-  // The other substitution: a branch in the component choosing between two glyph
-  // components on the direction, which is a prop and a coverage line for what one
-  // declaration does. A returning branch is invisible to the stylesheet guard
-  // above because it is not CSS, and invisible to the shared layer's literal
-  // guard because a glyph component is neither a text child nor a string, so it
-  // is asserted here or nowhere.
+  // The way the mirror rule is undone in JavaScript rather than in CSS: a branch
+  // in the component choosing between two glyph components on the direction,
+  // which is a prop and a coverage line for what one declaration does. It is
+  // invisible to the stylelint rules that hold the stylesheets because it is not
+  // CSS, and invisible to the shared layer's literal guard because a glyph
+  // component is neither a text child nor a string, so it is asserted here or
+  // nowhere.
   it("picks the page glyphs with a stylesheet rather than with a branch", () => {
     const alternatives = jsxAlternatives(
       moduleSource(DIRECTIONAL_GLYPH_COMPONENT),

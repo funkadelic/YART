@@ -38,6 +38,12 @@
       {
         "message": "An inline-axis value follows the document rather than the page: use text-align: start, float: inline-start or clear: inline-end"
       }
+    ],
+    "selector-disallowed-list": [
+      ["/:dir\\(/"],
+      {
+        "message": "The :dir() pseudo-class landed in Chrome 120 against this application's floor of 111, so it ships inert in the very browsers the floor exists to name: select the direction on the attribute, as [dir=\"rtl\"] .navButton svg does"
+      }
     ]
   }
 }
