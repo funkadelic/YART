@@ -67,6 +67,17 @@ const RETIRED_TOKENS = [
   "--background-light-hover",
   "--accent-color",
   "--error-color",
+  // The flat gray ramp the --neutral- primitives replaced. Retired names rather
+  // than a retired tier: nothing declares one any more, so a reference resolves
+  // to nothing.
+  "--gray-50",
+  "--gray-100",
+  "--gray-400",
+  "--gray-500",
+  "--gray-600",
+  "--gray-700",
+  "--gray-800",
+  "--gray-900",
 ];
 
 // The four hex lengths CSS accepts, and nothing longer, so an identifier that
