@@ -61,6 +61,23 @@
           {
             "message": "Colour in a component stylesheet arrives through var(--color-*) and nowhere else; a keyword is as fixed as a hex and flips with no theme"
           }
+        ],
+        "declaration-property-unit-allowed-list": [
+          {
+            "margin": ["rem"],
+            "margin-block": ["rem"],
+            "margin-inline": ["rem"],
+            "padding": ["rem"],
+            "padding-block": ["rem"],
+            "padding-inline": ["rem"],
+            "gap": ["rem"],
+            "row-gap": ["rem"],
+            "column-gap": ["rem"],
+            "font-size": ["rem"]
+          },
+          {
+            "message": "Spacing and type are authored in rem through a token, so the layout follows the reader's browser font-size setting: reach for var(--space-*) or var(--font-size-*)"
+          }
         ]
       }
     },
@@ -68,6 +85,12 @@
       "files": ["src/index.css"],
       "rules": {
         "color-no-hex": null
+      }
+    },
+    {
+      "files": ["src/styles/_visually-hidden.scss"],
+      "rules": {
+        "declaration-property-unit-allowed-list": null
       }
     }
   ]

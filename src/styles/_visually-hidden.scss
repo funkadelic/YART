@@ -8,6 +8,11 @@
   width: 1px;
   height: 1px;
   padding: 0;
+
+  // The one px length on a spacing property in the tree, and the reason this
+  // file nulls declaration-property-unit-allowed-list in .stylelintrc.json. A
+  // unit allowed-list cannot say "a pixel or two", which is what the negative
+  // margin is: the classic off-screen clip, not spacing.
   margin: -1px;
   overflow: hidden;
   clip-path: inset(50%);

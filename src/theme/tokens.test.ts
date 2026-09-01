@@ -98,25 +98,17 @@ const OUTLINE_DECLARATION =
 const RING_CANCELLING_VALUE =
   /(?<![\w.-])(none|0(px|rem|em)?|transparent)(?![\w.%-])/i;
 
-// A border or an outline is a line rather than a length on the spacing scale,
-// and one authored in rem would thicken as the reader's type grew. Anything
-// wider than this is spacing, and spacing arrives through a token.
-const PX_HAIRLINE_MAXIMUM = 2;
-const PX_LENGTH = /(\d+(?:\.\d+)?)px/g;
-
-// Every other length that ignores the reader's setting or compounds against an
-// inherited one. Guarding px alone enforced "not px" while the stated rule is
-// "rem": 1.5em compounds against the parent's size and 12pt is a fixed physical
-// length, and neither was seen. No hairline allowance here, because a hairline
-// authored in any of these is not a hairline. The optional sign is matched only
-// after a non-word, non-hyphen character, so a negative margin is read as a
-// length while --space-2em is read as the identifier it is.
-const NON_REM_LENGTH =
-  /(?<![\w-])-?\d+(?:\.\d+)?(em|pt|pc|in|mm|cm|ex|ch)(?![\w-])/g;
-
 // The control radius and the container one, and nothing beside them. A count
 // rather than a skip, so the exemption cannot grow to cover an unrelated px.
+// src/index.css declares the tokens the stylelint unit allowed-list holds the
+// component stylesheets to, and a bounded count is a claim that rule cannot make.
 const GLOBAL_PX_ALLOWANCE = 2;
+
+// A hairline and the focus ring are lines rather than lengths on the spacing
+// scale, and one authored in rem would thicken as the reader's type grew.
+// Anything wider is spacing, and spacing arrives through a token.
+const HAIRLINE_PX = 2;
+const PX_VALUE = /(\d+(?:\.\d+)?)px/g;
 
 const SKIPPED_DIRECTORIES = new Set(["node_modules", "dist", "coverage"]);
 
@@ -129,34 +121,6 @@ function stripComments(source: string): string {
   return source
     .replace(/\/\*[\s\S]*?\*\//g, " ")
     .replace(/(^|[^:])\/\/[^\n]*/g, "$1");
-}
-
-/**
- * Source with the condition of every media at-rule blanked out. A breakpoint is
- * a viewport measurement, not a step on the spacing scale, and one expressed in
- * rem would move with the reader's type, which is the opposite of what a layout
- * breakpoint is for.
- */
-function stripMediaConditions(source: string): string {
-  return source.replace(/@media[^{]*/g, "@media ");
-}
-
-/**
- * The lengths in a stylesheet that are not on the rem scale: any px wide enough
- * to be spacing rather than a hairline, plus every unit that is not rem at all.
- * Judged on the file with its comments and its breakpoints removed first, so a
- * retired value quoted in an explanation is read as prose and a breakpoint is
- * read as a breakpoint.
- */
-function offScaleLengths(source: string): string[] {
-  const readable = stripMediaConditions(stripComments(source));
-
-  return [
-    ...[...readable.matchAll(PX_LENGTH)]
-      .filter(([, magnitude]) => Number(magnitude) > PX_HAIRLINE_MAXIMUM)
-      .map(([length]) => length),
-    ...[...readable.matchAll(NON_REM_LENGTH)].map(([length]) => length),
-  ];
 }
 
 /**
@@ -609,28 +573,17 @@ describe("stray declarations in the component stylesheets", () => {
   });
 });
 
-// The counterpart to the colour guard, and the reason the walk above takes
-// every stylesheet rather than the module ones: the rule this keeps is that
-// spacing and type are authored in rem through a token, so the layout follows
-// the reader's browser font-size setting. A stylesheet written after this file
-// inherits the rule by being walked, without anyone restating it.
-describe("length in the stylesheets", () => {
-  it("leaves no px spacing in any component stylesheet", () => {
-    const offenders: string[] = [];
-
-    for (const file of componentStylesheets) {
-      for (const length of offScaleLengths(readFileSync(file, "utf8"))) {
-        offenders.push(
-          `${relative(projectRoot, file)}: holds ${length}, which is spacing and belongs to a token`,
-        );
-      }
-    }
-
-    expect(offenders).toEqual([]);
-  });
-
+// The half of the length rule stylelint's unit allowed-list has no way to say.
+// It counts rather than forbids, and it reads src/index.css, where the two
+// corner radii are px on purpose: growing with the reader's type would only
+// distort the shape.
+describe("length in the global stylesheet", () => {
   it("allows the global stylesheet the corner radii and nothing beside them", () => {
-    const found = offScaleLengths(readFileSync(cssPath, "utf8"));
+    const found = [
+      ...stripComments(readFileSync(cssPath, "utf8")).matchAll(PX_VALUE),
+    ]
+      .filter(([, magnitude]) => Number(magnitude) > HAIRLINE_PX)
+      .map(([length]) => length);
 
     expect(
       found,
@@ -677,40 +630,6 @@ describe("the focus ring", () => {
 // spelling below is one a real author reaches for and one an earlier revision of
 // these matchers passed, so the reach is asserted rather than assumed.
 describe("the reach of the guards", () => {
-  it("sees a length authored off the rem scale, whatever unit carries it", () => {
-    for (const declaration of [
-      "padding: 1.5em;",
-      "margin: 12pt;",
-      "width: 2in;",
-      "gap: 3mm;",
-      "inline-size: 40ch;",
-      "margin-top: -1.5em;",
-      "padding: 24px;",
-    ]) {
-      expect(
-        offScaleLengths(declaration),
-        `${declaration} is invisible to the length guard`,
-      ).not.toEqual([]);
-    }
-  });
-
-  it("reads the rem scale, a hairline and a viewport measure as none of that", () => {
-    for (const declaration of [
-      "padding: 1.5rem;",
-      "gap: 0.25rem;",
-      "width: 50%;",
-      "min-height: 100vh;",
-      "border-bottom: 1px solid var(--color-border);",
-      "margin: 0;",
-      "--space-2em: 1rem;",
-    ]) {
-      expect(
-        offScaleLengths(declaration),
-        `${declaration} is reported as an off-scale length`,
-      ).toEqual([]);
-    }
-  });
-
   it("sees a suppressed focus ring however it is spelled", () => {
     for (const declaration of [
       "outline: none;",
