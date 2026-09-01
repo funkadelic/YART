@@ -11,13 +11,7 @@ interface TableHeadProps<T, Id extends string> {
   readonly onSortChange: (columnId: Id) => void;
 }
 
-/**
- * The header cell's sort state, in the three values the attribute accepts.
- *
- * Every column carries one: a sortable column that is not the active one
- * reports "none" rather than omitting the attribute, so assistive technology
- * describes it as sortable-but-unsorted instead of not sortable at all.
- */
+/** An inactive column reports "none" rather than omitting the attribute. */
 function ariaSort(
   direction: "asc" | "desc" | null,
 ): "ascending" | "descending" | "none" {
@@ -26,15 +20,7 @@ function ariaSort(
   return "none";
 }
 
-/**
- * The header row: one cell per column, each carrying the control that cycles
- * the sort and the state the cycle is currently in.
- *
- * Everything rendered here comes from the descriptor, so this component names
- * no field of the row type it orders. The width the descriptor may carry is
- * applied as a style object rather than interpolated into an attribute, which
- * is what keeps an author-supplied string off the attribute itself.
- */
+/** The header row. The width is a style object, not an interpolation. */
 export function TableHead<T, Id extends string>({
   columns,
   sortColumnId,

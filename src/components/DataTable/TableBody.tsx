@@ -7,15 +7,7 @@ interface TableBodyProps<T, Id extends string> {
   readonly getRowId: (row: T) => string;
 }
 
-/**
- * The data rows: one row per element, one cell per column, each cell produced
- * by that column's own renderer.
- *
- * The renderer's return value is inserted as a child, which the framework
- * escapes, and the default renderer stringifies the value. That is the whole
- * defence for a cell slot an author controls, and it is enough only for as long
- * as no raw-markup insertion appears anywhere near it.
- */
+/** The data rows, each cell produced by its own column's renderer. */
 export function TableBody<T, Id extends string>({
   rows,
   columns,

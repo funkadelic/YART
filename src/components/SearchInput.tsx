@@ -2,12 +2,7 @@ import { FiSearch } from "react-icons/fi";
 
 import styles from "./SearchInput.module.scss";
 
-/**
- * The two strings this control shows.
- *
- * One object rather than two loose props, so the pair moves together when the
- * language does and a caller cannot supply half of it.
- */
+/** The two strings this control shows, as one object so they move together. */
 export interface SearchInputLabels {
   /** The accessible name: what the control does, not what it searches. */
   readonly name: string;
@@ -22,12 +17,9 @@ interface SearchInputProps {
 }
 
 /**
- * The search box above the table.
- *
- * The term is reported upward rather than held here, so the control stays a
- * pure function of the value its owner already has. The event-to-term
- * conversion happens here, at the only place that knows an input event exists,
- * which keeps the callback signature free of the DOM.
+ * The search box above the table. The term is reported upward rather than held
+ * here, and the event-to-term conversion happens at the only place that knows
+ * an input event exists, which keeps the callback signature free of the DOM.
  *
  * a11y: the accessible name describes what the control does rather than what it
  * searches, which is why it is one word and not the name of a collection. That
@@ -38,10 +30,7 @@ interface SearchInputProps {
  * the caller knows.
  */
 export function SearchInput({ value, onChange, labels }: SearchInputProps) {
-  /**
-   * Reports every keystroke upward. Debouncing belongs to whoever owns the
-   * request, not to the control.
-   */
+  /** Reports every keystroke upward; debouncing belongs to the request owner. */
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
   };
