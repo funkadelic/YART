@@ -25,11 +25,12 @@ const TEST_SCAFFOLDING_IMPORT = {
 };
 
 export default defineConfig([
-  // Build output, not authored source. `eslint .` walks the working tree, so
-  // without this the gate reports parse errors for an emitted bundle and a
-  // coverage report.
+  // Build output and test-runner output, not authored source. `eslint .` walks
+  // the working tree, so without this the gate reports parse errors for an
+  // emitted bundle, a coverage report, and the page resources the visual spec
+  // archives under test-results/.
   {
-    ignores: ["dist/", "coverage/"],
+    ignores: ["dist/", "coverage/", "test-results/", "playwright-report/"],
   },
   {
     files: ["**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}"],

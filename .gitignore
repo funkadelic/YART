@@ -55,3 +55,9 @@ src/__screenshots__/
 # test-results/, which the end-to-end runner clears before every run, and
 # rewritten each time rather than describing this tree.
 /junit
+
+# The Chromatic CLI's own artifacts, written into the repository root. The build
+# log is named for the archive build script, which is the one this project runs.
+chromatic.log
+chromatic-diagnostics.json
+build-archive.log
