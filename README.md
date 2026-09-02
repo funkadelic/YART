@@ -394,22 +394,22 @@ The pipeline sends three reports to [Codecov](https://codecov.io/gh/funkadelic/Y
 
 ## Scripts
 
-| Script                    | What it does                                                          |
-| ------------------------- | --------------------------------------------------------------------- |
-| `npm run dev`             | Start the dev server with hot reload                                  |
-| `npm run build`           | Build the production bundle                                           |
-| `npm run preview`         | Serve the built bundle locally                                        |
-| `npm test`                | Run the test suite once                                               |
-| `npm run test:watch`      | Run the test suite in watch mode                                      |
-| `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%      |
-| `npm run test:browser`    | Run the accessibility checks in a real Chromium                       |
-| `npm run test:e2e`        | Run the end-to-end suite in a real Chromium against a built bundle    |
-| `npm run chromatic`       | Upload the snapshots the end-to-end run archived, for visual review   |
-| `npm run typecheck`       | Check types without emitting output                                   |
-| `npm run lint`            | Run ESLint then Stylelint; a warning fails it (`lint:fix` to autofix) |
-| `npm run format`          | Run Prettier                                                          |
-| `npm run format:check`    | Check formatting without rewriting anything                           |
-| `npm run generate:cities` | Regenerate the committed dataset asset from the upstream CSV export   |
+| Script                    | What it does                                                               |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `npm run dev`             | Start the dev server with hot reload                                       |
+| `npm run build`           | Build the production bundle                                                |
+| `npm run preview`         | Serve the built bundle locally                                             |
+| `npm test`                | Run the test suite once                                                    |
+| `npm run test:watch`      | Run the test suite in watch mode                                           |
+| `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%           |
+| `npm run test:browser`    | Run the accessibility checks in a real Chromium                            |
+| `npm run test:e2e`        | Run the end-to-end suite in a real Chromium against a built bundle         |
+| `npm run chromatic`       | Upload the snapshots a full `npm run test:e2e` archived, for visual review |
+| `npm run typecheck`       | Check types without emitting output                                        |
+| `npm run lint`            | Run ESLint then Stylelint; a warning fails it (`lint:fix` to autofix)      |
+| `npm run format`          | Run Prettier                                                               |
+| `npm run format:check`    | Check formatting without rewriting anything                                |
+| `npm run generate:cities` | Regenerate the committed dataset asset from the upstream CSV export        |
 
 `npm run test:browser` and `npm run test:e2e` both drive a real Chromium. `npm ci` downloads neither that browser nor the system libraries it needs, so a clean clone fetches both once with `npx playwright install --with-deps --only-shell chromium`, whose `--with-deps` half needs `sudo` on Linux. CI runs that same command, so every path installs the same binary.
 

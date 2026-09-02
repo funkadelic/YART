@@ -19,10 +19,11 @@ jobs:
     # catches a hang in setup or in either install without holding the machine for
     # the six-hour platform default.
     timeout-minutes: 10
-    # At job level rather than on the step, because a step's `if` cannot read env
-    # the step itself declares, and the guard below tests the token's presence.
+    # A boolean rather than the token, because `secrets` is not an allowed
+    # context in a step's `if`. The token itself stays on the one step that
+    # needs it, out of the environment of the install and of every action here.
     env:
-      CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+      HAS_CHROMATIC: ${{ secrets.CHROMATIC_PROJECT_TOKEN != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -169,13 +170,22 @@ jobs:
       # the scan and the Pages artifact. It reads the archives the end-to-end
       # sweep already wrote, so it rebuilds and re-runs nothing.
       #
-      # A visual change exits zero. An unaccepted diff is a review item rather
-      # than a broken build, and Chromatic's own pull request check is where it
-      # is accepted. The token guard rather than an actor check, because this
-      # repository is public and a fork pull request gets no secret at all.
+      # Pull requests and main only. Both event types fire on a branch with an
+      # open pull request, in different concurrency groups, so without this every
+      # commit is captured and metered twice.
+      #
+      # Exits once the build is uploaded rather than waiting out the capture, so
+      # a slow queue cannot spend the job's budget. The accept gate is
+      # Chromatic's own pull request check rather than this exit code. The token
+      # is guarded rather than the actor, because this repository is public and a
+      # fork pull request gets no secret at all.
       - name: Chromatic
-        if: env.CHROMATIC_PROJECT_TOKEN != ''
-        run: npx chromatic --playwright --exit-zero-on-changes
+        if: >-
+          env.HAS_CHROMATIC == 'true'
+          && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+        env:
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+        run: npx chromatic --playwright --exit-once-uploaded
 
   # A job rather than its own workflow, because `needs` is what makes the publish
   # wait on the gate. The write permissions sit here so the job running untrusted
