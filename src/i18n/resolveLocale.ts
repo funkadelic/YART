@@ -1,52 +1,28 @@
-// The locale's vocabulary and the one rule that turns a stored choice plus the
-// reader's own preferences into something the document, the catalogs and the
-// platform formatters can each act on. Everything the inline script in
+// The locale's vocabulary and the rule that turns a stored choice plus the
+// reader's preferences into a resolved locale. Everything the inline script in
 // index.html duplicates by hand is declared here.
 
-/**
- * Every catalog that ships, in the order the picker offers them.
- *
- * The last is not a language. It is the readable right-to-left pseudo-locale
- * that exists so direction and truncation have something to prove themselves
- * against, because the other three are all left to right.
- */
+/** Every catalog that ships. The last is a pseudo-locale, not a language. */
 export const CATALOG_IDS = ["en", "es", "fr", "ar-XB"] as const;
 
 /** The literal union of the ids above, formed with no assertion anywhere. */
 export type CatalogId = (typeof CATALOG_IDS)[number];
 
 /**
- * The catalogs a preference list is allowed to select.
- *
- * The pseudo-locale is excluded because its primary subtag is ar, and an
- * unfiltered walk would hand a reader who genuinely prefers Arabic a catalog of
- * bracketed English. It stays reachable the only way it should be, by being
- * chosen.
+ * The catalogs a preference list may select. The pseudo-locale's primary
+ * subtag is ar, and negotiation matches on that, so an unfiltered walk would
+ * serve bracketed English to a reader who wants Arabic. Excluding it here
+ * leaves it reachable the only way it should be, by being chosen.
  */
 export const NEGOTIABLE_CATALOG_IDS = ["en", "es", "fr"] as const;
 
-/**
- * What the reader picked. The word rather than a catalog id means follow the
- * machine, which is the default and is a choice like any other rather than the
- * absence of one.
- */
+/** The word rather than an id means follow the machine, the default. */
 export type LocaleChoice = CatalogId | "system";
 
 /** The storage key. The inline script in index.html spells this out by hand. */
 export const LOCALE_STORAGE_KEY = "yart-locale";
 
-/**
- * A resolved locale is three fields rather than one: which catalog supplies the
- * strings, which language tag the platform formatters get, and which direction
- * the document carries.
- *
- * The split is load-bearing rather than tidy. The pseudo-locale's id is a well
- * formed language tag, so an engine carrying Arabic data would collate and
- * format for Arabic if the id were passed through, and jsdom, Chromium and Node
- * would each answer differently for reasons that have nothing to do with this
- * code. Its strings really are English, so its tag is English and only its
- * direction is borrowed.
- */
+/** Three fields, because the pseudo-locale borrows a direction, not a tag. */
 export interface ResolvedLocale {
   /** Which catalog supplies the strings. */
   readonly catalog: CatalogId;
@@ -56,18 +32,7 @@ export interface ResolvedLocale {
   readonly dir: "ltr" | "rtl";
 }
 
-/**
- * The whole mapping, as literals.
- *
- * Direction is written out rather than asked of Intl.Locale.prototype
- * getTextInfo, which is Chrome 130, Firefox 153 and Safari 17 against this
- * app's floor of Chrome 111, Firefox 111 and Safari 16.4. Node 24 carries it,
- * so a test of it under this runner would pass while Firefox 111 through 152
- * threw at the reader.
- *
- * Indexed only by a value of the closed union, so the lookup is total and there
- * is no fallback arm here that nothing can reach.
- */
+/** Direction written out: Intl.Locale getTextInfo is above the browser floor. */
 const RESOLVED_LOCALES = {
   en: { catalog: "en", tag: "en-US", dir: "ltr" },
   es: { catalog: "es", tag: "es-ES", dir: "ltr" },
@@ -75,15 +40,9 @@ const RESOLVED_LOCALES = {
   "ar-XB": { catalog: "ar-XB", tag: "en-US", dir: "rtl" },
 } as const satisfies Readonly<Record<CatalogId, ResolvedLocale>>;
 
-/**
- * Whether a value names a catalog that ships. The one gate between a
- * reader-controlled string, from storage or from another document, and a lookup
- * in a record keyed by the closed union.
- */
+/** The one gate between a reader-controlled string and the closed union. */
 export function isCatalogId(value: unknown): value is CatalogId {
-  // Widened for the search alone. The array is a closed tuple of catalog ids,
-  // so its own includes rejects an unknown argument outright, and the whole
-  // point here is to ask about one.
+  // Widened for the search: the tuple's own includes rejects an unknown.
   return (CATALOG_IDS as readonly unknown[]).includes(value);
 }
 
@@ -93,10 +52,8 @@ export function isLocaleChoice(value: unknown): value is LocaleChoice {
 }
 
 /**
- * A language tag's primary subtag, lowercased, which is the unit the lookup
- * below matches on. Written with a search rather than a split so a tag carrying
- * no separator takes a real branch instead of an index access that can never be
- * absent.
+ * A language tag's primary subtag. A search rather than a split, so a tag with
+ * no separator takes a real branch rather than an index that is never absent.
  */
 function primarySubtag(tag: string): string {
   const separator = tag.indexOf("-");
@@ -105,24 +62,9 @@ function primarySubtag(tag: string): string {
 }
 
 /**
- * The rule that turns a choice plus the reader's preference list into the
- * locale everything downstream reads.
- *
- * An explicit choice wins outright. Otherwise the preferences are walked in
- * order and the first one whose primary subtag names a negotiable catalog is
- * taken, which is the lookup rule from the language-tag matching standard
- * reduced to the part this app can answer. Nothing matching is the base catalog
- * rather than a failure, so the function is total and no caller has a throw to
- * handle.
- *
- * Every answer is one of four module constants, so the same input returns the
- * same object identity. The store below depends on that: it is what lets a
- * snapshot reader be handed straight to React without a cache in front of it.
- *
- * This same rule is written a second time, as a literal, inside the blocking
- * inline script in index.html. It has to be: that script runs before any module
- * loads, so it cannot import this function. The guard in src/toolchain.test.ts
- * is what holds the two copies together.
+ * Turns a choice plus a preference list into a resolved locale, always one of
+ * four module constants, so identity is stable. Written a second time as a
+ * literal in index.html's inline script; the parity guard holds the two.
  */
 export function resolveLocale(
   choice: LocaleChoice,

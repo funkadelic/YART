@@ -2,60 +2,25 @@ import type { DatasetErrorCode } from "../../api/getCities";
 import { numberFormatFor, selectPlural } from "../format";
 
 /**
- * The nouns the two woven sentences below pluralize, one record per noun,
- * total over the two categories the English tag reports.
- *
- * Total rather than defaulted, so there is no fallback arm here that nothing
- * can reach and no branch the coverage gate cannot cover. The category set is
- * CLDR data rather than a type, so what holds these honest is the catalog test,
- * which calls every catalog with a count drawn from each of its own tag's
- * categories and reads the result for a hole.
+ * The nouns the woven sentences pluralize, total over the two categories
+ * English reports, so there is no branch the coverage gate cannot cover.
  */
 const CITY = { one: "city", other: "cities" };
 const RESULT = { one: "result", other: "results" };
 const ENTRY = { one: "entry", other: "entries" };
 
-/**
- * Which way a sorted column runs.
- *
- * Declared here rather than imported from the table, because a catalog names
- * words and must not learn what a table is. It is the same pair of tokens the
- * sort state travels as, and it arrives at the two entries below as a value
- * precisely so that no sentence has to build a word out of it.
- */
+/** Declared here rather than imported: a catalog must not learn about tables. */
 export type SortedDirection = "asc" | "desc";
 
-/**
- * The two directions, as the words the sentences below weave in.
- *
- * A record rather than a suffix appended to the token, and the difference is
- * the whole reason this file changed: "ascend" plus "ing" is a word in exactly
- * one language, and a sentence assembled that way cannot be translated at all.
- * Every language spells the pair out here and reads it by key.
- */
+/** A record rather than a suffix: "ascend" plus "ing" is one language only. */
 const DIRECTION: Readonly<Record<SortedDirection, string>> = {
   asc: "ascending",
   desc: "descending",
 };
 
 /**
- * What a reader is told when the city data cannot be loaded, one sentence per
- * failure code.
- *
- * Total over the code union rather than defaulted, so a code added to the loader
- * without a sentence in all four catalogs fails the type check instead of
- * rendering the word undefined at the moment the application has already
- * failed. There is no fallback arm here and so no branch the coverage gate
- * cannot reach.
- *
- * Every entry has the same signature and most ignore both arguments, which is
- * what keeps the lookup one call with no branch. The three that use the second
- * one weave a row index or a response status and group it on the resolved tag,
- * like every other number this application shows.
- *
- * The field count in the two row sentences is written out rather than passed
- * in. It is a fact about the asset's shape rather than a quantity a reader's
- * locale groups, and the detail slot is already carrying the row.
+ * One sentence per failure code, total over the code union, so a new code fails
+ * the type check and no branch is left the coverage gate cannot reach.
  */
 export type DatasetErrorText = Readonly<
   Record<DatasetErrorCode, (tag: string, detail: number) => string>
@@ -78,21 +43,7 @@ const DATASET_ERROR_TEXT: DatasetErrorText = {
   unexpected: () => "An unexpected error occurred.",
 };
 
-/**
- * The base catalog: every string the city table shows that names what its rows
- * are or what a column of them holds, in the language the rest of the tree is
- * checked against.
- *
- * The wording is the wording the table already shipped, up to the two nouns
- * that now follow their count and the two counts that are now grouped.
- *
- * The entries taking the resolved language tag as their first parameter take it
- * for one reason: the count a reader sees is grouped by that tag's own rule, and
- * the noun beside it is selected over the categories the tag reports. Neither
- * decision can be made where the sentence is assembled, because that is one
- * layer below the locale by construction. An entry needing neither takes no tag,
- * so the signature says which entries are locale-sensitive and which are copy.
- */
+/** An entry takes the tag only when it groups a number or picks a plural. */
 export const en = {
   appTitle: "City List",
   themeGroup: "Theme",
@@ -145,10 +96,5 @@ export const en = {
   },
 };
 
-/**
- * The shape every other catalog is held to. Derived from the base rather than
- * declared beside it, so the key set has one definition: a catalog missing a key
- * or misspelling one fails the type check rather than rendering undefined at a
- * reader.
- */
+/** Derived from the base, so a missing key in another catalog fails to type. */
 export type Catalog = typeof en;

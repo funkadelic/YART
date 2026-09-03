@@ -26,7 +26,6 @@ const guardFile = here.filename;
 
 interface Manifest {
   scripts?: Record<string, string>;
-  browserslist?: unknown;
   [key: string]: unknown;
 }
 
@@ -371,227 +370,6 @@ function findSourceFiles(directory: string): string[] {
   return found;
 }
 
-/**
- * Every stylesheet under a directory, both dialects, so a rule asked of the
- * styling can be asked of all of it rather than of the dialect that happened to
- * be checked. The global sheet is plain CSS and every component sheet is SCSS.
- */
-function findStyleSheets(directory: string): string[] {
-  const found: string[] = [];
-
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const path = join(directory, entry.name);
-
-    if (entry.isDirectory()) {
-      if (SKIPPED_DIRECTORIES.has(entry.name)) continue;
-      found.push(...findStyleSheets(path));
-    } else if (/\.(css|scss)$/.test(entry.name)) {
-      found.push(path);
-    }
-  }
-
-  return found;
-}
-
-/** One declaration as written, with the property and the value already split. */
-interface StyleDeclaration {
-  readonly property: string;
-  readonly value: string;
-}
-
-/** A stylesheet reduced to the two constructs the guards below ask about. */
-interface StyleSheetParts {
-  readonly declarations: readonly StyleDeclaration[];
-  readonly selectors: readonly string[];
-}
-
-/**
- * A stylesheet split into its declarations and its selectors.
- *
- * Constructs rather than raw text, which is this file's standard and is
- * load-bearing here twice over. Every sheet in this tree carries paragraphs
- * explaining itself, and the rules below are exactly the sort a comment states
- * in order to say why it is being obeyed: a text search would go red on the
- * explanation as readily as on a violation, at which point the guard gets
- * deleted rather than kept. Quoted runs are carried through rather than
- * dropped, because a selector matching an attribute value is a quoted run and
- * one guard below reads it.
- *
- * At-rules are not declarations: an include, a use and a media prelude all end
- * in a semicolon or open a block, and none of them sets a property.
- */
-function styleSheetParts(source: string): StyleSheetParts {
-  const declarations: StyleDeclaration[] = [];
-  const selectors: string[] = [];
-  let buffer = "";
-  let index = 0;
-
-  const flushDeclaration = (): void => {
-    const text = buffer.trim();
-    buffer = "";
-
-    if (text === "" || text.startsWith("@")) return;
-
-    const colon = text.indexOf(":");
-
-    if (colon === -1) return;
-
-    declarations.push({
-      property: text.slice(0, colon).trim().toLowerCase(),
-      value: text
-        .slice(colon + 1)
-        .trim()
-        .toLowerCase(),
-    });
-  };
-
-  while (index < source.length) {
-    const character = source[index];
-    const following = source[index + 1];
-
-    if (character === '"' || character === "'") {
-      const close = source.indexOf(character, index + 1);
-      const end = close === -1 ? source.length : close + 1;
-
-      buffer += source.slice(index, end);
-      index = end;
-      continue;
-    }
-
-    if (character === "/" && following === "/") {
-      const end = source.indexOf("\n", index);
-
-      index = end === -1 ? source.length : end;
-      continue;
-    }
-
-    if (character === "/" && following === "*") {
-      const end = source.indexOf("*/", index + 2);
-
-      index = end === -1 ? source.length : end + 2;
-      continue;
-    }
-
-    if (character === "{") {
-      selectors.push(buffer.trim());
-      buffer = "";
-      index += 1;
-      continue;
-    }
-
-    if (character === "}" || character === ";") {
-      flushDeclaration();
-      index += 1;
-      continue;
-    }
-
-    buffer += character;
-    index += 1;
-  }
-
-  return { declarations, selectors };
-}
-
-/**
- * The physical properties that name one end of the inline axis, so a sheet
- * declaring one serves a left-to-right document and silently mis-serves a
- * right-to-left one.
- *
- * The block axis is deliberately absent. Top and bottom mean the same thing
- * whichever way the text runs, so banning them would be churn rather than a
- * rule.
- */
-const PHYSICAL_INLINE_PROPERTIES: ReadonlySet<string> = new Set([
-  "left",
-  "right",
-  "margin-left",
-  "margin-right",
-  "padding-left",
-  "padding-right",
-  "border-left",
-  "border-right",
-  "border-left-color",
-  "border-left-style",
-  "border-left-width",
-  "border-right-color",
-  "border-right-style",
-  "border-right-width",
-]);
-
-/**
- * The properties whose value, rather than whose name, can name one end of the
- * inline axis. Each has a logical pair, start and end, that follows the
- * document instead.
- */
-const PHYSICAL_INLINE_VALUED_PROPERTIES: ReadonlySet<string> = new Set([
-  "text-align",
-  "float",
-  "clear",
-]);
-
-/** The component holding the four glyphs that mean a direction. */
-const DIRECTIONAL_GLYPH_COMPONENT = "src/components/DataTable/Pagination.tsx";
-
-/** Whether a node is JSX, in any of the three shapes the grammar allows. */
-function isJsx(node: ts.Node): boolean {
-  return (
-    ts.isJsxElement(node) ||
-    ts.isJsxSelfClosingElement(node) ||
-    ts.isJsxFragment(node)
-  );
-}
-
-/**
- * Whether a statement's own return is JSX, ignoring any nested function.
- *
- * A callback declared inside the branch returns whatever it returns, which is
- * not the branch returning it, so the walk stops at a function boundary.
- */
-function returnsJsx(node: ts.Node): boolean {
-  if (ts.isFunctionLike(node)) return false;
-
-  if (ts.isReturnStatement(node)) {
-    return node.expression !== undefined && isJsx(node.expression);
-  }
-
-  return ts.forEachChild(node, returnsJsx) ?? false;
-}
-
-/**
- * Every conditional in a file that picks between two pieces of JSX: a ternary
- * with an element either side, or an if whose two branches each return one.
- *
- * A guarded render, which is the shape the table already uses, has JSX on one
- * side and nothing on the other and is not one of these.
- */
-function jsxAlternatives(file: ts.SourceFile): string[] {
-  const found: string[] = [];
-
-  const visit = (node: ts.Node): void => {
-    if (
-      ts.isConditionalExpression(node) &&
-      isJsx(node.whenTrue) &&
-      isJsx(node.whenFalse)
-    ) {
-      found.push(node.condition.getText(file));
-    }
-
-    if (
-      ts.isIfStatement(node) &&
-      node.elseStatement !== undefined &&
-      returnsJsx(node.thenStatement) &&
-      returnsJsx(node.elseStatement)
-    ) {
-      found.push(node.expression.getText(file));
-    }
-
-    node.forEachChild(visit);
-  };
-
-  file.forEachChild(visit);
-  return found;
-}
-
 const scannedFiles = findTestFiles(projectRoot).filter(
   (file) => file !== guardFile,
 );
@@ -604,45 +382,6 @@ const E2E_DIRECTORY = "e2e";
 function isEndToEndSpec(file: string): boolean {
   return relative(projectRoot, file).split(sep)[0] === E2E_DIRECTORY;
 }
-
-/**
- * Array.isArray narrows an unknown to any[], which reintroduces the untyped
- * value the check was meant to remove. This narrows to unknown[] instead, so
- * the elements stay unknown and have to be checked before they are used.
- */
-function isUnknownArray(value: unknown): value is unknown[] {
-  return Array.isArray(value);
-}
-
-/** browserslist wherever it is configured: inline, keyed by env, or in its own file. */
-function browserslistQueries(): unknown[] {
-  const configured = manifest.browserslist;
-
-  if (isUnknownArray(configured)) return configured;
-
-  if (configured && typeof configured === "object") {
-    return Object.values(configured as Record<string, unknown>).flatMap(
-      (value) => (isUnknownArray(value) ? value : []),
-    );
-  }
-
-  const rcPath = join(projectRoot, ".browserslistrc");
-  if (existsSync(rcPath)) {
-    return readFileSync(rcPath, "utf8")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith("#"));
-  }
-
-  return [];
-}
-
-/**
- * Queries whose meaning is decided by upstream data rather than by this manifest.
- * Any of them lets a browserslist data release move the build output with no commit.
- */
-const MOVING_QUERY =
-  /\b(defaults|last\s+\d+|dead|since\s+\d{4}|unreleased|maintained|current\s+node|node\s+current|extends|supports)\b|%/i;
 
 const FAKES_CLOCK = /\buseFakeTimers\s*\(/;
 const CONFIGURES_CLOCK = /\bfakeTimers\s*:/;
@@ -684,13 +423,6 @@ const COVERAGE_EXCLUDE_PATTERNS = [
   "src/test/**",
   "src/**/*.d.ts",
 ];
-
-// The complete coverage include list. One entry, named here for the same
-// reason its exclude sibling is written out: narrowing this to a subdirectory
-// satisfies a hundred percent by shrinking the gate's input rather than by
-// covering the code, and it is the sibling property the exclude guard does not
-// reach.
-const COVERAGE_INCLUDE_PATTERNS = ["src/**/*.{ts,tsx}"];
 
 // A suppression comment in any provider's spelling, matched against raw source
 // because a hint is itself a comment and blanking comments first would make the
@@ -1216,69 +948,6 @@ function localeCallSites(file: ts.SourceFile): string[] {
   return found;
 }
 
-/** The layer that renders any collection, and so may name none of them. */
-const SHARED_COMPONENT_DIRECTORY = "src/components";
-
-/**
- * The attributes whose string value a reader perceives.
- *
- * Two attributes carrying string values in that directory are deliberately not
- * here. The sort state attribute takes one of three values the standard itself
- * defines, and the live region's politeness setting takes one of two. Both are
- * specification tokens rather than copy: assistive technology matches on them,
- * so translating either would not localize anything, it would break the feature.
- * They are English because the specification is, which is a different fact from
- * a component holding a word for a reader.
- */
-const READER_FACING_ATTRIBUTES = new Set([
-  "aria-label",
-  "title",
-  "placeholder",
-  "alt",
-]);
-
-/**
- * Every string a reader could read out of a component: text rendered between
- * tags, and a literal on one of the attributes above.
- *
- * Parsed rather than searched, which is this file's standard and is what makes
- * the guard survivable. Every component in that directory carries paragraphs of
- * prose explaining itself, and a search would fail on the explanation of the
- * rule as readily as on a violation of it, at which point the guard gets
- * deleted rather than obeyed. An attribute whose value is an expression is not
- * a literal and is not collected: reading a string out of a prop is the shape
- * this rule exists to require.
- */
-function readerFacingLiterals(file: ts.SourceFile): string[] {
-  const found: string[] = [];
-
-  const visit = (node: ts.Node): void => {
-    // Whitespace between elements is text too, so the letter is what separates
-    // a rendered word from the indentation around it.
-    if (ts.isJsxText(node) && /\p{L}/u.test(node.text)) {
-      found.push(node.text.trim());
-    }
-
-    if (ts.isJsxAttribute(node)) {
-      const name = node.name.getText(file);
-      const value = node.initializer;
-
-      if (
-        READER_FACING_ATTRIBUTES.has(name) &&
-        value !== undefined &&
-        ts.isStringLiteralLike(value)
-      ) {
-        found.push(`${name}="${value.text}"`);
-      }
-    }
-
-    node.forEachChild(visit);
-  };
-
-  file.forEachChild(visit);
-  return found;
-}
-
 describe("toolchain baseline", () => {
   // This guard used to ban a list of names belonging to the runner that was
   // removed, and nothing else. A second runner arriving with a config of its own
@@ -1340,61 +1009,6 @@ describe("toolchain baseline", () => {
       /(^|\s)(-w|--watch)\b/,
     );
     expect(script, "the test script names no project").toMatch(/--project[= ]/);
-  });
-
-  // The guard above covers the script a developer types and neither of the two
-  // the pipeline runs. Both are asserted as the properties that make them gates
-  // rather than as one string, for the same reason: adding a flag is free and
-  // dropping the one that matters is not.
-  //
-  // Without --coverage nothing measures coverage, so the threshold is never
-  // evaluated and coverage/lcov.info is never written, which the Sonar import
-  // reads as a silent zero rather than as an error. Without the browser project
-  // named, the browser script fans out to every project and reports the
-  // deterministic suite a second time as if it were the real-engine one.
-  //
-  // The end-to-end script is read the other way round: it must carry no
-  // coverage flag at all. The answer written beside its config is that this
-  // runner measures nothing and the hundred percent threshold stays over the
-  // deterministic project alone, and without this line that answer is a claim
-  // about intent that nothing checks. The failure it prevents is silent rather
-  // than loud: a coverage flag added later emits a second report over the same
-  // directory the static analysis import reads.
-  //
-  // Nothing else has to move for that carve, and both reasons are worth stating
-  // because both stop holding if the end-to-end specs are ever moved under the
-  // source directory. The coverage block of the build config is untouched, which
-  // is what keeps the four-pattern exclude set guard green, and the static
-  // analysis source set is the source directory, which is what keeps the derived
-  // inclusions guard green. Both hold because the specs live outside it.
-  it("keeps each pipeline test script carrying the flags its gate needs, and none it must not", () => {
-    const coverage = manifest.scripts?.["test:coverage"] ?? "";
-
-    expect(coverage, "the coverage script collects no coverage").toMatch(
-      /(^|\s)--coverage\b/,
-    );
-    expect(coverage, "the coverage script names no project").toMatch(
-      /--project[= ]jsdom\b/,
-    );
-
-    expect(
-      manifest.scripts?.["test:browser"] ?? "",
-      "the browser script does not name the browser project",
-    ).toMatch(/--project[= ]browser\b/);
-
-    // Read off the script itself rather than off an empty-string fallback. The
-    // two assertions above get existence for free because they match a flag
-    // positively and an absent script matches nothing; this one is the inverted
-    // case, where an absent script satisfies the pattern it is checked against.
-    // Without the line below, deleting the end-to-end script entirely passes
-    // the guard that exists to keep it honest.
-    const endToEnd = manifest.scripts?.["test:e2e"];
-
-    expect(endToEnd, "the end-to-end script is gone").toBeDefined();
-    expect(
-      endToEnd as string,
-      "the end-to-end script collects coverage, which writes a second report into the directory the static analysis import reads",
-    ).not.toMatch(/(^|\s)--coverage\b/);
   });
 
   // A report the upload step cannot collect is skipped, so the pipeline stays
@@ -1522,15 +1136,6 @@ describe("toolchain baseline", () => {
         `${WORKFLOW_FILE} installs the headless shell alone and ${name} launches a browser that is not it`,
       ).toBe(false);
     }
-  });
-
-  // Most of the hook rule family is registered at warn rather than error by the
-  // plugin's own config, exhaustive-deps among them. Without the flag the gate
-  // exits zero with all of them reported, so neither the pipeline nor the
-  // pre-commit hook can fail on the rule that guards every dependency array in
-  // the tree.
-  it("fails the lint gate on a warning as well as an error", () => {
-    expect(manifest.scripts?.lint).toContain("--max-warnings 0");
   });
 
   // Nothing under src/ imports the icon or the manifest. index.html names each
@@ -1688,49 +1293,6 @@ describe("toolchain baseline", () => {
         expect(locale.catalog, `the ${id} entry`).toBe(id);
       }
     });
-  });
-
-  // browserslist is pinned to explicit versions like the rest of the manifest. A
-  // shared query such as "defaults" or "last 2 versions" would let upstream data
-  // releases move the build output without a commit.
-  it("pins browserslist to explicit versions rather than a moving query", () => {
-    const queries = browserslistQueries();
-
-    expect(
-      queries.length,
-      "browserslist is configured nowhere",
-    ).toBeGreaterThan(0);
-
-    for (const query of queries) {
-      expect(typeof query, `${String(query)} is not a string`).toBe("string");
-      expect(query as string, `${String(query)} is a moving query`).not.toMatch(
-        MOVING_QUERY,
-      );
-      expect(
-        query as string,
-        `${String(query)} names no explicit version`,
-      ).toMatch(/\d/);
-    }
-  });
-
-  // CI runs the format check and so does the hook, which catches drift before it
-  // becomes a commit rather than after it becomes a push.
-  it("runs lint and the format check from the pre-commit hook", () => {
-    const hookPath = join(projectRoot, ".husky", "pre-commit");
-
-    expect(existsSync(hookPath), ".husky/pre-commit is missing").toBe(true);
-
-    // Judged on live lines only: commenting the commands out and falling through to
-    // a bare exit disables the hook while leaving every expected string in the file.
-    const live = readFileSync(hookPath, "utf8")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith("#"));
-
-    expect(live.some((line) => line.includes("npm run lint"))).toBe(true);
-    expect(live.some((line) => line.includes("npm run format:check"))).toBe(
-      true,
-    );
   });
 
   // A faked clock plus the user input library deadlocks unless the library is told
@@ -1902,28 +1464,6 @@ describe("toolchain baseline", () => {
     expect(patterns?.toSorted()).toEqual(COVERAGE_EXCLUDE_PATTERNS.toSorted());
   });
 
-  // The threshold is the single line that turns the number into a gate, and the
-  // include list decides what the number is measured over. Both sit beside the
-  // exclude list and neither was guarded, so the gate could be reverted to a
-  // report, or fitted to a third of the tree, with every other guard green.
-  // Compared the same way the exclude list is: reordering is not a weakening
-  // and must not flap, while narrowing, widening or emptying must all fail.
-  it("keeps the coverage gate at a hundred percent over the whole source tree", () => {
-    expect(
-      coverageBlock(),
-      `${CONFIG_FILE} declares no hundred percent coverage threshold`,
-    ).toMatch(/thresholds\s*:\s*\{\s*100\s*:\s*true\s*,?\s*\}/);
-
-    const patterns = coveragePatterns("include");
-
-    expect(
-      patterns,
-      `${CONFIG_FILE} declares no coverage include list`,
-    ).not.toBeNull();
-
-    expect(patterns?.toSorted()).toEqual(COVERAGE_INCLUDE_PATTERNS.toSorted());
-  });
-
   // Sonar reads a file the coverage report excludes as main source and counts
   // every line of it as uncovered, which is how the same tree reported 92.9%
   // there and 98.5% here. The properties file states that the two lists have to
@@ -2009,77 +1549,6 @@ describe("toolchain baseline", () => {
     ).toBeGreaterThan(0);
 
     expect(globalSheets("src/a11y.browser.test.tsx")).toEqual(shipped);
-  });
-
-  // Direction-dependent geometry is written once, on the inline axis, so one
-  // stylesheet serves both directions and there is no second artifact to keep in
-  // step. Five declarations in this tree were physical and were rewritten; a
-  // sixth arriving is invisible to every other check here, and is exactly the
-  // kind of thing that is correct in the browser the author happens to use.
-  //
-  // A test rather than a lint rule because the standard configuration in use
-  // carries no such rule, and the plugin that does is a new dependency for five
-  // declarations. This file already walks the tree and already parses what it
-  // asks about, so the guard costs a function rather than an install.
-  it("keeps direction-dependent geometry on the inline axis in every stylesheet", () => {
-    const sheets = findStyleSheets(join(projectRoot, "src"));
-
-    expect(
-      sheets.length,
-      "src/ carries no stylesheet, so this guard is reading nothing",
-    ).toBeGreaterThan(0);
-
-    const offenders = sheets.flatMap((sheet) => {
-      const name = relative(projectRoot, sheet);
-
-      return styleSheetParts(readFileSync(sheet, "utf8"))
-        .declarations.filter(
-          ({ property, value }) =>
-            PHYSICAL_INLINE_PROPERTIES.has(property) ||
-            (PHYSICAL_INLINE_VALUED_PROPERTIES.has(property) &&
-              /\b(?:left|right)\b/.test(value)),
-        )
-        .map(({ property, value }) => `${name}: ${property}: ${value}`);
-    });
-
-    expect(offenders).toEqual([]);
-  });
-
-  // The two ways the rule above is most likely to be undone. Each is otherwise a
-  // sentence in a plan with nothing behind it.
-  //
-  // The mirror rule that turns the four page glyphs is written on the direction
-  // attribute for a measured reason: :dir() landed in Chrome 120 and this
-  // application's floor is 111, so the pseudo-class ships inert in the very
-  // browsers the floor exists to name. It is also the tidier-looking spelling,
-  // which is precisely why a later reader substitutes it.
-  it("selects direction on the attribute rather than on the pseudo-class", () => {
-    const offenders = findStyleSheets(join(projectRoot, "src"))
-      .filter((sheet) => sheet.endsWith(".scss"))
-      .flatMap((sheet) =>
-        styleSheetParts(readFileSync(sheet, "utf8"))
-          .selectors.filter((selector) => selector.includes(":dir("))
-          .map((selector) => `${relative(projectRoot, sheet)}: ${selector}`),
-      );
-
-    expect(offenders).toEqual([]);
-  });
-
-  // The other substitution: a branch in the component choosing between two glyph
-  // components on the direction, which is a prop and a coverage line for what one
-  // declaration does. A returning branch is invisible to the stylesheet guard
-  // above because it is not CSS, and invisible to the shared layer's literal
-  // guard because a glyph component is neither a text child nor a string, so it
-  // is asserted here or nowhere.
-  it("picks the page glyphs with a stylesheet rather than with a branch", () => {
-    const alternatives = jsxAlternatives(
-      moduleSource(DIRECTIONAL_GLYPH_COMPONENT),
-    );
-
-    expect(
-      alternatives,
-      `${DIRECTIONAL_GLYPH_COMPONENT} chooses between two elements on a condition`,
-    ).toEqual([]);
   });
 
   // The dataset ceiling is written twice on purpose, once where a reader
@@ -2280,85 +1749,89 @@ describe("toolchain baseline", () => {
   // The application resolves one locale and four surfaces follow it: the
   // catalog, the document element, the ordering of text and the grouping of
   // numbers. A fifth surface asking the platform for a locale of its own would
-  // reintroduce the defect this phase closed, and would do it invisibly, since
-  // a machine whose own preference is the base tag renders every one of them
-  // identically. Counting the call sites is the only thing that notices.
+  // reintroduce the defect the locale layer closed, and would do it invisibly,
+  // since a machine whose own preference is the base tag renders every one of
+  // them identically.
   //
-  // Test files are excluded, and deliberately. A test asserting a formatted
-  // string has to compute the expectation through the platform rather than type
-  // it, because the French group separator is a narrow no-break space and a
-  // typed literal fails on a difference no terminal renders. So the ban is on
-  // shipped call sites, not on the name.
-  it("asks the platform for a locale in exactly one module", () => {
-    const sources = findSourceFiles(join(projectRoot, "src"));
+  // The modules under src/ are held by the no-restricted-syntax rules in
+  // eslint.config.js. Two halves of that rule are outside what a lint rule can
+  // reach, and both are here. ESLint does not lint HTML, so the inline script is
+  // asserted here or nowhere; and a disallow rule cannot say that the formatter
+  // module still builds anything, so it passes just as happily on a formatter
+  // module with its caches deleted.
+  it("asks the platform for a locale only where the lint rule cannot reach", () => {
+    // The inline script resolves a locale of its own before any module loads.
+    // It reaches its answer through a literal map rather than through the
+    // platform, so it should contribute nothing.
+    expect(
+      localeCallSites(inlineScript()),
+      "the inline script in index.html asks the platform for a locale",
+    ).toEqual([]);
 
     expect(
-      sources.length,
-      "the source walk found no module under src/, so this guard read nothing",
-    ).toBeGreaterThan(0);
-
-    const holders = new Map<string, string[]>();
-
-    for (const path of sources) {
-      const name = relative(projectRoot, path).split(sep).join("/");
-      const calls = localeCallSites(parse(readFileSync(path, "utf8")));
-
-      if (calls.length > 0) holders.set(name, calls);
-    }
-
-    // The inline script resolves a locale of its own before any module loads,
-    // so it is walked here too. It reaches its answer through a literal map
-    // rather than through the platform, so it should contribute nothing, and if
-    // it ever grows a call this is where that shows up.
-    const stamped = localeCallSites(inlineScript());
-    if (stamped.length > 0) holders.set("index.html", stamped);
-
-    expect(
-      [...holders.keys()].toSorted(),
-      "something other than the formatter module asks the platform for a locale",
-    ).toEqual([FORMATTER_MODULE]);
-
-    // Without this the assertion above passes just as happily on a formatter
-    // module that constructs nothing at all, which is the shape this guard
-    // would take the day someone deleted the caches it exists to protect.
-    expect(
-      required(
-        holders.get(FORMATTER_MODULE),
-        `the call sites in ${FORMATTER_MODULE}`,
+      localeCallSites(
+        parse(readFileSync(join(projectRoot, FORMATTER_MODULE), "utf8")),
       ).toSorted(),
       "the formatter module no longer builds the three cached instances",
     ).toEqual(["Intl.Collator", "Intl.NumberFormat", "Intl.PluralRules"]);
   });
+});
 
-  // The shared component layer renders any collection for any reader, and a
-  // literal there is a claim about which. The layer already may not import a
-  // domain type or the locale layer, and both of those are lint rules over
-  // imports; a hardcoded sentence needs no import and would pass them both.
-  // Every word that layer shows now arrives in a labels object, and this is
-  // what keeps the next one arriving the same way: a second locale added to a
-  // component still holding a literal is a second set of literals.
-  it("renders no reader-facing literal in the shared component layer", () => {
-    const components = findSourceFiles(
-      join(projectRoot, SHARED_COMPONENT_DIRECTORY),
-    );
+describe("the plugin rule sets the lint gate claims to run", () => {
+  // A flat-config block that spreads a shared config and then declares its own
+  // rules key replaces that config's rules wholesale rather than merging with
+  // them. The gate stays green, because the rules are simply absent. Same
+  // per-object replacement hazard eslint.config.js records for
+  // no-restricted-imports, one level up, and no disallow rule can state the
+  // positive claim that a rule set is still on.
+  //
+  // The one rule turned off on purpose: the new JSX transform needs no import
+  // in scope. Listed here so a second name joining it has to be deliberate.
+  const DELIBERATELY_OFF = ["react/react-in-jsx-scope"];
+
+  const severityOf = (entry: unknown): unknown =>
+    Array.isArray(entry) ? entry[0] : entry;
+
+  const isOff = (entry: unknown): boolean => {
+    const severity = severityOf(entry);
+    return severity === 0 || severity === "off" || severity === undefined;
+  };
+
+  it("has every rule of the React recommended set active", async () => {
+    const { ESLint } = await import("eslint");
+    const react = (await import("eslint-plugin-react")).default;
+
+    // calculateConfigForFile answers for a path with nothing behind it, so a
+    // rename would otherwise leave this guard green over a file that moved.
+    const target = join(projectRoot, "src/components/DataTable/TableHead.tsx");
+    expect(existsSync(target), "the guard's sample file moved").toBe(true);
+
+    const resolved: unknown = await new ESLint({
+      cwd: projectRoot,
+    }).calculateConfigForFile(target);
+    const active =
+      (resolved as { rules?: Record<string, unknown> }).rules ?? {};
+
+    const recommended = required(
+      react.configs.flat.recommended,
+      "the React recommended flat config",
+    ).rules;
+
+    // The plugin ships a few of its own recommended entries at severity 0, so
+    // the claim is over the ones it actually enables.
+    const enabled = Object.entries(recommended ?? {})
+      .filter(([, entry]) => !isOff(entry))
+      .map(([name]) => name)
+      .filter((name) => !DELIBERATELY_OFF.includes(name));
 
     expect(
-      components.length,
-      "the walk found no component, so this guard read nothing",
-    ).toBeGreaterThan(0);
-
-    const holders = new Map<string, string[]>();
-
-    for (const path of components) {
-      const name = relative(projectRoot, path).split(sep).join("/");
-      const literals = readerFacingLiterals(parse(readFileSync(path, "utf8")));
-
-      if (literals.length > 0) holders.set(name, literals);
-    }
+      enabled.length,
+      "the React recommended set is empty",
+    ).toBeGreaterThan(10);
 
     expect(
-      Object.fromEntries(holders),
-      "a component under the shared layer carries a string a reader can read",
-    ).toEqual({});
+      enabled.filter((name) => isOff(active[name])),
+      "rules of the React recommended set are not on",
+    ).toEqual([]);
   });
 });

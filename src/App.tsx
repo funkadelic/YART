@@ -9,15 +9,8 @@ import { RootLayout } from "./features/RootLayout";
 import { CityTable, parseSearchTerm } from "./features/CityTable";
 
 const App = () => {
-  // Seeded from the address so the first render already asks for the right
-  // rows. Without this the effect below issues a request for the empty term and
-  // then immediately another for the restored one, so every shared link costs
-  // two requests on a cold start; the stale-result guard makes that survivable
-  // rather than correct.
-  //
-  // This is a read of the address and stays one. The single write lives with
-  // the table's view state, one layer down, and adding a second writer here is
-  // what would make the address a thing two components argue over.
+  // Seeded from the address, or every shared link costs two requests on a cold
+  // start. A read and it stays one: the single write is one layer down.
   const [searchTerm, setSearchTerm] = useState(() =>
     parseSearchTerm(window.location.search),
   );
@@ -26,11 +19,8 @@ const App = () => {
   const { catalog, tag } = useLocale();
 
   useEffect(() => {
-    // The asynchronous work sits directly in the effect rather than behind a
-    // memoized callback, because that is what lets this one variable guard
-    // every state write below, the settle handler included. A result that
-    // arrives after the cleanup has run belongs to a search the user has
-    // already moved past, so it is dropped rather than rendered.
+    // The fetch sits in the effect so this one flag guards every write below.
+    // A result arriving after cleanup belongs to a search already moved past.
     let ignore = false;
 
     // Clear the last failure as the new attempt starts, so a retry does not
@@ -47,10 +37,8 @@ const App = () => {
         if (err instanceof Error) {
           dispatch({ type: "failed", error: err });
         } else {
-          // A rejection carrying no error at all, which the loader never
-          // produces and a stubbed seam can. It enters state as a dataset
-          // error so what the reducer holds is always something the translator
-          // below has a sentence for.
+          // A rejection carrying no error, which only a stubbed seam produces.
+          // It enters state as a dataset error so a sentence always exists.
           dispatch({
             type: "failed",
             error: new DatasetError(
@@ -71,29 +59,20 @@ const App = () => {
     };
   }, [searchTerm, retryAttempt]);
 
-  // Receives the term the search box has settled on rather than every
-  // keystroke: the debounce lives with the box now, so what arrives here is
-  // already the term worth issuing a request for. Memoized because the child
-  // holds on to it, and an empty dependency array is what makes that hold safe.
+  // Receives the settled term rather than every keystroke. Memoized with an
+  // empty dependency array, because the child holds on to it.
   const handleSearchChange = useCallback((term: string) => {
     setSearchTerm(term);
   }, []);
 
-  // The next keystroke would re-run the search too, but nothing on screen says
-  // so, which leaves a reader of the error with no way forward. Retrying on a
-  // timer with backoff was rejected instead: it hides a misconfigured
-  // deployment behind a spinner and re-downloads several megabytes of city data
-  // with nobody watching.
+  // Deliberately manual. A backoff timer would hide a misconfigured deployment
+  // behind a spinner and re-download the dataset with nobody watching.
   const handleRetry = useCallback(() => {
     dispatch({ type: "retry" });
   }, []);
 
-  // Derived here, during render, rather than at the catch above, and that is
-  // the whole reason this line is not two lines further up. The catch is inside
-  // the fetch effect, so reading the catalog there would make the locale a
-  // dependency of the effect and a reader changing language would re-issue the
-  // search. Here the catalog is already in scope and the effect's dependencies
-  // are untouched.
+  // Derived during render rather than at the catch, which is inside the fetch
+  // effect: reading the catalog there would make the locale a dependency of it.
   const errorMessage =
     error === null ? null : datasetErrorText(error, catalog, tag);
 

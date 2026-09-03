@@ -10,23 +10,7 @@ import styles from "./DataTable.module.scss";
 
 export type { PaginationLabels };
 
-/**
- * Every string this table and the controls under it render.
- *
- * They arrive as a prop because a table that renders any collection is the one
- * thing that cannot know what the collection is called, and a shared component
- * carrying one collection's nouns would be shared in name only. The same
- * argument is what grew the object from the five entries it opened with to every
- * word below: a component holding one reader's language is shared in name only
- * too. Nothing in this file is a literal a reader sees.
- *
- * Several entries are functions because they weave a value into a sentence.
- * None of them takes a word: a caller handing over an already-composed phrase
- * has made the grammatical decision one layer too early, which is exactly the
- * defect the two sort entries below were rewritten to remove. The object is
- * expected to hold one identity per language, so those closures stay stable
- * across renders.
- */
+/** Entries that weave a value take the value, never an assembled word. */
 export interface DataTableLabels {
   /** Shown in place of the whole view until the rows have arrived once. */
   readonly loading: string;
@@ -63,16 +47,12 @@ export interface DataTableLabels {
 export interface DataTableProps<T, Id extends string> {
   readonly rows: readonly T[];
   readonly columns: readonly Column<T, Id>[];
-  /**
-   * Must be injective. It keys the rows for reconciliation and it breaks ties
-   * between equal values in the sort, so two rows sharing a value here lose
-   * their identity and their ordering in the same stroke.
-   */
+  /** Must be injective: it keys the rows and breaks ties in the sort. */
   readonly getRowId: (row: T) => string;
   // The id is read off the column array above and only checked here. Without
-  // the wrapper the compiler would collect a candidate from this prop too and
-  // union it in, so a misspelt id would widen the union in silence instead of
-  // failing at the line that holds it.
+  // the NoInfer wrapper the compiler would collect a candidate from this prop
+  // too and union it in, so a misspelt id would widen the union in silence
+  // instead of failing at the line that holds it.
   readonly state: TableState<NoInfer<Id>>;
   readonly onSortChange: (columnId: NoInfer<Id>) => void;
   readonly onPageChange: (page: number) => void;
@@ -80,12 +60,10 @@ export interface DataTableProps<T, Id extends string> {
   readonly loading: boolean;
   // False until the underlying collection has arrived at least once.
   readonly datasetReady: boolean;
-  // The text of the failure rather than the failure itself. A component tier
-  // that renders a message cannot narrow an error object, which also means a
-  // preserved cause has no path to the screen from here.
+  // The text of the failure rather than the failure itself, so no component
+  // tier sees a cause.
   readonly errorMessage: string | null;
-  // Optional so the table stays usable on its own, without a container to
-  // re-run the request behind it.
+  // Optional so the table stays usable without a container behind it.
   readonly onRetry?: (() => void) | undefined;
   readonly labels: DataTableLabels;
 }
@@ -96,11 +74,6 @@ export interface DataTableProps<T, Id extends string> {
  * a11y: the failure arrives after the initial render, so without a live region
  * a screen reader user is never told the load failed or that a way back is on
  * offer. alert rather than status because the table it replaces is gone.
- *
- * A failed dataset load makes every search fail, so the way back belongs in the
- * region that already reports it rather than in a second error surface. A
- * native button carries the role, the focus, and the keyboard activation on its
- * own.
  */
 function ErrorRegion({
   message,
@@ -123,18 +96,7 @@ function ErrorRegion({
   );
 }
 
-/**
- * What the sort live region says.
- *
- * A cleared sort and a sort that has never been applied render the same state,
- * so the first render has to stay silent while the press that clears a sort
- * does not. That is what hasSorted separates.
- *
- * It separates the sorted case too, not just the cleared one: a sort can arrive
- * without anybody pressing anything, because a link can carry one. That is
- * still a first render, and a region reporting what the table is rather than
- * what just changed announces something that did not happen.
- */
+/** A link can carry a sort nobody pressed, so hasSorted gates the first. */
 function sortAnnouncement(
   labels: DataTableLabels,
   sortDirection: "asc" | "desc" | null,
@@ -143,23 +105,14 @@ function sortAnnouncement(
 ): string {
   if (!hasSorted) return "";
   if (sortDirection && activeLabel) {
-    // The direction travels as the value it is rather than as a word chosen
-    // here. The word it turns into is a fact about a language, and the
-    // suffixed token this replaced was a word in exactly one of them.
+    // The direction travels as the value it is, not as a word chosen here:
+    // which word it becomes is a fact about a language.
     return labels.sortedAnnouncement(activeLabel, sortDirection);
   }
   return labels.sortClearedAnnouncement;
 }
 
-/**
- * What the results live region says.
- *
- * Silent unless there is a settled result to report, because announcing a count
- * mid-request would name rows that are about to be replaced. The empty result
- * gets a sentence of its own: emptying a region is not an announcement, so a
- * search matching nothing would otherwise be indistinguishable from a request
- * that never came back.
- */
+/** Silent unless settled: a count mid-request names rows about to go. */
 function resultsAnnouncement(
   labels: DataTableLabels,
   settled: boolean,
@@ -171,10 +124,7 @@ function resultsAnnouncement(
   return labels.results(shown, total);
 }
 
-/**
- * The sort, described for the caption, in the words the caption weaves into a
- * sentence rather than the words the live region announces.
- */
+/** The sort described for the caption, in the caption's words, not the region's. */
 function sortSummary(
   labels: DataTableLabels,
   sortDirection: "asc" | "desc" | null,
@@ -185,17 +135,9 @@ function sortSummary(
 }
 
 /**
- * Renders a collection as a sortable, paginated table.
- *
- * It holds nothing. The sort column and direction, the page position, the page
- * size and the committed query all arrive in one object and leave as three
- * calls describing what the user did, so the owner of that object decides what
- * the next one is. Both derivations below are memos over modules that know
- * nothing about React.
- *
- * Ordering and every rendered cell are delegated to the column descriptors, and
- * every string naming what the rows are comes from the labels object, so
- * nothing in this file knows which collection it is showing.
+ * Renders a collection as a sortable, paginated table, holding nothing itself.
+ * Cells come from the descriptors and words from the labels, so nothing here
+ * knows which collection it is showing.
  */
 export function DataTable<T, Id extends string>({
   rows,
@@ -225,29 +167,21 @@ export function DataTable<T, Id extends string>({
     state.pageSize,
   );
 
-  // The announcements name what is on screen, and what is on screen is the
-  // column label. state.sortColumnId is the descriptor's id, which is not the name of
-  // anything the reader can see.
-  // Empty rather than absent when no column matches, so the two composers
-  // below hand a string to the catalog. The empty string is falsy exactly
-  // where the missing label was, which is what the announcement's guard reads.
+  // The announcements name the column label, not the descriptor's id. Empty
+  // rather than absent, so the composers below always hand over a string.
   const activeLabel =
     columns.find((column) => column.id === state.sortColumnId)?.label ?? "";
 
-  // The four views the table can show, chosen once here rather than through a
-  // stack of conditional expressions inside the markup. The order is the
-  // precedence: a failure outranks a pending load, and both outrank a result.
+  // The four views the table can show. The order is the precedence: a failure
+  // outranks a pending load, and both outrank a result.
   let body: ReactNode;
   if (errorMessage !== null) {
     body = (
       <ErrorRegion message={errorMessage} labels={labels} onRetry={onRetry} />
     );
   } else if (!datasetReady) {
-    // The whole view is replaced until the collection has arrived once, the
-    // first paint before the request even starts included: the empty result
-    // copy would otherwise claim a search had been made and matched nothing.
-    // Once the collection has arrived, a refetch keeps the table mounted so it
-    // does not unmount and flash on every keystroke.
+    // Gated on datasetReady rather than loading, or the empty-result copy
+    // would claim a search matched nothing before one was made.
     body = <div className={styles.loading}>{labels.loading}</div>;
   } else if (paginatedData.length === 0) {
     body = <div className={styles.noResults}>{labels.empty}</div>;

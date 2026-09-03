@@ -1,15 +1,7 @@
 import { numberFormatFor, selectPlural } from "../format";
 import type { Catalog, DatasetErrorText, SortedDirection } from "./en";
 
-/**
- * The nouns the two woven sentences below pluralize, total over the three
- * categories the French tag reports.
- *
- * French puts zero in the singular category where English and Spanish put it in
- * the plural, so "0 ville" is correct here and "0 ciudades" is correct beside
- * it. That is the rule a ternary on the count gets wrong without ever looking
- * wrong, and it is the reason the selection goes through the platform.
- */
+/** Total over three categories. French puts zero in the singular. */
 const VILLE = { one: "ville", many: "villes", other: "villes" };
 const RESULTAT = { one: "résultat", many: "résultats", other: "résultats" };
 const ENTREE = { one: "entrée", many: "entrées", other: "entrées" };
@@ -20,17 +12,7 @@ const ORDRE: Readonly<Record<SortedDirection, string>> = {
   desc: "décroissant",
 };
 
-/**
- * The narrow no-break space French typography sets before a colon, a semicolon,
- * an exclamation mark and a question mark.
- *
- * Written as an escape rather than as the character, because the character is
- * indistinguishable from an ordinary space in every editor and terminal this
- * file is read in, and a reviewer meeting it inline would correct it. It is a
- * translation requirement, not a typo. The same character is already in every
- * grouped number these entries carry, put there by the formatter rather than by
- * hand.
- */
+/** U+202F, as an escape: inline it is indistinguishable from a space. */
 const NARROW_NO_BREAK_SPACE = "\u202F";
 
 /** Ce qui est annoncé au lecteur quand les données ne peuvent pas être chargées. */
@@ -52,20 +34,7 @@ const TEXTE_ERREUR: DatasetErrorText = {
   unexpected: () => "Une erreur inattendue s'est produite.",
 };
 
-/**
- * The French catalog.
- *
- * Declared with satisfies rather than annotated with it, so a missing key and a
- * misspelled key are both compile errors while the literal types of the entries
- * survive for anything that wants to read them.
- *
- * French typography puts a narrow no-break space, U+202F, before a colon, a
- * semicolon, an exclamation mark and a question mark. Two entries below carry
- * one: the label above the page-size control and the prefix on a failure. Both
- * reach it through the named constant above rather than by holding the
- * character inline, so a reviewer reads the requirement instead of a space that
- * looks like a typo.
- */
+/** Declared with satisfies, so a missing key is a compile error. */
 export const fr = {
   appTitle: "Liste des villes",
   themeGroup: "Thème",

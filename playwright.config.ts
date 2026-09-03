@@ -6,8 +6,10 @@ import globalSetup from "./e2e/globalSetup";
 // all. The hundred percent threshold stays measured over the deterministic
 // jsdom project alone, which is the project the only command asking for
 // coverage is scoped to. The other half of that agreement lives in the coverage
-// block of vite.config.ts, and the guard that keeps the end-to-end script from
-// quietly growing a coverage flag lives in src/toolchain.test.ts.
+// block of vite.config.ts. A coverage flag added to this script would emit a
+// second report into the directory the static analysis import reads, and
+// nothing fails on that flag appearing, so the carve rests on the scripts being
+// read rather than on a gate.
 //
 // Two alternatives were rejected. Merging this runner's numbers into the one
 // report the static analysis import reads would cost a hand-rolled protocol

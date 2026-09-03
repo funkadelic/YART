@@ -1,5 +1,12 @@
 // @vitest-environment node
 //
+// Token layering and contrast, the theme script's placement in index.html, and
+// the halves of the stylesheet rules stylelint has no way to express: an SCSS
+// variable declared in a component sheet, a reference to a retired token, the
+// global sheet's bounded px count, and the positive claim that the focus ring is
+// drawn. The negative rules moved to .stylelintrc.json, where a violation is
+// named at the line rather than at the end of a walk.
+//
 // The stylesheet is the single source of truth for every colour in the app, so
 // this guard reads the shipped file rather than a copy of its values. Node
 // rather than the DOM environment for two measured reasons: the runner replaces
@@ -79,58 +86,22 @@ const RETIRED_TOKENS = [
   "--gray-900",
 ];
 
-// The four hex lengths CSS accepts, and nothing longer, so an identifier that
-// merely starts with hex digits is not mistaken for a colour.
-const HEX_COLOR = /#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})(?![0-9a-z-])/gi;
-
-// The other two forms CSS accepts for a fixed colour. A functional notation and
-// a named colour are as fixed as a hex is, and neither flips with the theme, so
-// a guard that reads hex alone waves both through. The boundaries exclude a
-// hyphen, so var(--gray-50) and white-space are read as the identifiers they
-// are rather than as colours.
-const COLOR_FUNCTION =
-  /(?<![\w-])(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix)[ \t]*\(/gi;
-const NAMED_COLOR =
-  /(?<![\w-])(red|blue|green|black|white|gray|grey|orange|teal|silver|transparent)(?![\w-])/gi;
-
 // Anchored to the start of a line, which is where a declaration sits. An
 // interpolation or a reference mid-value is a use, and there is nothing to use
 // once no file declares one.
 const SCSS_VARIABLE = /^[ \t]*\$[\w-]+[ \t]*:/gm;
 
-// Matched on the property family, so outline-offset is not mistaken for a
-// suppression while the two longhands that cancel a ring are still seen. The
-// value runs to the next delimiter rather than to a required semicolon: the
-// last declaration in a block needs none, and !important sits between the two.
-const OUTLINE_DECLARATION =
-  /(?<![\w-])outline(?:-style|-width|-color)?[ \t]*:([^;}]*)/g;
-
-// A zero width, an absent style or an invisible colour each cancel the ring.
-// The zero is matched only as a whole number, so a 0.125rem ring reads as a
-// ring rather than as the absence of one. Its unit is optional and spelled out,
-// because a bare 0 and a 0 carrying any length unit are the same width.
-const RING_CANCELLING_VALUE =
-  /(?<![\w.-])(none|0(px|rem|em)?|transparent)(?![\w.%-])/i;
-
-// A border or an outline is a line rather than a length on the spacing scale,
-// and one authored in rem would thicken as the reader's type grew. Anything
-// wider than this is spacing, and spacing arrives through a token.
-const PX_HAIRLINE_MAXIMUM = 2;
-const PX_LENGTH = /(\d+(?:\.\d+)?)px/g;
-
-// Every other length that ignores the reader's setting or compounds against an
-// inherited one. Guarding px alone enforced "not px" while the stated rule is
-// "rem": 1.5em compounds against the parent's size and 12pt is a fixed physical
-// length, and neither was seen. No hairline allowance here, because a hairline
-// authored in any of these is not a hairline. The optional sign is matched only
-// after a non-word, non-hyphen character, so a negative margin is read as a
-// length while --space-2em is read as the identifier it is.
-const NON_REM_LENGTH =
-  /(?<![\w-])-?\d+(?:\.\d+)?(em|pt|pc|in|mm|cm|ex|ch)(?![\w-])/g;
-
 // The control radius and the container one, and nothing beside them. A count
 // rather than a skip, so the exemption cannot grow to cover an unrelated px.
+// src/index.css declares the tokens the stylelint unit allowed-list holds the
+// component stylesheets to, and a bounded count is a claim that rule cannot make.
 const GLOBAL_PX_ALLOWANCE = 2;
+
+// A hairline and the focus ring are lines rather than lengths on the spacing
+// scale, and one authored in rem would thicken as the reader's type grew.
+// Anything wider is spacing, and spacing arrives through a token.
+const HAIRLINE_PX = 2;
+const PX_VALUE = /(\d+(?:\.\d+)?)px/g;
 
 const SKIPPED_DIRECTORIES = new Set(["node_modules", "dist", "coverage"]);
 
@@ -146,64 +117,11 @@ function stripComments(source: string): string {
 }
 
 /**
- * Source with the condition of every media at-rule blanked out. A breakpoint is
- * a viewport measurement, not a step on the spacing scale, and one expressed in
- * rem would move with the reader's type, which is the opposite of what a layout
- * breakpoint is for.
- */
-function stripMediaConditions(source: string): string {
-  return source.replace(/@media[^{]*/g, "@media ");
-}
-
-/**
- * The lengths in a stylesheet that are not on the rem scale: any px wide enough
- * to be spacing rather than a hairline, plus every unit that is not rem at all.
- * Judged on the file with its comments and its breakpoints removed first, so a
- * retired value quoted in an explanation is read as prose and a breakpoint is
- * read as a breakpoint.
- */
-function offScaleLengths(source: string): string[] {
-  const readable = stripMediaConditions(stripComments(source));
-
-  return [
-    ...[...readable.matchAll(PX_LENGTH)]
-      .filter(([, magnitude]) => Number(magnitude) > PX_HAIRLINE_MAXIMUM)
-      .map(([length]) => length),
-    ...[...readable.matchAll(NON_REM_LENGTH)].map(([length]) => length),
-  ];
-}
-
-/**
- * Every colour literal in a stylesheet, in each of the three forms CSS accepts
- * for one. All of them rather than the first, so a file that reintroduces five
- * reports five and is fixed once instead of five times.
- */
-function colourLiterals(source: string): string[] {
-  return [HEX_COLOR, COLOR_FUNCTION, NAMED_COLOR].flatMap((matcher) =>
-    [...source.matchAll(matcher)].map(([literal]) => literal),
-  );
-}
-
-/**
- * The outline declarations in a stylesheet whose value cancels the focus ring,
- * returned whole so the failure message names the declaration that has to go.
- */
-function focusRingSuppressions(source: string): string[] {
-  return [...source.matchAll(OUTLINE_DECLARATION)]
-    .filter(([, value]) =>
-      RING_CANCELLING_VALUE.test(
-        required(value, "the outline declaration's value"),
-      ),
-    )
-    .map(([declaration]) => declaration.trim());
-}
-
-/**
  * Every stylesheet under src/, found by walking rather than by a list, so a
  * stylesheet added by a later component is covered the day it lands instead of
  * the day someone remembers to add it here. Every extension rather than the
- * module ones alone, because a shared partial and a global file are the two
- * places a rule would otherwise be free to break.
+ * module ones alone, because a shared partial is a place a rule would otherwise
+ * be free to break.
  */
 function findStylesheets(directory: string): string[] {
   const found: string[] = [];
@@ -220,12 +138,11 @@ function findStylesheets(directory: string): string[] {
   return found;
 }
 
-const stylesheets = findStylesheets(join(projectRoot, "src"));
-
-// The global file declares the hex primitives every other file reaches for
-// through a token, so it is the one exemption from the colour half of the guard
-// and from nothing else.
-const componentStylesheets = stylesheets.filter((file) => file !== cssPath);
+// The global file is read on its own terms below, by the two guards written
+// against it, so it is held out of the walk rather than exempted inside one.
+const componentStylesheets = findStylesheets(join(projectRoot, "src")).filter(
+  (file) => file !== cssPath,
+);
 
 /** Every declaration in the file, keyed by selector then by property. */
 function readBlocks(): Map<string, Map<string, string>> {
@@ -329,26 +246,21 @@ function contrastRatio(a: string, b: string): number {
  * hover fill, only inherited body text does, and the focus ring sits outside the
  * border box on the parent surface rather than on the fill it surrounds.
  *
+ * Four text pairs are absent: axe decides them by value in the real-engine
+ * sweep, and CONTRAST-OVERLAP.md records that measurement per pair.
+ *
  * The two logo rows are measured by choice. The non-text contrast criterion
  * exempts logos and logotypes outright, so if a future surface change turns
  * either one red the correct answer is to drop the exempt pair deliberately,
  * never to lower a threshold to keep it.
  */
 const PAIRS: Array<[string, string, number]> = [
-  ["--color-text", "--color-surface", TEXT_CONTRAST_MINIMUM],
-  ["--color-text", "--color-surface-raised", TEXT_CONTRAST_MINIMUM],
   ["--color-text", "--color-surface-hover", TEXT_CONTRAST_MINIMUM],
-  ["--color-text-muted", "--color-surface", TEXT_CONTRAST_MINIMUM],
   ["--color-text-muted", "--color-surface-raised", TEXT_CONTRAST_MINIMUM],
   ["--color-accent", "--color-surface", TEXT_CONTRAST_MINIMUM],
   ["--color-accent", "--color-surface-raised", TEXT_CONTRAST_MINIMUM],
   ["--color-error", "--color-surface", TEXT_CONTRAST_MINIMUM],
   ["--color-error", "--color-surface-raised", TEXT_CONTRAST_MINIMUM],
-  // The selected segment of the theme control: the surface colour laid on the
-  // accent, which is the one pairing in the app that reads a background token as
-  // a foreground. Measured here rather than by hand, so a later accent change
-  // cannot quietly take the control's label below the text threshold.
-  ["--color-surface", "--color-accent", TEXT_CONTRAST_MINIMUM],
   ["--color-border-strong", "--color-surface", NON_TEXT_CONTRAST_MINIMUM],
   [
     "--color-border-strong",
@@ -592,10 +504,11 @@ describe("the theme script in index.html", () => {
   });
 });
 
-// A string check rather than a parse: the CSS parser throws outright on the
-// inline comments in the table's stylesheet, and a guard written against the one
-// module file that happens to have none would look like it worked.
-describe("colour in the component stylesheets", () => {
+// The halves of the old colour guard stylelint has no rule for: declaring an
+// SCSS variable, and naming a token that no longer exists. A string check rather
+// than a parse, because the CSS parser throws outright on the inline comments in
+// the table's stylesheet.
+describe("stray declarations in the component stylesheets", () => {
   it("finds the stylesheets by walking rather than by a list", () => {
     expect(
       componentStylesheets.length,
@@ -603,7 +516,7 @@ describe("colour in the component stylesheets", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("leaves no colour literal, SCSS variable or retired token in any of them", () => {
+  it("leaves no SCSS variable or retired token in any of them", () => {
     const offenders: string[] = [];
 
     for (const file of componentStylesheets) {
@@ -611,10 +524,6 @@ describe("colour in the component stylesheets", () => {
       // prose and a declaration is judged as a declaration.
       const source = stripComments(readFileSync(file, "utf8"));
       const name = relative(projectRoot, file);
-
-      for (const literal of colourLiterals(source)) {
-        offenders.push(`${name}: holds the colour literal ${literal}`);
-      }
 
       for (const variable of source.matchAll(SCSS_VARIABLE)) {
         offenders.push(`${name}: declares ${variable[0].trim()}`);
@@ -642,28 +551,17 @@ describe("colour in the component stylesheets", () => {
   });
 });
 
-// The counterpart to the colour guard, and the reason the walk above takes
-// every stylesheet rather than the module ones: the rule this keeps is that
-// spacing and type are authored in rem through a token, so the layout follows
-// the reader's browser font-size setting. A stylesheet written after this file
-// inherits the rule by being walked, without anyone restating it.
-describe("length in the stylesheets", () => {
-  it("leaves no px spacing in any component stylesheet", () => {
-    const offenders: string[] = [];
-
-    for (const file of componentStylesheets) {
-      for (const length of offScaleLengths(readFileSync(file, "utf8"))) {
-        offenders.push(
-          `${relative(projectRoot, file)}: holds ${length}, which is spacing and belongs to a token`,
-        );
-      }
-    }
-
-    expect(offenders).toEqual([]);
-  });
-
+// The half of the length rule stylelint's unit allowed-list has no way to say.
+// It counts rather than forbids, and it reads src/index.css, where the two
+// corner radii are px on purpose: growing with the reader's type would only
+// distort the shape.
+describe("length in the global stylesheet", () => {
   it("allows the global stylesheet the corner radii and nothing beside them", () => {
-    const found = offScaleLengths(readFileSync(cssPath, "utf8"));
+    const found = [
+      ...stripComments(readFileSync(cssPath, "utf8")).matchAll(PX_VALUE),
+    ]
+      .filter(([, magnitude]) => Number(magnitude) > HAIRLINE_PX)
+      .map(([length]) => length);
 
     expect(
       found,
@@ -684,124 +582,5 @@ describe("the focus ring", () => {
       rule?.get("outline"),
       "the global focus rule does not draw its outline from the ring token",
     ).toContain("--color-focus-ring");
-  });
-
-  it("is suppressed by no stylesheet", () => {
-    const offenders: string[] = [];
-
-    // The global stylesheet is walked alongside the rest: a suppression there
-    // would cancel the rule from the same file that declares it.
-    for (const file of stylesheets) {
-      const source = stripComments(readFileSync(file, "utf8"));
-
-      for (const suppression of focusRingSuppressions(source)) {
-        offenders.push(
-          `${relative(projectRoot, file)}: cancels the focus ring with ${suppression}`,
-        );
-      }
-    }
-
-    expect(offenders).toEqual([]);
-  });
-});
-
-// The guards above read a clean tree, which is the one condition under which a
-// guard that matches nothing and a guard that works are indistinguishable. Each
-// spelling below is one a real author reaches for and one an earlier revision of
-// these matchers passed, so the reach is asserted rather than assumed.
-describe("the reach of the guards", () => {
-  it("sees a colour literal in every form CSS accepts for one", () => {
-    for (const declaration of [
-      "color: #abc;",
-      "color: red;",
-      "background: rgb(1 2 3);",
-      "border-color: hsl(0 0% 0%);",
-      "background: transparent;",
-      "color: color-mix(in oklab, #fff, #000);",
-    ]) {
-      expect(
-        colourLiterals(declaration),
-        `${declaration} is invisible to the colour guard`,
-      ).not.toEqual([]);
-    }
-  });
-
-  it("reads a token reference and a property name as neither", () => {
-    for (const declaration of [
-      "color: var(--color-text);",
-      "background: var(--gray-50);",
-      "white-space: nowrap;",
-      "background-color: var(--color-surface);",
-    ]) {
-      expect(
-        colourLiterals(declaration),
-        `${declaration} is reported as a colour literal`,
-      ).toEqual([]);
-    }
-  });
-
-  it("sees a length authored off the rem scale, whatever unit carries it", () => {
-    for (const declaration of [
-      "padding: 1.5em;",
-      "margin: 12pt;",
-      "width: 2in;",
-      "gap: 3mm;",
-      "inline-size: 40ch;",
-      "margin-top: -1.5em;",
-      "padding: 24px;",
-    ]) {
-      expect(
-        offScaleLengths(declaration),
-        `${declaration} is invisible to the length guard`,
-      ).not.toEqual([]);
-    }
-  });
-
-  it("reads the rem scale, a hairline and a viewport measure as none of that", () => {
-    for (const declaration of [
-      "padding: 1.5rem;",
-      "gap: 0.25rem;",
-      "width: 50%;",
-      "min-height: 100vh;",
-      "border-bottom: 1px solid var(--color-border);",
-      "margin: 0;",
-      "--space-2em: 1rem;",
-    ]) {
-      expect(
-        offScaleLengths(declaration),
-        `${declaration} is reported as an off-scale length`,
-      ).toEqual([]);
-    }
-  });
-
-  it("sees a suppressed focus ring however it is spelled", () => {
-    for (const declaration of [
-      "outline: none;",
-      "outline: none !important;",
-      "outline-style: none;",
-      "a { color: var(--color-text); outline: none }",
-      "outline: 0 solid transparent;",
-      "outline-width: 0;",
-      "outline-width: 0rem;",
-      "outline-color: transparent;",
-    ]) {
-      expect(
-        focusRingSuppressions(declaration),
-        `${declaration} is invisible to the focus-ring guard`,
-      ).not.toEqual([]);
-    }
-  });
-
-  it("reads a drawn ring and an offset as neither", () => {
-    for (const declaration of [
-      "outline: 2px solid var(--color-focus-ring);",
-      "outline: 0.125rem solid var(--color-focus-ring);",
-      "outline-offset: 2px;",
-    ]) {
-      expect(
-        focusRingSuppressions(declaration),
-        `${declaration} is reported as a suppression`,
-      ).toEqual([]);
-    }
   });
 });

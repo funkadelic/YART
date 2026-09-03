@@ -24,13 +24,88 @@ const TEST_SCAFFOLDING_IMPORT = {
     "src/test/ holds test scaffolding and is excluded from coverage. Importing it from application code moves executing code outside the coverage gate.",
 };
 
+// The four attributes whose string value a reader perceives. `aria-sort` and
+// `aria-live` carry strings in that layer too and are deliberately outside the
+// set: both take a value the standard defines and assistive technology matches
+// on, so translating either would break the feature rather than localize it.
+//
+// no-restricted-syntax is configured per rule and not per selector, exactly as
+// no-restricted-imports is above, so each selector set is declared once here and
+// composed per block below. A block that named the rule and forgot a set would
+// silently unrestrict it for every file that block matches.
+const READER_FACING_ATTRIBUTE = {
+  selector:
+    'JSXAttribute[name.name=/^(aria-label|title|placeholder|alt)$/]:matches([value.type="Literal"], [value.expression.type="Literal"], [value.expression.type="TemplateLiteral"][value.expression.expressions.length=0])',
+  message:
+    "src/components/ renders any collection for any reader, so a string here is a claim about which reader. Add the entry to the catalogs and read it off DataTableLabels, PaginationLabels or SearchInputLabels.",
+};
+
+// Every way a file asks the platform for a locale: a namespace construction, and
+// a call to one of the six value-level helpers that read a locale from the
+// machine when called with no argument. A fifth surface resolving a locale of its
+// own reintroduces the defect the locale layer closed, and does it invisibly on a
+// machine whose own preference is the base tag.
+//
+// Matched on the tree rather than on the text, which matters twice here: a
+// namespace named inside a comment is not a call site, and a type annotation
+// naming the same constructor is not one either.
+const LOCALE_CALL_SITE = [
+  {
+    selector:
+      ':matches(NewExpression, CallExpression)[callee.object.name="Intl"]',
+    message:
+      "src/i18n/format.ts is the one module that builds a platform locale object, so its caches hold one instance per resolved tag. Reach for collatorFor, numberFormatFor or pluralRulesFor instead.",
+  },
+  {
+    selector:
+      "CallExpression[callee.property.name=/^(localeCompare|toLocaleString|toLocaleDateString|toLocaleTimeString|toLocaleLowerCase|toLocaleUpperCase)$/]",
+    message:
+      "This reads a locale from the machine rather than the one the application resolved, and builds a formatter per call. Take a collator or a formatter from src/i18n/format.ts instead.",
+  },
+];
+
+// The way the mirror rule is undone in JavaScript rather than in CSS: a branch
+// choosing between two glyph components on the reading direction. It is
+// invisible to the stylelint rules that hold the stylesheets, because it is not
+// CSS, and invisible to the literal rule above, because a glyph component is
+// neither a text child nor a string.
+const DIRECTION_BRANCH = [
+  {
+    selector:
+      "ConditionalExpression[consequent.type=/^JSX(Element|Fragment)$/][alternate.type=/^JSX(Element|Fragment)$/]",
+    message:
+      "Two glyph components chosen on a condition are a prop, a branch and a coverage line for what one transform: scaleX(-1) under an attribute selector already does. Mirror in the stylesheet.",
+  },
+  {
+    // Both sides, by shape: esquery cannot scope :has() to a named property,
+    // so an else-if chain and a return that is not first in its block are out
+    // of reach. Recorded in GUARD-DISPOSITION.md rather than answered with a
+    // looser selector, because the guarded render this used to flag is the
+    // false positive that gets a rule deleted.
+    selector:
+      "IfStatement" +
+      ":matches([consequent.argument.type=/^JSX(Element|Fragment)$/], [consequent.body.0.argument.type=/^JSX(Element|Fragment)$/])" +
+      ":matches([alternate.argument.type=/^JSX(Element|Fragment)$/], [alternate.body.0.argument.type=/^JSX(Element|Fragment)$/])",
+    message:
+      "Two glyph components returned from two branches are a prop, a branch and a coverage line for what one transform: scaleX(-1) under an attribute selector already does. Mirror in the stylesheet.",
+  },
+];
+
 export default defineConfig([
   // Build output and test-runner output, not authored source. `eslint .` walks
   // the working tree, so without this the gate reports parse errors for an
   // emitted bundle, a coverage report, and the page resources the visual spec
   // archives under test-results/.
   {
-    ignores: ["dist/", "coverage/", "test-results/", "playwright-report/"],
+    ignores: [
+      "dist/",
+      "coverage/",
+      "test-results/",
+      "playwright-report/",
+      "junit/",
+      "src/__screenshots__/",
+      ".vitest-attachments/",
+    ],
   },
   {
     files: ["**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}"],
@@ -63,6 +138,9 @@ export default defineConfig([
       },
     },
     rules: {
+      // Spread again: the key above replaces the recommended rules wholesale
+      // rather than merging with them, which silently disabled all 22.
+      ...react.configs.flat.recommended.rules,
       "react/react-in-jsx-scope": "off",
     },
   },
@@ -113,6 +191,59 @@ export default defineConfig([
             },
           ],
         },
+      ],
+    },
+  },
+  // The formatter module is exempt because it is the module the rule names. The
+  // test globs are exempt because a test asserting a formatted string has to
+  // compute its expectation through the platform rather than type it: the French
+  // group separator is a narrow no-break space, and a typed literal fails on a
+  // difference no terminal renders. src/test/ is not exempt: it holds executing
+  // helpers rather than assertions, and the sweep it drives is shipped code's
+  // reach.
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: [
+      "src/i18n/format.ts",
+      "src/**/*.test.{ts,tsx}",
+      "src/**/*.test-d.ts",
+    ],
+    rules: {
+      "no-restricted-syntax": ["error", ...LOCALE_CALL_SITE],
+    },
+  },
+  // The same layer rule one level down from the imports above: a hardcoded
+  // sentence needs no import, so the two import rules cannot see it. ignoreProps
+  // is deliberate, because the attribute half is narrower than every prop and is
+  // the selector beside it.
+  {
+    files: ["src/components/**/*.{ts,tsx}"],
+    ignores: ["src/**/*.test.{ts,tsx}", "src/**/*.test-d.ts"],
+    rules: {
+      "react/jsx-no-literals": [
+        "error",
+        { noStrings: true, ignoreProps: true, allowedStrings: [] },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        READER_FACING_ATTRIBUTE,
+        ...LOCALE_CALL_SITE,
+      ],
+    },
+  },
+  // The component holding the four glyphs that mean a direction. All three
+  // selector sets, because no-restricted-syntax is configured per rule: this
+  // block replaces the two above outright for this file, and naming only the
+  // direction set would unrestrict the other two for exactly the component most
+  // likely to regain a literal.
+  {
+    files: ["src/components/DataTable/Pagination.tsx"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        READER_FACING_ATTRIBUTE,
+        ...LOCALE_CALL_SITE,
+        ...DIRECTION_BRANCH,
       ],
     },
   },

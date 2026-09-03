@@ -7,26 +7,10 @@ import {
   type ResolvedLocale,
 } from "./resolveLocale";
 
-/**
- * The chosen locale, owned once for the whole document.
- *
- * The theme's choice lives inside its hook, one copy per caller, and its own
- * documentation says that is why a second caller would race the first. This one
- * has several callers by design: the picker in the header and the table below
- * it both read it, and both stamp the same document element. Holding the choice
- * here rather than in the hook is what makes those writes agree by
- * construction, because every subscriber resolves the identical value.
- */
+// The chosen locale, owned once for the document, which is what makes several
+// callers agree rather than each resolving one of its own.
 
-/**
- * Reads the stored choice. Anything that is not the id of a catalog that ships
- * is absent, and so is a store that cannot be read at all: a stale entry from an
- * older build and a hostile one are the same case, and both resolve to
- * following the machine rather than to an undefined locale.
- *
- * The property access is what throws when site data is blocked, so neither a
- * typeof guard nor optional chaining substitutes for the catch.
- */
+/** Anything not a shipped id is absent. The access throws when blocked. */
 function readStoredChoice(): LocaleChoice {
   try {
     const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
@@ -52,15 +36,7 @@ function notify(): void {
   }
 }
 
-/**
- * Another document wrote the key. Re-read the store rather than trusting the
- * value the event carries, and ignore every other key: the event does not fire
- * in the document that made the write, which is why the setter below does not
- * have to guard against reacting to itself.
- *
- * A null key is a clear() rather than a write, and it takes this key with it, so
- * it counts the same as a write to this key.
- */
+/** Re-read rather than trust the event. A null key is a clear(). */
 function handleStorage(event: StorageEvent): void {
   if (event.key === null || event.key === LOCALE_STORAGE_KEY) {
     choice = readStoredChoice();
@@ -69,14 +45,9 @@ function handleStorage(event: StorageEvent): void {
 }
 
 /**
- * Registers a reader and returns the unregister.
- *
- * The window listeners are installed with the first subscriber and removed with
- * the last, so a document with nothing mounted holds nothing. That is also why
- * the choice is re-read here: between the last unsubscribe and this call there
- * was no listener, so a write from another document in that window went unseen.
- * React re-reads the snapshot immediately after subscribing, which is what turns
- * the re-read into a render rather than into a value nobody asked for.
+ * The listeners come and go with the first and last subscriber, so the choice
+ * is re-read here: nothing was listening between the last unsubscribe and this
+ * call, and a cross-tab write in that window went unseen.
  */
 export function subscribeLocale(onStoreChange: () => void): () => void {
   if (subscribers.size === 0) {
@@ -97,14 +68,7 @@ export function subscribeLocale(onStoreChange: () => void): () => void {
   };
 }
 
-/**
- * The resolved locale right now.
- *
- * Safe to hand straight to React with no cache in front of it, because the
- * resolver returns one of four module constants and so its identity is already
- * stable for a stable input. A resolver that built its answer would need one,
- * and the loop it would otherwise cause is the reason this is worth stating.
- */
+/** Safe to hand straight to React: the resolver returns a module constant. */
 export function getLocaleSnapshot(): ResolvedLocale {
   return resolveLocale(choice, navigator.languages);
 }
@@ -115,13 +79,8 @@ export function getChoiceSnapshot(): LocaleChoice {
 }
 
 /**
- * Moves the choice and writes it through.
- *
- * Takes a string rather than the union because the picker hands over whatever
- * the DOM has in the control's value, and this is the one place that decides
- * whether a value names a choice. A value that names none is ignored outright:
- * the option list is closed, so nothing that reaches this branch came from a
- * reader picking something.
+ * Moves the choice and writes it through. A value naming none is ignored: the
+ * option list is closed, so nothing reaching that branch came from a reader.
  */
 export function setLocaleChoice(next: string): void {
   if (!isLocaleChoice(next)) {
@@ -132,8 +91,8 @@ export function setLocaleChoice(next: string): void {
 
   try {
     if (next === "system") {
-      // A delete, not the word: the default has exactly one representation, and
-      // every other value the key could hold is already treated as absent.
+      // A delete, not the word: the default has one representation, the key
+      // not being there.
       localStorage.removeItem(LOCALE_STORAGE_KEY);
     } else {
       localStorage.setItem(LOCALE_STORAGE_KEY, next);

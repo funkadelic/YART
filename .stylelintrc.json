@@ -7,6 +7,118 @@
       {
         "message": "Class selectors are camelCase, so a component reads them back as styles.thisName rather than through a bracketed string"
       }
+    ],
+    "property-disallowed-list": [
+      [
+        "left",
+        "right",
+        "margin-left",
+        "margin-right",
+        "padding-left",
+        "padding-right",
+        "border-left",
+        "border-right",
+        "border-left-color",
+        "border-left-style",
+        "border-left-width",
+        "border-right-color",
+        "border-right-style",
+        "border-right-width"
+      ],
+      {
+        "message": "Inline-axis geometry is logical, so one stylesheet serves both reading directions: use inset-inline-start, margin-inline-end, padding-inline or border-inline-end"
+      }
+    ],
+    "declaration-property-value-disallowed-list": [
+      {
+        "text-align": ["/^(?:left|right)$/"],
+        "float": ["/^(?:left|right)$/"],
+        "clear": ["/^(?:left|right)$/"],
+        "outline": [
+          "/(?<![\\w.-])(?:none|0(?:px|rem|em)?|transparent)(?![\\w.%-])/"
+        ],
+        "outline-style": ["/^(?:none|0(?:px|rem|em)?|transparent)$/"],
+        "outline-width": ["/^(?:none|0(?:px|rem|em)?|transparent)$/"],
+        "outline-color": ["/^(?:none|0(?:px|rem|em)?|transparent)$/"]
+      },
+      {
+        "message": "Two kinds of value are disallowed on a property here. An inline-axis value follows the document rather than the page: use text-align: start, float: inline-start or clear: inline-end. And a value that cancels an outline removes the only keyboard affordance on that control: the focus ring is drawn once, globally, from the ring token, and no component cancels it"
+      }
+    ],
+    "selector-disallowed-list": [
+      ["/:dir\\(/"],
+      {
+        "message": "The :dir() pseudo-class landed in Chrome 120 against this application's floor of 111, so it ships inert in the very browsers the floor exists to name: select the direction on the attribute, as [dir=\"rtl\"] .navButton svg does"
+      }
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["src/**/*.{css,scss}"],
+      "rules": {
+        "color-no-hex": [
+          true,
+          {
+            "message": "Colour in a component stylesheet arrives through var(--color-*) and nowhere else, so a theme switch moves every value at once"
+          }
+        ],
+        "color-named": [
+          "never",
+          {
+            "message": "Colour in a component stylesheet arrives through var(--color-*) and nowhere else; a keyword is as fixed as a hex and flips with no theme"
+          }
+        ],
+        "declaration-property-unit-allowed-list": [
+          {
+            "/^(margin|padding)(-(block|inline))?(-(start|end))?$/": ["rem"],
+            "/^(margin|padding)-(top|bottom|left|right)$/": ["rem"],
+            "/^(gap|row-gap|column-gap|font-size)$/": ["rem"]
+          },
+          {
+            "message": "Spacing and type are authored in rem through a token, so the layout follows the reader's browser font-size setting: reach for var(--space-*) or var(--font-size-*)"
+          }
+        ],
+        "function-disallowed-list": [
+          [
+            "rgb",
+            "rgba",
+            "hsl",
+            "hsla",
+            "hwb",
+            "lab",
+            "lch",
+            "oklab",
+            "oklch",
+            "color-mix",
+            "color"
+          ],
+          {
+            "message": "Colour in a component stylesheet arrives through var(--color-*) and nowhere else; a functional notation is as fixed as a hex and flips with no theme"
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/index.css"],
+      "rules": {
+        "color-no-hex": null,
+        "function-disallowed-list": null
+      }
+    },
+    {
+      "files": ["src/styles/_visually-hidden.scss"],
+      "rules": {
+        "declaration-property-unit-allowed-list": [
+          {
+            "/^padding(-(block|inline))?(-(start|end))?$/": ["rem"],
+            "/^padding-(top|bottom|left|right)$/": ["rem"],
+            "/^(gap|row-gap|column-gap|font-size)$/": ["rem"]
+          },
+          {
+            "message": "Spacing and type are authored in rem through a token. Only margin is exempt here, for the off-screen clip's margin: -1px, which is a magnitude a unit allowed-list cannot express"
+          }
+        ]
+      }
+    }
+  ]
 }

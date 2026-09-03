@@ -6,27 +6,15 @@ import { CATALOG_IDS } from "../../i18n/resolveLocale";
 import styles from "./LocaleControl.module.scss";
 
 /**
- * The language picker: following the machine, then one option per catalog that
- * ships, each named in its own language.
- *
- * A native select rather than the segmented control its neighbour uses. Five
- * options do not fit a row of buttons across a header bar, the page-size control
- * in the table below is already a native select, and the native control brings
- * keyboard handling, mobile behaviour and accessibility with nothing written by
- * hand.
- *
- * The option list is built from the shipped ids rather than written out, so a
- * catalog added later appears here without this file being edited.
- *
- * Its own two strings come from the catalog like every other word on the page.
- * The autonyms below do not, and must not: a reader who cannot read the
- * interface in front of them still has to find their own language in the list.
+ * The language picker: follow the machine, then one option per shipped catalog,
+ * each named in its own language. A native select rather than the segmented
+ * control beside it, because five options do not fit a row of buttons and the
+ * native control brings its keyboard and mobile behavior with it.
  */
 export function LocaleControl() {
   const { catalog, choice, setChoice } = useLocale();
 
-  // Document-global, so a constant here would give a second mounted control the
-  // same id and bind both labels to the first select.
+  // Document-global, so a constant would bind two labels to one select.
   const selectId = useId();
 
   return (

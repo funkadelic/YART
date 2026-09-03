@@ -9,15 +9,7 @@ import {
 import { PAGE_SIZE_OPTIONS } from "./tableState";
 import styles from "./Pagination.module.scss";
 
-/**
- * Every string the page controls render.
- *
- * A slice of the table's own labels object rather than a second prop the caller
- * assembles, so one object reaches the table and the table hands this part of it
- * on. Each of the four action entries is used twice, once as the tooltip and
- * once as the accessible name, which is what stops a translation moving one and
- * leaving the other behind.
- */
+/** Each action entry is read twice, as tooltip and as accessible name. */
 export interface PaginationLabels {
   /** Names the control choosing how many rows a page holds. */
   readonly pageSize: string;
@@ -44,19 +36,7 @@ interface PaginationProps {
   readonly labels: PaginationLabels;
 }
 
-/**
- * The page-size control and the page navigation.
- *
- * It knows the page position and nothing else about the table's view state, so
- * a change to how sorting is held cannot reach it. The select's value is parsed
- * to a number here, at the only place that sees the event, so the callback
- * never receives a string.
- *
- * Every word it shows arrives in the labels object, the table's own slice of
- * which is handed down whole rather than spread or reshaped. Each of the four
- * actions reads one entry twice, once as the tooltip and once as the accessible
- * name, which is the only arrangement in which the two cannot drift apart.
- */
+/** The page-size control and the page navigation, and no other view state. */
 export function Pagination({
   page,
   totalPages,
@@ -65,15 +45,10 @@ export function Pagination({
   onPageSizeChange,
   labels,
 }: PaginationProps) {
-  // Derived rather than a fixed string, so two tables on one page do not label
-  // each other's select.
+  // Derived, so two tables on one page do not label each other's select.
   const pageSizeId = useId();
 
-  /**
-   * Turns the select's string value into the number the arithmetic divides by.
-   * The option list is a closed set, so nothing out of range or non-numeric can
-   * reach the arithmetic through this control.
-   */
+  /** The option list is closed, so the parse cannot yield an unusable size. */
   const handlePageSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     onPageSizeChange(Number.parseInt(e.target.value, 10));
   };
