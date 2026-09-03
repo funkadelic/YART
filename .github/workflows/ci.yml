@@ -195,6 +195,10 @@ jobs:
         with:
           playwright: true
           exitOnceUploaded: true
+          # A build on the baseline branch does not accept its own snapshots.
+          # Without this they stay unreviewed, and a later pull request finds no
+          # accepted ancestor to compare against, so it re-reports every one.
+          autoAcceptChanges: main
 
   # A job rather than its own workflow, because `needs` is what makes the publish
   # wait on the gate. The write permissions sit here so the job running untrusted
