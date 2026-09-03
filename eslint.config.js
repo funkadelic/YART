@@ -35,7 +35,7 @@ const TEST_SCAFFOLDING_IMPORT = {
 // silently unrestrict it for every file that block matches.
 const READER_FACING_ATTRIBUTE = {
   selector:
-    'JSXAttribute[name.name=/^(aria-label|title|placeholder|alt)$/]:matches([value.type="Literal"], [value.expression.type="Literal"], [value.expression.type="TemplateLiteral"])',
+    'JSXAttribute[name.name=/^(aria-label|title|placeholder|alt)$/]:matches([value.type="Literal"], [value.expression.type="Literal"], [value.expression.type="TemplateLiteral"][value.expression.expressions.length=0])',
   message:
     "src/components/ renders any collection for any reader, so a string here is a claim about which reader. Add the entry to the catalogs and read it off DataTableLabels, PaginationLabels or SearchInputLabels.",
 };
@@ -77,6 +77,11 @@ const DIRECTION_BRANCH = [
       "Two glyph components chosen on a condition are a prop, a branch and a coverage line for what one transform: scaleX(-1) under an attribute selector already does. Mirror in the stylesheet.",
   },
   {
+    // Both sides, by shape: esquery cannot scope :has() to a named property,
+    // so an else-if chain and a return that is not first in its block are out
+    // of reach. Recorded in GUARD-DISPOSITION.md rather than answered with a
+    // looser selector, because the guarded render this used to flag is the
+    // false positive that gets a rule deleted.
     selector:
       "IfStatement" +
       ":matches([consequent.argument.type=/^JSX(Element|Fragment)$/], [consequent.body.0.argument.type=/^JSX(Element|Fragment)$/])" +
@@ -193,7 +198,9 @@ export default defineConfig([
   // test globs are exempt because a test asserting a formatted string has to
   // compute its expectation through the platform rather than type it: the French
   // group separator is a narrow no-break space, and a typed literal fails on a
-  // difference no terminal renders. So the ban is on shipped call sites.
+  // difference no terminal renders. src/test/ is not exempt: it holds executing
+  // helpers rather than assertions, and the sweep it drives is shipped code's
+  // reach.
   {
     files: ["src/**/*.{ts,tsx}"],
     ignores: [

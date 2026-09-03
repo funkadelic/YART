@@ -1801,11 +1801,14 @@ describe("the plugin rule sets the lint gate claims to run", () => {
     const { ESLint } = await import("eslint");
     const react = (await import("eslint-plugin-react")).default;
 
+    // calculateConfigForFile answers for a path with nothing behind it, so a
+    // rename would otherwise leave this guard green over a file that moved.
+    const target = join(projectRoot, "src/components/DataTable/TableHead.tsx");
+    expect(existsSync(target), "the guard's sample file moved").toBe(true);
+
     const resolved: unknown = await new ESLint({
       cwd: projectRoot,
-    }).calculateConfigForFile(
-      join(projectRoot, "src/components/DataTable/TableHead.tsx"),
-    );
+    }).calculateConfigForFile(target);
     const active =
       (resolved as { rules?: Record<string, unknown> }).rules ?? {};
 

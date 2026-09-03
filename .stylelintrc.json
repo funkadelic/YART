@@ -89,7 +89,8 @@
             "lch",
             "oklab",
             "oklch",
-            "color-mix"
+            "color-mix",
+            "color"
           ],
           {
             "message": "Colour in a component stylesheet arrives through var(--color-*) and nowhere else; a functional notation is as fixed as a hex and flips with no theme"
@@ -100,7 +101,8 @@
     {
       "files": ["src/index.css"],
       "rules": {
-        "color-no-hex": null
+        "color-no-hex": null,
+        "function-disallowed-list": null
       }
     },
     {
