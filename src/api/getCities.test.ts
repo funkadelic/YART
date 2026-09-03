@@ -173,17 +173,29 @@ describe("getCities", () => {
     expect(await getCities({ searchTerm: "admin" })).toHaveLength(0);
   });
 
-  it("cannot be made to match across two indexed fields", async () => {
+  it("matches nothing for a term carrying the field separator", async () => {
     // The address is an input path the box is not: ?q=%00 decodes to a real
-    // separator and trim leaves it, so a needle could span the join. getCities
-    // strips it, which turns a bare one into the empty term.
+    // separator and trim leaves it, so a term could otherwise span the join.
+    // No field's content holds a separator, so such a term matches nothing.
     const spanning = await getCities({
       searchTerm: `Tokyo${SEARCH_KEY_SEPARATOR}Tokyo`,
     });
-    expect(spanning).toEqual(await getCities({ searchTerm: "TokyoTokyo" }));
+    expect(spanning).toHaveLength(0);
 
+    // Not rewritten into a search for the term without it.
+    expect(await getCities({ searchTerm: "TokyoTokyo" })).toHaveLength(0);
+    const embedded = await getCities({
+      searchTerm: `To${SEARCH_KEY_SEPARATOR}kyo`,
+    });
+    expect(embedded).toHaveLength(0);
+    expect((await getCities({ searchTerm: "Tokyo" })).length).toBeGreaterThan(
+      0,
+    );
+
+    // A term of nothing but a separator answers nothing, not every row.
     const bare = await getCities({ searchTerm: SEARCH_KEY_SEPARATOR });
-    expect(bare).toHaveLength((await getCities({ searchTerm: "" })).length);
+    expect(bare).toHaveLength(0);
+    expect((await getCities({ searchTerm: "" })).length).toBeGreaterThan(0);
   });
 
   it("returns an empty list when nothing matches", async () => {

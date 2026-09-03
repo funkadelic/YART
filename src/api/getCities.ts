@@ -22,16 +22,23 @@ export async function getCities({
 }: GetCitiesParams = {}): Promise<City[]> {
   const all = await loadCities();
 
-  // Stripped here rather than at the URL parser, so a needle arriving any
-  // other way cannot span two fields either.
-  const needle = searchTerm
-    .replaceAll(SEARCH_KEY_SEPARATOR, "")
-    .trim()
-    .toLowerCase();
+  const needle = searchTerm.trim().toLowerCase();
+
+  // Answered here rather than at the URL parser, so a term arriving any other
+  // way is answered the same. The separator marks a field boundary in the
+  // search key, so no field's content holds one and a term carrying one matches
+  // nothing. Deleting it instead would answer a different search, and a term of
+  // nothing but a separator would answer every row.
+  //
   // The empty term returns a copy, so the module-scope cache cannot escape.
-  const matched = needle
-    ? all.filter((city) => city.searchKey.includes(needle))
-    : [...all];
+  let matched: City[];
+  if (needle === "") {
+    matched = [...all];
+  } else if (needle.includes(SEARCH_KEY_SEPARATOR)) {
+    matched = [];
+  } else {
+    matched = all.filter((city) => city.searchKey.includes(needle));
+  }
 
   // Applied to the filter as well as the download, so a cache-warm call still
   // behaves like a network call and the debounce timing keeps its meaning.
