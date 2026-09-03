@@ -48,6 +48,10 @@
     font-variant-numeric: tabular-nums;
   }
 
+  tbody tr:hover {
+    background-color: var(--color-surface-hover);
+  }
+
   tbody tr:last-child td {
     border-bottom: none; // last in row needs no border otherwise it will have thicker border due to the parent container border
   }
