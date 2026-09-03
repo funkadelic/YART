@@ -9,8 +9,10 @@ export const CATALOG_IDS = ["en", "es", "fr", "ar-XB"] as const;
 export type CatalogId = (typeof CATALOG_IDS)[number];
 
 /**
- * The catalogs a preference list may select. The pseudo-locale is excluded, so
- * it stays reachable the only way it should be, by being chosen.
+ * The catalogs a preference list may select. The pseudo-locale's primary
+ * subtag is ar, and negotiation matches on that, so an unfiltered walk would
+ * serve bracketed English to a reader who wants Arabic. Excluding it here
+ * leaves it reachable the only way it should be, by being chosen.
  */
 export const NEGOTIABLE_CATALOG_IDS = ["en", "es", "fr"] as const;
 

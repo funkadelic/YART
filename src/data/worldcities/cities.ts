@@ -34,7 +34,12 @@ export interface City {
   population: number;
 }
 
-/** The ways loading can fail. Codes, because the messages below are English. */
+/**
+ * The ways loading can fail. Codes, because the messages below are English.
+ * Eight are thrown here; "unexpected" is App's fallback for a rejection that
+ * carries no Error. A tuple, so the catalog test walks the set rather than
+ * restating it.
+ */
 export const DATASET_ERROR_CODES = [
   "notAnObject",
   "missingRows",
@@ -213,7 +218,8 @@ export function loadCities(): Promise<IndexedCity[]> {
     .then(parseCities);
 
   // Attached at store time: any delay leaves a window in which a retry
-  // re-awaits the already-rejected promise.
+  // re-awaits the already-rejected promise. Unconditional is safe, because a
+  // new entry is only stored after this handler has cleared the old one.
   pending.catch(() => {
     cached = undefined;
   });

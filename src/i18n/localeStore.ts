@@ -43,7 +43,11 @@ function handleStorage(event: StorageEvent): void {
   }
 }
 
-/** The listeners come and go with the first and last subscriber. */
+/**
+ * The listeners come and go with the first and last subscriber, so the choice
+ * is re-read here: nothing was listening between the last unsubscribe and this
+ * call, and a cross-tab write in that window went unseen.
+ */
 export function subscribeLocale(onStoreChange: () => void): () => void {
   if (subscribers.size === 0) {
     choice = readStoredChoice();

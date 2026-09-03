@@ -8,7 +8,10 @@ function isBlank(value: unknown): boolean {
 /** Grouping by type keeps the comparison transitive over mixed rows. */
 const TYPE_RANK = { number: 0, string: 1, other: 2 } as const;
 
-/** Places a value in the ordering above. The rows reach here already widened. */
+/**
+ * Places a value in the ordering above. The parse boundary types every City
+ * field, so only a row type other than City reaches the mixed arms.
+ */
 function rank(value: unknown): number {
   if (typeof value === "number") return TYPE_RANK.number;
   if (typeof value === "string") return TYPE_RANK.string;
