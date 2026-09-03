@@ -113,6 +113,7 @@ The static head of the document stays in the base language too. Its title, its d
 - [Sass](https://sass-lang.com/) for the CSS Modules stylesheets
 - [React Icons](https://react-icons.github.io/react-icons/)
 - [axe-core](https://github.com/dequelabs/axe-core) for the accessibility sweeps
+- [Chromatic](https://www.chromatic.com/) for the visual regression snapshots
 - [ESLint](https://eslint.org/), [Stylelint](https://stylelint.io/), and [Prettier](https://prettier.io/)
 
 ### Build target
@@ -387,27 +388,28 @@ it("sorts by population descending on the second activation", async () => {
 
 The assertions read `aria-sort`, the same attribute a screen reader announces, so a passing test is evidence the announcement is right.
 
-A second suite under `e2e/` runs in a real browser against a production build, covering four things a simulated DOM cannot show: that reopening a link restores the search, sort and page it carries; that Back and Forward move through history the way the shareable-link design intends; that the theme and the language are stamped before the first paint rather than after the page loads; and that the dataset arrives over the network as a separate content-hashed asset.
+A second suite under `e2e/` runs in a real browser against a production build, covering five things a simulated DOM cannot show: that reopening a link restores the search, sort and page it carries; that Back and Forward move through history the way the shareable-link design intends; that the theme and the language are stamped before the first paint rather than after the page loads; that the dataset arrives over the network as a separate content-hashed asset; and how the table actually renders, captured as snapshots for visual comparison.
 
 The pipeline sends three reports to [Codecov](https://codecov.io/gh/funkadelic/YART): the coverage the hundred percent gate is measured on, a JUnit report from each of the three suites, and the size of every emitted asset. A test that fails intermittently is flagged as a flake. The asset sizes come from Codecov's standalone analyzer, which reports assets and not individual modules.
 
 ## Scripts
 
-| Script                    | What it does                                                          |
-| ------------------------- | --------------------------------------------------------------------- |
-| `npm run dev`             | Start the dev server with hot reload                                  |
-| `npm run build`           | Build the production bundle                                           |
-| `npm run preview`         | Serve the built bundle locally                                        |
-| `npm test`                | Run the test suite once                                               |
-| `npm run test:watch`      | Run the test suite in watch mode                                      |
-| `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%      |
-| `npm run test:browser`    | Run the accessibility checks in a real Chromium                       |
-| `npm run test:e2e`        | Run the end-to-end suite in a real Chromium against a built bundle    |
-| `npm run typecheck`       | Check types without emitting output                                   |
-| `npm run lint`            | Run ESLint then Stylelint; a warning fails it (`lint:fix` to autofix) |
-| `npm run format`          | Run Prettier                                                          |
-| `npm run format:check`    | Check formatting without rewriting anything                           |
-| `npm run generate:cities` | Regenerate the committed dataset asset from the upstream CSV export   |
+| Script                    | What it does                                                               |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `npm run dev`             | Start the dev server with hot reload                                       |
+| `npm run build`           | Build the production bundle                                                |
+| `npm run preview`         | Serve the built bundle locally                                             |
+| `npm test`                | Run the test suite once                                                    |
+| `npm run test:watch`      | Run the test suite in watch mode                                           |
+| `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%           |
+| `npm run test:browser`    | Run the accessibility checks in a real Chromium                            |
+| `npm run test:e2e`        | Run the end-to-end suite in a real Chromium against a built bundle         |
+| `npm run chromatic`       | Upload the snapshots a full `npm run test:e2e` archived, for visual review |
+| `npm run typecheck`       | Check types without emitting output                                        |
+| `npm run lint`            | Run ESLint then Stylelint; a warning fails it (`lint:fix` to autofix)      |
+| `npm run format`          | Run Prettier                                                               |
+| `npm run format:check`    | Check formatting without rewriting anything                                |
+| `npm run generate:cities` | Regenerate the committed dataset asset from the upstream CSV export        |
 
 `npm run test:browser` and `npm run test:e2e` both drive a real Chromium. `npm ci` downloads neither that browser nor the system libraries it needs, so a clean clone fetches both once with `npx playwright install --with-deps --only-shell chromium`, whose `--with-deps` half needs `sudo` on Linux. CI runs that same command, so every path installs the same binary.
 

@@ -19,6 +19,11 @@ jobs:
     # catches a hang in setup or in either install without holding the machine for
     # the six-hour platform default.
     timeout-minutes: 10
+    # A boolean rather than the token, because `secrets` is not an allowed
+    # context in a step's `if`. The token itself stays on the one step that
+    # needs it, out of the environment of the install and of every action here.
+    env:
+      HAS_CHROMATIC: ${{ secrets.CHROMATIC_PROJECT_TOKEN != '' }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -159,6 +164,37 @@ jobs:
         uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:
           path: dist
+
+      # Last, because every step above carries no status function and so inherits
+      # success(): a Chromatic failure placed earlier would skip the two uploads,
+      # the scan and the Pages artifact. It reads the archives the end-to-end
+      # sweep already wrote, so it rebuilds and re-runs nothing.
+      #
+      # Pull requests and main only. Both event types fire on a branch with an
+      # open pull request, in different concurrency groups, so without this every
+      # commit is captured and metered twice.
+      #
+      # Exits once the build is uploaded rather than waiting out the capture, so
+      # a slow queue cannot spend the job's budget. The accept gate is
+      # Chromatic's own pull request check rather than this exit code. The token
+      # is guarded rather than the actor, because this repository is public and a
+      # fork pull request gets no secret at all.
+      #
+      # The action rather than the CLI, because on a pull request the checkout is
+      # a merge ref and the CLI files the build against a commit that exists in
+      # no branch and is later collected. The action reads the head commit off
+      # the event payload. It carries its own copy of the CLI, so keep this pin
+      # and the one in package.json on the same version.
+      - name: Chromatic
+        if: >-
+          env.HAS_CHROMATIC == 'true'
+          && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+        env:
+          CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+        uses: chromaui/action@2a0b63f30233c48591844a46d451b9cf68128186 # v18.7.2
+        with:
+          playwright: true
+          exitOnceUploaded: true
 
   # A job rather than its own workflow, because `needs` is what makes the publish
   # wait on the gate. The write permissions sit here so the job running untrusted

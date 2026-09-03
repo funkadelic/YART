@@ -14,6 +14,7 @@
     "react-icons": "5.7.0"
   },
   "devDependencies": {
+    "@chromatic-com/playwright": "0.14.12",
     "@codecov/bundle-analyzer": "2.0.1",
     "@eslint/js": "9.39.5",
     "@playwright/test": "1.62.1",
@@ -30,6 +31,7 @@
     "@vitest/coverage-v8": "4.1.11",
     "autoprefixer": "10.5.4",
     "axe-core": "4.13.0",
+    "chromatic": "18.7.2",
     "eslint": "9.39.5",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-jsx-a11y": "6.10.2",
@@ -64,6 +66,7 @@
     "test:watch": "vitest --project=jsdom",
     "test:browser": "vitest run --project=browser --reporter=default --reporter=junit --outputFile.junit=junit/browser.junit.xml",
     "test:e2e": "playwright test",
+    "chromatic": "chromatic --playwright",
     "prepare": "husky"
   },
   "browserslist": [
