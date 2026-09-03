@@ -7,7 +7,8 @@ import {
   type ResolvedLocale,
 } from "./resolveLocale";
 
-/** Owned once for the document, which is what makes several callers agree. */
+// The chosen locale, owned once for the document, which is what makes several
+// callers agree rather than each resolving one of its own.
 
 /** Anything not a shipped id is absent. The access throws when blocked. */
 function readStoredChoice(): LocaleChoice {

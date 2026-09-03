@@ -5,7 +5,7 @@ import {
   type SortedDirection,
 } from "./en";
 
-/** The pseudo-locale, so direction and truncation have something to prove. */
+// The pseudo-locale, so direction and truncation have something to prove.
 
 /** An isolate, not a mark: a mark cannot bound a run, only start one. */
 const FIRST_STRONG_ISOLATE = "\u2066";

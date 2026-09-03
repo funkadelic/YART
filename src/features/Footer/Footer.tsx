@@ -7,10 +7,12 @@ import styles from "./Footer.module.scss";
 const SOURCE_NAME = "simplemaps.com World Cities";
 const LICENSE_NAME = "CC BY 4.0";
 
-const LINK_URLS: Readonly<Record<string, string>> = {
-  [SOURCE_NAME]: "https://simplemaps.com/data/world-cities",
-  [LICENSE_NAME]: "https://creativecommons.org/licenses/by/4.0/",
-};
+// A Map rather than an object literal: the key is a slice of catalog copy, and
+// an object answers for every Object.prototype member as well as its own.
+const LINK_URLS = new Map<string, string>([
+  [SOURCE_NAME, "https://simplemaps.com/data/world-cities"],
+  [LICENSE_NAME, "https://creativecommons.org/licenses/by/4.0/"],
+]);
 
 // Splits the sentence around the two identifiers, so each can be a link
 // wherever the sentence put it. One catalog entry rather than three fragments,
@@ -27,7 +29,7 @@ export function Footer() {
           .attribution(SOURCE_NAME, LICENSE_NAME)
           .split(EMBEDDED_NAMES)
           .map((part) => {
-            const href = LINK_URLS[part];
+            const href = LINK_URLS.get(part);
 
             // The part itself is the key: the split alternates text with
             // identifier, and position is what a translation may move.
