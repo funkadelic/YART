@@ -35,7 +35,7 @@ const TEST_SCAFFOLDING_IMPORT = {
 // silently unrestrict it for every file that block matches.
 const READER_FACING_ATTRIBUTE = {
   selector:
-    'JSXAttribute[name.name=/^(aria-label|title|placeholder|alt)$/][value.type="Literal"]',
+    'JSXAttribute[name.name=/^(aria-label|title|placeholder|alt)$/]:matches([value.type="Literal"], [value.expression.type="Literal"], [value.expression.type="TemplateLiteral"])',
   message:
     "src/components/ renders any collection for any reader, so a string here is a claim about which reader. Add the entry to the catalogs and read it off DataTableLabels, PaginationLabels or SearchInputLabels.",
 };
@@ -78,7 +78,9 @@ const DIRECTION_BRANCH = [
   },
   {
     selector:
-      "IfStatement[alternate] ReturnStatement[argument.type=/^JSX(Element|Fragment)$/]",
+      "IfStatement" +
+      ":matches([consequent.argument.type=/^JSX(Element|Fragment)$/], [consequent.body.0.argument.type=/^JSX(Element|Fragment)$/])" +
+      ":matches([alternate.argument.type=/^JSX(Element|Fragment)$/], [alternate.body.0.argument.type=/^JSX(Element|Fragment)$/])",
     message:
       "Two glyph components returned from two branches are a prop, a branch and a coverage line for what one transform: scaleX(-1) under an attribute selector already does. Mirror in the stylesheet.",
   },
@@ -90,7 +92,15 @@ export default defineConfig([
   // emitted bundle, a coverage report, and the page resources the visual spec
   // archives under test-results/.
   {
-    ignores: ["dist/", "coverage/", "test-results/", "playwright-report/"],
+    ignores: [
+      "dist/",
+      "coverage/",
+      "test-results/",
+      "playwright-report/",
+      "junit/",
+      "src/__screenshots__/",
+      ".vitest-attachments/",
+    ],
   },
   {
     files: ["**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}"],
@@ -123,6 +133,9 @@ export default defineConfig([
       },
     },
     rules: {
+      // Spread again: the key above replaces the recommended rules wholesale
+      // rather than merging with them, which silently disabled all 22.
+      ...react.configs.flat.recommended.rules,
       "react/react-in-jsx-scope": "off",
     },
   },
@@ -187,7 +200,6 @@ export default defineConfig([
       "src/i18n/format.ts",
       "src/**/*.test.{ts,tsx}",
       "src/**/*.test-d.ts",
-      "src/test/**",
     ],
     rules: {
       "no-restricted-syntax": ["error", ...LOCALE_CALL_SITE],

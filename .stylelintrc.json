@@ -76,19 +76,29 @@
         ],
         "declaration-property-unit-allowed-list": [
           {
-            "margin": ["rem"],
-            "margin-block": ["rem"],
-            "margin-inline": ["rem"],
-            "padding": ["rem"],
-            "padding-block": ["rem"],
-            "padding-inline": ["rem"],
-            "gap": ["rem"],
-            "row-gap": ["rem"],
-            "column-gap": ["rem"],
-            "font-size": ["rem"]
+            "/^(margin|padding)(-(block|inline))?(-(start|end))?$/": ["rem"],
+            "/^(margin|padding)-(top|bottom|left|right)$/": ["rem"],
+            "/^(gap|row-gap|column-gap|font-size)$/": ["rem"]
           },
           {
             "message": "Spacing and type are authored in rem through a token, so the layout follows the reader's browser font-size setting: reach for var(--space-*) or var(--font-size-*)"
+          }
+        ],
+        "function-disallowed-list": [
+          [
+            "rgb",
+            "rgba",
+            "hsl",
+            "hsla",
+            "hwb",
+            "lab",
+            "lch",
+            "oklab",
+            "oklch",
+            "color-mix"
+          ],
+          {
+            "message": "Colour in a component stylesheet arrives through var(--color-*) and nowhere else; a functional notation is as fixed as a hex and flips with no theme"
           }
         ]
       }

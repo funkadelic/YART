@@ -1776,3 +1776,59 @@ describe("toolchain baseline", () => {
     ).toEqual(["Intl.Collator", "Intl.NumberFormat", "Intl.PluralRules"]);
   });
 });
+
+describe("the plugin rule sets the lint gate claims to run", () => {
+  // A flat-config block that spreads a shared config and then declares its own
+  // rules key replaces that config's rules wholesale rather than merging with
+  // them. The gate stays green, because the rules are simply absent. Same
+  // per-object replacement hazard eslint.config.js records for
+  // no-restricted-imports, one level up, and no disallow rule can state the
+  // positive claim that a rule set is still on.
+  //
+  // The one rule turned off on purpose: the new JSX transform needs no import
+  // in scope. Listed here so a second name joining it has to be deliberate.
+  const DELIBERATELY_OFF = ["react/react-in-jsx-scope"];
+
+  const severityOf = (entry: unknown): unknown =>
+    Array.isArray(entry) ? entry[0] : entry;
+
+  const isOff = (entry: unknown): boolean => {
+    const severity = severityOf(entry);
+    return severity === 0 || severity === "off" || severity === undefined;
+  };
+
+  it("has every rule of the React recommended set active", async () => {
+    const { ESLint } = await import("eslint");
+    const react = (await import("eslint-plugin-react")).default;
+
+    const resolved: unknown = await new ESLint({
+      cwd: projectRoot,
+    }).calculateConfigForFile(
+      join(projectRoot, "src/components/DataTable/TableHead.tsx"),
+    );
+    const active =
+      (resolved as { rules?: Record<string, unknown> }).rules ?? {};
+
+    const recommended = required(
+      react.configs.flat.recommended,
+      "the React recommended flat config",
+    ).rules;
+
+    // The plugin ships a few of its own recommended entries at severity 0, so
+    // the claim is over the ones it actually enables.
+    const enabled = Object.entries(recommended ?? {})
+      .filter(([, entry]) => !isOff(entry))
+      .map(([name]) => name)
+      .filter((name) => !DELIBERATELY_OFF.includes(name));
+
+    expect(
+      enabled.length,
+      "the React recommended set is empty",
+    ).toBeGreaterThan(10);
+
+    expect(
+      enabled.filter((name) => isOff(active[name])),
+      "rules of the React recommended set are not on",
+    ).toEqual([]);
+  });
+});
