@@ -79,8 +79,12 @@ const COLUMNS = [
   "population",
 ] as const;
 
-/** A text input cannot produce this, so a needle cannot cross a field. */
-const SEARCH_KEY_SEPARATOR = "\u0000";
+/**
+ * Joins the indexed fields. The address can carry one (`?q=%00`) and trim does
+ * not strip it, so getCities removes it from the needle rather than this being
+ * a character no input produces.
+ */
+export const SEARCH_KEY_SEPARATOR = "\u0000";
 
 /** A search cache rather than a fact about a city, so it stays off City. */
 interface IndexedCity extends City {

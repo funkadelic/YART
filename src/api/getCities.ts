@@ -1,5 +1,5 @@
 import type { City } from "../data/worldcities/cities";
-import { loadCities } from "../data/worldcities/cities";
+import { SEARCH_KEY_SEPARATOR, loadCities } from "../data/worldcities/cities";
 
 // Re-exported so no consumer's import path changed when the definition moved.
 export type { City };
@@ -22,7 +22,12 @@ export async function getCities({
 }: GetCitiesParams = {}): Promise<City[]> {
   const all = await loadCities();
 
-  const needle = searchTerm.trim().toLowerCase();
+  // Stripped here rather than at the URL parser, so a needle arriving any
+  // other way cannot span two fields either.
+  const needle = searchTerm
+    .replaceAll(SEARCH_KEY_SEPARATOR, "")
+    .trim()
+    .toLowerCase();
   // The empty term returns a copy, so the module-scope cache cannot escape.
   const matched = needle
     ? all.filter((city) => city.searchKey.includes(needle))

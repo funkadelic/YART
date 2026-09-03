@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
+import { SEARCH_KEY_SEPARATOR } from "../data/worldcities/cities";
 import { getCities } from "./getCities";
 import type { City } from "./getCities";
 import {
@@ -170,6 +171,19 @@ describe("getCities", () => {
     // needle. The loader's key comment carries the measurement.
     expect(await getCities({ searchTerm: "primary" })).toHaveLength(0);
     expect(await getCities({ searchTerm: "admin" })).toHaveLength(0);
+  });
+
+  it("cannot be made to match across two indexed fields", async () => {
+    // The address is an input path the box is not: ?q=%00 decodes to a real
+    // separator and trim leaves it, so a needle could span the join. getCities
+    // strips it, which turns a bare one into the empty term.
+    const spanning = await getCities({
+      searchTerm: `Tokyo${SEARCH_KEY_SEPARATOR}Tokyo`,
+    });
+    expect(spanning).toEqual(await getCities({ searchTerm: "TokyoTokyo" }));
+
+    const bare = await getCities({ searchTerm: SEARCH_KEY_SEPARATOR });
+    expect(bare).toHaveLength((await getCities({ searchTerm: "" })).length);
   });
 
   it("returns an empty list when nothing matches", async () => {
