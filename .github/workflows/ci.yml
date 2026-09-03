@@ -179,13 +179,22 @@ jobs:
       # Chromatic's own pull request check rather than this exit code. The token
       # is guarded rather than the actor, because this repository is public and a
       # fork pull request gets no secret at all.
+      #
+      # The action rather than the CLI, because on a pull request the checkout is
+      # a merge ref and the CLI files the build against a commit that exists in
+      # no branch and is later collected. The action reads the head commit off
+      # the event payload. It carries its own copy of the CLI, so keep this pin
+      # and the one in package.json on the same version.
       - name: Chromatic
         if: >-
           env.HAS_CHROMATIC == 'true'
           && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
         env:
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-        run: npx chromatic --playwright --exit-once-uploaded
+        uses: chromaui/action@2a0b63f30233c48591844a46d451b9cf68128186 # v18.7.2
+        with:
+          playwright: true
+          exitOnceUploaded: true
 
   # A job rather than its own workflow, because `needs` is what makes the publish
   # wait on the gate. The write permissions sit here so the job running untrusted
