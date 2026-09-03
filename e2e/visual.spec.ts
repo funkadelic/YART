@@ -82,3 +82,31 @@ test("empty results", async ({ page }) => {
     timeout: DATASET_READY_TIMEOUT_MS,
   });
 });
+
+test("hovered row", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("table")).toBeVisible({
+    timeout: DATASET_READY_TIMEOUT_MS,
+  });
+
+  const row = page.locator("tbody tr").first();
+  const background = () =>
+    row.evaluate((el) => getComputedStyle(el).backgroundColor);
+  const resting = await background();
+
+  await row.hover();
+  const hovered = await background();
+  expect(hovered).not.toBe(resting);
+
+  // The archive Chromatic replays carries the DOM, never the pointer, so a
+  // :hover rule paints in none of it. Writing the colour the rule just produced
+  // onto the row puts it somewhere the archive reaches. Read from the rendered
+  // page rather than restated here, so a token change moves the snapshot and a
+  // deleted rule fails the assertion above before this line runs. Set through
+  // the CSSOM because the shell's style-src forbids a style attribute.
+  await row.evaluate((el, color) => {
+    el.style.backgroundColor = color;
+  }, hovered);
+  await page.mouse.move(0, 0);
+  await expect.poll(background).toBe(hovered);
+});
