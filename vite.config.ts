@@ -2,6 +2,7 @@ import { playwright } from "@vitest/browser-playwright";
 import react from "@vitejs/plugin-react";
 import { defaultExclude, defineConfig } from "vitest/config";
 import { createHash } from "node:crypto";
+import { resolve } from "node:path";
 
 import type { Plugin } from "vite";
 
@@ -218,6 +219,16 @@ export default defineConfig({
     // to its content hash, so this pins a floor rather than changing output.
     // Update it and the browserslist together; nothing asserts they agree.
     target: ["chrome111", "edge111", "firefox111", "safari16.4"],
+    rollupOptions: {
+      // Declaring an input replaces the implicit single-shell one, so the
+      // original shell has to be named here or it stops being built. Both stay
+      // at the repository root: a nested shell would resolve the relative asset
+      // prefix this build emits one directory too deep.
+      input: {
+        index: resolve(import.meta.dirname, "index.html"),
+        movies: resolve(import.meta.dirname, "movies.html"),
+      },
+    },
   },
   test: {
     coverage: {

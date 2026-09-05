@@ -1,0 +1,15 @@
+// the top-level parent container, wrapping the search box and the table
+// together now that the two are siblings
+.container {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: var(--space-5);
+}
+
+// responsive styles
+@media (width <= 768px) {
+  .container {
+    padding: var(--space-2-5);
+  }
+}

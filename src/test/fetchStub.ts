@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { vi } from "vitest";
 
+import { FILM_FIXTURE_ENVELOPE } from "./filmFixture";
+
 /**
  * Shared dataset request stubs.
  *
@@ -24,6 +26,7 @@ const assetPath = join(
   "worldcities",
   "cities.json",
 );
+const filmAssetPath = join(here.dirname, "..", "data", "films", "films.json");
 
 /**
  * Serves a payload as the dataset response, serializing it first.
@@ -47,8 +50,27 @@ export function stubDatasetFetchFromDisk(body: string) {
 }
 
 /**
+ * Serves the film envelope in place of the city one the setup file installs.
+ *
+ * Deliberately not a URL-discriminating stub: the shared stub above answers
+ * whatever is asked for, and a films test installs this one over it in its own
+ * hook, which runs after the setup file's. A films test that forgets fails with
+ * a column-order failure rather than passing quietly against city data.
+ */
+export function stubFilmDatasetFetch(payload: unknown = FILM_FIXTURE_ENVELOPE) {
+  return stubDatasetFetch(payload);
+}
+
+/**
  * Reads the committed dataset asset off disk.
  */
 export function readCommittedAsset(): string {
   return readFileSync(assetPath, "utf8");
+}
+
+/**
+ * Reads the committed film dataset asset off disk.
+ */
+export function readCommittedFilmAsset(): string {
+  return readFileSync(filmAssetPath, "utf8");
 }

@@ -108,14 +108,17 @@ it(
 
       const datasets = emitted.filter((name) => name.endsWith(".json"));
 
-      expect(datasets, "the dataset was not emitted exactly once").toHaveLength(
-        1,
-      );
+      expect(
+        datasets,
+        "the two datasets were not emitted exactly once each",
+      ).toHaveLength(2);
+
+      const cities = datasets.find((name) => HASHED_JSON_ASSET.test(name));
 
       expect(
-        datasets[0],
-        `${datasets[0]} carries no content hash, so a corrected dataset would keep the same URL`,
-      ).toMatch(HASHED_JSON_ASSET);
+        cities,
+        `${datasets.join(", ")} carries no content-hashed city dataset, so a corrected dataset would keep the same URL`,
+      ).toBeDefined();
 
       // The shell names the emitted dataset so the preload scanner can start
       // the largest request on the page before the entry chunk has parsed. It
@@ -135,7 +138,7 @@ it(
       expect(
         preload ?? "",
         "the preload does not name the emitted dataset",
-      ).toContain(`assets/${datasets[0]}`);
+      ).toContain(`assets/${cities ?? ""}`);
       expect(
         preload ?? "",
         "the preload carries no crossorigin, so the dataset downloads twice",

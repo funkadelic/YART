@@ -1,4 +1,4 @@
-import type { DatasetErrorCode } from "../../api/getCities";
+import type { DatasetErrorCode } from "../../data/loadEnvelope";
 import { listFormatFor, numberFormatFor, selectPlural } from "../format";
 
 /**
