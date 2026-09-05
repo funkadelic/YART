@@ -79,9 +79,16 @@ const defaultProps = {
   errorMessage: null,
 };
 
-/** The cells of the one rendered row, in column order: title, year, runtime. */
+/**
+ * The three scalar cells of the one rendered row, in column order. The three
+ * multi-valued ones follow them and are asserted beside the builder that joins
+ * them, where the catalog entry doing the joining is in reach.
+ */
 function onlyRowCells() {
-  return screen.getAllByRole("cell").map((cell) => cell.textContent);
+  return screen
+    .getAllByRole("cell")
+    .slice(0, 3)
+    .map((cell) => cell.textContent);
 }
 
 beforeEach(() => {
