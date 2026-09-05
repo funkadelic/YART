@@ -23,13 +23,17 @@ const projectRoot = join(here.dirname, "..");
  * about the web server rather than about the build, which is the difference
  * between a ten second fix and an issue filed about a flaky suite.
  *
- * ponytail: this checks the entry document only, not staleness. A build older
+ * ponytail: this checks both entry documents only, not staleness. A build older
  * than the sources still passes. Compare modification times if that ever bites.
  */
 export default function globalSetup(): void {
-  if (!existsSync(join(projectRoot, "dist", "index.html"))) {
-    throw new Error(
-      "dist/index.html is missing. The end-to-end suite serves an existing build. Run: npm run build",
-    );
+  // Named one at a time rather than counted, so a build that dropped one entry
+  // says which one instead of reporting a number.
+  for (const shell of ["index.html", "movies.html"]) {
+    if (!existsSync(join(projectRoot, "dist", shell))) {
+      throw new Error(
+        `dist/${shell} is missing. The end-to-end suite serves an existing build. Run: npm run build`,
+      );
+    }
   }
 }
