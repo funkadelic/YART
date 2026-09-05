@@ -68,6 +68,13 @@ function isStringArray(value: unknown): value is string[] {
   );
 }
 
+// Code-unit order, not the reader's collation: the asset is parsed once and
+// cached, and the locale is not fixed for the life of that cache.
+const byCodeUnit = (a: string, b: string) => {
+  if (a === b) return 0;
+  return a < b ? -1 : 1;
+};
+
 /** The only place a row's untyped fields are narrowed. */
 function parseFilmRows(rows: unknown[]): Film[] {
   return rows.map((row, at) => {
@@ -110,9 +117,9 @@ function parseFilmRows(rows: unknown[]): Film[] {
       title,
       year,
       runtime,
-      directors: [...directors].sort(),
-      genres: [...genres].sort(),
-      countries: [...countries].sort(),
+      directors: [...directors].sort(byCodeUnit),
+      genres: [...genres].sort(byCodeUnit),
+      countries: [...countries].sort(byCodeUnit),
     };
   });
 }

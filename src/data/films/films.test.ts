@@ -279,7 +279,7 @@ describe("loadFilms values", () => {
           "A Film",
           2000,
           100,
-          ["Zoe", "Adil"],
+          ["Zoe", "Adil", "Zoe"],
           ["war", "epic"],
           ["Peru", "Chad"],
         ],
@@ -290,7 +290,7 @@ describe("loadFilms values", () => {
 
     const [row] = await loadFilms();
 
-    expect(row?.directors).toEqual(["Adil", "Zoe"]);
+    expect(row?.directors).toEqual(["Adil", "Zoe", "Zoe"]);
     expect(row?.genres).toEqual(["epic", "war"]);
     expect(row?.countries).toEqual(["Chad", "Peru"]);
   });
