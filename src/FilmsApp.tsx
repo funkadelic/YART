@@ -8,6 +8,10 @@ import { datasetErrorText } from "./i18n/datasetErrorText";
 import { RootLayout } from "./features/RootLayout";
 import { FilmTable, parseSearchTerm } from "./features/FilmTable";
 
+// ponytail: a near-copy of App, deliberately. The request effect and its stale
+// guard are the same shape for any dataset, but two consumers is not enough to
+// say what the third would need. Lift it into one hook when a third page
+// arrives, or sooner if the two copies start to disagree.
 const FilmsApp = () => {
   // Seeded from the address, or every shared link costs two requests on a cold
   // start. A read and it stays one: the single write is one layer down.
