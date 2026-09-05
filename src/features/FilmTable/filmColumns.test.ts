@@ -80,49 +80,52 @@ describe("the multi-valued cells", () => {
   });
 });
 
-describe("the genres comparator", () => {
-  const two = film({ genres: ["drama film", "comedy film"] });
-  const three = film({ genres: ["drama film", "comedy film", "war film"] });
-  const none = film({ genres: [] });
+// Driven over all three rather than over genres alone, because the defect this
+// covers was the comparator being given to one of the three columns that need
+// it while the other two silently kept the default.
+const MULTI_VALUED = ["directors", "genres", "countries"] as const;
 
-  it("orders the shorter list first ascending and the longer first descending", () => {
-    expect(order("genres", two, three, "asc")).toBe(-1);
-    expect(order("genres", two, three, "desc")).toBe(1);
+describe.each(MULTI_VALUED)("the %s comparator", (id) => {
+  const one = film({ [id]: ["beta"] });
+  const two = film({ [id]: ["alpha", "gamma"] });
+  const none = film({ [id]: [] });
+
+  it("orders by the joined text rather than by how many values there are", () => {
+    // The pair the length-first ordering got wrong: one value that reads later
+    // against two that read earlier. Length would put the single value first.
+    expect(order(id, one, two, "asc")).toBe(1);
+    expect(order(id, one, two, "desc")).toBe(-1);
   });
 
-  it("falls through to a collated comparison when the lengths agree", () => {
+  it("orders equal-length lists the way the collator does", () => {
     const collator = collatorFor(TAG);
-    const other = film({ genres: ["action film", "comedy film"] });
+    const other = film({ [id]: ["alpha", "delta"] });
 
-    const collated = Math.sign(collator.compare("drama film", "action film"));
+    const collated = Math.sign(collator.compare("alpha gamma", "alpha delta"));
 
-    expect(order("genres", two, other, "asc")).toBe(collated);
-    expect(order("genres", two, other, "desc")).toBe(-collated);
+    expect(order(id, two, other, "asc")).toBe(collated);
+    expect(order(id, two, other, "desc")).toBe(-collated);
   });
 
   // The case the default comparator gets wrong: an empty array is not blank by
   // the shared definition, so it would sort among the letters rather than last.
-  it("sorts a film with no recorded genre last in both directions", () => {
-    expect(order("genres", none, two, "asc")).toBe(1);
-    expect(order("genres", none, two, "desc")).toBe(1);
-    expect(order("genres", two, none, "asc")).toBe(-1);
-    expect(order("genres", two, none, "desc")).toBe(-1);
+  it("sorts a film with no recorded value last in both directions", () => {
+    expect(order(id, none, two, "asc")).toBe(1);
+    expect(order(id, none, two, "desc")).toBe(1);
+    expect(order(id, two, none, "asc")).toBe(-1);
+    expect(order(id, two, none, "desc")).toBe(-1);
   });
 
   // Identity rather than equality: negated zero is equal to zero and is not the
   // same value, and it is the difference an equality check downstream reads.
-  it("returns positive zero for two films with no recorded genre", () => {
-    expect(Object.is(column("genres").compare(none, none, "desc"), 0)).toBe(
-      true,
-    );
+  it("returns positive zero for two films with no recorded value", () => {
+    expect(Object.is(column(id).compare(none, none, "desc"), 0)).toBe(true);
   });
 
-  it("returns positive zero for two films with the same genres", () => {
-    const same = film({ genres: [...two.genres] });
+  it("returns positive zero for two films with the same values", () => {
+    const same = film({ [id]: [...two[id]] });
 
-    expect(Object.is(column("genres").compare(two, same, "desc"), 0)).toBe(
-      true,
-    );
+    expect(Object.is(column(id).compare(two, same, "desc"), 0)).toBe(true);
   });
 });
 
