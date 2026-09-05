@@ -16,9 +16,17 @@ import { resolveLocale } from "../../i18n/resolveLocale";
  * as four digits, and a thousands separator in it is wrong in every locale.
  */
 export function buildFilmColumns(catalog: Catalog, tag: string) {
-  const col = columns<Film>(collatorFor(tag));
+  // Named rather than passed straight through, because the genres comparator
+  // below closes over it. That closure is why the shared column options keep
+  // the three parameters they have always had.
+  const collator = collatorFor(tag);
+  const col = columns<Film>(collator);
   const number = numberFormatFor(tag);
   const headings = catalog.films.columns;
+
+  // The language decides how a list of values reads, so the catalog joins it and
+  // no cell here writes a separator of its own.
+  const list = (values: readonly string[]) => catalog.common.list(tag, values);
 
   return [
     col.key("title", { label: headings.title }),
@@ -30,6 +38,33 @@ export function buildFilmColumns(catalog: Catalog, tag: string) {
       // default renderer would do and what this one has to keep doing.
       renderCell: (value) => (value === null ? "" : number.format(value)),
     }),
+    col.key("directors", { label: headings.directors, renderCell: list }),
+    // The default comparator is not an error here, which is the hazard: it files
+    // an array as an other-typed value and orders it by the accidental string
+    // form, and it does not call an empty list blank, so films with no recorded
+    // genre would sort among the letters rather than last. Explicit, then.
+    col.key("genres", {
+      label: headings.genres,
+      renderCell: list,
+      compare: (a, b, direction) => {
+        // Ahead of the direction, because an empty list sorts last in both and
+        // a flip applied first would reverse it.
+        if ((a.length === 0) !== (b.length === 0)) {
+          return a.length === 0 ? 1 : -1;
+        }
+
+        const comparison =
+          a.length === b.length
+            ? collator.compare(a[0] ?? "", b[0] ?? "")
+            : a.length - b.length;
+
+        // Returned ahead of the flip, since negating zero gives a value an
+        // equality check downstream reads as unequal.
+        if (comparison === 0) return 0;
+        return direction === "desc" ? -comparison : comparison;
+      },
+    }),
+    col.key("countries", { label: headings.countries, renderCell: list }),
   ];
 }
 
