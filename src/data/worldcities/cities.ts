@@ -1,6 +1,21 @@
 // The ?url suffix is load-bearing: a plain value import would compile several
 // megabytes of dataset into the JavaScript chunk with no visible error.
 import citiesUrl from "./cities.json?url";
+import {
+  DatasetError,
+  SEARCH_KEY_SEPARATOR,
+  createEnvelopeLoader,
+} from "../loadEnvelope";
+
+// The failure vocabulary reaches the tree through this module, so no consumer's
+// import path moved when the shared boundaries were extracted. Same trick
+// src/api/getCities.ts uses on this module, for the same reason.
+export type { DatasetErrorCode } from "../loadEnvelope";
+export {
+  DATASET_ERROR_CODES,
+  DatasetError,
+  SEARCH_KEY_SEPARATOR,
+} from "../loadEnvelope";
 
 /**
  * simplemaps.com "World Cities" basic database, v1.91.3, distributed under
@@ -34,40 +49,6 @@ export interface City {
   population: number;
 }
 
-/**
- * The ways loading can fail. Codes, because the messages below are English.
- * Eight are thrown here; "unexpected" is App's fallback for a rejection that
- * carries no Error. A tuple, so the catalog test walks the set rather than
- * restating it.
- */
-export const DATASET_ERROR_CODES = [
-  "notAnObject",
-  "missingRows",
-  "columnOrder",
-  "rowShape",
-  "rowFieldType",
-  "transport",
-  "status",
-  "notJson",
-  "unexpected",
-] as const;
-
-/** Which failure a dataset error is. */
-export type DatasetErrorCode = (typeof DATASET_ERROR_CODES)[number];
-
-/** A dataset failure and its code. The message never reaches the screen. */
-export class DatasetError extends Error {
-  constructor(
-    readonly code: DatasetErrorCode,
-    readonly detail: number,
-    message: string,
-    options?: ErrorOptions,
-  ) {
-    super(message, options);
-    this.name = "DatasetError";
-  }
-}
-
 /** The order the asset must declare, so a mis-mapping is a startup failure. */
 const COLUMNS = [
   "id",
@@ -79,66 +60,14 @@ const COLUMNS = [
   "population",
 ] as const;
 
-/**
- * Joins the indexed fields. The address can carry one (`?q=%00`) and trim does
- * not strip it, so getCities removes it from the needle rather than this being
- * a character no input produces.
- */
-export const SEARCH_KEY_SEPARATOR = "\u0000";
-
 /** A search cache rather than a fact about a city, so it stays off City. */
 interface IndexedCity extends City {
   searchKey: string;
 }
 
-/** Generous: a wall-clock deadline over a 3.3MB asset that cannot resume. */
-const LOAD_TIMEOUT_MS = 60_000;
-
-/** A download that did not finish. A stall and a drop are one failure. */
-function transportError(cause: unknown): DatasetError {
-  return new DatasetError(
-    "transport",
-    0,
-    "The city data could not be downloaded. Check your connection and try again.",
-    { cause },
-  );
-}
-
-let cached: Promise<IndexedCity[]> | undefined;
-
-/** The only place the untyped result of response.json() is narrowed. */
-function parseCities(payload: unknown): IndexedCity[] {
-  if (typeof payload !== "object" || payload === null) {
-    throw new DatasetError(
-      "notAnObject",
-      0,
-      "The city data could not be read.",
-    );
-  }
-
-  const { columns, rows } = payload as { columns?: unknown; rows?: unknown };
-
-  if (!Array.isArray(rows)) {
-    throw new DatasetError(
-      "missingRows",
-      0,
-      "The city data is missing its rows array.",
-    );
-  }
-
-  if (
-    !Array.isArray(columns) ||
-    columns.length !== COLUMNS.length ||
-    columns.some((column, at) => column !== COLUMNS[at])
-  ) {
-    throw new DatasetError(
-      "columnOrder",
-      0,
-      "The city data has an unexpected column order and was not loaded.",
-    );
-  }
-
-  return (rows as unknown[]).map((row, at) => {
+/** The only place a row's untyped fields are narrowed. */
+function parseCityRows(rows: unknown[]): IndexedCity[] {
+  return rows.map((row, at) => {
     if (!Array.isArray(row) || row.length !== COLUMNS.length) {
       throw new DatasetError(
         "rowShape",
@@ -183,51 +112,10 @@ function parseCities(payload: unknown): IndexedCity[] {
   });
 }
 
-/** The module-scope cache is what makes a double mount issue one request. */
-export function loadCities(): Promise<IndexedCity[]> {
-  if (cached) return cached;
-
-  const pending = fetch(citiesUrl, {
-    signal: AbortSignal.timeout(LOAD_TIMEOUT_MS),
-  })
-    // The browser's own text tells the reader nothing, so it is replaced and
-    // kept as the cause. Attached here, so a read failure is not reported as one.
-    .catch((reason: unknown) => {
-      throw transportError(reason);
-    })
-    .then((response) => {
-      if (!response.ok) {
-        throw new DatasetError(
-          "status",
-          response.status,
-          `The city data could not be downloaded (status ${response.status}).`,
-        );
-      }
-      // A static host serving its own page for a missing file answers with a
-      // success status and HTML, so the status check stays ahead of this.
-      return response.json().catch((reason: unknown) => {
-        // A body that is not JSON fails the parse and nothing else does, so
-        // everything else reaching here is the download stopping partway.
-        if (!(reason instanceof SyntaxError)) {
-          throw transportError(reason);
-        }
-        throw new DatasetError(
-          "notJson",
-          0,
-          "The city data was downloaded but could not be read as JSON.",
-          { cause: reason },
-        );
-      });
-    })
-    .then(parseCities);
-
-  // Attached at store time: any delay leaves a window in which a retry
-  // re-awaits the already-rejected promise. Unconditional is safe, because a
-  // new entry is only stored after this handler has cleared the old one.
-  pending.catch(() => {
-    cached = undefined;
-  });
-
-  cached = pending;
-  return pending;
-}
+/** The cache the factory holds is what makes a double mount issue one request. */
+export const loadCities = createEnvelopeLoader({
+  url: citiesUrl,
+  dataset: "city",
+  columns: COLUMNS,
+  parseRows: parseCityRows,
+});
