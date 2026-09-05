@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// Token layering and contrast, the theme script's placement in index.html, and
+// Token layering and contrast, the theme script's placement in each shell, and
 // the halves of the stylesheet rules stylelint has no way to express: an SCSS
 // variable declared in a component sheet, a reference to a retired token, the
 // global sheet's bounded px count, and the positive claim that the focus ring is
@@ -16,7 +16,7 @@
 // indirection here is the only way to assert on the values that actually reach a
 // screen.
 
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import postcss from "postcss";
 import { describe, expect, it } from "vitest";
@@ -30,7 +30,6 @@ import { required } from "../test/required";
 const here = import.meta as ImportMeta & { dirname: string };
 const projectRoot = join(here.dirname, "..", "..");
 const cssPath = join(projectRoot, "src", "index.css");
-const htmlPath = join(projectRoot, "index.html");
 
 const LIGHT_SELECTOR = ":root";
 const DARK_SELECTOR = ':root[data-theme="dark"]';
@@ -443,8 +442,14 @@ describe("contrast", () => {
   }
 });
 
-describe("the theme script in index.html", () => {
-  const html = readFileSync(htmlPath, "utf8");
+// Every shell the site ships. Each carries its own copy of the theme script, so
+// a guard reading one of them leaves the other free to defer the script and
+// flash the wrong theme, and for a right-to-left reader the wrong direction, on
+// every load.
+const SHELLS = ["index.html", "movies.html"];
+
+describe.each(SHELLS)("the theme script in %s", (shell) => {
+  const html = readFileSync(join(projectRoot, shell), "utf8");
   const headStart = html.indexOf("<head>");
   const headEnd = html.indexOf("</head>");
   const head = html.slice(headStart, headEnd);
@@ -469,7 +474,7 @@ describe("the theme script in index.html", () => {
   it("carries exactly one blocking classic script inside the head", () => {
     expect(
       blocking.length,
-      "index.html has no attribute-free script in its head, so the theme lands after first paint",
+      `${shell} has no attribute-free script in its head, so the theme lands after first paint`,
     ).toBe(1);
   });
 
@@ -478,12 +483,10 @@ describe("the theme script in index.html", () => {
 
     const moduleScript = html.search(/<script[^>]*\btype=["']module["']/);
 
-    expect(moduleScript, "index.html loads no module script").toBeGreaterThan(
-      -1,
-    );
+    expect(moduleScript, `${shell} loads no module script`).toBeGreaterThan(-1);
     expect(
       required(blocking[0], "the blocking script").offset,
-      "the theme script does not precede the module script",
+      `the theme script in ${shell} does not precede the module script`,
     ).toBeLessThan(moduleScript);
   });
 
@@ -494,9 +497,22 @@ describe("the theme script in index.html", () => {
     expect(blocking, "no blocking script to read a key from").toHaveLength(1);
     expect(
       required(blocking[0], "the blocking script").body,
-      `the theme script does not mention the storage key ${THEME_STORAGE_KEY}`,
+      `the theme script in ${shell} does not mention the storage key ${THEME_STORAGE_KEY}`,
     ).toContain(THEME_STORAGE_KEY);
   });
+});
+
+// A renamed shell would otherwise empty the loop above into silence rather than
+// into a failure.
+it("checks the theme script in every shell the site ships", () => {
+  expect(SHELLS.length, "the shell list is empty").toBe(2);
+
+  for (const shell of SHELLS) {
+    expect(
+      existsSync(join(projectRoot, shell)),
+      `${shell} is named in the shell list but is not in the tree`,
+    ).toBe(true);
+  }
 });
 
 // The halves of the old color guard stylelint has no rule for: declaring an
