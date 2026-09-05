@@ -758,10 +758,26 @@ function moduleSource(path: string): ts.SourceFile {
 const THEME_MODULE = "src/theme/resolveTheme.ts";
 const LOCALE_MODULE = "src/i18n/resolveLocale.ts";
 
-// The one module allowed to write the address, and the module that owns which
-// keys the address may carry.
+// The city page's address writer, and the module that owns which keys the
+// address may carry. This constant stays the city container alone, because it
+// is also an element of the address-document list below, and widening it there
+// would demand a second verbatim copy of the invariant paragraph.
 const ADDRESS_WRITER = "src/features/CityTable/CityTable.tsx";
+const FILMS_ADDRESS_WRITER = "src/features/FilmTable/FilmTable.tsx";
 const SCHEMA_MODULE = "src/components/DataTable/tableStateUrl.ts";
+
+/**
+ * Every module allowed to write the address, one per page, sorted.
+ *
+ * Two rather than one is a decision and not a trend: the site ships two pages,
+ * each a separate document with its own query string, and neither writer can
+ * see the other's. A third writer appearing without a third page having been
+ * planned for is what this list exists to reject.
+ */
+const ADDRESS_WRITERS = [ADDRESS_WRITER, FILMS_ADDRESS_WRITER].toSorted();
+
+/** How many pages the site ships, written out so a rename cannot move it. */
+const ADDRESS_WRITING_PAGES = 2;
 
 /**
  * The four keys the query string owns, sorted.
@@ -1684,7 +1700,7 @@ describe("toolchain baseline", () => {
   // four keys it owned, and whether every document a reader consults for the
   // design still says the same thing about what a link reproduces. A token
   // search would pass on all three from a mention inside a comment.
-  it("keeps one address writer, four query keys, and one account of what a link carries", () => {
+  it("keeps one address writer per page, four query keys, and one account of what a link carries", () => {
     const sources = findSourceFiles(join(projectRoot, "src"));
 
     expect(
@@ -1708,8 +1724,17 @@ describe("toolchain baseline", () => {
 
     expect(
       writers.toSorted(),
-      "the address is written from somewhere other than exactly the one writer",
-    ).toEqual([ADDRESS_WRITER]);
+      "the address is written from somewhere other than exactly the two writers",
+    ).toEqual(ADDRESS_WRITERS);
+
+    // Against a written-out number rather than the list above, in the idiom the
+    // address-document loop already uses: a rename that moved both constants
+    // and the containers together would otherwise satisfy the comparison with
+    // whatever set it found, including an empty one.
+    expect(
+      writers,
+      "fewer address writers were found than the site has pages",
+    ).toHaveLength(ADDRESS_WRITING_PAGES);
 
     // Separate from the count above so the failure says which rule broke. A push
     // fills the back stack with positions the reader never asked to record, which

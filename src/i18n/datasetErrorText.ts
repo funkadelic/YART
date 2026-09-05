@@ -1,4 +1,8 @@
-import { DatasetError } from "../api/getCities";
+// Taken from the shared envelope loader rather than from either dataset seam.
+// This module serves both pages, so naming one seam would pull that dataset's
+// loader into the chunk both entries share, and the other page would download
+// a dataset it never renders.
+import { DatasetError } from "../data/loadEnvelope";
 
 import type { DomainCatalog } from "./catalogs/en";
 
