@@ -1772,8 +1772,13 @@ describe("toolchain baseline", () => {
       localeCallSites(
         parse(readFileSync(join(projectRoot, FORMATTER_MODULE), "utf8")),
       ).toSorted(),
-      "the formatter module no longer builds the three cached instances",
-    ).toEqual(["Intl.Collator", "Intl.NumberFormat", "Intl.PluralRules"]);
+      "the formatter module no longer builds the four cached instances",
+    ).toEqual([
+      "Intl.Collator",
+      "Intl.ListFormat",
+      "Intl.NumberFormat",
+      "Intl.PluralRules",
+    ]);
   });
 });
 
