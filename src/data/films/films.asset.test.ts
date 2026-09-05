@@ -169,8 +169,15 @@ describe("committed film dataset", () => {
     expect(offenders.slice(0, 10)).toEqual([]);
   });
 
-  // The three shapes the rest of the phase is built to exercise. Without them
-  // the asset renders correctly and proves nothing.
+  // The shapes the rest of the phase is built to exercise. Without them the
+  // asset renders correctly and proves nothing. The year is asserted here as
+  // well as the runtime, because the type declares both nullable and the
+  // either-a-number-or-null case above is satisfied by an asset with no null
+  // in it at all.
+  it("keeps at least one row with a null year", () => {
+    expect(rows.some((row) => (row as AssetRow)[2] === null)).toBe(true);
+  });
+
   it("keeps at least one row with a null runtime", () => {
     expect(rows.some((row) => (row as AssetRow)[3] === null)).toBe(true);
   });

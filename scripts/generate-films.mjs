@@ -129,8 +129,16 @@ export function parseSparqlResult(text) {
     }
 
     // The tail segment of the entity URI. Already injective, so unlike the cities
-    // id it needs no padding and no synthetic fallback.
+    // id it needs no padding and no synthetic fallback. Validated here rather
+    // than left to the asset check, because the sort below reads the digits off
+    // it: a tail that is not an entity id yields NaN, and a comparator returning
+    // NaN reorders the rows with no error anywhere.
     const id = uri.slice(uri.lastIndexOf("/") + 1);
+    if (!/^Q[0-9]+$/.test(id)) {
+      throw new Error(
+        `Binding ${index} has a film URI that is not an entity id: ${uri}`,
+      );
+    }
 
     const title = literal(binding, "title");
     if (title === undefined || title === "") {
@@ -161,10 +169,18 @@ export function parseSparqlResult(text) {
     }
 
     // Split here, once, at generation time, so no comparator and no cell renderer
-    // ever has to take a pipe-joined string apart.
+    // ever has to take a pipe-joined string apart. An empty element means a label
+    // contained the separator and one name became two, which every later check
+    // accepts because two strings are as valid as one.
     for (const name of MULTI_VALUED) {
       const raw = literal(binding, name);
-      row.push(raw === undefined ? [] : raw.split(SEPARATOR));
+      const values = raw === undefined ? [] : raw.split(SEPARATOR);
+      if (values.some((value) => value === "")) {
+        throw new Error(
+          `Film ${id} has a ${name} value containing the separator: ${JSON.stringify(raw)}`,
+        );
+      }
+      row.push(values);
     }
 
     return row;
@@ -188,6 +204,9 @@ export function checkShape(rows) {
 
   if (new Set(ids).size !== ids.length) {
     problems.push("some film ids repeat, so the row id is not injective");
+  }
+  if (!rows.some((row) => row[2] === null)) {
+    problems.push("no row carries a null year");
   }
   if (!rows.some((row) => row[3] === null)) {
     problems.push("no row carries a null runtime");

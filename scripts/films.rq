@@ -1,4 +1,6 @@
-# Recommended. Measured 31.0s / 8,944 rows / 1.29 MB CSV on 2026-09-04.
+# Recommended. Returned the 8,945 rows the committed asset holds, as SPARQL
+# JSON, well inside the service deadline when it was run on 2026-09-04. The row
+# count is the one figure worth recording, since the asset check reads it back.
 # Each multi-valued property is aggregated in its own subquery; a single flat
 # GROUP BY over the same joins exceeds the service's 60 second deadline.
 SELECT ?film ?title ?year ?runtime ?directors ?genres ?countries WHERE {
