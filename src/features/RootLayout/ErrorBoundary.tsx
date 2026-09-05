@@ -45,8 +45,8 @@ export class ErrorBoundary extends Component<
 
   render() {
     if (this.state.hasError) {
-      // a11y: alert rather than status, because the content it replaces is
-      // gone. Same reasoning the inline error region already records.
+      // a11y: role alert, because the content it replaces is gone. Same
+      // reasoning the inline error region already records.
       return (
         <div className={styles.fallback} role="alert">
           <p>{this.props.labels.message}</p>

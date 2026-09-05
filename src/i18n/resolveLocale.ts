@@ -12,7 +12,7 @@ export type CatalogId = (typeof CATALOG_IDS)[number];
  * The catalogs a preference list may select. The pseudo-locale's primary
  * subtag is ar, and negotiation matches on that, so an unfiltered walk would
  * serve bracketed English to a reader who wants Arabic. Excluding it here
- * leaves it reachable the only way it should be, by being chosen.
+ * leaves it reachable by being chosen.
  */
 export const NEGOTIABLE_CATALOG_IDS = ["en", "es", "fr"] as const;
 
@@ -32,7 +32,7 @@ export interface ResolvedLocale {
   readonly dir: "ltr" | "rtl";
 }
 
-/** Direction written out: Intl.Locale getTextInfo is above the browser floor. */
+/** dir written out; Intl.Locale getTextInfo is above the browser floor. */
 const RESOLVED_LOCALES = {
   en: { catalog: "en", tag: "en-US", dir: "ltr" },
   es: { catalog: "es", tag: "es-ES", dir: "ltr" },
@@ -42,7 +42,7 @@ const RESOLVED_LOCALES = {
 
 /** The one gate between a reader-controlled string and the closed union. */
 export function isCatalogId(value: unknown): value is CatalogId {
-  // Widened for the search: the tuple's own includes rejects an unknown.
+  // Widened for the search, since the tuple's own includes rejects an unknown.
   return (CATALOG_IDS as readonly unknown[]).includes(value);
 }
 
@@ -52,8 +52,9 @@ export function isLocaleChoice(value: unknown): value is LocaleChoice {
 }
 
 /**
- * A language tag's primary subtag. A search rather than a split, so a tag with
- * no separator takes a real branch rather than an index that is never absent.
+ * A language tag's primary subtag. The separator is searched for, so a tag
+ * carrying none takes a real branch; a split would index a position that can
+ * never be absent.
  */
 function primarySubtag(tag: string): string {
   const separator = tag.indexOf("-");

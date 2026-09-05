@@ -11,10 +11,10 @@ import { PREFERS_DARK_QUERY } from "../theme/resolveTheme";
  * stub reports and the listeners currently subscribed to it, so a test can move
  * the preference and read back whether a mounted consumer followed.
  *
- * The stub carries only the three members the hook touches. The global is
- * installed through a helper that takes an unknown value, so consumers still
- * typecheck against the DOM's own declaration and a member nothing calls would
- * be answering to nobody.
+ * The stub carries only the three members the hook touches, since anything more
+ * would answer to no caller. The global is installed through a helper that takes
+ * an unknown value, so consumers still typecheck against the DOM's own
+ * declaration.
  */
 
 type MediaPreferenceListener = (event: {
@@ -28,7 +28,7 @@ const mediaListeners = new Set<MediaPreferenceListener>();
 /**
  * Moves the operating system preference the stub reports and notifies everything
  * currently subscribed, so a test can prove that a mounted consumer follows a
- * change rather than only that it read the value once.
+ * change and did not merely read the value once.
  */
 export function setPrefersDark(next: boolean): void {
   prefersDark = next;
@@ -47,10 +47,10 @@ export function mediaListenerCount(): number {
 }
 
 /**
- * Installs the stub and returns the preference to light. Called per test rather
- * than once at module scope because the suite unstubs globals after every case,
- * which would strip a module-scope installation after the first test in a file
- * and fail every later test in it for a reason unrelated to its subject.
+ * Installs the stub and returns the preference to light. Called per test,
+ * because the suite unstubs globals after every case and a module-scope
+ * installation would be stripped after the first test in a file, failing every
+ * later test in it for a reason unrelated to its subject.
  */
 export function installMatchMediaStub(): void {
   prefersDark = false;

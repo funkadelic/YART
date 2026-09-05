@@ -17,17 +17,15 @@ interface SearchInputProps {
 }
 
 /**
- * The search box above the table. The term is reported upward rather than held
- * here, and the event-to-term conversion happens at the only place that knows
+ * The search box above the table. The term is held nowhere here and reported
+ * upward, and the event-to-term conversion happens at the only place that knows
  * an input event exists, which keeps the callback signature free of the DOM.
  *
- * a11y: the accessible name describes what the control does rather than what it
- * searches, which is why it is one word and not the name of a collection. That
- * is still true and is now a catalog entry rather than a literal: the reason it
- * was fixed here was that it never varies by caller, and the reason it is no
- * longer fixed here is that it does vary by language. The placeholder sits
- * beside it because that text names the collection being searched, which only
- * the caller knows.
+ * a11y: the accessible name describes what the control does, so it is one word
+ * and not the name of a collection. It still never varies by caller, which is
+ * why it used to be a literal here; it now arrives as a catalog entry because
+ * it does vary by language. The placeholder sits beside it because that text
+ * names the collection being searched, which only the caller knows.
  */
 export function SearchInput({ value, onChange, labels }: SearchInputProps) {
   /** Reports every keystroke upward; debouncing belongs to the request owner. */

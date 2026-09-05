@@ -11,7 +11,7 @@ export function paginate<T>(
   page: number,
   pageSize: number,
 ): PaginateResult<T> {
-  // Floored at one: zero would be a page count nothing can be on.
+  // Floored at one, because zero would be a page count nothing can be on.
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   // Clamped for reading only. The position in state is left alone, so a result
   // set that widens again restores the reader where they were.

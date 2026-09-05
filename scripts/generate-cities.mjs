@@ -9,13 +9,12 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-// Imported rather than taken from the global, so this file is clean under the
-// browser-globals lint config the rest of the repo uses.
+// Imported explicitly, so this file is clean under the browser-globals lint
+// config the rest of the repo uses.
 import process from "node:process";
 
-// Resolved from this file's own location rather than from the working directory,
-// which is wherever npm happened to be invoked and is not necessarily the project
-// root.
+// Resolved from this file's own location, because the working directory is
+// wherever npm happened to be invoked and is not necessarily the project root.
 const dataDir = join(import.meta.dirname, "..", "src", "data", "worldcities");
 const DEFAULT_INPUT_PATH = join(dataDir, "worldcities.csv");
 const OUTPUT_PATH = join(dataDir, "cities.json");
@@ -60,8 +59,8 @@ const SOURCE_FIELDS = Object.freeze([
 ]);
 
 /**
- * Wraps the rows in the envelope the loader expects. The declared column list is
- * what turns the tuple shape's one real defect, a silently shifted field, into a
+ * Wraps the rows in the envelope the loader expects. The declared column list
+ * turns the tuple shape's one real defect, a silently shifted field, into a
  * loud startup failure.
  */
 export function buildEnvelope(rows) {
@@ -79,10 +78,10 @@ export function buildEnvelope(rows) {
 /**
  * Serializes the envelope with every row on its own line.
  *
- * The line-per-row layout is the reason the tuple shape was chosen: it makes a
- * single corrected city a one-line diff. A plain JSON.stringify puts the whole
- * payload on one line roughly 3.3 MB wide, and the reviewability argument for
- * this shape collapses with it. The cost is about 1.3% gzipped.
+ * The line-per-row layout makes a single corrected city a one-line diff, which
+ * is the reason the tuple shape was chosen. A plain JSON.stringify puts the
+ * whole payload on one line roughly 3.3 MB wide, and the reviewability argument
+ * for this shape collapses with it. The cost is about 1.3% gzipped.
  */
 export function formatEnvelope(envelope) {
   const lines = [
@@ -104,7 +103,7 @@ export function formatEnvelope(envelope) {
 }
 
 /**
- * Splits CSV text into records, honouring quoted fields with embedded commas,
+ * Splits CSV text into records, honoring quoted fields with embedded commas,
  * doubled quotes, and newlines.
  */
 function splitCsvRecords(text) {
@@ -176,12 +175,11 @@ export function parseWorldCitiesCsv(text) {
   // every real id is at least 1004003059.
   let syntheticId = 0;
 
-  // Number() turns anything unparseable into NaN, and NaN survives every gate
-  // downstream: typeof NaN is "number", so the asset test's per-row typecheck
+  // Number() turns anything unparseable into NaN, and typeof NaN is "number",
+  // so NaN survives every gate downstream: the asset test's per-row typecheck
   // and the parse boundary in cities.ts both wave it through, and the table
-  // renders the string "NaN". Rejecting here is the only place it can be
-  // caught, so a corrupt upstream export fails the generator instead of
-  // shipping.
+  // renders the string "NaN". This is the only place it can be caught, so a
+  // corrupt upstream export fails the generator instead of shipping.
   const numericOrThrow = (raw, field, at) => {
     const value = Number(raw);
     if (!Number.isFinite(value)) {

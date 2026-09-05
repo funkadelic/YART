@@ -12,9 +12,9 @@ interface Widget {
 }
 
 /**
- * A collator on the base tag, because the factory no longer holds one and every
- * caller states which reader's ordering it is building for. Nothing in this
- * file depends on which tag it is; it depends on there being exactly one.
+ * A collator on the base tag. The factory holds none, so every caller states
+ * which reader's ordering it is building for, and nothing in this file depends
+ * on which tag that is, only on there being exactly one.
  */
 const col = columns<Widget>(collatorFor("en-US"));
 
@@ -37,9 +37,9 @@ interface Props {
 
 /**
  * Renders the hook while recording the array it returns on every render, so a
- * case can assert that two renders handed back the same array rather than two
- * equal ones. A new-but-equal array is what reshuffles the table between
- * renders, and deep equality cannot see it.
+ * case can assert that two renders handed back the identical array and not an
+ * equal copy. A new-but-equal array reshuffles the table between renders, and
+ * deep equality cannot see it.
  */
 function renderSorted(initialProps: Props) {
   const seen: (readonly Widget[])[] = [];

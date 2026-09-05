@@ -51,7 +51,7 @@ export interface DataTableProps<T, Id extends string> {
   readonly getRowId: (row: T) => string;
   // The id is read off the column array above and only checked here. Without
   // the NoInfer wrapper the compiler would collect a candidate from this prop
-  // too and union it in, so a misspelt id would widen the union in silence
+  // too and union it in, so a misspelled id would widen the union in silence
   // instead of failing at the line that holds it.
   readonly state: TableState<NoInfer<Id>>;
   readonly onSortChange: (columnId: NoInfer<Id>) => void;
@@ -60,8 +60,7 @@ export interface DataTableProps<T, Id extends string> {
   readonly loading: boolean;
   // False until the underlying collection has arrived at least once.
   readonly datasetReady: boolean;
-  // The text of the failure rather than the failure itself, so no component
-  // tier sees a cause.
+  // The failure as text, so no component tier sees a cause.
   readonly errorMessage: string | null;
   // Optional so the table stays usable without a container behind it.
   readonly onRetry?: (() => void) | undefined;
@@ -73,7 +72,7 @@ export interface DataTableProps<T, Id extends string> {
  *
  * a11y: the failure arrives after the initial render, so without a live region
  * a screen reader user is never told the load failed or that a way back is on
- * offer. alert rather than status because the table it replaces is gone.
+ * offer. The role is alert, because the table it replaces is gone.
  */
 function ErrorRegion({
   message,
@@ -105,14 +104,14 @@ function sortAnnouncement(
 ): string {
   if (!hasSorted) return "";
   if (sortDirection && activeLabel) {
-    // The direction travels as the value it is, not as a word chosen here:
-    // which word it becomes is a fact about a language.
+    // The direction travels as a value, because which word it becomes is a
+    // fact about a language.
     return labels.sortedAnnouncement(activeLabel, sortDirection);
   }
   return labels.sortClearedAnnouncement;
 }
 
-/** Silent unless settled: a count mid-request names rows about to go. */
+/** Silent until settled, because a count mid-request names rows about to go. */
 function resultsAnnouncement(
   labels: DataTableLabels,
   settled: boolean,
@@ -124,7 +123,7 @@ function resultsAnnouncement(
   return labels.results(shown, total);
 }
 
-/** The sort described for the caption, in the caption's words, not the region's. */
+/** Describes the sort for the caption, whose words differ from the region's. */
 function sortSummary(
   labels: DataTableLabels,
   sortDirection: "asc" | "desc" | null,
@@ -167,8 +166,8 @@ export function DataTable<T, Id extends string>({
     state.pageSize,
   );
 
-  // The announcements name the column label, not the descriptor's id. Empty
-  // rather than absent, so the composers below always hand over a string.
+  // The announcements name the column label, not the descriptor's id. It falls
+  // back to the empty string, so the composers below always hand over a string.
   const activeLabel =
     columns.find((column) => column.id === state.sortColumnId)?.label ?? "";
 
@@ -180,8 +179,8 @@ export function DataTable<T, Id extends string>({
       <ErrorRegion message={errorMessage} labels={labels} onRetry={onRetry} />
     );
   } else if (!datasetReady) {
-    // Gated on datasetReady rather than loading, or the empty-result copy
-    // would claim a search matched nothing before one was made.
+    // Gated on datasetReady. Gating on loading would let the empty-result copy
+    // claim a search matched nothing before one was made.
     body = <div className={styles.loading}>{labels.loading}</div>;
   } else if (paginatedData.length === 0) {
     body = <div className={styles.noResults}>{labels.empty}</div>;
@@ -236,12 +235,12 @@ export function DataTable<T, Id extends string>({
           activeLabel,
         )}
       </div>
-      {/* a11y: mounted unconditionally rather than inside the branch that
-          renders the table. A live region created with its message already in
-          it announces nothing, which would drop the first row count on a cold
-          start and again after a successful retry. The empty result gets a
-          sentence of its own for the same reason in reverse: emptying a region
-          is not an announcement either, so a search matching no rows would be
+      {/* a11y: mounted unconditionally, outside the branch that renders the
+          table. A live region created with its message already in it announces
+          nothing, which would drop the first row count on a cold start and
+          again after a successful retry. The empty result gets a sentence of
+          its own for the same reason in reverse, since emptying a region is not
+          an announcement either, so a search matching no rows would be
           indistinguishable from a request that never came back. */}
       <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
         {resultsAnnouncement(

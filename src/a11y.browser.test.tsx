@@ -14,31 +14,32 @@ import { required } from "./test/required";
 import "./index.css";
 
 // The rules the engine could not decide, asserted by set equality as the jsdom
-// sweep asserts its own. Empty here, and that emptiness is the reason this file
-// exists beside that one: a real engine has a layout engine and a canvas, so it
-// can sample the rendered color pair behind an element and the contrast rule
-// actually runs rather than filing itself as undecided. A rule turning up
-// undecided in a real engine is news, and news belongs in a red run.
+// sweep asserts its own. Empty here, because a real engine has a layout engine
+// and a canvas, so it can sample the rendered color pair behind an element and
+// the contrast rule actually runs instead of filing itself as undecided. That
+// gap is why this file exists beside the jsdom one, and a rule turning up
+// undecided in a real engine is news that belongs in a red run.
 const EXPECTED_INCOMPLETE: readonly string[] = Object.freeze([]);
 
 /**
- * Every state the app is swept in, in the order the sweeps run. Written out
- * rather than derived, so it can disagree with what actually ran.
+ * Every state the app is swept in, in the order the sweeps run. Written out by
+ * hand, so it can disagree with what actually ran.
  */
 const SWEPT_STATES = Object.freeze(["light", "dark", "paged", "rtl"]);
 
 /**
- * The one catalog that ships reading right to left. It is not a language, and
- * that is why it ships: the other three all read left to right, which would
- * leave the direction half of this file with nothing to prove itself against.
+ * The one catalog that ships reading right to left. It is a pseudo-locale and
+ * not a language, and it ships because the other three all read left to right,
+ * which would leave the direction half of this file with nothing to assert
+ * against.
  */
 const RTL_CATALOG_ID = "ar-XB";
 
 /**
  * The inset the search icon sits at, and the inset the input reserves for it.
- * One token, var(--space-4), restated here as a resolved length rather than
- * imported, per the convention that a value the subject also defines is written
- * out in the test so the assertion cannot pass for whatever the subject holds.
+ * One token, var(--space-4), restated here as a resolved length, per the
+ * convention that a value the subject also defines is written out in the test so
+ * the assertion cannot pass for whatever the subject holds.
  */
 const SEARCH_ICON_INSET = "16px";
 
@@ -56,9 +57,9 @@ const MIRRORED = "matrix(-1, 0, 0, 1, 0, 0)";
 /**
  * Narrow enough for the table's horizontal scroll container, which only exists
  * below 768px, and the desktop size the browser project is configured with and
- * which the closing sweep state assumes. Restated rather than read back off the
- * runner, because restoring to whatever the runner happens to report would make
- * the restoration unfalsifiable.
+ * which the closing sweep state assumes. Written out here, because restoring to
+ * whatever the runner happens to report would make the restoration
+ * unfalsifiable.
  */
 const NARROW_VIEWPORT = Object.freeze({ width: 480, height: 900 });
 const DESKTOP_VIEWPORT = Object.freeze({ width: 1280, height: 900 });
@@ -72,18 +73,18 @@ const sweptStates: string[] = [];
 /**
  * Runs the rule engine over whatever is currently on screen and holds both
  * assertions, so a state added to the walk cannot arrive with only half of
- * them. The state name rides along as the assertion message, which is what
- * makes a failure say which of the swept states broke.
+ * them. The state name rides along as the assertion message, so a failure says
+ * which of the swept states broke.
  *
- * The context is the document rather than the body, for the reason the jsdom
- * sweep widens its own: nine rules match the html element and a body context
+ * The context is the document, for the reason the jsdom sweep widens its own:
+ * nine rules match the html element and a body context
  * reports them neither as violations nor as undecided. Here the page really is
  * the page, so the page-level rules read what a reader would load.
  *
  * resultTypes is passed for the same reason the jsdom sweep passes it: without
  * it the engine builds a full node list for the thirty-odd rules that pass on
- * every sweep, and nothing reads it. It still reports which rules passed, which
- * is what the first assertion below reads.
+ * every sweep, and nothing reads it. It still reports which rules passed, and
+ * the first assertion below reads that.
  */
 async function sweep(state: string): Promise<void> {
   const results = await axe.run(document, {
@@ -92,17 +93,16 @@ async function sweep(state: string): Promise<void> {
 
   // Both assertions below compare against an empty set in this file, so a sweep
   // that reached a verdict on nothing reads exactly like a sweep of a clean
-  // page. The rules that passed are what tell the two apart. Asserted as a
-  // floor rather than as the count evaluated today, so a rule retired upstream
-  // is not a failure and an engine that ran nothing still is.
+  // page. The rules that passed tell the two apart. Asserted as a floor rather
+  // than as the count evaluated today, so a rule retired upstream is not a
+  // failure and an engine that ran nothing still is.
   expect(results.passes.length, state).toBeGreaterThan(0);
 
   expect(describeViolations(results), state).toEqual([]);
   expect(incompleteRuleIds(results), state).toEqual(EXPECTED_INCOMPLETE);
 
-  // Recorded after the assertions rather than before them, for the reason the
-  // jsdom sweep records it there: a state that failed its sweep is not a state
-  // that was swept clean.
+  // Recorded after the assertions, for the reason the jsdom sweep records it
+  // there: a state that failed its sweep is not a state that was swept clean.
   sweptStates.push(state);
 }
 
@@ -115,14 +115,14 @@ describe("accessibility in a real engine", () => {
 
     render(<App />);
 
-    // The one generous wait in the file, and deliberate rather than a smell.
-    // The engine fetches the real multi-megabyte dataset asset across the dev
+    // The one generous wait in the file, and deliberate. The engine fetches
+    // the real multi-megabyte dataset asset across the dev
     // server, parses and indexes it, and only then waits out the seam latency.
     // The jsdom suite pays none of that, because it runs against a fixture.
     await screen.findByRole("table", {}, { timeout: 20_000 });
 
-    // The first state is chosen rather than inherited. Left on the default the
-    // theme resolves against the engine's own preference, which would sweep the
+    // The first state is chosen explicitly. Left on the default, the theme
+    // resolves against the engine's own preference, which would sweep the
     // dark palette twice on a machine that prefers dark and never sweep light.
     await user.click(screen.getByRole("radio", { name: "Light" }));
     await screen.findByRole("radio", { name: "Light", checked: true });
@@ -136,9 +136,9 @@ describe("accessibility in a real engine", () => {
     await screen.findByText(/^Page 2 of /);
     await sweep("paged");
 
-    // The picker is operated rather than the attribute being set, so the state
-    // swept is one a reader can actually reach. Found by role alone: its own
-    // accessible name follows the language it is about to change.
+    // Operating the picker, so the state swept is one a reader can actually
+    // reach. Found by role alone, because its own accessible name follows the
+    // language it is about to change.
     await user.selectOptions(
       screen.getByRole("combobox", { name: "Language" }),
       RTL_CATALOG_ID,
@@ -199,9 +199,9 @@ describe("accessibility in a real engine", () => {
 
     // The remaining two of the six, on the header's segmented control. Its
     // automatic margin resolves onto the reading-end side, so the control still
-    // pins to the trailing edge; its separator hairlines fall between the labels
-    // rather than doubling against the outer edge, which is what the reset on the
-    // reading-start-most label is for.
+    // pins to the trailing edge. The reset on the reading-start-most label keeps
+    // the separator hairlines between the labels instead of doubling one against
+    // the outer edge.
     const themeControl = screen.getByRole("radiogroup");
     const themeMargins = getComputedStyle(themeControl);
 
@@ -243,8 +243,8 @@ describe("accessibility in a real engine", () => {
 
     expect(edges).toEqual([...edges].toSorted((a, b) => b - a));
 
-    // Position is what flex reverses. The glyphs are mirrored by the stylesheet,
-    // and this is the half that would silently stay wrong without it.
+    // Flex reverses position only. The glyphs are mirrored by the stylesheet,
+    // and without that rule they would silently point the wrong way.
     for (const control of controls) {
       const glyph = required(
         control.querySelector("svg") ?? undefined,
@@ -270,7 +270,7 @@ describe("accessibility in a real engine", () => {
 
     expect(scroller.scrollWidth).toBeGreaterThan(scroller.clientWidth);
 
-    // Reachability rather than a scroll offset. Under this direction the offset
+    // This asserts reachability, because under this direction the scroll offset
     // runs negative in a standards-compliant engine, nothing in this tree reads
     // one, and a test that started would be the first. The first column reads at
     // the start edge and is on screen; the last is the one the container exists

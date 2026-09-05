@@ -40,8 +40,8 @@ function changedBy<Id extends string>(
       return { query: action.query };
     case "sort": {
       const { columnId } = action;
-      // Sorting cycles rather than toggling: ascending, descending, unsorted,
-      // then over. Every branch reports a sort, the one that clears included.
+      // Sorting cycles through ascending, descending, unsorted, then over.
+      // Every branch reports a sort, the one that clears included.
       if (state.sortColumnId !== columnId) {
         return {
           sortColumnId: columnId,
@@ -74,13 +74,13 @@ export function applyTableAction<Id extends string>(
 
   // The one action a control can emit at its current value, because the
   // debounce commits any pause, including a sequence that undoes itself. The
-  // same object rather than an equal one, so no render and no address write.
+  // identical object comes back, so there is no render and no address write.
   if (action.type === "query" && action.query === state.query) {
     return state;
   }
 
   // Sorting, resizing and searching each replace the rows the position was
   // chosen against, so all three return to the first page. One site, so whoever
-  // adds a fifth action has to decide about the reset rather than forget it.
+  // adds a fifth action has to decide about the reset.
   return { ...state, ...changedBy(state, action), page: 1 };
 }
