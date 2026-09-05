@@ -189,6 +189,15 @@ export default defineConfig([
               message:
                 "src/components/ takes its strings as props so that it stays reusable. Pass them in through the labels prop instead of reaching for a catalog here.",
             },
+            {
+              // The other direction of the same layer rule. A domain type here
+              // welds the generic table to one dataset and defeats the type
+              // parameter, and it does so invisibly: the tree still renders and
+              // every test still passes.
+              group: ["**/api/**", "**/data/**"],
+              message:
+                "src/components/ renders any row type, so it may not name one. Pass the shape through Column<T>, getRowId and the labels prop instead of importing a domain type here.",
+            },
           ],
         },
       ],
