@@ -2,14 +2,20 @@ import { describe, expect, it } from "vitest";
 
 import { DATASET_ERROR_CODES } from "../../api/getCities";
 import { required } from "../../test/required";
-import { numberFormatFor, pluralRulesFor } from "../format";
+import { listFormatFor, numberFormatFor, pluralRulesFor } from "../format";
 import { CATALOG_IDS, resolveLocale } from "../resolveLocale";
 import { AUTONYMS, CATALOGS } from "./index";
-import { en } from "./en";
+import { en, type DomainId } from "./en";
 import { pseudoize } from "./pseudo";
 
-/** The base catalog's key set, which every other catalog is held to. */
+/** The domains, taken off the base catalog so a third arrives here on its own. */
+const DOMAIN_IDS = Object.keys(en).filter(
+  (key): key is DomainId => key !== "common",
+);
+
+/** The base catalog's key sets, which every other catalog is held to. */
 const BASE_KEYS = Object.keys(en).sort();
+const BASE_COMMON_KEYS = Object.keys(en.common).sort();
 
 /**
  * Counts wide enough to reach every plural category any shipped tag reports.
@@ -29,9 +35,33 @@ describe("the catalogs", () => {
   // other way would lose it silently.
   it("carries the same key set in every catalog", () => {
     for (const id of CATALOG_IDS) {
-      expect(Object.keys(CATALOGS[id]).sort(), `the ${id} catalog`).toEqual(
+      const catalog = CATALOGS[id];
+
+      expect(Object.keys(catalog).sort(), `the ${id} catalog`).toEqual(
         BASE_KEYS,
       );
+      expect(
+        Object.keys(catalog.common).sort(),
+        `the ${id} catalog's common half`,
+      ).toEqual(BASE_COMMON_KEYS);
+    }
+  });
+
+  // The phase's central claim: both domains are the same shape, so a films entry
+  // present in English and missing in French is a compile error. A satisfies
+  // clause is one deletion away from being gone, and the deletion looks like
+  // tidying, so the claim is asserted here too. Walked rather than restated: a
+  // twelfth key added to both domains arrives without touching this file.
+  it("carries the same key set in both domains of every catalog", () => {
+    for (const id of CATALOG_IDS) {
+      const catalog = CATALOGS[id];
+      const [first, ...rest] = DOMAIN_IDS.map((domain) =>
+        Object.keys(catalog[domain]).sort(),
+      );
+
+      for (const keys of rest) {
+        expect(keys, `the ${id} catalog's domains`).toEqual(first);
+      }
     }
   });
 
@@ -49,53 +79,82 @@ describe("the catalogs", () => {
     expect(AUTONYMS.fr).toBe("Français");
   });
 
-  // The two function-valued entries are the ones a translation can quietly get
+  // The function-valued entries are the ones a translation can quietly get
   // wrong: dropping an argument out of the sentence still typechecks, still
   // renders, and leaves a reader in that language with a count they cannot see.
   // Asked of every catalog rather than of the base one, because the base one is
   // the only catalog that cannot have the defect.
-  it("weaves every argument into the sentence in every catalog", () => {
+  it("weaves every argument into the chrome sentences in every catalog", () => {
     for (const id of CATALOG_IDS) {
-      const catalog = CATALOGS[id];
+      const { common } = CATALOGS[id];
 
-      expect(catalog.results("en-US", 25, 500), `the ${id} catalog`).toMatch(
-        /25(?=.*500)/s,
-      );
-      expect(
-        catalog.caption("en-US", 500, "not sorted"),
-        `the ${id} catalog`,
-      ).toMatch(/500(?=.*not sorted)/s);
-      expect(catalog.error("it went wrong"), `the ${id} catalog`).toContain(
+      expect(common.error("it went wrong"), `the ${id} catalog`).toContain(
         "it went wrong",
       );
       expect(
-        catalog.sortedAnnouncement("Population", "asc"),
+        common.sortedAnnouncement("Population", "asc"),
         `the ${id} catalog`,
       ).toContain("Population");
       expect(
-        catalog.sortSummary("Population", "asc"),
+        common.sortSummary("Population", "asc"),
         `the ${id} catalog`,
       ).toContain("Population");
-      expect(catalog.pageStatus("en-US", 2, 3), `the ${id} catalog`).toMatch(
+      expect(common.pageStatus("en-US", 2, 3), `the ${id} catalog`).toMatch(
         /2(?=.*3)/s,
       );
     }
   });
 
-  // Every failure the loader can report has a sentence in every catalog, and a
-  // missing arm is a reader shown the word undefined at the moment the
-  // application has already failed. The type check catches an absent key; this
-  // catches an entry present and empty, and it walks the code tuple rather than
-  // restating it, so a code added to the loader arrives here on its own.
+  it("weaves every argument into the page sentences of both domains", () => {
+    for (const id of CATALOG_IDS) {
+      for (const domain of DOMAIN_IDS) {
+        const copy = CATALOGS[id][domain];
+        const where = `the ${id} catalog, ${domain}`;
+
+        expect(copy.results("en-US", 25, 500), where).toMatch(/25(?=.*500)/s);
+        expect(copy.caption("en-US", 500, "not sorted"), where).toMatch(
+          /500(?=.*not sorted)/s,
+        );
+      }
+    }
+  });
+
+  // A multi-valued cell joins through the platform on the resolved tag, so no
+  // component and no column builder writes a separator of its own. The
+  // expectation is computed rather than typed: the conjunction and the spacing
+  // are CLDR data, and a typed literal would be English pinned into the loop.
+  it("joins a multi-valued list on its own tag in every catalog", () => {
+    const values = ["one", "two", "three"];
+
+    for (const id of CATALOG_IDS) {
+      const { tag } = resolveLocale(id, []);
+      const joined = CATALOGS[id].common.list(tag, values);
+
+      for (const value of values) {
+        expect(joined, `the ${id} catalog`).toContain(value);
+      }
+      expect(joined, `the ${id} catalog`).toContain(
+        listFormatFor(tag).format(values),
+      );
+    }
+  });
+
+  // Every failure the loader can report has a sentence in every catalog and in
+  // every domain, and a missing arm is a reader shown the word undefined at the
+  // moment the application has already failed. The type check catches an absent
+  // key; this catches an entry present and empty, and it walks the code tuple
+  // rather than restating it, so a code added to the loader arrives here alone.
   it("says something for every dataset failure in every catalog", () => {
     for (const id of CATALOG_IDS) {
-      const catalog = CATALOGS[id];
+      for (const domain of DOMAIN_IDS) {
+        const { datasetError } = CATALOGS[id][domain];
 
-      for (const code of DATASET_ERROR_CODES) {
-        expect(
-          catalog.datasetError[code]("en-US", 7).trim(),
-          `the ${id} catalog, ${code}`,
-        ).not.toBe("");
+        for (const code of DATASET_ERROR_CODES) {
+          expect(
+            datasetError[code]("en-US", 7).trim(),
+            `the ${id} catalog, ${domain}, ${code}`,
+          ).not.toBe("");
+        }
       }
     }
   });
@@ -105,14 +164,32 @@ describe("the catalogs", () => {
   // without it and tell the reader nothing.
   it("weaves the detail into every dataset failure that names one", () => {
     for (const id of CATALOG_IDS) {
-      const catalog = CATALOGS[id];
+      for (const domain of DOMAIN_IDS) {
+        const { datasetError } = CATALOGS[id][domain];
 
-      for (const code of ["rowShape", "rowFieldType", "status"] as const) {
-        expect(
-          catalog.datasetError[code]("en-US", 404),
-          `the ${id} catalog, ${code}`,
-        ).toContain("404");
+        for (const code of ["rowShape", "rowFieldType", "status"] as const) {
+          expect(
+            datasetError[code]("en-US", 404),
+            `the ${id} catalog, ${domain}, ${code}`,
+          ).toContain("404");
+        }
       }
+    }
+  });
+
+  // The two domains report different failures for the same code. Collapsing the
+  // nine sentences into one set taking the noun as an argument would typecheck
+  // and would break on gender and agreement in Spanish and French, so this is
+  // what says the two sets are genuinely written out rather than shared.
+  it("names its own subject in each domain's failure sentences", () => {
+    for (const id of CATALOG_IDS) {
+      const sentences = new Set(
+        DOMAIN_IDS.map((domain) =>
+          CATALOGS[id][domain].datasetError.notAnObject("en-US", 0),
+        ),
+      );
+
+      expect(sentences.size, `the ${id} catalog`).toBe(DOMAIN_IDS.length);
     }
   });
 
@@ -122,35 +199,40 @@ describe("the catalogs", () => {
   // what the table is doing half the time.
   it("says something different for each sort direction in every catalog", () => {
     for (const id of CATALOG_IDS) {
-      const catalog = CATALOGS[id];
+      const { common } = CATALOGS[id];
 
       expect(
-        catalog.sortedAnnouncement("Population", "asc"),
+        common.sortedAnnouncement("Population", "asc"),
         `the ${id} catalog`,
-      ).not.toBe(catalog.sortedAnnouncement("Population", "desc"));
+      ).not.toBe(common.sortedAnnouncement("Population", "desc"));
       expect(
-        catalog.sortSummary("Population", "asc"),
+        common.sortSummary("Population", "asc"),
         `the ${id} catalog`,
-      ).not.toBe(catalog.sortSummary("Population", "desc"));
+      ).not.toBe(common.sortSummary("Population", "desc"));
     }
   });
 
-  // The attribution sentence is a licence obligation rather than copy: it has to
+  // The city attribution is a licence obligation rather than copy: it has to
   // credit the creator, link the source, link the licence and say the work was
-  // changed, in every language. The two identifiers travel through it as
+  // changed, in every language. The film credit is a courtesy and carries the
+  // same three parts anyway. The two identifiers travel through both as
   // arguments and a translation that dropped either one would leave the footer
   // with a link it never rendered.
-  it("carries both attribution identifiers in every catalog", () => {
+  it("carries both attribution identifiers in every catalog and domain", () => {
     for (const id of CATALOG_IDS) {
-      const sentence = CATALOGS[id].attribution(
-        "simplemaps.com World Cities",
-        "CC BY 4.0",
-      );
+      for (const domain of DOMAIN_IDS) {
+        const sentence = CATALOGS[id][domain].attribution(
+          "a source name",
+          "a licence name",
+        );
 
-      expect(sentence, `the ${id} catalog`).toContain(
-        "simplemaps.com World Cities",
-      );
-      expect(sentence, `the ${id} catalog`).toContain("CC BY 4.0");
+        expect(sentence, `the ${id} catalog, ${domain}`).toContain(
+          "a source name",
+        );
+        expect(sentence, `the ${id} catalog, ${domain}`).toContain(
+          "a licence name",
+        );
+      }
     }
   });
 
@@ -173,16 +255,18 @@ describe("the catalogs", () => {
           PROBE_COUNTS.find((probe) => rules.select(probe) === category),
           `a count selecting ${category} under ${tag}`,
         );
-        const catalog = CATALOGS[id];
 
-        expect(
-          catalog.results(tag, count, count),
-          `the ${id} catalog at ${category}`,
-        ).not.toContain("undefined");
-        expect(
-          catalog.caption(tag, count, "not sorted"),
-          `the ${id} catalog at ${category}`,
-        ).not.toContain("undefined");
+        for (const domain of DOMAIN_IDS) {
+          const copy = CATALOGS[id][domain];
+          const where = `the ${id} catalog, ${domain}, at ${category}`;
+
+          expect(copy.results(tag, count, count), where).not.toContain(
+            "undefined",
+          );
+          expect(copy.caption(tag, count, "not sorted"), where).not.toContain(
+            "undefined",
+          );
+        }
       }
     }
   });
@@ -198,24 +282,52 @@ describe("the catalogs", () => {
       const catalog = CATALOGS[id];
 
       expect(
-        catalog.results(tag, GROUPED, GROUPED),
+        catalog.common.pageStatus(tag, 1, GROUPED),
         `the ${id} catalog`,
       ).toContain(grouped);
-      expect(
-        catalog.caption(tag, GROUPED, "not sorted"),
-        `the ${id} catalog`,
-      ).toContain(grouped);
-      expect(
-        catalog.pageStatus(tag, 1, GROUPED),
-        `the ${id} catalog`,
-      ).toContain(grouped);
+
+      for (const domain of DOMAIN_IDS) {
+        const copy = catalog[domain];
+        const where = `the ${id} catalog, ${domain}`;
+
+        expect(copy.results(tag, GROUPED, GROUPED), where).toContain(grouped);
+        expect(copy.caption(tag, GROUPED, "not sorted"), where).toContain(
+          grouped,
+        );
+      }
+
       expect(grouped, `the ${id} catalog`).not.toBe(String(GROUPED));
     }
   });
 
   it("translates rather than transliterating the base copy", () => {
-    expect(CATALOGS.es.empty).toBe("No se encontraron ciudades");
-    expect(CATALOGS.fr.empty).toBe("Aucune ville trouvée");
+    expect(CATALOGS.es.cities.empty).toBe("No se encontraron ciudades");
+    expect(CATALOGS.fr.cities.empty).toBe("Aucune ville trouvée");
+    expect(CATALOGS.es.films.empty).toBe("No se encontraron películas");
+    expect(CATALOGS.fr.films.empty).toBe("Aucun film trouvé");
+  });
+
+  // The column headings are the one part of a domain block the shape type has
+  // to key loosely, because the two domains have different columns. The outer
+  // satisfies clause still holds every catalog to the base's ids; what it
+  // cannot say is that a heading carries a word.
+  it("gives every column of every domain a heading in every catalog", () => {
+    for (const id of CATALOG_IDS) {
+      for (const domain of DOMAIN_IDS) {
+        const headings = Object.entries(CATALOGS[id][domain].columns);
+
+        expect(headings.length, `the ${id} catalog, ${domain}`).toBeGreaterThan(
+          0,
+        );
+
+        for (const [key, heading] of headings) {
+          expect(
+            heading.trim(),
+            `the ${id} catalog, ${domain}.${key}`,
+          ).not.toBe("");
+        }
+      }
+    }
   });
 });
 
@@ -224,7 +336,8 @@ describe("the pseudo-locale", () => {
   // pseudo-locale performs is dropped so that anyone reading this repository can
   // review the catalog.
   it("keeps the English words readable", () => {
-    expect(CATALOGS["ar-XB"].empty).toContain("No cities found");
+    expect(CATALOGS["ar-XB"].cities.empty).toContain("No cities found");
+    expect(CATALOGS["ar-XB"].films.empty).toContain("No films found");
   });
 
   it("bounds each message unit so two entries cannot read as one line", () => {
@@ -252,11 +365,15 @@ describe("the pseudo-locale", () => {
   });
 
   it("derives its woven sentences from the base catalog", () => {
-    expect(CATALOGS["ar-XB"].results("en-US", 25, 500)).toBe(
-      pseudoize(en.results("en-US", 25, 500)),
-    );
-    expect(CATALOGS["ar-XB"].caption("en-US", 500, "not sorted")).toBe(
-      pseudoize(en.caption("en-US", 500, "not sorted")),
-    );
+    for (const domain of DOMAIN_IDS) {
+      const copy = CATALOGS["ar-XB"][domain];
+
+      expect(copy.results("en-US", 25, 500)).toBe(
+        pseudoize(en[domain].results("en-US", 25, 500)),
+      );
+      expect(copy.caption("en-US", 500, "not sorted")).toBe(
+        pseudoize(en[domain].caption("en-US", 500, "not sorted")),
+      );
+    }
   });
 });
