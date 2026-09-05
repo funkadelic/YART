@@ -6,26 +6,37 @@ import { es } from "../../i18n/catalogs/es";
 import { LOCALE_STORAGE_KEY } from "../../i18n/resolveLocale";
 import { Footer } from "./Footer";
 
-/** The two identifiers the sentence carries verbatim in every language. */
-const SOURCE_NAME = "simplemaps.com World Cities";
-const LICENSE_NAME = "CC BY 4.0";
+/** The four identifiers the sentences carry verbatim in every language. */
+const CITIES_SOURCE = "simplemaps.com World Cities";
+const CITIES_LICENSE = "CC BY 4.0";
+const FILMS_SOURCE = "Wikidata";
+const FILMS_LICENSE = "CC0 1.0";
+
+/** Each identifier and the address it has to point at, whatever language it sits in. */
+const LINKS = [
+  [CITIES_SOURCE, "https://simplemaps.com/data/world-cities"],
+  [CITIES_LICENSE, "https://creativecommons.org/licenses/by/4.0/"],
+  [FILMS_SOURCE, "https://www.wikidata.org/"],
+  [FILMS_LICENSE, "https://creativecommons.org/publicdomain/zero/1.0/"],
+] as const;
 
 /**
- * The footer attribution is a licence obligation, not decoration. This file is
- * what stops it being removed by a refactor that does not know why it is there:
- * delete either anchor, or reword the modification sentence, and these cases go
- * red instead of the repository quietly falling out of compliance.
+ * The city attribution is a licence obligation, not decoration, and the film
+ * credit is a courtesy the upstream data access page asks for. This file is what
+ * stops either being removed by a refactor that does not know why it is there:
+ * delete an anchor, or reword a modification sentence, and these cases go red
+ * instead of the repository quietly falling out of compliance.
  *
  * Every assertion reads the accessible name and the href rather than the markup
  * structure, so a later phase can restyle the footer without touching this file.
  * Accessible-name matching normalizes whitespace, so a line wrap in the JSX
  * cannot flap these.
  *
- * The sentence itself is asserted against the catalog entry rather than against
- * a literal restating it. A literal here would be a second copy of the copy, and
- * the two would drift the first time a word changed. What is asserted is the
- * obligation: whatever the sentence says, both identifiers are in it and both
- * are links, in every language.
+ * The sentences themselves are asserted against the catalog entries rather than
+ * against literals restating them. A literal here would be a second copy of the
+ * copy, and the two would drift the first time a word changed. What is asserted
+ * is the obligation: whatever the sentences say, all four identifiers are in
+ * them and all four are links, in every language.
  */
 
 /** Rendered text with runs of whitespace collapsed, so JSX line wrapping is invisible. */
@@ -34,57 +45,62 @@ function normalize(text: string | null): string {
 }
 
 describe("Footer", () => {
-  it("links the dataset source under the name the source uses", () => {
+  it("links every source and licence under the name that source uses", () => {
     render(<Footer />);
 
-    expect(
-      screen.getByRole("link", { name: "simplemaps.com World Cities" }),
-    ).toHaveAttribute("href", "https://simplemaps.com/data/world-cities");
+    for (const [name, href] of LINKS) {
+      expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
+    }
   });
 
-  it("names the licence and links its deed", () => {
-    render(<Footer />);
+  it("renders both catalog sentences whole, modifications included", () => {
+    const { container } = render(<Footer />);
+    const rendered = normalize(container.textContent);
 
-    expect(screen.getByRole("link", { name: "CC BY 4.0" })).toHaveAttribute(
-      "href",
-      "https://creativecommons.org/licenses/by/4.0/",
+    expect(rendered).toContain(
+      normalize(en.cities.attribution(CITIES_SOURCE, CITIES_LICENSE)),
     );
+    expect(rendered).toContain(
+      normalize(en.films.attribution(FILMS_SOURCE, FILMS_LICENSE)),
+    );
+    expect(rendered).toContain("Modified:");
   });
 
-  it("renders the catalog's whole attribution sentence, modifications included", () => {
+  // Crediting a source that requires no credit is worth nothing if it reads as
+  // an obligation the project is discharging. The sentence has to say which it
+  // is, because the licence names in the footer look alike to a reader.
+  it("says the film credit is a courtesy rather than a requirement", () => {
     const { container } = render(<Footer />);
 
-    expect(normalize(container.textContent)).toBe(
-      normalize(en.attribution(SOURCE_NAME, LICENSE_NAME)),
+    expect(normalize(container.textContent)).toContain(
+      "Credited as a courtesy",
     );
-    expect(normalize(container.textContent)).toContain("Modified:");
   });
 
-  it("carries the same four obligations in a second language", () => {
+  it("carries the same obligations in a second language", () => {
     localStorage.setItem(LOCALE_STORAGE_KEY, "es");
 
     const { container } = render(<Footer />);
+    const rendered = normalize(container.textContent);
 
-    expect(normalize(container.textContent)).toBe(
-      normalize(es.attribution(SOURCE_NAME, LICENSE_NAME)),
+    expect(rendered).toContain(
+      normalize(es.cities.attribution(CITIES_SOURCE, CITIES_LICENSE)),
     );
-    // The sentence is translated; the source name, the licence identifier and
-    // both addresses are not. They are identifiers rather than copy.
-    expect(screen.getByRole("link", { name: SOURCE_NAME })).toHaveAttribute(
-      "href",
-      "https://simplemaps.com/data/world-cities",
+    expect(rendered).toContain(
+      normalize(es.films.attribution(FILMS_SOURCE, FILMS_LICENSE)),
     );
-    expect(screen.getByRole("link", { name: LICENSE_NAME })).toHaveAttribute(
-      "href",
-      "https://creativecommons.org/licenses/by/4.0/",
-    );
-    expect(normalize(container.textContent)).toContain("Modificado:");
+    // The sentences are translated; the source names, the licence identifiers
+    // and the addresses are not. They are identifiers rather than copy.
+    for (const [name, href] of LINKS) {
+      expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
+    }
+    expect(rendered).toContain("Modificado:");
   });
 
-  it("keeps the attribution in the accessibility tree", () => {
+  it("keeps both attributions in the accessibility tree", () => {
     render(<Footer />);
 
-    for (const name of ["simplemaps.com World Cities", "CC BY 4.0"]) {
+    for (const [name] of LINKS) {
       const link = screen.getByRole("link", { name });
 
       // closest matches the element itself as well as its ancestors, so this
@@ -93,9 +109,9 @@ describe("Footer", () => {
     }
   });
 
-  it("renders both links with no props supplied", () => {
+  it("renders every link with no props supplied", () => {
     render(<Footer />);
 
-    expect(screen.getAllByRole("link")).toHaveLength(2);
+    expect(screen.getAllByRole("link")).toHaveLength(LINKS.length);
   });
 });

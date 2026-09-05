@@ -1,15 +1,18 @@
 import { DatasetError } from "../api/getCities";
 
-import type { Catalog } from "./catalogs/en";
+import type { DomainCatalog } from "./catalogs/en";
 
 /**
  * The sentence a reader is shown for a failed load. Called during render, not
  * at the catch, which would put the locale in the fetch effect's dependencies.
  * The second of the two branches is the one a rejection with no error reaches.
+ *
+ * Given one domain's half of the catalog rather than the whole of it: this
+ * reads the error record and nothing else, so the caller names which failed.
  */
 export function datasetErrorText(
   error: Error,
-  catalog: Catalog,
+  catalog: DomainCatalog,
   tag: string,
 ): string {
   if (error instanceof DatasetError) {

@@ -112,7 +112,9 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByText(`Error: ${en.datasetError.notJson("en-US", 0)}`),
+      await screen.findByText(
+        `Error: ${en.cities.datasetError.notJson("en-US", 0)}`,
+      ),
     ).toBeInTheDocument();
     // The developer-facing message and the preserved cause both stay off the
     // screen. The reader sees the authored sentence and nothing else.
@@ -171,7 +173,7 @@ describe("App", () => {
 
     expect(
       await screen.findByText(
-        `Error: ${en.datasetError.transport("en-US", 0)}`,
+        `Error: ${en.cities.datasetError.transport("en-US", 0)}`,
       ),
     ).toBeInTheDocument();
 
@@ -184,7 +186,7 @@ describe("App", () => {
 
     expect(
       await screen.findByText(
-        `Error: ${es.datasetError.transport("es-ES", 0)}`,
+        `Error: ${es.cities.datasetError.transport("es-ES", 0)}`,
       ),
     ).toBeInTheDocument();
     expect(getCitiesSeam.mock.calls).toHaveLength(callsBefore);

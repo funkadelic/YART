@@ -43,14 +43,19 @@ describe("ThemeControl", () => {
 
     render(<ThemeControl />);
 
-    expect(screen.getByRole("radiogroup")).toHaveAccessibleName(es.themeGroup);
-    for (const name of [es.themeLight, es.themeDark, es.themeSystem]) {
+    expect(screen.getByRole("radiogroup")).toHaveAccessibleName(
+      es.common.themeGroup,
+    );
+    for (const name of [
+      es.common.themeLight,
+      es.common.themeDark,
+      es.common.themeSystem,
+    ]) {
       expect(screen.getByRole("radio", { name })).toBeInTheDocument();
     }
-    expect(screen.getByRole("radio", { name: es.themeSystem })).toHaveAttribute(
-      "value",
-      "system",
-    );
+    expect(
+      screen.getByRole("radio", { name: es.common.themeSystem }),
+    ).toHaveAttribute("value", "system");
   });
 
   it("names the group, so the options are not three loose controls", () => {

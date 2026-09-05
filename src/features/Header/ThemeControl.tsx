@@ -22,9 +22,9 @@ export function ThemeControl() {
   // A record rather than a label beside each value, so the option list stays
   // the one definition of what the states are.
   const names: Readonly<Record<ThemeChoice, string>> = {
-    light: catalog.themeLight,
-    dark: catalog.themeDark,
-    system: catalog.themeSystem,
+    light: catalog.common.themeLight,
+    dark: catalog.common.themeDark,
+    system: catalog.common.themeSystem,
   };
 
   // Document-global, so a constant would put a second mounted control's radios
@@ -35,7 +35,7 @@ export function ThemeControl() {
     <div
       className={styles.control}
       role="radiogroup"
-      aria-label={catalog.themeGroup}
+      aria-label={catalog.common.themeGroup}
     >
       {THEME_CHOICES.map((value) => (
         <Fragment key={value}>

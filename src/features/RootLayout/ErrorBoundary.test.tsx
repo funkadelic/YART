@@ -14,8 +14,8 @@ const THROWN_MESSAGE = "a render threw this";
 // class and cannot read a catalog itself, which is the whole reason it takes
 // these as props.
 const FALLBACK_LABELS = {
-  message: en.renderFailure,
-  action: en.renderFailureRetry,
+  message: en.cities.renderFailure,
+  action: en.common.renderFailureRetry,
 };
 
 // The flag is module-local rather than a prop so the same component instance
@@ -139,7 +139,7 @@ describe("ErrorBoundary mounted in the layout", () => {
       .mockImplementation(() => {});
 
     render(
-      <RootLayout>
+      <RootLayout domain="cities">
         <ThrowingChild />
       </RootLayout>,
     );
@@ -162,7 +162,7 @@ describe("ErrorBoundary mounted in the layout", () => {
       .mockImplementation(() => {});
 
     render(
-      <RootLayout>
+      <RootLayout domain="cities">
         <ThrowingChild />
       </RootLayout>,
     );
@@ -180,7 +180,7 @@ describe("ErrorBoundary mounted in the layout", () => {
 
   it("shows the inline asynchronous error region as the only alert region when a request rejects", () => {
     render(
-      <RootLayout>
+      <RootLayout domain="cities">
         <CityTable
           data={[]}
           onSearchChange={() => {}}
