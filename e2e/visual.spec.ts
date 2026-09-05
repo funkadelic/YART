@@ -1,7 +1,8 @@
 import { expect, test } from "@chromatic-com/playwright";
 
 /**
- * Five deliberate view states, one per test, for visual regression.
+ * Eight deliberate view states, one per test, for visual regression. Six on the
+ * city page and two on the films one.
  *
  * The fixture captures one snapshot at the end of each test, so each test
  * settles its view and ends without a capture call.
@@ -22,6 +23,10 @@ const RTL_CATALOG_ID = "ar-XB";
 
 // The empty-results sentence from the English catalog.
 const EMPTY_MESSAGE = "No cities found";
+
+// The second page, by its explicit shell file name. Whether the static host
+// serves the extensionless form is untested; this works on both.
+const FILMS_PATH = "/movies.html";
 
 test("default view", async ({ page }) => {
   await page.goto("/");
@@ -109,4 +114,32 @@ test("hovered row", async ({ page }) => {
   }, hovered);
   await page.mouse.move(0, 0);
   await expect.poll(background).toBe(hovered);
+});
+
+// ponytail: two films states and no more. Each one is billed on every future
+// build rather than only on this one, so this is a ceiling rather than a
+// starting point; add a third knowingly. The right-to-left variant is the one
+// worth having, because the films page carries three multi-valued text columns
+// the city page does not.
+test("films default view", async ({ page }) => {
+  await page.goto(FILMS_PATH);
+  await expect(page.getByRole("table")).toBeVisible({
+    timeout: DATASET_READY_TIMEOUT_MS,
+  });
+});
+
+test("films right-to-left locale", async ({ page }) => {
+  // Seeded before the first navigation, for the same reason as the city states
+  // above: the blocking script stamps the direction on the first frame.
+  await page.addInitScript(
+    ({ key, value }: { key: string; value: string }) => {
+      window.localStorage.setItem(key, value);
+    },
+    { key: LOCALE_STORAGE_KEY, value: RTL_CATALOG_ID },
+  );
+  await page.goto(FILMS_PATH);
+  await expect(page.getByRole("table")).toBeVisible({
+    timeout: DATASET_READY_TIMEOUT_MS,
+  });
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 });
