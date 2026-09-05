@@ -295,7 +295,7 @@ describe("CityTable and the address", () => {
     });
 
     render(
-      <RootLayout>
+      <RootLayout domain="cities">
         <CityTable {...defaultProps} />
       </RootLayout>,
     );

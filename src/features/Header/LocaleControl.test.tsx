@@ -50,7 +50,7 @@ describe("LocaleControl", () => {
   it("names the control, so the picker is not an unlabelled dropdown", () => {
     render(<LocaleControl />);
 
-    expect(picker()).toHaveAccessibleName(en.languageName);
+    expect(picker()).toHaveAccessibleName(en.common.languageName);
   });
 
   it("names itself, and the machine, in the chosen language", () => {
@@ -58,12 +58,12 @@ describe("LocaleControl", () => {
 
     render(<LocaleControl />);
 
-    expect(picker()).toHaveAccessibleName(fr.languageName);
+    expect(picker()).toHaveAccessibleName(fr.common.languageName);
     // The option naming the machine is copy. The autonyms beside it are not,
     // and stay in the language each of them names.
-    expect(screen.getByRole("option", { name: fr.languageSystem })).toHaveValue(
-      "system",
-    );
+    expect(
+      screen.getByRole("option", { name: fr.common.languageSystem }),
+    ).toHaveValue("system");
     expect(screen.getByRole("option", { name: "Español" })).toBeInTheDocument();
   });
 
@@ -151,7 +151,7 @@ describe("LocaleControl", () => {
 
     await user.selectOptions(picker(), "fr");
 
-    expect(screen.getByText(fr.loading)).toBeInTheDocument();
+    expect(screen.getByText(fr.cities.loading)).toBeInTheDocument();
     expect(document.documentElement.lang).toBe("fr-FR");
   });
 });

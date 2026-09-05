@@ -15,14 +15,15 @@ import { resolveLocale } from "../../i18n/resolveLocale";
 export function buildCityColumns(catalog: Catalog, tag: string) {
   const col = columns<City>(collatorFor(tag));
   const number = numberFormatFor(tag);
+  const headings = catalog.cities.columns;
 
   return [
-    col.key("name", { label: catalog.columnName }),
-    col.key("country", { label: catalog.columnCountry }),
-    col.key("capital", { label: catalog.columnCapital }),
-    col.key("countryIso3", { label: catalog.columnCountryCode }),
+    col.key("name", { label: headings.name }),
+    col.key("country", { label: headings.country }),
+    col.key("capital", { label: headings.capital }),
+    col.key("countryIso3", { label: headings.countryIso3 }),
     col.key("population", {
-      label: catalog.columnPopulation,
+      label: headings.population,
       numeric: true,
       renderCell: (value) => number.format(value),
     }),

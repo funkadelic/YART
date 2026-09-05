@@ -14,7 +14,7 @@ import {
 import { SearchInput } from "../../components/SearchInput";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 import { useLocale } from "../../hooks/useLocale";
-import { buildSearchLabels, buildTableLabels } from "./cityLabels";
+import { buildSearchLabels, buildTableLabels } from "../tableLabels";
 import {
   CITY_COLUMN_IDS,
   buildCityColumns,
@@ -61,11 +61,17 @@ export function CityTable({
   // The documented exception to module-scope label objects: the table holds
   // this across renders and several entries are closures, so its identity has
   // to move when the locale does and must not move otherwise.
-  const labels = useMemo(() => buildTableLabels(catalog, tag), [catalog, tag]);
+  const labels = useMemo(
+    () => buildTableLabels(catalog, "cities", tag),
+    [catalog, tag],
+  );
 
   // Keyed on the catalog alone, because neither entry weaves a number and the
   // tag decides nothing here.
-  const searchLabels = useMemo(() => buildSearchLabels(catalog), [catalog]);
+  const searchLabels = useMemo(
+    () => buildSearchLabels(catalog, "cities"),
+    [catalog],
+  );
 
   // Keyed on exactly the two values the labels are, and that is a requirement
   // rather than a symmetry: an array identity that moved on its own would

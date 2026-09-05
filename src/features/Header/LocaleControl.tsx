@@ -23,7 +23,7 @@ export function LocaleControl() {
           sighted reader needs no visible label, but the control still has to
           have a name in the accessibility tree. */}
       <label className={styles.label} htmlFor={selectId}>
-        {catalog.languageName}
+        {catalog.common.languageName}
       </label>
       {/* A closed list, and the store rejects anything that is not on it, so
           nothing outside the shipped ids can become the chosen locale. */}
@@ -35,7 +35,7 @@ export function LocaleControl() {
           setChoice(event.target.value);
         }}
       >
-        <option value="system">{catalog.languageSystem}</option>
+        <option value="system">{catalog.common.languageSystem}</option>
         {CATALOG_IDS.map((id) => (
           <option key={id} value={id}>
             {AUTONYMS[id]}

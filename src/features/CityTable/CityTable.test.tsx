@@ -8,7 +8,7 @@ import { numberFormatFor } from "../../i18n/format";
 import { setLocaleChoice } from "../../i18n/localeStore";
 import { required } from "../../test/required";
 import { buildCityColumns } from "./cityColumns";
-import { buildTableLabels } from "./cityLabels";
+import { buildTableLabels } from "../tableLabels";
 
 // A spy over the real builder rather than a replacement for it, so every case
 // in this file goes on exercising the shipping columns. The one thing a spy can
@@ -24,8 +24,8 @@ vi.mock("./cityColumns", async (importOriginal) => {
 // The same spy over the labels builder, and for the same reason. The object it
 // returns is held by the table across renders, so how often it is built is the
 // whole content of the claim that its identity follows the locale.
-vi.mock("./cityLabels", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./cityLabels")>();
+vi.mock("../tableLabels", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tableLabels")>();
 
   return { ...actual, buildTableLabels: vi.fn(actual.buildTableLabels) };
 });
@@ -1028,8 +1028,10 @@ describe("CityTable", () => {
 
       render(<CityTable {...defaultProps} />);
 
-      expect(screen.getByText(fr.columnName)).toBeInTheDocument();
-      expect(screen.getByText(fr.columnCountryCode)).toBeInTheDocument();
+      expect(screen.getByText(fr.cities.columns.name)).toBeInTheDocument();
+      expect(
+        screen.getByText(fr.cities.columns.countryIso3),
+      ).toBeInTheDocument();
       expect(screen.queryByText("Country Code")).not.toBeInTheDocument();
     });
 
@@ -1049,7 +1051,7 @@ describe("CityTable", () => {
         />,
       );
 
-      expect(screen.getByText(fr.loading)).toBeInTheDocument();
+      expect(screen.getByText(fr.cities.loading)).toBeInTheDocument();
 
       rerender(<CityTable {...defaultProps} />);
 
@@ -1058,18 +1060,22 @@ describe("CityTable", () => {
       const captionText = () =>
         screen.getByRole("table").querySelector("caption")?.textContent ?? "";
 
-      expect(captionText()).toContain(fr.unsorted);
+      expect(captionText()).toContain(fr.common.unsorted);
 
       const announcer = container.querySelector(
         '[aria-live="polite"][aria-atomic="true"]',
       );
 
-      await user.click(screen.getByRole("button", { name: fr.columnName }));
+      await user.click(
+        screen.getByRole("button", { name: fr.cities.columns.name }),
+      );
 
       expect(announcer).toHaveTextContent(
-        fr.sortedAnnouncement(fr.columnName, "asc"),
+        fr.common.sortedAnnouncement(fr.cities.columns.name, "asc"),
       );
-      expect(captionText()).toContain(fr.sortSummary(fr.columnName, "asc"));
+      expect(captionText()).toContain(
+        fr.common.sortSummary(fr.cities.columns.name, "asc"),
+      );
     });
 
     it("takes the failure and the way back from the catalog", () => {
@@ -1085,10 +1091,13 @@ describe("CityTable", () => {
       );
 
       expect(
-        screen.getByText(fr.error("quelque chose a mal tourné"), asWritten),
+        screen.getByText(
+          fr.common.error("quelque chose a mal tourné"),
+          asWritten,
+        ),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: fr.retry }),
+        screen.getByRole("button", { name: fr.common.retry }),
       ).toBeInTheDocument();
     });
 
@@ -1097,8 +1106,8 @@ describe("CityTable", () => {
 
       render(<CityTable {...defaultProps} />);
 
-      const box = screen.getByRole("textbox", { name: fr.searchName });
-      expect(box).toHaveAttribute("placeholder", fr.searchPlaceholder);
+      const box = screen.getByRole("textbox", { name: fr.common.searchName });
+      expect(box).toHaveAttribute("placeholder", fr.cities.searchPlaceholder);
     });
 
     // One catalog entry per control, read twice. Two entries would let a
@@ -1110,15 +1119,19 @@ describe("CityTable", () => {
       render(<CityTable {...defaultProps} data={pagedFixture(25)} />);
 
       expect(
-        screen.getByRole("navigation", { name: fr.paginationNavigation }),
+        screen.getByRole("navigation", {
+          name: fr.common.paginationNavigation,
+        }),
       ).toBeInTheDocument();
-      expect(screen.getByLabelText(fr.pageSize, asWritten)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(fr.common.pageSize, asWritten),
+      ).toBeInTheDocument();
 
       for (const name of [
-        fr.firstPage,
-        fr.previousPage,
-        fr.nextPage,
-        fr.lastPage,
+        fr.common.firstPage,
+        fr.common.previousPage,
+        fr.common.nextPage,
+        fr.common.lastPage,
       ]) {
         expect(screen.getByRole("button", { name })).toHaveAttribute(
           "title",
@@ -1140,7 +1153,7 @@ describe("CityTable", () => {
 
       render(<CityTable {...defaultProps} data={rows} />);
 
-      const expected = fr.pageStatus("fr-FR", 1, totalPages);
+      const expected = fr.common.pageStatus("fr-FR", 1, totalPages);
 
       expect(expected).not.toBe(`Page 1 sur ${String(totalPages)}`);
       expect(screen.getByText(expected, asWritten)).toBeInTheDocument();

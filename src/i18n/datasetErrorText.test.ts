@@ -17,7 +17,7 @@ describe("datasetErrorText", () => {
     for (const code of DATASET_ERROR_CODES) {
       const sentence = datasetErrorText(
         new DatasetError(code, 0, "the developer-facing text"),
-        en,
+        en.cities,
         "en-US",
       );
 
@@ -30,7 +30,7 @@ describe("datasetErrorText", () => {
     expect(
       datasetErrorText(
         new DatasetError("status", 503, "the developer-facing text"),
-        en,
+        en.cities,
         "en-US",
       ),
     ).toBe("The city data could not be downloaded (status 503).");
@@ -39,18 +39,18 @@ describe("datasetErrorText", () => {
   it("reads the sentence out of the catalog it is given", () => {
     const failure = new DatasetError("notAnObject", 0, "the English message");
 
-    expect(datasetErrorText(failure, es, "es-ES")).toBe(
-      es.datasetError.notAnObject("es-ES", 0),
+    expect(datasetErrorText(failure, es.cities, "es-ES")).toBe(
+      es.cities.datasetError.notAnObject("es-ES", 0),
     );
-    expect(datasetErrorText(failure, es, "es-ES")).not.toBe(
-      datasetErrorText(failure, en, "en-US"),
+    expect(datasetErrorText(failure, es.cities, "es-ES")).not.toBe(
+      datasetErrorText(failure, en.cities, "en-US"),
     );
   });
 
   it("falls to the unexpected sentence for a failure carrying no code", () => {
-    expect(datasetErrorText(new Error("Failed to fetch"), en, "en-US")).toBe(
-      "An unexpected error occurred.",
-    );
+    expect(
+      datasetErrorText(new Error("Failed to fetch"), en.cities, "en-US"),
+    ).toBe("An unexpected error occurred.");
   });
 
   // The preserved cause is engine text kept for a developer, and the message is
@@ -64,7 +64,7 @@ describe("datasetErrorText", () => {
       { cause },
     );
 
-    const sentence = datasetErrorText(failure, en, "en-US");
+    const sentence = datasetErrorText(failure, en.cities, "en-US");
 
     expect(sentence).not.toContain("the developer-facing text");
     expect(sentence).not.toContain("NetworkError");

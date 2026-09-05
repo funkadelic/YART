@@ -37,7 +37,9 @@ describe("useLocale", () => {
     const { result } = renderLocale();
 
     expect(result.current.choice).toBe("es");
-    expect(result.current.catalog.empty).toBe("No se encontraron ciudades");
+    expect(result.current.catalog.cities.empty).toBe(
+      "No se encontraron ciudades",
+    );
   });
 
   describe("stamping the document element", () => {

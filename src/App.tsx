@@ -76,11 +76,11 @@ const App = () => {
   // Derived during render rather than at the catch, which is inside the fetch
   // effect: reading the catalog there would make the locale a dependency of it.
   const errorMessage =
-    error === null ? null : datasetErrorText(error, catalog, tag);
+    error === null ? null : datasetErrorText(error, catalog.cities, tag);
 
   return (
-    <RootLayout>
-      <h1>{catalog.appTitle}</h1>
+    <RootLayout domain="cities">
+      <h1>{catalog.cities.appTitle}</h1>
       <CityTable
         data={rows}
         onSearchChange={handleSearchChange}
