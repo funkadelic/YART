@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 
 import type { Film } from "../../api/getFilms";
 import { fr } from "../../i18n/catalogs/fr";
-import { numberFormatFor } from "../../i18n/format";
+import { durationFormatFor } from "../../i18n/format";
 import { setLocaleChoice } from "../../i18n/localeStore";
 import { FILM_FIXTURE } from "../../test/filmFixture";
 import { required } from "../../test/required";
@@ -136,12 +136,21 @@ describe("FilmTable", () => {
 
   // A year is an identifier a reader reads as four digits, so it is the one
   // number on this page that is not grouped.
-  it("groups the runtime and leaves the year ungrouped", () => {
+  // The runtime carries its unit and the year does not: a runtime is a quantity
+  // whose unit a reader cannot infer from 1,234, and a year is an identifier
+  // that a group separator would only make wrong.
+  it("groups the runtime with its unit and leaves the year ungrouped", () => {
     const long: Film = { ...WITH_RUNTIME, year: 2011, runtime: 1234 };
 
     render(<FilmTable {...defaultProps} data={[long]} />);
 
-    expect(onlyRowCells()).toEqual([long.title, "2011", "1,234"]);
+    // Computed through the platform rather than typed, so the case states the
+    // rule rather than one locale's rendering of it.
+    const runtime = durationFormatFor("en-US").format(1234);
+
+    expect(runtime).toContain("1,234");
+    expect(runtime).not.toBe("1,234");
+    expect(onlyRowCells()).toEqual([long.title, "2011", runtime]);
   });
 
   it("renders the search box with the film copy", () => {
@@ -366,8 +375,8 @@ describe("FilmTable and the locale", () => {
 
     // Computed through the platform rather than typed: the separator above is
     // invisible in every terminal a failure is read in.
-    const french = numberFormatFor("fr-FR").format(1234);
-    const english = numberFormatFor("en-US").format(1234);
+    const french = durationFormatFor("fr-FR").format(1234);
+    const english = durationFormatFor("en-US").format(1234);
 
     expect(french).not.toBe(english);
     expect(screen.getByText(french, asWritten)).toBeInTheDocument();

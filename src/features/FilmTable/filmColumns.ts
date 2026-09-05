@@ -2,7 +2,7 @@ import type { Film } from "../../api/getFilms";
 import { columns } from "../../components/DataTable/column";
 import type { Catalog } from "../../i18n/catalogs/en";
 import { en } from "../../i18n/catalogs/en";
-import { collatorFor, numberFormatFor } from "../../i18n/format";
+import { collatorFor, durationFormatFor } from "../../i18n/format";
 import { resolveLocale } from "../../i18n/resolveLocale";
 
 /**
@@ -21,7 +21,7 @@ export function buildFilmColumns(catalog: Catalog, tag: string) {
   // the three parameters they have always had.
   const collator = collatorFor(tag);
   const col = columns<Film>(collator);
-  const number = numberFormatFor(tag);
+  const duration = durationFormatFor(tag);
   const headings = catalog.films.columns;
 
   // The language decides how a list of values reads, so the catalog joins it and
@@ -58,9 +58,11 @@ export function buildFilmColumns(catalog: Catalog, tag: string) {
     col.key("runtime", {
       label: headings.runtime,
       numeric: true,
-      // A film with no recorded runtime paints an empty cell, which is what the
-      // default renderer would do and what this one has to keep doing.
-      renderCell: (value) => (value === null ? "" : number.format(value)),
+      // Carries its unit, because the heading says Runtime and a bare 112 reads
+      // as minutes, seconds or hours depending on the reader. A film with no
+      // recorded runtime paints an empty cell, which is what the default
+      // renderer would do and what this one has to keep doing.
+      renderCell: (value) => (value === null ? "" : duration.format(value)),
     }),
     col.key("directors", {
       label: headings.directors,
