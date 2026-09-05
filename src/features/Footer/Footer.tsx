@@ -39,7 +39,7 @@ const LINK_URLS = new Map<string, string>([
 // name carrying a parenthesis or a plus would either throw here or split the
 // sentence somewhere the catalog never put a boundary.
 const escapeForPattern = (name: string) =>
-  name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  name.replace(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
 
 // Splits a sentence around the four identifiers, so each can be a link wherever
 // the sentence put it. One catalog entry, because three fragments would hold
