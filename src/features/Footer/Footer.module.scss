@@ -5,3 +5,9 @@
   font-size: var(--font-size-sm);
   text-align: center;
 }
+
+// Two credits stack as their own lines; the footer's padding is the only
+// spacing either of them needs.
+.credit {
+  margin-block: 0;
+}

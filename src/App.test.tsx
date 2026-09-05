@@ -12,11 +12,11 @@ import { stubDatasetFetch } from "./test/fetchStub";
 
 import type { City } from "./api/getCities";
 
-// The search seam is spied on rather than stubbed out: the factory delegates to
-// the real module, so the integration case below keeps exercising real
-// behaviour, and a case that needs a specific outcome overrides it for itself.
-// A rejection carrying something other than an Error is only reachable this
-// way, because the real module never produces one.
+// The search seam is spied on, with the factory delegating to the real module,
+// so the integration case below keeps exercising real behavior and a case that
+// needs a specific outcome overrides it for itself. A rejection carrying
+// something other than an Error is only reachable this way, because the real
+// module never produces one.
 vi.mock("./api/getCities", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./api/getCities")>();
   return { ...actual, getCities: vi.fn(actual.getCities) };
@@ -40,9 +40,8 @@ const SEAM_LATENCY_MS = 200;
  * case that counts requests inherits an earlier case's populated cache and
  * counts none at all.
  *
- * Resetting the registry is not enough on its own, and the mock is re-declared
- * here rather than left to the hoisted one above for a second reason beyond
- * rebinding the spy. Resetting the registry does not re-evaluate a mock factory,
+ * The mock is re-declared here too, and not only to rebind the spy. Resetting
+ * the registry does not re-evaluate a mock factory,
  * so the container would keep importing the seam belonging to the registry that
  * was thrown away, while the loader it now calls belongs to the new one. The two
  * would then hold two different dataset error classes, and the failure sentence
@@ -112,10 +111,12 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      await screen.findByText(`Error: ${en.datasetError.notJson("en-US", 0)}`),
+      await screen.findByText(
+        `Error: ${en.cities.datasetError.notJson("en-US", 0)}`,
+      ),
     ).toBeInTheDocument();
     // The developer-facing message and the preserved cause both stay off the
-    // screen. The reader sees the authored sentence and nothing else.
+    // screen. The reader sees only the authored sentence.
     expect(document.body).not.toHaveTextContent("the developer-facing text");
     expect(document.body).not.toHaveTextContent("Unexpected token");
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
@@ -156,11 +157,11 @@ describe("App", () => {
     ).not.toBeInTheDocument();
   });
 
-  // The reason the translation happens during render rather than at the catch
-  // inside the fetch effect. Reading the catalog there would put the locale in
-  // that effect's dependency array, and a reader changing language while an
-  // error was on screen would re-download several megabytes of city data to
-  // find out the same thing in another language.
+  // The translation happens during render because the catch sits inside the
+  // fetch effect. Reading the catalog there would put the locale in that
+  // effect's dependency array, and a reader changing language while an error
+  // was on screen would re-download several megabytes of city data to find out
+  // the same thing in another language.
   it("re-renders a displayed failure in the chosen language without issuing a request", async () => {
     const user = userEvent.setup({ delay: null });
     getCitiesSeam.mockRejectedValue(
@@ -171,7 +172,7 @@ describe("App", () => {
 
     expect(
       await screen.findByText(
-        `Error: ${en.datasetError.transport("en-US", 0)}`,
+        `Error: ${en.cities.datasetError.transport("en-US", 0)}`,
       ),
     ).toBeInTheDocument();
 
@@ -184,7 +185,7 @@ describe("App", () => {
 
     expect(
       await screen.findByText(
-        `Error: ${es.datasetError.transport("es-ES", 0)}`,
+        `Error: ${es.cities.datasetError.transport("es-ES", 0)}`,
       ),
     ).toBeInTheDocument();
     expect(getCitiesSeam.mock.calls).toHaveLength(callsBefore);
@@ -268,7 +269,7 @@ describe("App", () => {
 
   it("keeps the newer result when an earlier search settles last", async () => {
     // Today both searches read the same in-memory array, so a race between them
-    // would be invisible. The guard is established now because a later phase
+    // would be invisible. The guard is established now because a later change
     // seeds a non-empty term on first load, at which point the two searches
     // carry different rows and the interleaving becomes real.
     const earlierRows: City[] = [
@@ -303,8 +304,9 @@ describe("App", () => {
     getCitiesSeam.mockImplementationOnce(() => Promise.resolve(laterRows));
 
     // This case runs on the real clock, so the inter-keystroke delay is dropped
-    // rather than bound. A file that fakes the clock anywhere has to declare one
-    // or the other at every input session, which the toolchain guard enforces.
+    // and not bound to a fake one. A file that fakes the clock anywhere has to
+    // declare one or the other at every input session, which the toolchain
+    // guard enforces.
     const user = userEvent.setup({ delay: null });
 
     render(<App />);
@@ -348,8 +350,9 @@ describe("App", () => {
     getCitiesSeam.mockImplementationOnce(() => Promise.resolve(laterRows));
 
     // This case runs on the real clock, so the inter-keystroke delay is dropped
-    // rather than bound. A file that fakes the clock anywhere has to declare one
-    // or the other at every input session, which the toolchain guard enforces.
+    // and not bound to a fake one. A file that fakes the clock anywhere has to
+    // declare one or the other at every input session, which the toolchain
+    // guard enforces.
     const user = userEvent.setup({ delay: null });
 
     render(<App />);
@@ -361,8 +364,8 @@ describe("App", () => {
     await act(async () => {
       failEarlier(new Error("The city service is unreachable"));
       // The container's own catch arm settles this rejection. Awaiting it here
-      // only orders the assertions after it, so the await is swallowed rather
-      // than allowed to fail the case it is sequencing.
+      // only orders the assertions after it, so the await is swallowed and
+      // cannot fail the case it is sequencing.
       await earlier.catch(() => {});
     });
 
@@ -380,7 +383,7 @@ describe("App", () => {
 
     render(<FreshApp />);
 
-    // The cold pole: nothing has arrived yet, so the claim is true here.
+    // The cold pole. Nothing has arrived yet, so the claim is true here.
     expect(
       screen.getByText("Downloading the city data..."),
     ).toBeInTheDocument();
@@ -405,7 +408,7 @@ describe("App", () => {
     expect(screen.getByText("No cities found")).toBeInTheDocument();
 
     // One more keystroke over an empty result set. A request is in flight with
-    // no rows behind it, which is the state a row count reads as a cold start.
+    // no rows behind it, so a row count reads it as a cold start.
     await user.type(searchInput, "z");
 
     await act(async () => {

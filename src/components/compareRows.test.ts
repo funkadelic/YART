@@ -10,9 +10,9 @@ import { compareValues } from "./compareRows";
 
 /**
  * The collator every case below that does not name a locale orders text with.
- * It is the base tag rather than no tag at all: the comparator no longer holds
- * one, so every caller states which reader's ordering it is asking about, and a
- * test is a caller like any other.
+ * It names the base tag, because the comparator holds none of its own and every
+ * caller now states which reader's ordering it is asking about; a test is a
+ * caller like any other.
  */
 const EN = collatorFor("en-US");
 
@@ -30,9 +30,8 @@ const PRIMARY_CAPITAL = CITY_FIXTURE.filter(
   (city) => city.capital === "primary",
 );
 const ZERO_POPULATION = CITY_FIXTURE.filter((city) => city.population === 0);
-// Picked once here rather than indexed at each case below, so the cases read as
-// the comparison they are testing. The first case in the block asserts the
-// counts these three depend on.
+// Picked once here, so the cases below read as the comparison they are testing.
+// The first case in the block asserts the counts these three depend on.
 const BLANK = required(BLANK_CAPITAL[0], "a fixture row with a blank capital");
 const PRIMARY = required(
   PRIMARY_CAPITAL[0],
@@ -52,11 +51,11 @@ const COLLATION_SAMPLE = ["a", "B", "ä", "Z", "é", "10", "2"];
 
 /**
  * A row the parse boundary would reject. City declares no nullable field and no
- * field that is sometimes text and sometimes a number, so the comparator's null
- * and mixed-type arms cannot be reached with a correctly typed row at all. They
- * exist for the point at which the table becomes generic over its row type and
- * that parse-time guarantee stops covering the input, and this is the single
- * place that hands the comparator what such input looks like.
+ * field that is sometimes text and sometimes a number, so a correctly typed city
+ * reaches neither the comparator's null arm nor its mixed-type arm. The film row
+ * type does reach the null arm, through its two nullable number fields; the
+ * mixed-type arm no row type in the tree reaches, and this is the single place
+ * that hands the comparator what such input looks like.
  */
 function rowWithCapital(id: number, capital: unknown): City {
   return { ...CITY_FIXTURE[0], id, capital } as City;
@@ -64,10 +63,9 @@ function rowWithCapital(id: number, capital: unknown): City {
 
 /**
  * The comparator no longer sees a row, so the identity tiebreak it used to
- * apply is applied here instead. Both halves are the shipping functions rather
- * than a local restatement of them: a restatement passes while the product
- * orders rows differently, which is the failure this composition exists to make
- * impossible. Every expected order below is the order the application produces.
+ * apply is applied here instead. Both halves are the shipping functions, since a
+ * local restatement of them would pass while the product ordered rows
+ * differently. Every expected order below is the order the application produces.
  */
 function byColumn(column: keyof City, direction: "asc" | "desc") {
   return (a: City, b: City): number => {
@@ -114,7 +112,7 @@ describe("compareValues", () => {
   it("reports two blank values as equal in both directions", () => {
     // The pair used to come back separated by the row-id difference. Identity
     // is not a value, so the ordering half of this case now lives beside the
-    // sort module; what is left here is the value-level fact it rested on.
+    // sort module and only the value-level fact it rested on stays here.
     const first = required(BLANK_CAPITAL[0], "the first blank-capital row");
     const second = required(BLANK_CAPITAL[1], "the second blank-capital row");
 
@@ -153,7 +151,7 @@ describe("compareValues", () => {
   it("orders a mixed-type column without a cycle", () => {
     // Deciding a numeric pair by subtraction and a stringified pair by
     // collation is enough to produce 9 < 10 < "5" < 9, which the sort is free
-    // to resolve however it likes. Ranking by type first is what rules it out.
+    // to resolve however it likes. Ranking by type first rules that out.
     const nine = rowWithCapital(1, 9);
     const ten = rowWithCapital(2, 10);
     const five = rowWithCapital(3, "5");
@@ -236,8 +234,8 @@ describe("compareValues", () => {
   it("reports two infinities of the same sign as equal rather than NaN", () => {
     // Subtracting them gives NaN, which is neither negative, positive, nor
     // zero, so a tiebreak downstream of this function would never run and the
-    // order would be left to the sort. Comparing rather than subtracting is
-    // what makes the pair come back as the tie it is.
+    // order would be left to the sort. Comparing them brings the pair back as
+    // the tie it is.
     expect(compareValues(Infinity, Infinity, "asc", EN)).toBe(0);
     expect(compareValues(Infinity, Infinity, "desc", EN)).toBe(0);
     expect(compareValues(-Infinity, -Infinity, "asc", EN)).toBe(0);
@@ -295,8 +293,8 @@ describe("compareValues", () => {
 
   // Naming the base tag where the collator previously named nothing moves no
   // row. The runner's own default resolves to the base tag, so the two answers
-  // are the same answer here, and a machine where they were not is a machine
-  // this suite would have been reporting a different order on all along.
+  // agree here; on a machine where they did not, this suite would have been
+  // reporting a different order all along.
   it("agrees in sign with the locale-less comparison it replaces", () => {
     for (const left of COLLATION_SAMPLE) {
       for (const right of COLLATION_SAMPLE) {
@@ -316,9 +314,9 @@ describe("the city row identity", () => {
   /**
    * The two rows the parse boundary numbers itself, against a row carrying a
    * geoname id. Both are shorter than every other id in the dataset, and as raw
-   * text a shorter id orders by its first digit rather than its magnitude. The
-   * case is written from the ids alone rather than from fixture rows, because
-   * the fixture carries no short id and so cannot fail this on its own.
+   * text a shorter id orders by its first digit and not by its magnitude. The
+   * case is written from the ids alone, because the fixture carries no short id
+   * and so cannot fail this on its own.
    */
   const SHORT_IDS = [1, 2];
   const asRow = (id: number) => ({ ...FIRST_CITY, id });
@@ -341,8 +339,8 @@ describe("the city row identity", () => {
     // Not every short id inverts: geoname ids begin with 1, so raw "1" is a
     // prefix of one and still sorts first. Id 2 is the one that moves, and one
     // inverted pair is all it takes to reorder every group of tied rows around
-    // it. Asserted so a fixture whose ids stopped beginning with 1 would report
-    // that this case had gone quiet rather than passing on nothing.
+    // it. Asserted so a fixture whose ids stopped beginning with 1 reports that
+    // this case has gone quiet instead of passing on nothing.
     const inverts = SHORT_IDS.filter(
       (short) => String(short) > String(geonameId),
     );

@@ -5,9 +5,9 @@ import { LOCALE_STORAGE_KEY } from "../i18n/resolveLocale";
 import { useLocale } from "./useLocale";
 
 /**
- * Renders the hook on its own. No user input library and no controlled clock is
- * constructed in this file: the hook schedules nothing, so a failure here points
- * at the hook and not at the runner's timer handling.
+ * Renders the hook on its own. This file constructs no user input library and
+ * no controlled clock, because the hook schedules nothing, so a failure here
+ * points at the hook and not at the runner's timer handling.
  */
 function renderLocale() {
   return renderHook(() => useLocale());
@@ -37,7 +37,9 @@ describe("useLocale", () => {
     const { result } = renderLocale();
 
     expect(result.current.choice).toBe("es");
-    expect(result.current.catalog.empty).toBe("No se encontraron ciudades");
+    expect(result.current.catalog.cities.empty).toBe(
+      "No se encontraron ciudades",
+    );
   });
 
   describe("stamping the document element", () => {
@@ -62,9 +64,9 @@ describe("useLocale", () => {
     });
 
     // The theme hook beside this one is single instance by construction, and its
-    // own documentation says a second caller would race the first. This one is
-    // the opposite claim, so it is asserted rather than assumed: both callers
-    // read one store, so both write the same pair.
+    // own documentation says a second caller would race the first. This hook
+    // makes the opposite claim, so the case asserts it: both callers read one
+    // store, so both write the same pair.
     it("agrees with a second caller in the same tree", () => {
       const both = renderHook(() => [useLocale(), useLocale()] as const);
 

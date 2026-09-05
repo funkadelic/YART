@@ -19,7 +19,7 @@ export function sortRows<T, Id extends string>(
   });
 }
 
-/** Never flipped and never collated: an identity is not a visible value. */
+/** An identity is not a visible value, so it is never flipped or collated. */
 export function compareIdentities(aId: string, bId: string): number {
   if (aId === bId) return 0;
   return aId < bId ? -1 : 1;

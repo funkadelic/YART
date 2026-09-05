@@ -2,7 +2,7 @@
 // selector can match. Everything the inline script in index.html duplicates by
 // hand is declared here.
 
-/** A value rather than a bare union, so the accepted set has one definition. */
+/** A tuple, so the accepted set has one definition the type is derived from. */
 export const THEME_CHOICES = ["light", "dark", "system"] as const;
 
 /** The literal union of the words above, formed with no assertion anywhere. */
@@ -18,8 +18,9 @@ export const PREFERS_DARK_QUERY = "(prefers-color-scheme: dark)";
 
 /**
  * Turns a choice plus the system preference into the theme the document element
- * carries; the attribute is never "system". Written a second time as a literal
- * in index.html's inline script, and the parity guard holds the two together.
+ * carries; the attribute is never "system". Written again as a literal in the
+ * inline script of every shell, and the parity guard holds all the copies
+ * together.
  */
 export function resolveTheme(
   choice: ThemeChoice,

@@ -40,10 +40,10 @@ const SORT_CYCLE: Array<
   ["the active ascending column", sorted("name", "asc"), "name", "desc"],
   ["the active descending column", sorted("name", "desc"), null, null],
   ["a cleared column", sorted(null, null), "name", "asc"],
-  // Unreachable through the reducer's own transitions: the press that clears a
-  // sort nulls the column along with the direction, so nothing here produces a
-  // named column with no direction. A restored URL will, which is what this row
-  // covers ahead of the phase that adds one.
+  // Unreachable through the reducer's own transitions, because the press that
+  // clears a sort nulls the column along with the direction, so nothing here
+  // produces a named column with no direction. A restored URL does, and that is
+  // what this row covers.
   ["the active column with no direction", sorted("name", null), "name", "asc"],
 ];
 
@@ -117,7 +117,7 @@ describe("applyTableAction: the page", () => {
   });
 
   // The counterpart, and the reason the guard above names the query action
-  // rather than comparing whatever field an action happens to carry. Neither
+  // instead of comparing whatever field an action happens to carry. Neither
   // other control can emit its own current value, so a guard covering them
   // would be a rule with no case it applies to, and the reset would stop being
   // one line a reader can find.

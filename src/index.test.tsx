@@ -3,12 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // The bootstrap module reads its container and mounts on evaluation, so there
 // is no exported function to call and every case here has to import the module
-// afresh. The registry reset below is what makes the second import evaluate at
-// all rather than hand back the first one's cached result.
+// afresh. The registry reset below makes the second import evaluate instead of
+// handing back the first one's cached result.
 
 const actEnvironment = globalThis as typeof globalThis & {
-  // Explicitly undefined rather than merely optional, because the teardown
-  // writes back whatever was read, and absent is what it reads first.
+  // Typed as explicitly undefined, because the teardown writes back whatever it
+  // read and absent is what it reads first.
   IS_REACT_ACT_ENVIRONMENT?: boolean | undefined;
 };
 
@@ -22,8 +22,8 @@ let container: HTMLDivElement | null = null;
 
 /**
  * Whatever the flag below held before this file touched it, so the file hands
- * the global back as it found it. Nothing else in the suite sets it today, which
- * is exactly why leaving it set would be found late and somewhere else.
+ * the global back as it found it. Nothing else in the suite sets it today, so
+ * leaving it set would be found late and somewhere else.
  */
 let previousActEnvironment: boolean | undefined;
 
@@ -31,7 +31,7 @@ let previousActEnvironment: boolean | undefined;
  * The seam's simulated latency, written out here as src/App.test.tsx writes it
  * out, because the constant is private to src/api/getCities.ts and exporting it
  * would widen that module for a teardown. Teardown waits twice it, so the figure
- * only has to be an upper bound rather than the exact one.
+ * only has to be an upper bound.
  */
 const SEAM_LATENCY_MS = 200;
 
@@ -50,10 +50,10 @@ describe("bootstrap", () => {
   afterEach(async () => {
     // The root is created inside the module under test, so there is no handle to
     // unmount and the tree outlives the case that mounted it. Letting the seam's
-    // latency settle inside act is what keeps a resolved dataset from writing
-    // state into a detached tree after the case has ended, which is where the
-    // stray "not wrapped in act" warning comes from and why it lands on whatever
-    // case runs next rather than on this one.
+    // latency settle inside act keeps a resolved dataset from writing state into
+    // a detached tree after the case has ended. That write is where the stray
+    // "not wrapped in act" warning comes from, and why it lands on whatever case
+    // runs next instead of on this one.
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, SEAM_LATENCY_MS * 2));
     });
@@ -72,13 +72,13 @@ describe("bootstrap", () => {
       await import("./index");
     });
 
-    // Scoped to the container rather than the document: the claim is that the
-    // bootstrap mounted the application inside #root, and a document-wide query
-    // is satisfied by a table rendered anywhere at all.
+    // Scoped to the container, because the claim is that the bootstrap mounted
+    // the application inside #root and a document-wide query is satisfied by a
+    // table rendered anywhere at all.
     //
-    // The awaited query is not a stylistic choice. The application paints its
-    // loading branch first and resolves the dataset only after the seam's
-    // simulated latency, so a synchronous lookup finds nothing.
+    // The query is awaited because the application paints its loading branch
+    // first and resolves the dataset only after the seam's simulated latency, so
+    // a synchronous lookup finds nothing.
     expect(await within(container).findByRole("table")).toBeInTheDocument();
   });
 

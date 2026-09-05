@@ -50,7 +50,7 @@ describe("LocaleControl", () => {
   it("names the control, so the picker is not an unlabelled dropdown", () => {
     render(<LocaleControl />);
 
-    expect(picker()).toHaveAccessibleName(en.languageName);
+    expect(picker()).toHaveAccessibleName(en.common.languageName);
   });
 
   it("names itself, and the machine, in the chosen language", () => {
@@ -58,12 +58,12 @@ describe("LocaleControl", () => {
 
     render(<LocaleControl />);
 
-    expect(picker()).toHaveAccessibleName(fr.languageName);
+    expect(picker()).toHaveAccessibleName(fr.common.languageName);
     // The option naming the machine is copy. The autonyms beside it are not,
     // and stay in the language each of them names.
-    expect(screen.getByRole("option", { name: fr.languageSystem })).toHaveValue(
-      "system",
-    );
+    expect(
+      screen.getByRole("option", { name: fr.common.languageSystem }),
+    ).toHaveValue("system");
     expect(screen.getByRole("option", { name: "Español" })).toBeInTheDocument();
   });
 
@@ -93,8 +93,8 @@ describe("LocaleControl", () => {
       expect(stamped()).toEqual({ lang: "fr-FR", dir: "ltr" });
     });
 
-    // The one option that is not a language. Its strings stay English, which is
-    // what makes it reviewable, and only the direction moves.
+    // The one option that is not a language. Its strings stay English, so it
+    // stays reviewable, and only the direction moves.
     it("turns the document around for the pseudo-locale", async () => {
       const user = userEvent.setup();
       render(<LocaleControl />);
@@ -129,10 +129,10 @@ describe("LocaleControl", () => {
     expect(picker()).toHaveValue("es");
   });
 
-  // The whole seam in one case: the picker in the header and the table below it
-  // are two separate subscribers to one store, so choosing here has to repaint
-  // there. Two hooks holding their own copy of the choice would pass every case
-  // above and fail this one.
+  // The picker in the header and the table below it are two separate
+  // subscribers to one store, so choosing here has to repaint there. Two hooks
+  // holding their own copy of the choice would pass every case above and fail
+  // this one.
   it("repaints the table below it in the chosen language", async () => {
     const user = userEvent.setup();
 
@@ -151,7 +151,7 @@ describe("LocaleControl", () => {
 
     await user.selectOptions(picker(), "fr");
 
-    expect(screen.getByText(fr.loading)).toBeInTheDocument();
+    expect(screen.getByText(fr.cities.loading)).toBeInTheDocument();
     expect(document.documentElement.lang).toBe("fr-FR");
   });
 });

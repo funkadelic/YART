@@ -16,14 +16,14 @@ export interface Column<T, Id extends string = string> {
 }
 
 /**
- * What a caller supplies. The comparator takes the direction rather than being
- * flipped by its caller, because blanks sort last in both.
+ * What a caller supplies. The comparator takes the direction itself, because
+ * blanks sort last in both.
  *
  * ponytail: a caller-supplied comparator keeps the three parameters it has
- * always had and never receives the collator, so a caller that wants to collate
- * text itself has to reach for one of its own. Nothing in this tree does. The
- * day one does, the collator arrives the same way the accessor does: fused in
- * at construction, one line below.
+ * always had and never receives the collator, and the one in this tree that
+ * collates text needs no fourth. A feature builder already builds a collator to
+ * hand to this factory, so a comparator declared in that same body closes over
+ * it. Widen these options only for a caller that cannot do that.
  */
 export interface ColumnOptions<T, V> {
   readonly label: string;
@@ -37,7 +37,7 @@ export interface ColumnOptions<T, V> {
 /**
  * Builds columns for one row type. Curried because TypeScript infers all of a
  * call's type arguments or none, so an array carries its literal id union with
- * no assertion. One builder per table: it throws on a repeated id.
+ * no assertion. One builder per table, and it throws on a repeated id.
  */
 export function columns<T>(collator: Intl.Collator) {
   const issued = new Set<string>();
@@ -63,8 +63,9 @@ export function columns<T>(collator: Intl.Collator) {
       renderCell: renderCell
         ? (row) => renderCell(read(row), row)
         : (row) => {
-            // Nullish paints an empty cell rather than the word "null". NaN is
-            // not covered: the comparator calls it blank, but it is worth seeing.
+            // A nullish value paints an empty cell, so no cell reads "null".
+            // NaN is left uncovered: the comparator calls it blank, but a
+            // rendered NaN is worth seeing.
             const value = read(row);
             return value == null ? "" : String(value);
           },

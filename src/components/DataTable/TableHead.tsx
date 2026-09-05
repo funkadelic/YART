@@ -11,7 +11,7 @@ interface TableHeadProps<T, Id extends string> {
   readonly onSortChange: (columnId: Id) => void;
 }
 
-/** An inactive column reports "none" rather than omitting the attribute. */
+/** An inactive column reports "none", so the attribute is always present. */
 function ariaSort(
   direction: "asc" | "desc" | null,
 ): "ascending" | "descending" | "none" {
@@ -20,7 +20,7 @@ function ariaSort(
   return "none";
 }
 
-/** The header row. The width is a style object, not an interpolation. */
+/** The header row. The width is applied as a style object. */
 export function TableHead<T, Id extends string>({
   columns,
   sortColumnId,

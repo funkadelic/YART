@@ -8,11 +8,11 @@ import { RootLayout } from "../RootLayout";
 import { getCities } from "../../api/getCities";
 import type { City } from "../../api/getCities";
 
-// One case in this file renders the whole application rather than this feature,
-// because the property it asserts belongs to the address rather than to either
-// component: a link carrying a term has to produce exactly one request, and
-// that is only observable where the request is issued. The factory delegates to
-// the real module, so nothing else in the file changes behaviour.
+// One case in this file renders the whole application, because the property it
+// asserts belongs to the address and not to either component. A link carrying a
+// term has to produce exactly one request, and that is only observable where
+// the request is issued. The factory delegates to the real module, so nothing
+// else in the file changes behavior.
 vi.mock("../../api/getCities", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../api/getCities")>();
   return { ...actual, getCities: vi.fn(actual.getCities) };
@@ -25,9 +25,9 @@ vi.mock("../../api/getCities", async (importOriginal) => {
  */
 const SEARCH_DEBOUNCE_MS = 150;
 
-// Fifty rows rather than the handful the neighbouring suite renders. At the
-// default page size that is five pages, which is the smallest set a position
-// can be restored into, paged away from, and pushed past the end of.
+// Fifty rows, where the neighboring suite renders a handful. At the default
+// page size that is five pages, the smallest set a position can be restored
+// into, paged away from, and pushed past the end of.
 const PAGED_CITIES: City[] = Array.from({ length: 50 }, (_, index) => ({
   id: index + 1,
   name: `City ${index + 1}`,
@@ -52,9 +52,9 @@ const openAt = (search: string) => {
   window.history.replaceState(null, "", search);
 };
 
-// A restore rather than a guard: a file that installs a controlled clock in one
-// block and never puts the real one back leaks the frozen clock into whatever
-// runs next, and a restore that only runs on the happy path is not a restore.
+// Unconditional, because a file that installs a controlled clock in one block
+// and never puts the real one back leaks the frozen clock into whatever runs
+// next, and a restore that only runs on the happy path leaves that hole open.
 afterEach(() => {
   vi.useRealTimers();
 });
@@ -79,11 +79,11 @@ describe("CityTable and the address", () => {
   });
 
   it("writes the position into the address when the reader pages away", async () => {
-    // The session disables the delay between keystrokes rather than taking the
-    // default. A later plan puts a controlled clock in this file for the
-    // debounce cases, and the toolchain guard fails the build for any file that
-    // combines a controlled clock with a session that is not bound to it, so
-    // every session here is written in the form that survives that addition.
+    // The session disables the delay between keystrokes. This file later gains
+    // a controlled clock for the debounce cases, and the toolchain guard fails
+    // the build for any file that combines a controlled clock with a session
+    // that is not bound to it, so every session here is written in the form
+    // that survives that addition.
     const user = userEvent.setup({ delay: null });
 
     render(<CityTable {...defaultProps} />);
@@ -111,9 +111,9 @@ describe("CityTable and the address", () => {
   // The empty branch in the shared table asks how many rows the slice produced,
   // not how many rows there are, so a position that reaches the slice without
   // passing through the clamp renders the no-results copy over rows that exist.
-  // The clamp is what stops that, and it corrects the read alone: the position
-  // the reader was handed stays where they can see it, so a set that widens
-  // again puts them back and a position arriving before its rows do is not
+  // The clamp stops that, and it corrects the read alone. The position the
+  // reader was handed stays where they can see it, so a set that widens again
+  // puts them back, and a position arriving before its rows do is never
   // corrected against no rows at all.
   it("shows the last page that exists for a position past the end, and leaves that position in the address", () => {
     openAt("?page=999");
@@ -126,8 +126,8 @@ describe("CityTable and the address", () => {
     expect(window.location.search).toBe("?page=999");
   });
 
-  // What makes one Back press leave the site rather than walking the reader
-  // back through positions they never asked to record.
+  // One Back press leaves the site, and never walks the reader back through
+  // positions they never asked to record.
   it("adds no history entry for any amount of paging", async () => {
     const user = userEvent.setup({ delay: null });
 
@@ -145,7 +145,7 @@ describe("CityTable and the address", () => {
     expect(window.history).toHaveLength(entriesBefore);
   });
 
-  // The case a suite that only ever sets parameters never reaches: an empty
+  // A suite that only ever sets parameters never reaches this case. An empty
   // query has to be written as the path, because the empty string resolves to
   // the address it was given and leaves the stale query in place.
   it("clears the query completely when the reader returns to the first page", async () => {
@@ -167,9 +167,9 @@ describe("CityTable and the address", () => {
 
     render(<CityTable {...defaultProps} />);
 
-    // The header cell's own attribute rather than the row order, because that
-    // is where the state lives and what a screen reader reads: matching row
-    // order would also pass for a table that happened to arrive sorted.
+    // The header cell's own attribute, because that is where the state lives
+    // and what a screen reader reads. Matching row order would also pass for a
+    // table that happened to arrive sorted.
     expect(
       screen.getByRole("columnheader", { name: /Population/ }),
     ).toHaveAttribute("aria-sort", "descending");
@@ -189,8 +189,8 @@ describe("CityTable and the address", () => {
     await user.click(header);
     expect(window.location.search).toBe("?sort=-population");
 
-    // Removed outright rather than written empty: an unsorted table is the
-    // default, and the address states nothing it does not have to.
+    // Removed outright, because an unsorted table is the default and the
+    // address states nothing it does not have to.
     await user.click(header);
     expect(window.location.search).toBe("");
   });
@@ -225,7 +225,7 @@ describe("CityTable and the address", () => {
     });
 
     // All three in one update, which is what holding the view state as one
-    // object buys: three separate writes would be three chances to paint a
+    // object buys. Three separate writes would be three chances to paint a
     // position against a page size it was not chosen for.
     expect(
       screen.getByRole("columnheader", { name: /Population/ }),
@@ -238,8 +238,8 @@ describe("CityTable and the address", () => {
   // The pair below is one rule read from both sides. A restored sort is still a
   // first render, so announcing it tells a reader who has just followed a link
   // that something happened when nothing did. A traversal after a real press is
-  // the opposite case: that reader did sort, and the region is the only thing
-  // that reports where the traversal put them.
+  // the other side. That reader did sort, and the region is the only thing that
+  // reports where the traversal put them.
   it("stays silent when a back navigation restores a sort the reader never applied", () => {
     const { container } = render(<CityTable {...defaultProps} />);
 
@@ -280,11 +280,11 @@ describe("CityTable and the address", () => {
   });
 
   // The address is a convenience and the table is not. Browsers rate limit
-  // history mutation and throw rather than ignoring the call, and a held Enter
-  // key on the paging control reaches that ceiling over a collection with this
-  // many pages. Unguarded, the throw lands in a commit-phase effect and the
-  // boundary around the main slot replaces the whole view with its fallback,
-  // which is the reader losing the table over a link that failed to update.
+  // history mutation, and past the limit the call throws; a held Enter key on
+  // the paging control reaches that ceiling over a collection with this many
+  // pages. Unguarded, the throw lands in a commit-phase effect and the boundary
+  // around the main slot replaces the whole view with its fallback, so the
+  // reader loses the table over a link that failed to update.
   it("keeps the table rendered when the browser refuses the address write", async () => {
     const user = userEvent.setup({ delay: null });
     vi.spyOn(window.history, "replaceState").mockImplementation(() => {
@@ -295,7 +295,7 @@ describe("CityTable and the address", () => {
     });
 
     render(
-      <RootLayout>
+      <RootLayout domain="cities">
         <CityTable {...defaultProps} />
       </RootLayout>,
     );
@@ -310,9 +310,10 @@ describe("CityTable and the address", () => {
   it("carries a tracking parameter and an unrecognized key through a write, behind the keys it owns", async () => {
     const user = userEvent.setup({ delay: null });
 
-    // dir is not a key this schema owns: the column and the direction ride one
-    // signed token, so an incoming direction is a stranger's parameter rather
-    // than an invalid value, and preserving it is the rule working.
+    // dir is not a key this schema owns. The column and the direction ride one
+    // signed token, so an incoming direction is a stranger's parameter and not
+    // an invalid value of a key this table reads, and preserving it is the rule
+    // working.
     openAt("?utm_source=x&dir=sideways");
 
     render(<CityTable {...defaultProps} />);
@@ -350,9 +351,9 @@ describe("CityTable, the address, and the search term", () => {
     // went out, not what came back.
     seam.mockReturnValue(new Promise<City[]>(() => {}));
 
-    // Restored here rather than left to the shared teardown, which restores
-    // spies and this seam is not one: it is a plain mock function standing in
-    // for a module export, so nothing global reaches it. Without this, the next
+    // Restored here, because the shared teardown restores spies and this seam
+    // is not one. It is a plain mock function standing in for a module export,
+    // so nothing global reaches it. Without this, the next
     // case in this file to render the application gets a request that never
     // resolves and reads as a bug in the code under test.
     try {
@@ -388,8 +389,8 @@ describe("CityTable, the address, and the search term", () => {
   });
 
   // A link stating the defaults out loud is the same view as a link stating
-  // nothing, so the write that follows has to leave nothing behind: all four
-  // keys removed, and the address back to a bare path.
+  // nothing, so the write that follows removes all four keys and leaves the
+  // address a bare path.
   it("leaves no query at all for a link whose every value is the default", () => {
     openAt("?q=&sort=&page=1&size=10");
 
@@ -401,9 +402,9 @@ describe("CityTable, the address, and the search term", () => {
   });
 });
 
-// The clock is installed here and nowhere else in this file: the cases above
-// run on a real one, and the two below are about when a write happens rather
-// than what it says, which is not observable without owning the clock.
+// The clock is installed here and nowhere else in this file. The cases above
+// run on a real one, and the ones below are about when a write happens, which
+// is not observable without owning the clock.
 describe("CityTable and the debounced address write", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -435,7 +436,7 @@ describe("CityTable and the debounced address write", () => {
 
   // The narrow window where a traversal and a commit are both in play. The
   // keystrokes belong to the view the reader has left, so letting them land
-  // afterwards desyncs all three surfaces at once: the box would show the
+  // afterwards desyncs all three surfaces at once. The box would show the
   // restored term while the rows, the position, and the address carried the
   // typed one.
   it("drops a commit still pending when a back navigation lands inside the window", async () => {
@@ -454,7 +455,7 @@ describe("CityTable and the debounced address write", () => {
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
 
-    // Well past the boundary the cancelled commit would have fired at.
+    // Well past the boundary the canceled commit would have fired at.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS * 2);
     });
@@ -481,7 +482,7 @@ describe("CityTable and the debounced address write", () => {
     expect(replaceState).toHaveBeenCalledTimes(1);
 
     // The state is unchanged, so the serialized address equals the one already
-    // in the bar and the guard ahead of the write is what stops a second one.
+    // in the bar and the guard ahead of the write stops a second one.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
     });
@@ -492,7 +493,7 @@ describe("CityTable and the debounced address write", () => {
   // A trailing space is what a reader types before a second word, and the
   // debounce commits on the pause between the two. The search matches on a
   // trimmed term and the address writes a trimmed term, so that keystroke
-  // changes no row and has to change no view: the position stays where the
+  // changes no row and has to change no view. The position stays where the
   // reader left it, the address keeps the key that would restore it on a
   // reload or a share, and nothing untrimmed is ever reported upward to be
   // scanned for a second time.
@@ -516,8 +517,8 @@ describe("CityTable and the debounced address write", () => {
       await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
     });
 
-    // The box still paints what was typed, which is what makes trimming at the
-    // commit rather than in the box the right place for it.
+    // The box still paints what was typed, so the trim belongs at the commit
+    // and not in the box.
     expect(screen.getByRole("textbox", { name: "Search" })).toHaveValue(
       "City ",
     );

@@ -7,8 +7,8 @@ import {
   type ResolvedLocale,
 } from "./resolveLocale";
 
-// The chosen locale, owned once for the document, which is what makes several
-// callers agree rather than each resolving one of its own.
+// The chosen locale, owned once for the document, so every caller resolves the
+// same value.
 
 /** Anything not a shipped id is absent. The access throws when blocked. */
 function readStoredChoice(): LocaleChoice {
@@ -36,7 +36,10 @@ function notify(): void {
   }
 }
 
-/** Re-read rather than trust the event. A null key is a clear(). */
+/**
+ * Re-reads the store on each event; the value the event carries is ignored. A
+ * null key is a clear().
+ */
 function handleStorage(event: StorageEvent): void {
   if (event.key === null || event.key === LOCALE_STORAGE_KEY) {
     choice = readStoredChoice();
@@ -45,9 +48,9 @@ function handleStorage(event: StorageEvent): void {
 }
 
 /**
- * The listeners come and go with the first and last subscriber, so the choice
- * is re-read here: nothing was listening between the last unsubscribe and this
- * call, and a cross-tab write in that window went unseen.
+ * The listeners come and go with the first and last subscriber, so nothing was
+ * listening between the last unsubscribe and this call and a cross-tab write in
+ * that window went unseen. The choice is re-read here to catch it.
  */
 export function subscribeLocale(onStoreChange: () => void): () => void {
   if (subscribers.size === 0) {
@@ -68,19 +71,20 @@ export function subscribeLocale(onStoreChange: () => void): () => void {
   };
 }
 
-/** Safe to hand straight to React: the resolver returns a module constant. */
+/** Safe to hand straight to React; the resolver returns a module constant. */
 export function getLocaleSnapshot(): ResolvedLocale {
   return resolveLocale(choice, navigator.languages);
 }
 
-/** What the reader picked, which is what the picker paints as selected. */
+/** What the reader picked, and what the picker paints as selected. */
 export function getChoiceSnapshot(): LocaleChoice {
   return choice;
 }
 
 /**
- * Moves the choice and writes it through. A value naming none is ignored: the
- * option list is closed, so nothing reaching that branch came from a reader.
+ * Moves the choice and writes it through. A value naming no choice is ignored,
+ * and the option list is closed, so nothing reaching that branch came from a
+ * reader.
  */
 export function setLocaleChoice(next: string): void {
   if (!isLocaleChoice(next)) {
@@ -91,8 +95,8 @@ export function setLocaleChoice(next: string): void {
 
   try {
     if (next === "system") {
-      // A delete, not the word: the default has one representation, the key
-      // not being there.
+      // The default has one representation, the key being absent, so this
+      // deletes the key instead of storing the word.
       localStorage.removeItem(LOCALE_STORAGE_KEY);
     } else {
       localStorage.setItem(LOCALE_STORAGE_KEY, next);

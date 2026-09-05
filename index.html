@@ -33,9 +33,11 @@
 
       Both resolve rules below are duplicated, from src/theme/resolveTheme.ts and
       from src/i18n/resolveLocale.ts. Neither module can be imported from here,
-      because anything importable runs too late. A change to one needs the same
-      change to the other, and the parity guard in src/toolchain.test.ts fails
-      when the two stop agreeing about either rule.
+      because anything importable runs too late. The duplication is threefold
+      rather than twofold: this shell and movies.html each carry a copy, and the
+      site ships both. A change to one needs the same change to the other two,
+      and the parity guard in src/toolchain.test.ts fails when they stop
+      agreeing about either rule.
 
       Being inline, this script needs a Content-Security-Policy that allows it
       before it can run under one. The app ships as a static bundle with no

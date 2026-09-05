@@ -13,9 +13,9 @@ interface Props {
 
 /**
  * Renders the hook while recording the slice it returns on every render, so a
- * case can assert that two renders handed back the same slice rather than two
- * equal ones. A new-but-equal slice is a fresh set of table rows as far as
- * React is concerned, and deep equality cannot see it.
+ * case can assert that two renders handed back one slice and not two equal
+ * ones. A new-but-equal slice is a fresh set of table rows as far as React is
+ * concerned, and deep equality cannot see it.
  */
 function renderPaginated(initialProps: Props) {
   const seen: (readonly string[])[] = [];

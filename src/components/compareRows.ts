@@ -1,4 +1,4 @@
-/** Nothing to order by. Zero is not blank (0 population sorts small); NaN is. */
+/** Nothing to order by. Zero is not blank, it sorts small; NaN is blank. */
 function isBlank(value: unknown): boolean {
   return (
     value === "" || value === null || value === undefined || Number.isNaN(value)
@@ -9,8 +9,14 @@ function isBlank(value: unknown): boolean {
 const TYPE_RANK = { number: 0, string: 1, other: 2 } as const;
 
 /**
- * Places a value in the ordering above. The parse boundary types every City
- * field, so only a row type other than City reaches the mixed arms.
+ * Places a value in the ordering above.
+ *
+ * No shipped column reaches the `other` rank today: every column whose field is
+ * neither a number nor a string supplies its own comparator. A column that did
+ * not would land here, and an array would then compare by `String(array)`, which
+ * is not the order any reader expects. An empty array is not blank by the test
+ * above either, so such a column would sort its empty lists among the letters
+ * instead of last. The arm stays for that case and is covered directly.
  */
 function rank(value: unknown): number {
   if (typeof value === "number") return TYPE_RANK.number;
@@ -29,8 +35,8 @@ function compareRanked(
   if (aRank !== bRank) return aRank - bRank;
 
   if (aRank === TYPE_RANK.number) {
-    // Compared rather than subtracted: two infinities of the same sign subtract
-    // to NaN, which would skip the sort module's identity tiebreak.
+    // Subtracting two infinities of the same sign gives NaN, which would skip
+    // the sort module's identity tiebreak, so these are compared instead.
     const aNumber = aValue as number;
     const bNumber = bValue as number;
     if (aNumber === bNumber) return 0;

@@ -2,6 +2,7 @@ import { playwright } from "@vitest/browser-playwright";
 import react from "@vitejs/plugin-react";
 import { defaultExclude, defineConfig } from "vitest/config";
 import { createHash } from "node:crypto";
+import { resolve } from "node:path";
 
 import type { Plugin } from "vite";
 
@@ -21,7 +22,7 @@ import type { Plugin } from "vite";
  * by hand would leave two things to change together, and the failure of not
  * doing so is silent in exactly the same way.
  *
- * Build only, so the dev server is unaffected: it serves styles as injected
+ * Build only, so the dev server is unaffected. It serves styles as injected
  * style elements, which this policy does not allow and which the built page
  * never contains.
  */
@@ -89,11 +90,24 @@ function contentSecurityPolicy(): Plugin {
  * thing it asks for. The link below moves that request to the shell, where the
  * preload scanner reaches it immediately and the two downloads overlap.
  *
- * The name is content-hashed and exists only once the bundle does, which is why
- * this reads it off the bundle rather than being written into index.html by
- * hand. A shell carrying a stale hash would preload a file that is not there,
- * pay for the request and still fetch the real one afterwards, so the lookup
- * throws rather than skipping quietly when it finds anything but one match.
+ * The name is content-hashed and exists only once the bundle does, so this reads
+ * it off the build instead of index.html carrying it by hand. A shell carrying a
+ * stale hash would preload a file that is not there, pay for the request and
+ * still fetch the real one afterwards, so the lookup throws when it finds
+ * anything but one match.
+ *
+ * The lookup is per entry chunk. context.bundle is the whole build's bundle and
+ * every shell is handed the same one, so with two entries a name-based filter
+ * over it matches the same single asset for both shells and the guard never
+ * fires. That was measured with a two-entry probe build, and the shell that gets
+ * the wrong preload fails silently.
+ *
+ * Reading the entry comes with a ceiling. importedAssets is attributed to the
+ * chunk that imports the asset, so a dataset module landing in the shared chunk
+ * instead of an entry chunk leaves the entry's set empty and the plugin throws
+ * on a count of zero. That loud failure is the intended one, a red build in
+ * place of a wrong preload. Each dataset module here is reached from exactly one
+ * entry, so the case does not arise today.
  */
 function preloadDataset(): Plugin {
   return {
@@ -102,15 +116,13 @@ function preloadDataset(): Plugin {
     transformIndexHtml: {
       order: "post",
       handler(_html, context) {
-        const datasets = Object.values(context.bundle ?? {}).filter(
-          (output) =>
-            output.type === "asset" &&
-            /(^|\/)cities-[^/]*\.json$/.test(output.fileName),
-        );
+        const datasets = [
+          ...(context.chunk?.viteMetadata?.importedAssets ?? []),
+        ].filter((fileName) => fileName.endsWith(".json"));
 
         // A length check does not narrow an index access under
         // noUncheckedIndexedAccess, so the guard rides on a destructured
-        // binding rather than on the index at the use site.
+        // binding instead of on the index at the use site.
         const [dataset] = datasets;
 
         if (!dataset || datasets.length !== 1) {
@@ -126,14 +138,14 @@ function preloadDataset(): Plugin {
             attrs: {
               rel: "preload",
               as: "fetch",
-              // Required for an as="fetch" preload to be reused rather than
-              // downloaded a second time, which on this asset would cost more
-              // than the preload saves.
+              // Required for an as="fetch" preload to be reused. Without it the
+              // asset downloads a second time, which here costs more than the
+              // preload saves.
               crossorigin: "anonymous",
-              // Written relative here rather than root-absolute, because the
-              // base this build uses is relative and a tag injected at this
-              // point is past the rewrite that would otherwise apply it.
-              href: `./${dataset.fileName}`,
+              // Written relative, because the base this build uses is relative
+              // and a tag injected at this point is past the rewrite that would
+              // otherwise apply it.
+              href: `./${dataset}`,
             },
           },
         ];
@@ -167,52 +179,61 @@ export default defineConfig({
   // interop rule applies to it at all.
   //
   // That measurement is why legacy.inconsistentCjsInterop, the deprecated
-  // opt-out back to the previous behavior, is declined here rather than
-  // overlooked. The evidence it is not needed is the whole suite staying green
-  // across the bump, coverage included.
+  // opt-out back to the previous behavior, is deliberately declined here. The
+  // evidence it is not needed is the whole suite staying green across the bump,
+  // coverage included.
 
   // The plugin is taken at 6.x and taken bare. Its three peers other than the
   // bundler are every one of them optional, so none of them is installed by
   // taking it: oxc-transform-react is the Rust port of React Compiler, reached
   // through the compiler option, and @rolldown/plugin-babel together with
   // babel-plugin-react-compiler is the Babel route to the same adoption through
-  // the exported reactCompilerPreset. What is declined here is therefore an
-  // experimental compiler rather than a faster JSX transform. The JSX transform
-  // is Oxc's, arrives with the plugin itself and needs no peer at all, which is
-  // also why this major drops the refresh runtime out of the tree instead of
-  // adding to it. Babel is still installed, at @babel/core, but it arrives
-  // through the lint plugin's dependency edge rather than this one and was here
-  // before this bump as well. Adopting the compiler is a change of its own with
+  // the exported reactCompilerPreset. So what is declined here is an
+  // experimental compiler. The JSX transform is Oxc's, arrives with the plugin
+  // itself and needs no peer at all, which is also why this major drops the
+  // refresh runtime out of the tree instead of adding to it. Babel is still
+  // installed, at @babel/core, but it arrives through the lint plugin's
+  // dependency edge and not through this one, and was here before this bump as
+  // well. Adopting the compiler is a change of its own with
   // its own gate run, so the option stays unset and the peers stay uninstalled.
   plugins: [react(), preloadDataset(), contentSecurityPolicy()],
-  // Relative rather than the literal repository subpath the site is published
-  // under. One build has to serve from two addresses: the root, which is where
-  // `vite preview` serves it and therefore where both browser suites drive it,
-  // and /YART/, which is where GitHub Pages serves a project site. A literal
-  // base would move the preview address out from under the suites, and reading
-  // the base off an environment variable would leave the built artifact the
-  // pipeline measures different from the one it publishes.
+  // Relative, because one build has to serve from two addresses: the root, which
+  // is where `vite preview` serves it and therefore where both browser suites
+  // drive it, and /YART/, the repository subpath GitHub Pages serves a project
+  // site from. A literal base would move the preview address out from under the
+  // suites, and reading the base off an environment variable would leave the
+  // built artifact the pipeline measures different from the one it publishes.
   //
-  // Safe here because the app writes its own address from window.location
-  // rather than from a hardcoded path, so nothing in the tree assumes the root.
+  // Safe here because the app writes its own address from window.location, so
+  // nothing in the tree assumes the root.
   base: "./",
   build: {
     // Spelled out from the same four floors the browserslist declares, because
     // the bundler does not read that field and the two are otherwise free to
-    // drift. They already had: the default is baseline-widely-available, which
+    // drift. They already have. The default is baseline-widely-available, which
     // is Firefox 114 against the declared floor of 111, and the other three
     // agree exactly. The divergence emits nothing today, since a build pinned
     // to these targets and a build on the default produce the same chunk down
-    // to its content hash, so this pins a floor rather than changing output.
+    // to its content hash, so this pins a floor without changing output.
     // Update it and the browserslist together; nothing asserts they agree.
     target: ["chrome111", "edge111", "firefox111", "safari16.4"],
+    rollupOptions: {
+      // Declaring an input replaces the implicit single-shell one, so the
+      // original shell has to be named here or it stops being built. Both stay
+      // at the repository root, because a nested shell would resolve the
+      // relative asset prefix this build emits one directory too deep.
+      input: {
+        index: resolve(import.meta.dirname, "index.html"),
+        movies: resolve(import.meta.dirname, "movies.html"),
+      },
+    },
   },
   test: {
     coverage: {
-      // Declared once at root level rather than inside a project, because the
-      // runner rejects coverage options on a project. That is also the mechanism
-      // by which the gate is measured over the deterministic jsdom suite alone:
-      // the only command that asks for coverage is the one scoped to that project.
+      // Declared once at root level, because the runner rejects coverage options
+      // on a project. That is also how the gate ends up measured over the
+      // deterministic jsdom suite alone, since the only command that asks for
+      // coverage is the one scoped to that project.
       provider: "v8",
       // lcov for the Sonar import, text so a local run says the same thing the
       // gate will. The default reporters write html into coverage/ as well,
@@ -225,7 +246,7 @@ export default defineConfig({
       // Four patterns and no named file. Three of them name artifacts that
       // never execute. The fourth, src/test/**, names the shared scaffolding,
       // which does run on every pass of this suite and is deliberately not
-      // measured: it is support code for the tests rather than code the
+      // measured, because it is support code for the tests and not code the
       // product ships. That makes it the one directory holding executing code
       // outside the gate, so eslint.config.js forbids importing it from
       // anything that is not itself a test. An entry naming an application
@@ -238,26 +259,25 @@ export default defineConfig({
         "src/test/**",
         "src/**/*.d.ts",
       ],
-      // Without this the number is a report rather than a gate, and a change
-      // that drops coverage merges green with the drop recorded in a log
-      // nobody reads.
+      // Without this the number is only a report, and a change that drops
+      // coverage merges green with the drop recorded in a log nobody reads.
       thresholds: { 100: true },
     },
     projects: [
       {
         // Everything that runs without an engine. This is the suite the coverage
-        // gate measures and the one a clean install can run, so it is named rather
-        // than left implicit: a second project turns an unfiltered run into a
+        // gate measures and the one a clean install can run, so it is named
+        // explicitly, because a second project turns an unfiltered run into a
         // browser launch.
         extends: true,
         test: {
           name: "jsdom",
           environment: "jsdom",
           setupFiles: ["./vitest.setup.ts"],
-          // Supplying exclude replaces the runner's own default rather than adding
-          // to it, so the spread is what keeps the dependency directory out of
+          // Supplying exclude replaces the runner's own default instead of adding
+          // to it, so the spread keeps the dependency directory out of
           // collection. The first added pattern is the browser project's whole
-          // input. The second is the other runner's whole input: both runners
+          // input. The second is the other runner's whole input. Both runners
           // match the same spec filenames from the same project root, so without
           // it this one collects the end-to-end specs and each of them fails on
           // import with a message about being called from a configuration file.
@@ -267,9 +287,10 @@ export default defineConfig({
       {
         // A real engine, for the checks that need layout and paint. It shares the
         // root plugin list through extends, without which the JSX here never
-        // transforms, and it takes no setup file: the shared setup stubs the media
-        // query this project exists to exercise for real, and stubs the dataset
-        // fetch down to a fixture that would leave the paged table three pages long.
+        // transforms, and it takes no setup file, because the shared setup stubs
+        // the media query this project exists to exercise for real, and stubs the
+        // dataset fetch down to a fixture that would leave the paged table three
+        // pages long.
         extends: true,
         test: {
           name: "browser",
@@ -281,21 +302,21 @@ export default defineConfig({
             // The runner's own default is a phone-sized window, at which the
             // table overflows its scroll container and the last column is
             // clipped. The contrast rule then reports every cell in that column
-            // as undecided rather than passing or failing it, because a
-            // partially obscured element has no determinable background. A
-            // desktop window is the layout this table is built for and the one
-            // in which the rule can actually reach a verdict.
+            // as undecided, because a partially obscured element has no
+            // determinable background. A desktop window is the layout this table
+            // is built for and the one in which the rule can reach a verdict.
             viewport: { width: 1280, height: 900 },
             // A factory in this major version. The bare string throws while the
             // projects are still resolving, before a single test is collected.
             provider: playwright(),
             // The pipeline downloads chromium-headless-shell alone, and this
-            // launch resolves to exactly that: Playwright routes a headless
-            // launch that names no channel to the shell. Naming a channel, or
-            // turning headless off for a local debugging run, asks for a binary
-            // CI never fetched. src/toolchain.test.ts holds the two files
-            // together, so that edit is a red test here rather than a missing
-            // executable in the pipeline saying nothing about accessibility.
+            // launch resolves to exactly that, because Playwright routes a
+            // headless launch that names no channel to the shell. Naming a
+            // channel, or turning headless off for a local debugging run, asks
+            // for a binary CI never fetched. src/toolchain.test.ts holds the two
+            // files together, so that edit shows up as a red test here instead
+            // of a missing executable in the pipeline, whose failure would say
+            // nothing about accessibility.
             instances: [{ browser: "chromium" }],
           },
         },

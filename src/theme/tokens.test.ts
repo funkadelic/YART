@@ -1,22 +1,22 @@
 // @vitest-environment node
 //
-// Token layering and contrast, the theme script's placement in index.html, and
+// Token layering and contrast, the theme script's placement in each shell, and
 // the halves of the stylesheet rules stylelint has no way to express: an SCSS
 // variable declared in a component sheet, a reference to a retired token, the
 // global sheet's bounded px count, and the positive claim that the focus ring is
-// drawn. The negative rules moved to .stylelintrc.json, where a violation is
-// named at the line rather than at the end of a walk.
+// drawn. The negative rules live in .stylelintrc.json, where a violation is
+// named at the line it sits on rather than at the end of a walk.
 //
-// The stylesheet is the single source of truth for every colour in the app, so
-// this guard reads the shipped file rather than a copy of its values. Node
-// rather than the DOM environment for two measured reasons: the runner replaces
-// CSS imports with empty strings, so nothing is loaded into a document to
-// inspect; and jsdom does not substitute var() in getComputedStyle, so even a
-// mounted page would hand back the literal string "var(--gray-50)" instead of a
-// colour. Resolving the indirection here is the only way to assert on the values
-// that actually reach a screen.
+// The stylesheet is the single source of truth for every color in the app, so
+// this guard reads the shipped file, never a copy of its values. It runs under
+// Node for two measured reasons: the runner replaces CSS imports with empty
+// strings, so nothing is loaded into a document to inspect; and jsdom does not
+// substitute var() in getComputedStyle, so even a mounted page would hand back
+// the literal string "var(--gray-50)" instead of a color. Resolving the
+// indirection here is the only way to assert on the values that actually reach a
+// screen.
 
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import postcss from "postcss";
 import { describe, expect, it } from "vitest";
@@ -24,13 +24,12 @@ import { describe, expect, it } from "vitest";
 import { THEME_STORAGE_KEY } from "./resolveTheme";
 import { required } from "../test/required";
 
-// Resolved from this file's own location rather than from the working directory,
-// which is wherever the runner happened to be invoked and is not the project root
-// under an IDE runner or an explicit root argument.
+// Resolved from this file's own location. The working directory is wherever the
+// runner happened to be invoked and is not the project root under an IDE runner
+// or an explicit root argument.
 const here = import.meta as ImportMeta & { dirname: string };
 const projectRoot = join(here.dirname, "..", "..");
 const cssPath = join(projectRoot, "src", "index.css");
-const htmlPath = join(projectRoot, "index.html");
 
 const LIGHT_SELECTOR = ":root";
 const DARK_SELECTOR = ':root[data-theme="dark"]';
@@ -38,33 +37,31 @@ const DARK_SELECTOR = ':root[data-theme="dark"]';
 // The two thresholds from the contrast success criteria: 4.5:1 where the pair
 // carries text, 3:1 where it is a border, a gridline or the focus ring. Neither
 // number is ever moved to accommodate a failing pair, and no pair is ever added
-// to an allowlist to keep this file green. A ratio below the line is a colour
-// choice to redo, not a threshold to renegotiate.
+// to an allowlist to keep this file green. A ratio below the line is a color
+// choice to redo.
 const TEXT_CONTRAST_MINIMUM = 4.5;
 const NON_TEXT_CONTRAST_MINIMUM = 3;
 
-// The logo is the same two colours in both themes by design, so these two are
-// the complete exemption list for the partner assertion. Two entries, named
-// here rather than derived: a list that grows quietly is how the guard stops
-// being one.
+// The logo is the same two colors in both themes by design, so these two are
+// the complete exemption list for the partner assertion. Written out by hand, so
+// the list cannot grow without a visible edit.
 const THEME_INVARIANT_TOKENS = ["--color-brand", "--color-brand-contrast"];
 
-// The tier that carries no theme at all: spacing, type and the radius. These are
-// held out of the colour assertions by their prefix rather than by an entry in
-// the exemption list above, which is what lets that list stay at the two logo
-// colours no matter how far the scale grows.
+// The tier that carries no theme at all: spacing, type and the radius. Their
+// prefix holds them out of the color assertions, so the exemption list above
+// stays at the two logo colors no matter how far the scale grows.
 const INVARIANT_TOKEN_PREFIXES = ["--space-", "--font-size-", "--radius-"];
 
 // Only the exact bare form. A fallback argument such as var(--x, #abc) would let
-// a missing primitive ship a working colour with the chain silently broken, so
+// a missing primitive ship a working color with the chain silently broken, so
 // the resolver never gets the chance to report it.
 const BARE_INDIRECTION = /^var\(\s*(--[\w-]+)\s*\)$/;
 
 const IS_COLOR_TOKEN = /^--color-/;
 
 // The flat tier the semantic tokens replaced. Named here so a stylesheet that
-// reaches for one of them goes red rather than resolving to nothing and
-// rendering an element with no colour at all.
+// reaches for one goes red; the reference would otherwise resolve to nothing and
+// render an element with no color at all.
 const RETIRED_TOKENS = [
   "--border-color",
   "--border-light",
@@ -91,14 +88,14 @@ const RETIRED_TOKENS = [
 // once no file declares one.
 const SCSS_VARIABLE = /^[ \t]*\$[\w-]+[ \t]*:/gm;
 
-// The control radius and the container one, and nothing beside them. A count
-// rather than a skip, so the exemption cannot grow to cover an unrelated px.
+// The control radius and the container one, and nothing beside them. Counted, so
+// the exemption cannot grow to cover an unrelated px.
 // src/index.css declares the tokens the stylelint unit allowed-list holds the
 // component stylesheets to, and a bounded count is a claim that rule cannot make.
 const GLOBAL_PX_ALLOWANCE = 2;
 
-// A hairline and the focus ring are lines rather than lengths on the spacing
-// scale, and one authored in rem would thicken as the reader's type grew.
+// A hairline and the focus ring draw lines, and one authored in rem would
+// thicken as the reader's type grew.
 // Anything wider is spacing, and spacing arrives through a token.
 const HAIRLINE_PX = 2;
 const PX_VALUE = /(\d+(?:\.\d+)?)px/g;
@@ -117,11 +114,10 @@ function stripComments(source: string): string {
 }
 
 /**
- * Every stylesheet under src/, found by walking rather than by a list, so a
- * stylesheet added by a later component is covered the day it lands instead of
- * the day someone remembers to add it here. Every extension rather than the
- * module ones alone, because a shared partial is a place a rule would otherwise
- * be free to break.
+ * Every stylesheet under src/, found by walking, so one added by a later
+ * component is covered the day it lands instead of the day someone remembers to
+ * add it here. The walk takes any extension, because a shared partial is a place
+ * a rule would otherwise be free to break.
  */
 function findStylesheets(directory: string): string[] {
   const found: string[] = [];
@@ -139,7 +135,7 @@ function findStylesheets(directory: string): string[] {
 }
 
 // The global file is read on its own terms below, by the two guards written
-// against it, so it is held out of the walk rather than exempted inside one.
+// against it, so the walk excludes it.
 const componentStylesheets = findStylesheets(join(projectRoot, "src")).filter(
   (file) => file !== cssPath,
 );
@@ -175,7 +171,7 @@ function requireBlock(selector: string): Map<string, string> {
 const lightBlock = requireBlock(LIGHT_SELECTOR);
 const darkOverrides = requireBlock(DARK_SELECTOR);
 
-// The dark theme as a browser sees it: the overrides layered onto the base, so
+// The dark theme as a browser sees it, the overrides layered onto the base, so
 // a token the dark block leaves alone still resolves through its light value.
 const darkBlock = new Map([...lightBlock, ...darkOverrides]);
 
@@ -186,9 +182,9 @@ const THEMES: Array<[string, Map<string, string>]> = [
 
 /**
  * A token followed through the semantic tier to the primitive value it names.
- * Throws rather than skips on an undeclared reference or a cycle: either one
- * means the layering is broken, and a guard that stayed silent about it would
- * be reporting on a stylesheet nobody ships.
+ * An undeclared reference or a cycle throws, because either one means the
+ * layering is broken and a guard that stayed silent would be reporting on a
+ * stylesheet nobody ships.
  */
 function resolve(
   property: string,
@@ -241,12 +237,12 @@ function contrastRatio(a: string, b: string): number {
 }
 
 /**
- * The curated pair set: the semantic pairings the app actually renders, not the
- * cross product. Muted text, the accent and the error colour never sit on the
+ * The semantic pairings the app actually renders, curated instead of the full
+ * cross product. Muted text, the accent and the error color never sit on the
  * hover fill, only inherited body text does, and the focus ring sits outside the
  * border box on the parent surface rather than on the fill it surrounds.
  *
- * Four text pairs are absent: axe decides them by value in the real-engine
+ * Four text pairs are absent because axe decides them by value in the real-engine
  * sweep, and CONTRAST-OVERLAP.md records that measurement per pair.
  *
  * The two logo rows are measured by choice. The non-text contrast criterion
@@ -303,7 +299,7 @@ describe("token layering", () => {
       ).toContain(token);
     }
 
-    // The exemption is only defensible while it stays the two logo colours. A
+    // The exemption is only defensible while it stays the two logo colors. A
     // third entry means a token went theme-invariant without anyone deciding it.
     for (const token of THEME_INVARIANT_TOKENS) {
       expect(
@@ -314,9 +310,8 @@ describe("token layering", () => {
   });
 
   it("holds that exemption at exactly the two logo colours", () => {
-    // Asserted rather than trusted. Nothing else in the suite notices a third
-    // name arriving, and the whole point of naming the list was that growing it
-    // has to be a deliberate, visible edit.
+    // Nothing else in the suite notices a third name arriving, and growing the
+    // list has to be a deliberate, visible edit.
     expect(
       THEME_INVARIANT_TOKENS.length,
       "the partner-rule exemption has grown past the two logo colours",
@@ -344,9 +339,9 @@ describe("token layering", () => {
   });
 
   it("authors spacing and type in rem and the radius in px", () => {
-    // The unit is the accessibility property, not a style preference: a layout
-    // authored in rem follows the reader's browser font-size setting, while a
-    // corner radius that grew with it would only distort.
+    // A layout authored in rem follows the reader's browser font-size setting,
+    // while a corner radius that grew with it would only distort. The unit is an
+    // accessibility property here, not a style preference.
     for (const [property, value] of lightBlock) {
       if (
         property.startsWith("--space-") ||
@@ -361,8 +356,8 @@ describe("token layering", () => {
   });
 
   it("keeps the theme-invariant tier out of the contrast pair set", () => {
-    // A spacing token has no colour to measure, so a pair naming one would
-    // throw on resolve at best and widen a colour gate to a length at worst.
+    // A spacing token has no color to measure, so a pair naming one would
+    // throw on resolve at best and widen a color gate to a length at worst.
     for (const [foreground, background] of PAIRS) {
       for (const token of [foreground, background]) {
         for (const prefix of INVARIANT_TOKEN_PREFIXES) {
@@ -425,9 +420,8 @@ describe("token layering", () => {
   });
 
   it("qualifies the dark block by attribute so specificity is what makes it win", () => {
-    // Asserted as the selector rather than as source order: a block that only
-    // wins by sitting later in the file starts losing the moment anything is
-    // appended after it.
+    // Asserted on the selector, because a block that only wins by sitting later
+    // in the file starts losing the moment anything is appended after it.
     expect([...blocks.keys()]).toContain(DARK_SELECTOR);
   });
 });
@@ -436,9 +430,9 @@ describe("contrast", () => {
   for (const [theme, block] of THEMES) {
     for (const [foreground, background, minimum] of PAIRS) {
       it(`clears ${minimum}:1 for ${foreground} on ${background} in ${theme}`, () => {
-        // Compared without rounding: the specification is explicit that 2.999:1
-        // does not meet a 3:1 threshold, and a ratio landing exactly on the line
-        // passes.
+        // Compared without rounding, because the specification is explicit that
+        // 2.999:1 does not meet a 3:1 threshold. A ratio landing exactly on the
+        // line passes.
         expect(
           contrastRatio(resolve(foreground, block), resolve(background, block)),
           `${foreground} on ${background} in ${theme}`,
@@ -448,17 +442,23 @@ describe("contrast", () => {
   }
 });
 
-describe("the theme script in index.html", () => {
-  const html = readFileSync(htmlPath, "utf8");
+// Every shell the site ships. Each carries its own copy of the theme script, so
+// a guard reading one of them leaves the other free to defer the script and
+// flash the wrong theme, and for a right-to-left reader the wrong direction, on
+// every load.
+const SHELLS = ["index.html", "movies.html"];
+
+describe.each(SHELLS)("the theme script in %s", (shell) => {
+  const html = readFileSync(join(projectRoot, shell), "utf8");
   const headStart = html.indexOf("<head>");
   const headEnd = html.indexOf("</head>");
   const head = html.slice(headStart, headEnd);
 
   // Filtered on the three attributes that actually defer a script past first
-  // paint, rather than on carrying no attributes at all. Each of those fails
-  // silently rather than loudly, which is what makes them worth a guard. An
-  // attribute that changes nothing about when the script runs is not: a CSP
-  // nonce is the one this file will need first, and it defers nothing.
+  // paint, so a script carrying an unrelated attribute still counts. Each of the
+  // three fails silently, which is why it is worth a guard. An attribute that
+  // changes nothing about when the script runs is not worth one, and a CSP nonce
+  // is the one this file will need first.
   const blocking = [...head.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)]
     .filter(
       (match) =>
@@ -474,7 +474,7 @@ describe("the theme script in index.html", () => {
   it("carries exactly one blocking classic script inside the head", () => {
     expect(
       blocking.length,
-      "index.html has no attribute-free script in its head, so the theme lands after first paint",
+      `${shell} has no attribute-free script in its head, so the theme lands after first paint`,
     ).toBe(1);
   });
 
@@ -483,31 +483,42 @@ describe("the theme script in index.html", () => {
 
     const moduleScript = html.search(/<script[^>]*\btype=["']module["']/);
 
-    expect(moduleScript, "index.html loads no module script").toBeGreaterThan(
-      -1,
-    );
+    expect(moduleScript, `${shell} loads no module script`).toBeGreaterThan(-1);
     expect(
       required(blocking[0], "the blocking script").offset,
-      "the theme script does not precede the module script",
+      `the theme script in ${shell} does not precede the module script`,
     ).toBeLessThan(moduleScript);
   });
 
-  // A presence check on the shared literal, not an agreement test between the
-  // script and the resolver. The two implementations of the resolve rule are a
-  // known, accepted duplication; this only catches the storage key drifting.
+  // A presence check on the shared literal. The two implementations of the
+  // resolve rule are a known, accepted duplication, so this only catches the
+  // storage key drifting.
   it("reads the same storage key the resolver exports", () => {
     expect(blocking, "no blocking script to read a key from").toHaveLength(1);
     expect(
       required(blocking[0], "the blocking script").body,
-      `the theme script does not mention the storage key ${THEME_STORAGE_KEY}`,
+      `the theme script in ${shell} does not mention the storage key ${THEME_STORAGE_KEY}`,
     ).toContain(THEME_STORAGE_KEY);
   });
 });
 
-// The halves of the old colour guard stylelint has no rule for: declaring an
-// SCSS variable, and naming a token that no longer exists. A string check rather
-// than a parse, because the CSS parser throws outright on the inline comments in
-// the table's stylesheet.
+// A renamed shell would otherwise empty the loop above into silence rather than
+// into a failure.
+it("checks the theme script in every shell the site ships", () => {
+  expect(SHELLS.length, "the shell list is empty").toBe(2);
+
+  for (const shell of SHELLS) {
+    expect(
+      existsSync(join(projectRoot, shell)),
+      `${shell} is named in the shell list but is not in the tree`,
+    ).toBe(true);
+  }
+});
+
+// The halves of the old color guard stylelint has no rule for: declaring an
+// SCSS variable, and naming a token that no longer exists. Checked as a string,
+// because the CSS parser throws outright on the inline comments in the table's
+// stylesheet.
 describe("stray declarations in the component stylesheets", () => {
   it("finds the stylesheets by walking rather than by a list", () => {
     expect(
@@ -552,9 +563,9 @@ describe("stray declarations in the component stylesheets", () => {
 });
 
 // The half of the length rule stylelint's unit allowed-list has no way to say.
-// It counts rather than forbids, and it reads src/index.css, where the two
-// corner radii are px on purpose: growing with the reader's type would only
-// distort the shape.
+// It counts instead of forbidding, and it reads src/index.css, where the two
+// corner radii are px on purpose, because growing with the reader's type would
+// only distort the shape.
 describe("length in the global stylesheet", () => {
   it("allows the global stylesheet the corner radii and nothing beside them", () => {
     const found = [
