@@ -18,9 +18,11 @@ import { stubDatasetFetch } from "./test/fetchStub";
 // of index.html.
 //
 // The two facts are therefore lifted off the committed shell rather than written
-// out here, which is what keeps the rules pointed at the application. A shell
-// that loses its language or its title leaves these empty and the sweep goes
-// red, rather than the harness quietly supplying what the shell dropped.
+// out here, which is what keeps the rules pointed at the application, and the
+// closing case asserts the lift found something. That case is not ceremony: the
+// application's own locale effect restamps documentElement.lang as it renders,
+// so a shell that dropped the attribute would still be swept against a language
+// the application supplied, and the rule engine alone would never say so.
 //
 // Nothing else is copied. The shipped body holds a mount point and two scripts,
 // and every case below mounts its own tree.
@@ -33,9 +35,11 @@ const shell = readFileSync(
   "utf8",
 );
 
-document.documentElement.lang =
-  /<html[^>]*\slang="([^"]*)"/.exec(shell)?.[1] ?? "";
-document.title = /<title>([^<]*)<\/title>/.exec(shell)?.[1] ?? "";
+const shellLang = /<html[^>]*\slang="([^"]*)"/.exec(shell)?.[1] ?? "";
+const shellTitle = /<title>([^<]*)<\/title>/.exec(shell)?.[1] ?? "";
+
+document.documentElement.lang = shellLang;
+document.title = shellTitle;
 
 // The rules the engine cannot decide in this environment, asserted by set
 // equality rather than ignored. A rule that newly stops being evaluated and a
@@ -187,5 +191,14 @@ describe("accessibility", () => {
   // anything after the cases above have run, and now says so in its own name.
   it("swept every state it says it sweeps", () => {
     expect(sweptStates).toEqual(SWEPT_STATES);
+  });
+
+  // The positive floor under the lift above. A shell that lost either fact
+  // leaves the matching value empty and fails here, which is the only place a
+  // dropped language attribute can fail: the sweeps themselves read a document
+  // the application has already restamped.
+  it("takes both page-level facts from the shell that ships", () => {
+    expect(shellLang).not.toBe("");
+    expect(shellTitle).not.toBe("");
   });
 });
