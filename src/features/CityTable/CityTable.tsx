@@ -45,6 +45,9 @@ interface CityTableProps {
  * The shared table wired to the city columns, the city copy and the view state
  * that drives them. The search box belongs here: it holds what is being typed
  * and the term typing settles on, and reports the settled term upward.
+ *
+ * ponytail: FilmTable is a near-copy of this, deliberately. See the note there
+ * for the ceiling and when to lift the shared state and address logic out.
  */
 export function CityTable({
   data,
