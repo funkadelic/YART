@@ -34,10 +34,19 @@ const LINK_URLS = new Map<string, string>([
   [FILMS_LICENSE, "https://creativecommons.org/publicdomain/zero/1.0/"],
 ]);
 
+// Escaped on the way in: the keys are prose, and the dots in "CC BY 4.0" and
+// "simplemaps.com" are wildcards unless quoted. Harmless over today's four,
+// and a future source name carrying a parenthesis or a plus would throw here
+// rather than anywhere a reader could connect to the name that caused it.
+const escapeForPattern = (name: string) =>
+  name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 // Splits a sentence around the four identifiers, so each can be a link wherever
 // the sentence put it. One catalog entry rather than three fragments, which
 // would hold every language to English word order.
-const EMBEDDED_NAMES = new RegExp(`(${[...LINK_URLS.keys()].join("|")})`);
+const EMBEDDED_NAMES = new RegExp(
+  `(${[...LINK_URLS.keys()].map(escapeForPattern).join("|")})`,
+);
 
 export function Footer() {
   const { catalog } = useLocale();

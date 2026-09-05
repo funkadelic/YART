@@ -9,8 +9,11 @@ function isBlank(value: unknown): boolean {
 const TYPE_RANK = { number: 0, string: 1, other: 2 } as const;
 
 /**
- * Places a value in the ordering above. The parse boundary types every City
- * field, so only a row type other than City reaches the mixed arms.
+ * Places a value in the ordering above. The `other` rank is a routine path, not
+ * a dead one: the film row type carries three array fields, and an array lands
+ * here and compares by `String(array)` unless the column supplies a comparator
+ * of its own. An empty array is not blank by the test above, so a column that
+ * leaves this to the default sorts its empty lists among the letters.
  */
 function rank(value: unknown): number {
   if (typeof value === "number") return TYPE_RANK.number;

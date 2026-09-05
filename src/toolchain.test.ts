@@ -1215,24 +1215,38 @@ describe("toolchain baseline", () => {
   // Read outward from the shell rather than from a second copy of the filenames
   // kept here, so renaming a file and its href together stays green and renaming
   // one of them does not.
-  it("keeps the icon and manifest links in index.html resolving to shipped files", () => {
-    const html = readFileSync(join(projectRoot, "index.html"), "utf8");
+  it("keeps the icon and manifest links in every shell resolving to shipped files", () => {
     const publicDirectory = join(projectRoot, "public");
 
-    for (const relation of ["icon", "manifest"]) {
-      const link = new RegExp(`<link[^>]*\\brel="${relation}"[^>]*>`).exec(
-        html,
-      )?.[0];
+    // Over the shell list rather than over index.html alone. Every other shell
+    // guard in this file iterates it, and a second shell carrying the same two
+    // links is a second copy free to rot in the documented way.
+    expect(
+      SHELLS.length,
+      "the shell list is empty, so this guard would pass over nothing",
+    ).toBeGreaterThan(1);
 
-      expect(link, `index.html declares no ${relation} link`).toBeDefined();
+    for (const shell of SHELLS) {
+      const html = readFileSync(join(projectRoot, shell), "utf8");
 
-      const href = /\bhref="([^"]*)"/.exec(link ?? "")?.[1];
+      for (const relation of ["icon", "manifest"]) {
+        const link = new RegExp(`<link[^>]*\\brel="${relation}"[^>]*>`).exec(
+          html,
+        )?.[0];
 
-      expect(href, `the ${relation} link declares no href`).toBeDefined();
-      expect(
-        existsSync(join(publicDirectory, (href ?? "").replace(/^\//, ""))),
-        `the ${relation} link points at ${href ?? ""}, which public/ does not carry`,
-      ).toBe(true);
+        expect(link, `${shell} declares no ${relation} link`).toBeDefined();
+
+        const href = /\bhref="([^"]*)"/.exec(link ?? "")?.[1];
+
+        expect(
+          href,
+          `the ${relation} link in ${shell} declares no href`,
+        ).toBeDefined();
+        expect(
+          existsSync(join(publicDirectory, (href ?? "").replace(/^\//, ""))),
+          `the ${relation} link in ${shell} points at ${href ?? ""}, which public/ does not carry`,
+        ).toBe(true);
+      }
     }
 
     const manifest = JSON.parse(
@@ -1877,10 +1891,14 @@ describe("toolchain baseline", () => {
       localeCallSites(
         parse(readFileSync(join(projectRoot, FORMATTER_MODULE), "utf8")),
       ).toSorted(),
-      "the formatter module no longer builds the four cached instances",
+      "the formatter module no longer builds the five cached instances",
     ).toEqual([
       "Intl.Collator",
       "Intl.ListFormat",
+      // Twice, and not a duplicate to be tidied away: one plain number formatter
+      // for grouped counts and one unit formatter for the runtime, cached apart
+      // because they are configured differently and both are per tag.
+      "Intl.NumberFormat",
       "Intl.NumberFormat",
       "Intl.PluralRules",
     ]);
