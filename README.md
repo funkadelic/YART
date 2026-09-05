@@ -4,7 +4,7 @@
 
 A React and TypeScript single-page app for browsing a large dataset in the browser: search, sort, and paginate a list of world cities without a table library.
 
-**[Live demo](https://funkadelic.github.io/YART/)**, published from `main` by the pipeline once every gate passes.
+**[Live demo](https://funkadelic.github.io/YART/)**, published from `main` by the pipeline once every gate passes. A second table over a films dataset is served beside it at **[`movies.html`](https://funkadelic.github.io/YART/movies.html)**, and everything described below holds for both pages. The two do not link to each other: this is the route to the second one.
 
 ## Contents
 
@@ -100,6 +100,8 @@ Every push sweeps the running app for violations of a set of automated rules and
 ### What stays in the source language
 
 City and country names stay in their source form in every locale: the dataset carries a name and an ascii name and nothing else, so a reader of the French interface still reads the English country name. Translating them would need a translated column and a regenerated asset, which is a data pipeline rather than an internationalization change.
+
+Film, director, genre and country names stay in their source form in every locale: the query asks for English labels and nothing else, so a reader of the French interface still reads the English genre name. Translating them would need a translated label per property and a regenerated asset, which is a data pipeline rather than an internationalization change.
 
 The static head of the document stays in the base language too. Its title, its description, its two social strings and its no-script paragraph are all served before any module can run, and no catalog can reach them without script.
 

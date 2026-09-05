@@ -626,15 +626,33 @@ const PROVENANCE_REGENERATION =
  * module that defines the city type. Stating it twice is deliberate, and this is
  * what stops the two from becoming two different statements.
  */
-const SOURCE_FORM_CEILING =
+const CITY_SOURCE_FORM_CEILING =
   "City and country names stay in their source form in every locale: the " +
   "dataset carries a name and an ascii name and nothing else, so a reader of " +
   "the French interface still reads the English country name. Translating " +
   "them would need a translated column and a regenerated asset, which is a " +
   "data pipeline rather than an internationalization change.";
 
-/** The two documents that carry that ceiling: the prose one and the code one. */
-const SOURCE_FORM_DOCUMENTS = ["README.md", "src/data/worldcities/cities.ts"];
+/** The same ceiling for the second dataset, whose reason differs in its detail. */
+const FILM_SOURCE_FORM_CEILING =
+  "Film, director, genre and country names stay in their source form in " +
+  "every locale: the query asks for English labels and nothing else, so a " +
+  "reader of the French interface still reads the English genre name. " +
+  "Translating them would need a translated label per property and a " +
+  "regenerated asset, which is a data pipeline rather than an " +
+  "internationalization change.";
+
+/** Each ceiling and the two documents carrying it: the prose one and the code one. */
+const SOURCE_FORM_CEILINGS = [
+  {
+    ceiling: CITY_SOURCE_FORM_CEILING,
+    documents: ["README.md", "src/data/worldcities/cities.ts"],
+  },
+  {
+    ceiling: FILM_SOURCE_FORM_CEILING,
+    documents: ["README.md", "src/data/films/films.ts"],
+  },
+];
 
 /**
  * A literal expression's value, built from the tree rather than evaluated.
@@ -728,7 +746,7 @@ function firstArguments(file: ts.SourceFile, callee: string): string[] {
 }
 
 /**
- * The one inline script index.html carries, parsed.
+ * The one inline script a shell carries, parsed.
  *
  * Matched with the expression the policy plugin in vite.config.ts uses to find
  * the script it hashes, so this guard reads exactly the script that ships. That
@@ -736,18 +754,42 @@ function firstArguments(file: ts.SourceFile, callee: string): string[] {
  * means the guard says which of the two failed rather than reporting a parse of
  * the wrong script.
  */
-function inlineScript(): ts.SourceFile {
-  const html = readFileSync(join(projectRoot, "index.html"), "utf8");
+function inlineScript(shell: string): ts.SourceFile {
+  const html = readFileSync(join(projectRoot, shell), "utf8");
   const found = [
     ...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g),
   ];
 
   expect(
     found.length,
-    "index.html carries something other than exactly one inline script",
+    `${shell} carries something other than exactly one inline script`,
   ).toBe(1);
 
   return parse(required(found[0]?.[1], "the inline script's body"));
+}
+
+/** Every shell the site ships, one per page. */
+const SHELLS = ["index.html", "movies.html"];
+
+/** How many of those are committed, and therefore always readable. */
+const COMMITTED_SHELLS = 2;
+
+/**
+ * The shells to read, with the count guarded.
+ *
+ * Without the count the loops below pass vacuously the day someone renames a
+ * shell, which is the failure mode a list-driven guard always brings with it.
+ * Same idiom the address-document loop uses, for the same reason.
+ */
+function shells(): string[] {
+  const found = SHELLS.filter((name) => existsSync(join(projectRoot, name)));
+
+  expect(
+    found.length,
+    "fewer shells were found than the site commits",
+  ).toBeGreaterThanOrEqual(COMMITTED_SHELLS);
+
+  return found;
 }
 
 /** A module of this tree, parsed, for the literals a reader sees in it. */
@@ -1215,32 +1257,40 @@ describe("toolchain baseline", () => {
   // comment above the script.
   describe("the inline script and the resolvers", () => {
     it("agrees on both storage keys", () => {
-      expect(
-        new Set(firstArguments(inlineScript(), "localStorage.getItem")),
-      ).toEqual(
-        new Set([
-          declaredLiteral(
-            moduleSource(THEME_MODULE),
-            "THEME_STORAGE_KEY",
-            THEME_MODULE,
-          ),
-          declaredLiteral(
-            moduleSource(LOCALE_MODULE),
-            "LOCALE_STORAGE_KEY",
-            LOCALE_MODULE,
-          ),
-        ]),
-      );
+      for (const shell of shells()) {
+        expect(
+          new Set(firstArguments(inlineScript(shell), "localStorage.getItem")),
+          `${shell} reads a different set of storage keys`,
+        ).toEqual(
+          new Set([
+            declaredLiteral(
+              moduleSource(THEME_MODULE),
+              "THEME_STORAGE_KEY",
+              THEME_MODULE,
+            ),
+            declaredLiteral(
+              moduleSource(LOCALE_MODULE),
+              "LOCALE_STORAGE_KEY",
+              LOCALE_MODULE,
+            ),
+          ]),
+        );
+      }
     });
 
     it("agrees on the media query", () => {
-      expect(firstArguments(inlineScript(), "window.matchMedia")).toEqual([
-        declaredLiteral(
-          moduleSource(THEME_MODULE),
-          "PREFERS_DARK_QUERY",
-          THEME_MODULE,
-        ),
-      ]);
+      for (const shell of shells()) {
+        expect(
+          firstArguments(inlineScript(shell), "window.matchMedia"),
+          `${shell} asks a different media query`,
+        ).toEqual([
+          declaredLiteral(
+            moduleSource(THEME_MODULE),
+            "PREFERS_DARK_QUERY",
+            THEME_MODULE,
+          ),
+        ]);
+      }
     });
 
     it("accepts exactly the explicit theme words the module declares", () => {
@@ -1250,37 +1300,43 @@ describe("toolchain baseline", () => {
         THEME_MODULE,
       ) as string[];
 
-      expect(
-        new Set(
-          declaredLiteral(
-            inlineScript(),
-            "THEME_WORDS",
-            "index.html",
-          ) as string[],
-        ),
-        // The default is the key not being there, so the script must not accept
-        // the word for it any more than the module's own reader does.
-      ).toEqual(new Set(declared.filter((word) => word !== "system")));
+      for (const shell of shells()) {
+        expect(
+          new Set(
+            declaredLiteral(
+              inlineScript(shell),
+              "THEME_WORDS",
+              shell,
+            ) as string[],
+          ),
+          // The default is the key not being there, so the script must not
+          // accept the word for it any more than the module's own reader does.
+          `${shell} accepts a different set of theme words`,
+        ).toEqual(new Set(declared.filter((word) => word !== "system")));
+      }
     });
 
     it("agrees on which catalogs a preference list may select", () => {
-      expect(
-        new Set(
-          declaredLiteral(
-            inlineScript(),
-            "NEGOTIABLE",
-            "index.html",
-          ) as string[],
-        ),
-      ).toEqual(
-        new Set(
-          declaredLiteral(
-            moduleSource(LOCALE_MODULE),
-            "NEGOTIABLE_CATALOG_IDS",
-            LOCALE_MODULE,
-          ) as string[],
-        ),
-      );
+      for (const shell of shells()) {
+        expect(
+          new Set(
+            declaredLiteral(
+              inlineScript(shell),
+              "NEGOTIABLE",
+              shell,
+            ) as string[],
+          ),
+          `${shell} negotiates a different set of catalogs`,
+        ).toEqual(
+          new Set(
+            declaredLiteral(
+              moduleSource(LOCALE_MODULE),
+              "NEGOTIABLE_CATALOG_IDS",
+              LOCALE_MODULE,
+            ) as string[],
+          ),
+        );
+      }
     });
 
     it("agrees on the tag and the direction of every catalog", () => {
@@ -1293,14 +1349,19 @@ describe("toolchain baseline", () => {
       // The script stamps two attributes and has no use for the third field, so
       // it carries two. Compared field by field rather than whole, so the guard
       // states which of the two rules drifted.
-      expect(declaredLiteral(inlineScript(), "LOCALES", "index.html")).toEqual(
-        Object.fromEntries(
-          Object.entries(resolved).map(([id, locale]) => [
-            id,
-            { tag: locale.tag, dir: locale.dir },
-          ]),
-        ),
-      );
+      for (const shell of shells()) {
+        expect(
+          declaredLiteral(inlineScript(shell), "LOCALES", shell),
+          `${shell} maps a catalog to a different tag or direction`,
+        ).toEqual(
+          Object.fromEntries(
+            Object.entries(resolved).map(([id, locale]) => [
+              id,
+              { tag: locale.tag, dir: locale.dir },
+            ]),
+          ),
+        );
+      }
 
       // The field the script does not carry, checked on the module side alone:
       // an entry naming a catalog other than its own key would send a reader to
@@ -1574,17 +1635,18 @@ describe("toolchain baseline", () => {
   // pair is held from one literal in the same idiom. The code copy is a block
   // comment, so the comparison strips the leading asterisks: a guard that failed
   // on markup would be a guard nobody keeps.
-  it("keeps one account of the dataset ceiling in the README and the data module", () => {
-    for (const name of SOURCE_FORM_DOCUMENTS) {
-      const source = readFileSync(join(projectRoot, name), "utf8");
-      const text = name.endsWith(".md")
-        ? normalizeProse(source)
-        : normalizeComment(source);
+  it("keeps one account of each dataset ceiling in the README and the data module", () => {
+    for (const { ceiling, documents } of SOURCE_FORM_CEILINGS) {
+      for (const name of documents) {
+        const source = readFileSync(join(projectRoot, name), "utf8");
+        const text = name.endsWith(".md")
+          ? normalizeProse(source)
+          : normalizeComment(source);
 
-      expect(
-        text,
-        `${name} no longer carries: ${SOURCE_FORM_CEILING}`,
-      ).toContain(SOURCE_FORM_CEILING);
+        expect(text, `${name} no longer carries: ${ceiling}`).toContain(
+          ceiling,
+        );
+      }
     }
   });
 
@@ -1788,10 +1850,12 @@ describe("toolchain baseline", () => {
     // The inline script resolves a locale of its own before any module loads.
     // It reaches its answer through a literal map rather than through the
     // platform, so it should contribute nothing.
-    expect(
-      localeCallSites(inlineScript()),
-      "the inline script in index.html asks the platform for a locale",
-    ).toEqual([]);
+    for (const shell of shells()) {
+      expect(
+        localeCallSites(inlineScript(shell)),
+        `the inline script in ${shell} asks the platform for a locale`,
+      ).toEqual([]);
+    }
 
     expect(
       localeCallSites(
