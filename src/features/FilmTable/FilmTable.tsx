@@ -28,14 +28,14 @@ const SEARCH_DEBOUNCE_MS = 150;
 
 interface FilmTableProps {
   readonly data: readonly Film[];
-  // Receives the committed term, meaning one call per pause in typing rather
-  // than one per keystroke.
+  // Receives the committed term, so it is called once per pause in typing and
+  // not once per keystroke.
   readonly onSearchChange: (term: string) => void;
   readonly loading: boolean;
   // False until the underlying collection has arrived at least once.
   readonly datasetReady: boolean;
-  // The text of the failure rather than the failure itself, so nothing below
-  // this component narrows an error and a cause cannot reach a reader.
+  // Carries only the failure's text, so nothing below this component narrows an
+  // error and a cause cannot reach a reader.
   readonly errorMessage: string | null;
   // Optional so the table stays usable without a container behind it.
   readonly onRetry?: () => void;
@@ -43,14 +43,14 @@ interface FilmTableProps {
 
 /**
  * The shared table wired to the film columns, the film copy and the view state
- * that drives them. The search box belongs here: it holds what is being typed
- * and the term typing settles on, and reports the settled term upward.
+ * that drives them. The search box lives here too, holding what is being typed
+ * and the term typing settles on, and reporting the settled term upward.
  *
  * ponytail: a near-copy of CityTable, deliberately. Two consumers is not yet
- * evidence of what a third would need, and the shared part is the state and
- * address logic rather than anything domain-free enough to lift today. Factor
- * the debounce, the guarded replaceState and the popstate read into one hook
- * when a third table arrives, or sooner if the two copies start to disagree.
+ * evidence of what a third would need, and what the two share is the state and
+ * address logic, none of it domain-free enough to lift today. Factor the
+ * debounce, the guarded replaceState and the popstate read into one hook when a
+ * third table arrives, or sooner if the two copies start to disagree.
  */
 export function FilmTable({
   data,
@@ -64,7 +64,7 @@ export function FilmTable({
   // under src/components/ takes its strings as props.
   const { catalog, tag } = useLocale();
 
-  // The documented exception to module-scope label objects: the table holds
+  // The documented exception to module-scope label objects. The table holds
   // this across renders and several entries are closures, so its identity has
   // to move when the locale does and must not move otherwise.
   const labels = useMemo(
@@ -72,20 +72,19 @@ export function FilmTable({
     [catalog, tag],
   );
 
-  // Keyed on the catalog alone, because neither entry weaves a number and the
-  // tag decides nothing here.
+  // Keyed on the catalog alone, because neither entry weaves a number, so the
+  // tag would make no difference to either.
   const searchLabels = useMemo(
     () => buildSearchLabels(catalog, "films"),
     [catalog],
   );
 
-  // Keyed on exactly the two values the labels are, and that is a requirement
-  // rather than a symmetry: an array identity that moved on its own would
-  // re-sort the whole collection for nothing.
+  // Keyed on exactly the two values the labels are. An array identity that
+  // moved on its own would re-sort the whole collection for nothing.
   const columns = useMemo(() => buildFilmColumns(catalog, tag), [catalog, tag]);
 
   // Initialized from whatever the address carries, so the first render is
-  // already the restored view rather than the first page for a frame.
+  // already the restored view and the first page never flashes for a frame.
   const [tableState, setTableState] = useState<TableState<FilmColumnId>>(
     () => ({
       ...DEFAULT_TABLE_STATE,
@@ -98,17 +97,17 @@ export function FilmTable({
   const [searchInput, setSearchInput] = useState(tableState.query);
 
   // The second of the two places in this application that write the address,
-  // one per page, and it replaces rather than pushes. The two pages are
-  // separate documents and never share a query string. The account of what a
-  // link does and does not reproduce is stated once, on the city container, and
-  // it holds here unchanged.
+  // one per page, and it goes through replaceState and never pushState. The two
+  // pages are separate documents and never share a query string. What a link
+  // does and does not reproduce is stated once, on the city container, and it
+  // holds here unchanged.
   useEffect(() => {
     const next = serializeTableState(tableState, window.location.search);
     if (next === window.location.search) return;
 
-    // An empty query is written as the path: the empty string resolves to the
-    // current address and leaves the stale query where it was. The fragment
-    // rides along in both branches or a relative reference would drop it.
+    // An empty query is written as the path, because the empty string resolves
+    // to the current address and leaves the stale query where it was. The
+    // fragment rides along in both branches or a relative reference drops it.
     //
     // Guarded because no write to the address is worth the table. A browser
     // that rate limits history mutation throws, and a throw in a commit-phase
@@ -126,7 +125,7 @@ export function FilmTable({
     }
   }, [tableState]);
 
-  // The functional updater form is what keeps these dependency arrays empty.
+  // The functional updater form keeps these dependency arrays empty.
   const handleSort = useCallback((columnId: FilmColumnId) => {
     setTableState((state) =>
       applyTableAction(state, { type: "sort", columnId }),
@@ -143,7 +142,7 @@ export function FilmTable({
     );
   }, []);
 
-  // The single point a pause in typing reaches: it moves the view state, which
+  // The single point a pause in typing reaches. It moves the view state, which
   // returns the reader to the first page, and reports the term upward. Its one
   // dependency does not reach the debounce, which reads its callback from a ref.
   const commitSearch = useCallback(
@@ -170,7 +169,7 @@ export function FilmTable({
   useEffect(() => {
     const handlePopState = () => {
       // The keystrokes belong to the view the reader has left, so a commit
-      // still pending goes with it rather than landing on the restored view.
+      // still pending is canceled with it and never lands on the restored view.
       cancelSearchCommit();
 
       const restored: TableState<FilmColumnId> = {
@@ -180,13 +179,13 @@ export function FilmTable({
 
       setTableState((state) => ({
         ...restored,
-        // The one field carried over, because it is the one the address does
-        // not hold: a restored sort is still a first render and stays silent.
+        // The one field carried over, because the address does not hold it. A
+        // restored sort is still a first render and stays silent.
         hasSorted: state.hasSorted,
       }));
 
-      // Reported upward rather than read from the address by the container,
-      // which is what keeps the reader count at two.
+      // Reported upward, so the container never reads the address itself and
+      // the reader count stays at two.
       setSearchInput(restored.query);
       onSearchChange(restored.query);
     };

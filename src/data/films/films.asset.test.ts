@@ -5,20 +5,20 @@ import { describe, expect, it } from "vitest";
 /**
  * Guards over the committed film dataset itself.
  *
- * What goes undetected without this file: a regenerated asset that drifts in
- * shape, loses one of the quirks the row shape was chosen for, or is
- * re-serialized in a form that stops being reviewable. The loader has its own
- * suite, but every case there runs against a fixture, so this is the only place
- * the real committed artifact is checked.
+ * Without this file, a regenerated asset can drift in shape, lose one of the
+ * quirks the row shape was chosen for, or be re-serialized in a form that stops
+ * being reviewable, and nothing catches it. The loader has its own suite, but
+ * every case there runs against a fixture, so this is the only place the real
+ * committed artifact is checked.
  *
- * The predicates below are written out rather than snapshotted. A snapshot over
- * thousands of rows is accepted reflexively instead of read, and the point of
- * this file is that a human decided what has to hold.
+ * The predicates below are written out by hand, not snapshotted. A snapshot
+ * over thousands of rows is accepted reflexively instead of read, and here a
+ * human decided what has to hold.
  */
 
-// Resolved from this file's own location rather than from the working directory,
-// which is wherever the runner happened to be invoked and is not the project
-// root under an IDE runner or an explicit root argument.
+// Resolved from this file's own location, because the working directory is
+// wherever the runner happened to be invoked and is not the project root under
+// an IDE runner or an explicit root argument.
 const here = import.meta as ImportMeta & { dirname: string };
 const assetPath = join(here.dirname, "films.json");
 
@@ -42,8 +42,8 @@ const EXPECTED_COLUMNS = [
   "countries",
 ];
 
-// A tuple rather than an array, so an index into a row carries the type at that
-// position instead of a possibly-absent one.
+// A tuple, so an index into a row carries the type at that position instead of
+// a possibly-absent one.
 type AssetRow = [
   string,
   string,
@@ -62,8 +62,8 @@ const EXPECTED_VERSION = /^\d{4}-\d{2}-\d{2}\+r\d+$/;
 // so anything else means it mapped the wrong binding.
 const Q_ID = /^Q[1-9]\d*$/;
 
-// A floor rather than an equality, so a re-export from a live database fails
-// this suite only for a real reason.
+// A floor, not an equality, so a re-export from a live database fails this
+// suite only for a real reason.
 const MINIMUM_ROW_COUNT = 8000;
 
 // The three fields GROUP_CONCAT returns pipe-joined and the generator splits
@@ -76,7 +76,7 @@ const MULTI_VALUED = [
 
 // The envelope's own lines: the opening brace, the version, the columns, the
 // rows key, the closing bracket, and the closing brace. Every remaining line
-// holds exactly one row, so the count is exact rather than a bound.
+// holds exactly one row, so the count is exact.
 const ENVELOPE_NEWLINE_COUNT = 6;
 
 describe("committed film dataset", () => {
@@ -169,9 +169,10 @@ describe("committed film dataset", () => {
     expect(offenders.slice(0, 10)).toEqual([]);
   });
 
-  // The shapes the rest of the phase is built to exercise. Without them the
-  // asset renders correctly and proves nothing. The year is asserted here as
-  // well as the runtime, because the type declares both nullable and the
+  // The shapes the rest of the suite is built to exercise. Without them the
+  // asset still renders correctly, so every check would pass while none of
+  // these shapes was exercised. The year is asserted here as well as the
+  // runtime, because the type declares both nullable and the
   // either-a-number-or-null case above is satisfied by an asset with no null
   // in it at all.
   it("keeps at least one row with a null year", () => {
@@ -195,8 +196,8 @@ describe("committed film dataset", () => {
     expect(rows.some((row) => (row as AssetRow)[5].length > 1)).toBe(true);
   });
 
-  // This is the property that makes a single corrected film a one-line diff, and
-  // it is the whole reason this payload shape was chosen over a more compact one.
+  // This property makes a single corrected film a one-line diff, and it is why
+  // this payload shape was chosen over a more compact one.
   it("stores one row per line", () => {
     const lines = (rawAsset.match(/\n/g) ?? []).length;
 

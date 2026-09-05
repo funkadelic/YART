@@ -28,11 +28,11 @@ const PROBE_COUNTS = [0, 1, 2, 1000000];
 const GROUPED = 1234567;
 
 describe("the catalogs", () => {
-  // The type check already fails on a missing or misspelled key, which is the
-  // whole reason the catalogs are TypeScript modules. This asserts the same
-  // thing at runtime, because the type-level guarantee rests on every catalog
-  // actually being declared against the base and a future one declared some
-  // other way would lose it silently.
+  // The type check already fails on a missing or misspelled key, which is why
+  // the catalogs are TypeScript modules. This asserts the same thing at
+  // runtime, because the type-level guarantee rests on every catalog actually
+  // being declared against the base, and a future one declared some other way
+  // would lose it silently.
   it("carries the same key set in every catalog", () => {
     for (const id of CATALOG_IDS) {
       const catalog = CATALOGS[id];
@@ -47,11 +47,11 @@ describe("the catalogs", () => {
     }
   });
 
-  // The phase's central claim: both domains are the same shape, so a films entry
-  // present in English and missing in French is a compile error. A satisfies
-  // clause is one deletion away from being gone, and the deletion looks like
-  // tidying, so the claim is asserted here too. Walked rather than restated: a
-  // twelfth key added to both domains arrives without touching this file.
+  // Both domains are the same shape, so a films entry present in English and
+  // missing in French is a compile error. A satisfies clause is one deletion
+  // away from being gone, and the deletion looks like tidying, so the claim is
+  // asserted here too. Walked, not restated, so a twelfth key added to both
+  // domains arrives without touching this file.
   it("carries the same key set in both domains of every catalog", () => {
     for (const id of CATALOG_IDS) {
       const catalog = CATALOGS[id];
@@ -72,7 +72,7 @@ describe("the catalogs", () => {
 
   // A reader who cannot read the interface they are looking at still has to
   // find their own language, which only works while each name is written in the
-  // language it names rather than translated into the current one.
+  // language it names, never translated into the current one.
   it("names each catalog in its own language", () => {
     expect(AUTONYMS.en).toBe("English");
     expect(AUTONYMS.es).toBe("Español");
@@ -82,8 +82,8 @@ describe("the catalogs", () => {
   // The function-valued entries are the ones a translation can quietly get
   // wrong: dropping an argument out of the sentence still typechecks, still
   // renders, and leaves a reader in that language with a count they cannot see.
-  // Asked of every catalog rather than of the base one, because the base one is
-  // the only catalog that cannot have the defect.
+  // Asked of every catalog, because the base one is the only catalog that
+  // cannot have the defect.
   it("weaves every argument into the chrome sentences in every catalog", () => {
     for (const id of CATALOG_IDS) {
       const { common } = CATALOGS[id];
@@ -121,8 +121,9 @@ describe("the catalogs", () => {
 
   // A multi-valued cell joins through the platform on the resolved tag, so no
   // component and no column builder writes a separator of its own. The
-  // expectation is computed rather than typed: the conjunction and the spacing
-  // are CLDR data, and a typed literal would be English pinned into the loop.
+  // expectation is computed at test time, because the conjunction and the
+  // spacing are CLDR data and a typed literal would be English pinned into the
+  // loop.
   it("joins a multi-valued list on its own tag in every catalog", () => {
     const values = ["one", "two", "three"];
 
@@ -142,8 +143,8 @@ describe("the catalogs", () => {
   // Every failure the loader can report has a sentence in every catalog and in
   // every domain, and a missing arm is a reader shown the word undefined at the
   // moment the application has already failed. The type check catches an absent
-  // key; this catches an entry present and empty, and it walks the code tuple
-  // rather than restating it, so a code added to the loader arrives here alone.
+  // key; this catches an entry present and empty, and it walks the code tuple,
+  // so a code added to the loader arrives here alone.
   it("says something for every dataset failure in every catalog", () => {
     for (const id of CATALOG_IDS) {
       for (const domain of DOMAIN_IDS) {
@@ -161,7 +162,7 @@ describe("the catalogs", () => {
 
   // The three sentences that name a number are the ones a translation can
   // quietly drop: the row failures and the status failure all read fluently
-  // without it and tell the reader nothing.
+  // without it, leaving no way to tell which row or which status failed.
   it("weaves the detail into every dataset failure that names one", () => {
     for (const id of CATALOG_IDS) {
       for (const domain of DOMAIN_IDS) {
@@ -179,8 +180,8 @@ describe("the catalogs", () => {
 
   // The two domains report different failures for the same code. Collapsing the
   // nine sentences into one set taking the noun as an argument would typecheck
-  // and would break on gender and agreement in Spanish and French, so this is
-  // what says the two sets are genuinely written out rather than shared.
+  // and would break on gender and agreement in Spanish and French, so this case
+  // asserts the two sets are genuinely written out and not shared.
   it("names its own subject in each domain's failure sentences", () => {
     for (const id of CATALOG_IDS) {
       const sentences = new Set(
@@ -212,8 +213,8 @@ describe("the catalogs", () => {
     }
   });
 
-  // The city attribution is a licence obligation rather than copy: it has to
-  // credit the creator, link the source, link the licence and say the work was
+  // The city attribution is a license obligation and not copy. It has to credit
+  // the creator, link the source, link the license and say the work was
   // changed, in every language. The film credit is a courtesy and carries the
   // same three parts anyway. The two identifiers travel through both as
   // arguments and a translation that dropped either one would leave the footer
@@ -237,11 +238,11 @@ describe("the catalogs", () => {
   });
 
   // The record of plural forms in each catalog is total over the categories its
-  // own tag reports, and nothing in the type system can check that: the category
-  // set is CLDR data rather than a type, so the selection narrows the platform's
-  // answer to what the catalog declared. This is what makes that narrowing
-  // sound. A missing arm shows up as the word undefined inside a sentence a
-  // reader would have been shown.
+  // own tag reports, and nothing in the type system can check that: the
+  // category set is CLDR data, not a type, so the selection narrows the
+  // platform's answer to what the catalog declared, and this case is what that
+  // narrowing rests on. A missing arm shows up as the word undefined inside a
+  // sentence a reader would have been shown.
   it("declares a plural form for every category its own tag reports", () => {
     for (const id of CATALOG_IDS) {
       const { tag } = resolveLocale(id, []);
@@ -271,10 +272,10 @@ describe("the catalogs", () => {
     }
   });
 
-  // Grouped through the platform on the resolved tag rather than by hand, and
-  // asserted against a string computed at test time rather than typed. The
-  // French group separator is a narrow no-break space, and a typed literal
-  // holding an ordinary one fails on a difference no terminal renders.
+  // Grouped through the platform on the resolved tag, never by hand, and
+  // asserted against a string computed at test time. The French group separator
+  // is a narrow no-break space, and a typed literal holding an ordinary one
+  // fails on a difference no terminal renders.
   it("groups every count it weaves in on its own tag", () => {
     for (const id of CATALOG_IDS) {
       const { tag } = resolveLocale(id, []);
@@ -309,8 +310,8 @@ describe("the catalogs", () => {
 
   // The column headings are the one part of a domain block the shape type has
   // to key loosely, because the two domains have different columns. The outer
-  // satisfies clause still holds every catalog to the base's ids; what it
-  // cannot say is that a heading carries a word.
+  // satisfies clause still holds every catalog to the base's ids, but it cannot
+  // say that a heading carries a word.
   it("gives every column of every domain a heading in every catalog", () => {
     for (const id of CATALOG_IDS) {
       for (const domain of DOMAIN_IDS) {
@@ -332,9 +333,8 @@ describe("the catalogs", () => {
 });
 
 describe("the pseudo-locale", () => {
-  // Readable is the whole requirement: the reversal the real right-to-left
-  // pseudo-locale performs is dropped so that anyone reading this repository can
-  // review the catalog.
+  // The reversal the real right-to-left pseudo-locale performs is dropped, so
+  // that anyone reading this repository can review the catalog.
   it("keeps the English words readable", () => {
     expect(CATALOGS["ar-XB"].cities.empty).toContain("No cities found");
     expect(CATALOGS["ar-XB"].films.empty).toContain("No films found");
@@ -344,9 +344,9 @@ describe("the pseudo-locale", () => {
     expect(pseudoize("hello")).toMatch(/^\[.*\]$/);
   });
 
-  // The isolate is what keeps a Latin run rendering as its own run inside a
-  // right-to-left document. A directional mark states a direction at a point
-  // and cannot bound a run, which is why these two characters and not those.
+  // The isolate keeps a Latin run rendering as its own run inside a right-to-
+  // left document. A directional mark states a direction at a point and cannot
+  // bound a run, so these two characters are used and not those.
   it("isolates the readable run", () => {
     const rendered = pseudoize("hello");
 

@@ -9,10 +9,10 @@ import { DatasetError, createEnvelopeLoader } from "./loadEnvelope";
  * and surfaces much later as a cryptic sort crash.
  *
  * Every case starts from a known-good envelope and changes exactly one thing,
- * and asserts the message it expects rather than the mere fact of a rejection:
- * a case that accepts any rejection passes when the load failed for an
- * unrelated reason. The messages are written here as literals rather than
- * imported from the loader, so a rename cannot move both sides at once.
+ * and asserts the message it expects, because a case that accepts any
+ * rejection passes when the load failed for an unrelated reason. The messages
+ * are written here as literals and not imported from the loader, so a rename
+ * cannot move both sides at once.
  *
  * The row types are local and deliberately not City. This module knows no
  * domain, and a test reaching for the cities fixture would pass for a loader
@@ -61,8 +61,8 @@ function parseWidgetRows(rows: unknown[]): Widget[] {
 }
 
 /**
- * A loader with its own cache. Built per case rather than once for the file,
- * which is what lets these cases run without resetting the module registry.
+ * A loader with its own cache. Built per case, so these cases run without
+ * resetting the module registry.
  */
 function widgetLoader() {
   return createEnvelopeLoader({
@@ -82,8 +82,8 @@ function stubFetch(payload: unknown) {
 }
 
 /**
- * The error a load rejected with. Resolving is itself a failure here, and it is
- * reported as one rather than left to a later assertion on an undefined value.
+ * The error a load rejected with. Resolving is itself a failure here and is
+ * reported as one, so no later assertion has to trip over an undefined value.
  */
 async function rejectionOf<Row>(
   load: () => Promise<Row[]>,
@@ -103,8 +103,8 @@ async function rejectionOf<Row>(
 
 /**
  * The message and the code a load of the given payload rejected with. The two
- * travel together because they are asserted together everywhere: a failure is
- * the pair, and reading only one of them leaves the other free to drift.
+ * travel together because they are asserted together everywhere, and reading
+ * only one of them leaves the other free to drift.
  */
 async function rejection(payload: unknown) {
   stubFetch(payload);
@@ -218,8 +218,8 @@ describe("transport", () => {
       "The widget data could not be downloaded (status 500).",
     );
     expect(error.code).toBe("status");
-    // The status travels as the detail, which is what lets the sentence a
-    // reader is shown name it without parsing it back out of the message.
+    // The status travels as the detail, so the sentence a reader is shown can
+    // name it without parsing it back out of the message.
     expect(error.detail).toBe(500);
   });
 
@@ -242,20 +242,20 @@ describe("transport", () => {
 
   it("arms a timeout on the request, so a stall rejects rather than hanging", async () => {
     // A stalled request is the one failure that produces no rejection of its
-    // own: nothing settles, the download message renders forever, and the
+    // own. Nothing settles, the download message renders forever, and the
     // reader is never offered the retry. Asserting the signal is an AbortSignal
     // would not say that, since a controller's signal that never fires is one
-    // too. What has to hold is that the signal handed to the request is a
-    // timeout, and that its budget is a plausible one.
+    // too, so the assertion below is that the signal handed to the request is a
+    // timeout with a plausible budget.
     const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
     const fetchSpy = stubFetch(envelope());
 
     await widgetLoader()();
 
     const budget = timeoutSpy.mock.calls[0]?.[0];
-    // The band, rather than the value: a test naming the constant would only
-    // restate it, but a zero or a millisecond would fail every load and a day
-    // would be the hang this replaces.
+    // The band, not the value. A test naming the constant would only restate
+    // it, but a zero or a millisecond would fail every load and a day would be
+    // the hang this replaces.
     expect(budget).toBeGreaterThanOrEqual(5_000);
     expect(budget).toBeLessThanOrEqual(120_000);
     // The signal the timeout produced is the signal the request carries.
@@ -266,10 +266,10 @@ describe("transport", () => {
 
   it("reports a body read that stopped as a failed download, not a bad body", async () => {
     // A connection that dies after the headers arrive rejects the body read
-    // rather than the request, and so does the timeout signal, which covers
-    // the body too. Neither is a file the parser could not read, and reporting
-    // one as such sends the reader looking for a corrupt data file rather than
-    // at their connection.
+    // and not the request, and so does the timeout signal, which covers the
+    // body too. Neither is a file the parser could not read, and reporting one
+    // as such sends the reader looking for a corrupt data file when the fault
+    // is their connection.
     const dropped = new TypeError("terminated");
     const response = new Response("{");
     vi.spyOn(response, "json").mockRejectedValue(dropped);
@@ -308,8 +308,8 @@ describe("transport", () => {
 
 describe("caching", () => {
   it("issues one request for two calls, so a double mount loads once", async () => {
-    // A request count rather than a timing observation: a timing assertion
-    // passes against a second request that happened to be fast.
+    // A request count, because a timing assertion passes against a second
+    // request that happened to be fast.
     const fetchSpy = stubFetch(envelope());
     const load = widgetLoader();
 
@@ -329,7 +329,7 @@ describe("caching", () => {
 
     await expect(load()).rejects.toBeInstanceOf(DatasetError);
     // The clear is attached to the rejected promise itself, so a retry issued
-    // after it has settled finds no cache rather than re-awaiting the failure.
+    // after it has settled finds no cache and does not re-await the failure.
     const rows = await load();
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
@@ -337,7 +337,7 @@ describe("caching", () => {
   });
 
   it("holds one cache per loader, so two datasets do not answer each other", async () => {
-    // The whole reason this is a factory. A single module-scope cache would
+    // Why this is a factory. A single module-scope cache would
     // let the second loader resolve with the first one's rows, which is a films
     // page rendering cities.
     const gadgetColumns = ["code"] as const;

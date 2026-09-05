@@ -11,7 +11,7 @@ import { stubDatasetFetch } from "../test/fetchStub";
 
 /**
  * The latency the seam simulates on every call, download or not. Written out
- * here rather than imported, because a test that reached in for the constant
+ * here as a literal, because a test that reached in for the constant
  * would pass for any delay at all, including none.
  */
 const LATENCY_MS = 200;

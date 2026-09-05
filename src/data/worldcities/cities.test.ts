@@ -12,16 +12,15 @@ import { stubDatasetFetch } from "../../test/fetchStub";
  *
  * Every case starts from the known-good fixture envelope and changes exactly
  * one thing, so the case name and the mutation line together say what is being
- * rejected. Every case asserts the message it expects rather than the mere fact
- * of a rejection: a case that accepts any rejection passes when the load failed
- * for an unrelated reason, which is the specific way this kind of test goes
- * quietly wrong. The messages are written here as literals rather than imported
- * from the loader, so a rename cannot move both sides at once.
+ * rejected. Every case asserts the message it expects, because a case that
+ * accepts any rejection passes when the load failed for an unrelated reason.
+ * The messages are written here as literals and not imported from the loader,
+ * so a rename cannot move both sides at once.
  */
 
 /**
- * The separator the loader joins the derived key with, written out here rather
- * than imported for the same reason the messages are.
+ * The separator the loader joins the derived key with, written out here as a
+ * literal for the same reason the messages are.
  */
 const SEARCH_KEY_SEPARATOR = "\u0000";
 
@@ -64,12 +63,11 @@ function rowAt(payload: Envelope, at: number): unknown[] {
 
 /**
  * The message and the code a load rejected with. Resolving is itself a failure
- * here, and it is reported as one rather than left to a later assertion on an
+ * here and is reported as one, so no later assertion has to trip over an
  * undefined value.
  *
- * The two travel together because they are asserted together everywhere: a
- * failure is the pair, and reading only one of them leaves the other free to
- * drift.
+ * The two travel together because they are asserted together everywhere, and
+ * reading only one of them leaves the other free to drift.
  */
 async function rejection(
   payload: unknown,
@@ -80,8 +78,8 @@ async function rejection(
   try {
     await cities.loadCities();
   } catch (error) {
-    // The class is read off the freshly loaded module rather than imported at
-    // the top of this file. Every case here resets the module registry, which
+    // The class is read off the freshly loaded module, not imported at the top
+    // of this file. Every case here resets the module registry, which
     // hands the loader a new class object each time, and a class imported once
     // would stop recognizing its own instances after the first reset.
     if (error instanceof cities.DatasetError) {
@@ -98,8 +96,8 @@ async function rejection(
 
 /**
  * The error a load rejected with, for the cases that assert more than a message.
- * Resolving is itself a failure here, and it is reported as one rather than left
- * to a later assertion on an undefined value.
+ * Resolving is itself a failure here and is reported as one, so no later
+ * assertion has to trip over an undefined value.
  */
 async function rejectionOf(
   cities: typeof import("./cities"),
@@ -218,7 +216,7 @@ describe("loadCities indexing", () => {
 
     const rows = await loadCities();
     // A row whose ascii name differs from its name, so the joined key is a
-    // claim about four fields rather than about one field repeated.
+    // claim about four fields and not about one field repeated.
     const row = rows.find((city) => city.nameAscii !== city.name);
     if (!row) {
       throw new Error(
@@ -232,8 +230,9 @@ describe("loadCities indexing", () => {
         .toLowerCase(),
     );
 
-    // The derived key is a search cache rather than a fact about a city, so it
-    // stays off the exported type. If it ever appears there, the assignment
+    // The derived key is an index for searching and not a fact about a city,
+    // so it stays off the exported type. If it ever appears there, the
+    // assignment
     // below stops compiling, which is the only place that can be caught.
     type CityCarriesSearchKey = "searchKey" extends keyof City ? true : false;
     const cityCarriesSearchKey: CityCarriesSearchKey = false;

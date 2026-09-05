@@ -6,11 +6,11 @@ import { stubFilmDatasetFetch } from "./test/fetchStub";
 // The bootstrap module reads its container and mounts on evaluation, so there
 // is no exported function to call and every case here has to import the module
 // afresh. The registry reset below is what makes the second import evaluate at
-// all rather than hand back the first one's cached result.
+// all; without it the first import's cached result comes back.
 
 const actEnvironment = globalThis as typeof globalThis & {
-  // Explicitly undefined rather than merely optional, because the teardown
-  // writes back whatever was read, and absent is what it reads first.
+  // Explicitly undefined, and not just optional, because the teardown writes
+  // back whatever was read and absent is what it reads first.
   IS_REACT_ACT_ENVIRONMENT?: boolean | undefined;
 };
 
@@ -32,7 +32,7 @@ let previousActEnvironment: boolean | undefined;
  * The seam's simulated latency, written out here because the constant is
  * private to src/api/getFilms.ts and exporting it would widen that module for a
  * teardown. Teardown waits twice it, so the figure only has to be an upper
- * bound rather than the exact one.
+ * bound.
  */
 const SEAM_LATENCY_MS = 200;
 
@@ -75,17 +75,17 @@ describe("films bootstrap", () => {
     });
 
     // The application paints its loading branch first and resolves the dataset
-    // only after the seam's simulated latency, so the wait is real rather than
-    // incidental. Spelled out as an advance on the clock rather than handed to
-    // a polling helper, which is the form that survives this file ever being
-    // put on a controlled clock.
+    // only after the seam's simulated latency, so the wait is real. It is
+    // spelled out as an advance on the clock because that form survives this
+    // file ever being put on a controlled clock, and a polling helper would
+    // not.
     await act(async () => {
       await new Promise((resolve) => setTimeout(resolve, SEAM_LATENCY_MS * 2));
     });
 
-    // Scoped to the container rather than the document: the claim is that the
-    // bootstrap mounted the application inside #root, and a document-wide query
-    // is satisfied by a table rendered anywhere at all.
+    // Scoped to the container, because the claim is that the bootstrap mounted
+    // the application inside #root, and a document-wide query is satisfied by a
+    // table rendered anywhere at all.
     expect(within(container).getByRole("table")).toBeInTheDocument();
   });
 

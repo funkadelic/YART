@@ -12,15 +12,16 @@ import { describeViolations, incompleteRuleIds } from "./test/axeSweep";
 import "./index.css";
 
 // The rules the engine could not decide, asserted by set equality as the jsdom
-// sweep asserts its own. Empty here, and that emptiness is the reason this file
-// exists beside that one: a real engine has a layout engine and a canvas, so the
-// contrast rule and the two page-level rules actually run. A rule turning up
-// undecided in a real engine is news, and news belongs in a red run.
+// sweep asserts its own. Empty here, and that is why this file sits beside that
+// one: a real engine has a layout engine and a canvas, so the contrast rule and
+// the two page-level rules actually run. A rule turning up undecided in a real
+// engine is news, and news belongs in a red run.
 const EXPECTED_INCOMPLETE: readonly string[] = Object.freeze([]);
 
 /**
  * Every state this page is swept in, in the order the sweeps run. Written out
- * rather than derived, so it can disagree with what actually ran.
+ * by hand, so it can disagree with what actually ran; a derived list could
+ * not.
  */
 const SWEPT_STATES = Object.freeze(["light", "dark", "paged", "rtl"]);
 
@@ -39,7 +40,7 @@ const sweptStates: string[] = [];
  * assertions, so a state added to the walk cannot arrive with only half of
  * them. The state name rides along as the assertion message.
  *
- * The context is the document rather than the body, and the viewport is the
+ * The context is the document, not the body, and the viewport is the
  * desktop one the browser project declares. Both matter to the contrast rule:
  * a body context leaves the html-matching rules unreported, and a narrower
  * window clips the last column, which leaves a partially obscured element with
@@ -51,8 +52,8 @@ async function sweep(state: string): Promise<void> {
   });
 
   // Both assertions below compare against an empty set, so a sweep that reached
-  // a verdict on nothing reads exactly like a sweep of a clean page. The rules
-  // that passed are what tell the two apart.
+  // a verdict on nothing reads exactly like a sweep of a clean page. The count
+  // of rules that passed is what tells the two apart.
   expect(results.passes.length, state).toBeGreaterThan(0);
 
   expect(describeViolations(results), state).toEqual([]);
@@ -75,7 +76,7 @@ describe("films accessibility in a real engine", () => {
     // pays none of that, because it runs against a fixture.
     await screen.findByRole("table", {}, { timeout: 20_000 });
 
-    // The first state is chosen rather than inherited. Left on the default the
+    // The first state is chosen, never inherited. Left on the default, the
     // theme resolves against the engine's own preference, which would sweep the
     // dark palette twice on a machine that prefers dark and never sweep light.
     await user.click(screen.getByRole("radio", { name: "Light" }));
@@ -90,9 +91,9 @@ describe("films accessibility in a real engine", () => {
     await screen.findByText(/^Page 2 of /);
     await sweep("paged");
 
-    // The picker is operated rather than the attribute being set, so the state
-    // swept is one a reader can actually reach. Found by role alone: its own
-    // accessible name follows the language it is about to change.
+    // The picker is operated instead of the attribute being set, so the state
+    // swept is one a reader can actually reach. Found by role alone, because
+    // its own accessible name follows the language it is about to change.
     await user.selectOptions(
       screen.getByRole("combobox", { name: "Language" }),
       RTL_CATALOG_ID,

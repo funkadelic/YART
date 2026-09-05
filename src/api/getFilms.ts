@@ -19,11 +19,10 @@ const LATENCY_MS = 200;
 /**
  * Matches a term against the title.
  *
- * A sibling of src/api/getCities.ts rather than one seam generalized over both,
- * because the search semantics differ: the city seam matches a derived key
- * joining four fields, which only cities have and which brings a separator
- * guard with it. A shared seam would carry that guard for a dataset that has no
- * key to guard.
+ * A sibling of src/api/getCities.ts, kept separate because the search semantics
+ * differ. The city seam matches a derived key joining four fields, which only
+ * cities have and which brings a separator guard with it, and a shared seam
+ * would carry that guard for a dataset that has no key to guard.
  */
 export async function getFilms({
   searchTerm = "",

@@ -1,4 +1,4 @@
-/** Nothing to order by. Zero is not blank (0 population sorts small); NaN is. */
+/** Nothing to order by. Zero is not blank, it sorts small; NaN is blank. */
 function isBlank(value: unknown): boolean {
   return (
     value === "" || value === null || value === undefined || Number.isNaN(value)
@@ -9,9 +9,9 @@ function isBlank(value: unknown): boolean {
 const TYPE_RANK = { number: 0, string: 1, other: 2 } as const;
 
 /**
- * Places a value in the ordering above. The `other` rank is a routine path, not
- * a dead one: the film row type carries three array fields, and an array lands
- * here and compares by `String(array)` unless the column supplies a comparator
+ * Places a value in the ordering above. The `other` rank is reached routinely,
+ * because a row type carrying array fields lands here on every one of them, and
+ * an array compares by `String(array)` unless the column supplies a comparator
  * of its own. An empty array is not blank by the test above, so a column that
  * leaves this to the default sorts its empty lists among the letters.
  */
@@ -32,8 +32,8 @@ function compareRanked(
   if (aRank !== bRank) return aRank - bRank;
 
   if (aRank === TYPE_RANK.number) {
-    // Compared rather than subtracted: two infinities of the same sign subtract
-    // to NaN, which would skip the sort module's identity tiebreak.
+    // Subtracting two infinities of the same sign gives NaN, which would skip
+    // the sort module's identity tiebreak, so these are compared instead.
     const aNumber = aValue as number;
     const bNumber = bValue as number;
     if (aNumber === bNumber) return 0;

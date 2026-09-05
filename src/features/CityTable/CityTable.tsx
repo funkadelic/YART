@@ -28,14 +28,14 @@ const SEARCH_DEBOUNCE_MS = 150;
 
 interface CityTableProps {
   readonly data: readonly City[];
-  // Receives the committed term, meaning one call per pause in typing rather
-  // than one per keystroke.
+  // Receives the committed term, so it is called once per pause in typing and
+  // not once per keystroke.
   readonly onSearchChange: (term: string) => void;
   readonly loading: boolean;
   // False until the underlying collection has arrived at least once.
   readonly datasetReady: boolean;
-  // The text of the failure rather than the failure itself, so nothing below
-  // this component narrows an error and a cause cannot reach a reader.
+  // Carries only the failure's text, so nothing below this component narrows an
+  // error and a cause cannot reach a reader.
   readonly errorMessage: string | null;
   // Optional so the table stays usable without a container behind it.
   readonly onRetry?: () => void;
@@ -43,8 +43,8 @@ interface CityTableProps {
 
 /**
  * The shared table wired to the city columns, the city copy and the view state
- * that drives them. The search box belongs here: it holds what is being typed
- * and the term typing settles on, and reports the settled term upward.
+ * that drives them. The search box lives here too, holding what is being typed
+ * and the term typing settles on, and reporting the settled term upward.
  *
  * ponytail: FilmTable is a near-copy of this, deliberately. See the note there
  * for the ceiling and when to lift the shared state and address logic out.
@@ -61,7 +61,7 @@ export function CityTable({
   // under src/components/ takes its strings as props.
   const { catalog, tag } = useLocale();
 
-  // The documented exception to module-scope label objects: the table holds
+  // The documented exception to module-scope label objects. The table holds
   // this across renders and several entries are closures, so its identity has
   // to move when the locale does and must not move otherwise.
   const labels = useMemo(
@@ -69,20 +69,19 @@ export function CityTable({
     [catalog, tag],
   );
 
-  // Keyed on the catalog alone, because neither entry weaves a number and the
-  // tag decides nothing here.
+  // Keyed on the catalog alone, because neither entry weaves a number, so the
+  // tag would make no difference to either.
   const searchLabels = useMemo(
     () => buildSearchLabels(catalog, "cities"),
     [catalog],
   );
 
-  // Keyed on exactly the two values the labels are, and that is a requirement
-  // rather than a symmetry: an array identity that moved on its own would
-  // re-sort fifty thousand rows for nothing.
+  // Keyed on exactly the two values the labels are. An array identity that
+  // moved on its own would re-sort fifty thousand rows for nothing.
   const columns = useMemo(() => buildCityColumns(catalog, tag), [catalog, tag]);
 
   // Initialized from whatever the address carries, so the first render is
-  // already the restored view rather than the first page for a frame.
+  // already the restored view and the first page never flashes for a frame.
   const [tableState, setTableState] = useState<TableState<CityColumnId>>(
     () => ({
       ...DEFAULT_TABLE_STATE,
@@ -94,9 +93,10 @@ export function CityTable({
   // from the committed term, so a link carrying one paints it on first render.
   const [searchInput, setSearchInput] = useState(tableState.query);
 
-  // The only place in this application that writes the address, and it replaces
-  // rather than pushes. The comparison ahead of the write canonicalizes a
-  // hostile link on arrival and stops a back navigation looping.
+  // The first of the two places in this application that write the address, one
+  // per page, always through replaceState and never pushState. The comparison
+  // ahead of the write canonicalizes a hostile link on arrival and stops a back
+  // navigation from looping.
   //
   // One address is one view, per resolved locale: the query string carries
   // the search term, the sort column and direction, the page and the page
@@ -109,9 +109,9 @@ export function CityTable({
     const next = serializeTableState(tableState, window.location.search);
     if (next === window.location.search) return;
 
-    // An empty query is written as the path: the empty string resolves to the
-    // current address and leaves the stale query where it was. The fragment
-    // rides along in both branches or a relative reference would drop it.
+    // An empty query is written as the path, because the empty string resolves
+    // to the current address and leaves the stale query where it was. The
+    // fragment rides along in both branches or a relative reference drops it.
     //
     // Guarded because no write to the address is worth the table. A browser
     // that rate limits history mutation throws, and a throw in a commit-phase
@@ -129,7 +129,7 @@ export function CityTable({
     }
   }, [tableState]);
 
-  // The functional updater form is what keeps these dependency arrays empty.
+  // The functional updater form keeps these dependency arrays empty.
   const handleSort = useCallback((columnId: CityColumnId) => {
     setTableState((state) =>
       applyTableAction(state, { type: "sort", columnId }),
@@ -146,7 +146,7 @@ export function CityTable({
     );
   }, []);
 
-  // The single point a pause in typing reaches: it moves the view state, which
+  // The single point a pause in typing reaches. It moves the view state, which
   // returns the reader to the first page, and reports the term upward. Its one
   // dependency does not reach the debounce, which reads its callback from a ref.
   const commitSearch = useCallback(
@@ -173,7 +173,7 @@ export function CityTable({
   useEffect(() => {
     const handlePopState = () => {
       // The keystrokes belong to the view the reader has left, so a commit
-      // still pending goes with it rather than landing on the restored view.
+      // still pending is canceled with it and never lands on the restored view.
       cancelSearchCommit();
 
       const restored: TableState<CityColumnId> = {
@@ -183,13 +183,13 @@ export function CityTable({
 
       setTableState((state) => ({
         ...restored,
-        // The one field carried over, because it is the one the address does
-        // not hold: a restored sort is still a first render and stays silent.
+        // The one field carried over, because the address does not hold it. A
+        // restored sort is still a first render and stays silent.
         hasSorted: state.hasSorted,
       }));
 
-      // Reported upward rather than read from the address by the container,
-      // which is what keeps the reader count at two.
+      // Reported upward, so the container never reads the address itself and
+      // the reader count stays at two.
       setSearchInput(restored.query);
       onSearchChange(restored.query);
     };

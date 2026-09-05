@@ -11,13 +11,12 @@
 
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-// Imported rather than taken from the global, so this file is clean under the
-// browser-globals lint config the rest of the repo uses.
+// Imported, so this file is clean under the browser-globals lint config the
+// rest of the repo uses.
 import process from "node:process";
 
-// Resolved from this file's own location rather than from the working directory,
-// which is wherever npm happened to be invoked and is not necessarily the project
-// root.
+// Resolved from this file's own location, because the working directory is
+// wherever npm happened to be invoked and is not necessarily the project root.
 const dataDir = join(import.meta.dirname, "..", "src", "data", "films");
 const DEFAULT_INPUT_PATH = join(import.meta.dirname, "films-result.json");
 const OUTPUT_PATH = join(dataDir, "films.json");
@@ -53,15 +52,15 @@ const MULTI_VALUED = Object.freeze(["directors", "genres", "countries"]);
 
 const SEPARATOR = "|";
 
-// buildEnvelope and formatEnvelope are copied from scripts/generate-cities.mjs
-// rather than imported: both close over that file's own DATASET_VERSION and
-// COLUMN_ORDER, and parameterizing them for two callers is the larger move. At a
+// buildEnvelope and formatEnvelope are copied from scripts/generate-cities.mjs,
+// not imported, because both close over that file's own DATASET_VERSION and
+// COLUMN_ORDER and parameterizing them for two callers is the larger move. At a
 // third dataset, lift the pair into a shared scripts/envelope.mjs.
 
 /**
- * Wraps the rows in the envelope the loader expects. The declared column list is
- * what turns the tuple shape's one real defect, a silently shifted field, into a
- * loud startup failure.
+ * Wraps the rows in the envelope the loader expects. The declared column list
+ * turns the tuple shape's one real defect, a silently shifted field, into a loud
+ * startup failure.
  */
 export function buildEnvelope(rows) {
   rows.forEach((row, index) => {
@@ -78,7 +77,7 @@ export function buildEnvelope(rows) {
 /**
  * Serializes the envelope with every row on its own line.
  *
- * The line-per-row layout is the reason the tuple shape was chosen: it makes a
+ * The line-per-row layout is why the tuple shape was chosen, because it makes a
  * single corrected film a one-line diff. A plain JSON.stringify puts the whole
  * payload on one line, and the reviewability argument for this shape collapses
  * with it.
@@ -103,7 +102,7 @@ export function formatEnvelope(envelope) {
 }
 
 /**
- * An unbound OPTIONAL omits its key from the binding object rather than binding
+ * An unbound OPTIONAL omits its key from the binding object and does not bind
  * an empty string, so absence is the null signal for every optional field.
  */
 function literal(binding, name) {
@@ -128,11 +127,11 @@ export function parseSparqlResult(text) {
       throw new Error(`Binding ${index} has no film URI.`);
     }
 
-    // The tail segment of the entity URI. Already injective, so unlike the cities
-    // id it needs no padding and no synthetic fallback. Validated here rather
-    // than left to the asset check, because the sort below reads the digits off
-    // it: a tail that is not an entity id yields NaN, and a comparator returning
-    // NaN reorders the rows with no error anywhere.
+    // The tail segment of the entity URI. Already injective, so unlike the
+    // cities id it needs no padding and no synthetic fallback. Validated here,
+    // and not left to the asset check, because the sort below reads the digits
+    // off it. A tail that is not an entity id yields NaN, and a comparator
+    // returning NaN reorders the rows with no error anywhere.
     const id = uri.slice(uri.lastIndexOf("/") + 1);
     if (!/^Q[0-9]+$/.test(id)) {
       throw new Error(
@@ -145,14 +144,14 @@ export function parseSparqlResult(text) {
       throw new Error(`Film ${id} has no English title.`);
     }
 
-    // Upstream values are emitted verbatim, the one title carrying an em dash and
-    // the thirty carrying en dashes included: this project's rule against those
-    // characters governs prose it authors, and normalizing a title would break
-    // reproducibility from the recorded query.
+    // Upstream values are emitted verbatim, the one title carrying an em dash
+    // and the thirty carrying en dashes included. This project's rule against
+    // those characters governs prose it authors, and normalizing a title would
+    // break reproducibility from the recorded query.
     const row = [id, title];
 
-    // Number rather than parseInt: runtime arrives as a decimal and at least one
-    // value is fractional, which an integer parse would silently truncate.
+    // Number, because at least one runtime is fractional and an integer parse
+    // would truncate it silently.
     for (const name of ["year", "runtime"]) {
       const raw = literal(binding, name);
       if (raw === undefined) {
@@ -195,8 +194,8 @@ export function parseSparqlResult(text) {
 
 /**
  * Reports every way the export stops exercising the row shape this dataset was
- * taken for. An asset with no null and no empty list still parses and still
- * renders, and proves nothing.
+ * taken for. An asset with no null and no empty list still parses and renders,
+ * so it would pass every check while exercising none of those shapes.
  */
 export function checkShape(rows) {
   const problems = [];

@@ -13,7 +13,7 @@ const TAG = resolveLocale("en", []).tag;
 
 const COLUMNS = buildFilmColumns(en, TAG);
 
-/** By id rather than by position, so a reordered array does not silently pass. */
+/** Looked up by id, so a reordered array does not silently pass. */
 function column(id: string) {
   return required(
     COLUMNS.find((candidate) => candidate.id === id),
@@ -35,7 +35,7 @@ function film(overrides: Partial<Film>): Film {
   };
 }
 
-/** The sign is the whole claim: the magnitude of a comparison means nothing. */
+/** Only the sign is asserted: a comparison's magnitude is unspecified. */
 function order(id: string, a: Film, b: Film, direction: "asc" | "desc") {
   return Math.sign(column(id).compare(a, b, direction));
 }
@@ -52,7 +52,7 @@ describe("buildFilmColumns", () => {
     ]);
   });
 
-  // The flag is presentational only: it buys end alignment and tabular figures.
+  // The flag is presentational only, buying end alignment and tabular figures.
   // A multi-valued column is text and keeps the start alignment that follows
   // the reading direction.
   it("marks the two numeric columns and leaves the multi-valued ones alone", () => {
@@ -80,9 +80,9 @@ describe("the multi-valued cells", () => {
   });
 });
 
-// Driven over all three rather than over genres alone, because the defect this
-// covers was the comparator being given to one of the three columns that need
-// it while the other two silently kept the default.
+// Driven over all three, because the defect this covers was the comparator
+// being given to one of the three columns that need it while the other two
+// silently kept the default.
 const MULTI_VALUED = ["directors", "genres", "countries"] as const;
 
 describe.each(MULTI_VALUED)("the %s comparator", (id) => {
@@ -91,7 +91,7 @@ describe.each(MULTI_VALUED)("the %s comparator", (id) => {
   const none = film({ [id]: [] });
 
   it("orders by the joined text rather than by how many values there are", () => {
-    // The pair the length-first ordering got wrong: one value that reads later
+    // The pair the length-first ordering got wrong, one value that reads later
     // against two that read earlier. Length would put the single value first.
     expect(order(id, one, two, "asc")).toBe(1);
     expect(order(id, one, two, "desc")).toBe(-1);
@@ -107,8 +107,8 @@ describe.each(MULTI_VALUED)("the %s comparator", (id) => {
     expect(order(id, two, other, "desc")).toBe(-collated);
   });
 
-  // The case the default comparator gets wrong: an empty array is not blank by
-  // the shared definition, so it would sort among the letters rather than last.
+  // The case the default comparator gets wrong. An empty array is not blank by
+  // the shared definition, so it would sort among the letters and never last.
   it("sorts a film with no recorded value last in both directions", () => {
     expect(order(id, none, two, "asc")).toBe(1);
     expect(order(id, none, two, "desc")).toBe(1);
@@ -116,8 +116,8 @@ describe.each(MULTI_VALUED)("the %s comparator", (id) => {
     expect(order(id, two, none, "desc")).toBe(-1);
   });
 
-  // Identity rather than equality: negated zero is equal to zero and is not the
-  // same value, and it is the difference an equality check downstream reads.
+  // Identity, because negated zero is equal to zero without being the same
+  // value, and that difference is what an equality check downstream reads.
   it("returns positive zero for two films with no recorded value", () => {
     expect(Object.is(column(id).compare(none, none, "desc"), 0)).toBe(true);
   });
@@ -130,7 +130,7 @@ describe.each(MULTI_VALUED)("the %s comparator", (id) => {
 });
 
 describe("the collated ordering", () => {
-  // Two real titles whose collated order is not their code-unit order: the
+  // Two real titles whose collated order is not their code-unit order. The
   // ligature collates as the two letters it joins and sorts above the point its
   // single code unit would put it.
   const LIGATURE = required(
@@ -191,8 +191,8 @@ describe("the two numeric columns", () => {
     ).toBe(-1);
   });
 
-  // Kept as it was published rather than rounded, so it has to compare as the
-  // fraction it is rather than as either integer beside it.
+  // Kept as it was published, so it has to compare as the fraction it is and
+  // not as either integer beside it.
   it("orders a fractional runtime between the two integers it lies between", () => {
     const fractional = required(
       FILM_FIXTURE.find(

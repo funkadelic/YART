@@ -6,11 +6,11 @@ import { collatorFor, numberFormatFor } from "../../i18n/format";
 import { resolveLocale } from "../../i18n/resolveLocale";
 
 /**
- * The columns the city table shows, built for one resolved locale: both the
+ * The columns the city table shows, built for one resolved locale. Both the
  * label and the grouped population cell follow the reader, and the collator is
- * fused into the default comparator here. A new identity every call, which is
- * the hazard: the caller memoizes on the catalog and the tag, or the sort and
- * page memos downstream re-run on every render.
+ * fused into the default comparator here. Every call returns a new identity, so
+ * the caller has to memoize on the catalog and the tag, or the sort and page
+ * memos downstream re-run on every render.
  */
 export function buildCityColumns(catalog: Catalog, tag: string) {
   const col = columns<City>(collatorFor(tag));
@@ -31,16 +31,16 @@ export function buildCityColumns(catalog: Catalog, tag: string) {
 }
 
 /**
- * One build at module scope, for the id union and the closed set below and for
- * nothing else. Which columns exist is the same in every language; only what
- * they are called moves.
+ * One build at module scope, used only for the id union and the closed set
+ * below. Which columns exist is the same in every language; only what they are
+ * called moves.
  */
 const BASE_COLUMNS = buildCityColumns(en, resolveLocale("en", []).tag);
 
 /** The literal union of the ids above, formed with no assertion anywhere. */
 export type CityColumnId = (typeof BASE_COLUMNS)[number]["id"];
 
-/** The closed set a restored sort id is checked against, derived not listed. */
+/** The closed set a restored sort id is checked against, derived above. */
 export const CITY_COLUMN_IDS: readonly CityColumnId[] = BASE_COLUMNS.map(
   (column) => column.id,
 );

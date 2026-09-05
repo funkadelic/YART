@@ -10,16 +10,15 @@ import { required } from "./test/required";
  * quietly undone.
  *
  * Every guard here is only worth its line count if it goes red on the violation it
- * names, so each one is written to inspect the construct it cares about rather than
- * to look for a token anywhere in a file. A token search passes on a mention inside
- * a comment, and passes on a file where one call site is correct and the next is not.
+ * names, so each one inspects the construct it cares about instead of searching for a
+ * token anywhere in a file. A token search passes on a mention inside a comment, and
+ * passes on a file where one call site is correct and the next is not.
  */
 
-// Resolved from this file's own location rather than from the working directory,
-// which is wherever the runner happened to be invoked and is not the project root
-// under an IDE runner or an explicit --root. Read off import.meta directly rather
-// than through a URL, because the DOM environment replaces the global URL class and
-// node:url will not convert the result.
+// Resolved from this file's own location, because the working directory is wherever
+// the runner happened to be invoked and is not the project root under an IDE runner
+// or an explicit --root. Read off import.meta directly, because the DOM environment
+// replaces the global URL class and node:url will not convert the result.
 const here = import.meta as ImportMeta & { dirname: string; filename: string };
 const projectRoot = join(here.dirname, "..");
 const guardFile = here.filename;
@@ -37,10 +36,10 @@ const manifest = JSON.parse(
  * The four entries in the README's Stack list that carry a version, mapped to
  * the package the manifest pins.
  *
- * A major rather than the exact pin, because the manifest is pinned exactly and
- * a patch bump would otherwise falsify the prose on a change nobody reads the
- * README for. Only these four carry one: they answer the question a reviewer
- * opens the list with, which is which generation of each this tree is on. The
+ * A major, not the exact pin, because the manifest is pinned exactly and a patch
+ * bump would otherwise falsify the prose on a change nobody reads the README
+ * for. Only these four carry a version, because they answer the question a
+ * reviewer opens the list with: which generation of each this tree is on. The
  * rest of the list is commodity tooling whose version answers nothing, and a
  * version there would be one more copy to keep honest for no reader's benefit.
  */
@@ -55,11 +54,11 @@ const README_STACK_MAJORS: Readonly<Record<string, string>> = {
  * The file parsed once, as TSX so a JSX tag and a generic arrow both read the
  * way the tree writes them.
  *
- * A parse rather than a scan, because the one question a character-level
- * scanner cannot answer is the one that matters here: whether a slash opens a
- * regular expression or divides is decided by the grammar, not by the
- * characters either side of it, and a slash inside a JSX tag is a third case
- * again. The parser settles all three; nothing below approximates them.
+ * A parse, because a character-level scanner cannot answer the question that
+ * matters here. Whether a slash opens a regular expression or divides is decided
+ * by the grammar, not by the characters either side of it, and a slash inside a
+ * JSX tag is a third case again. The parser settles all three; nothing below
+ * approximates them.
  */
 function parse(source: string): ts.SourceFile {
   return ts.createSourceFile(
@@ -78,8 +77,8 @@ type Range = readonly [start: number, end: number];
 /**
  * Every comment in the file.
  *
- * A comment is trivia rather than a node, so it is reached through the token it
- * is attached to rather than found in the tree. Every comment is attached to
+ * A comment is trivia and not a node, so it is reached through the token it is
+ * attached to instead of found in the tree. Every comment is attached to
  * exactly one token, the end-of-file token included, so walking the leaves
  * reaches each one once and none is missed at the end of a file or before a
  * closing brace.
@@ -92,8 +91,8 @@ function commentRanges(file: ts.SourceFile): Range[] {
     const children = node.getChildren(file);
 
     if (children.length === 0) {
-      // Both, because the two APIs partition the comments rather than overlap.
-      // A comment sitting on the same line as the code before it is trailing by
+      // Both, because the two APIs partition the comments between them and do
+      // not overlap. A comment on the same line as the code before it is trailing by
       // definition and the leading reader skips it, so reading leading alone
       // leaves every end-of-line comment in the file visible as code.
       const attached = [
@@ -115,9 +114,9 @@ function commentRanges(file: ts.SourceFile): Range[] {
 /**
  * Every string, template chunk, regular expression and run of JSX text.
  *
- * A template's interpolations are code and stay code: only the literal chunks
- * around them are listed here, which is why the template head, middle and tail
- * are named separately rather than the template expression that holds them.
+ * A template's interpolations are code and stay code, so only the literal chunks
+ * around them are listed here. That is why the template head, middle and tail
+ * are named separately, and the template expression that holds them is not.
  */
 function literalRanges(file: ts.SourceFile): Range[] {
   const found: Range[] = [];
@@ -145,9 +144,9 @@ function literalRanges(file: ts.SourceFile): Range[] {
  * The source with every listed range reduced to spaces, keeping the line breaks
  * so an index into the result is still an index into the original.
  *
- * Split by code unit rather than by code point, because that is the unit the
- * parser reports its positions in and an astral character would otherwise slide
- * every offset after it by one.
+ * Split by code unit, because that is the unit the parser reports its positions
+ * in, and splitting by code point would slide every offset after an astral
+ * character by one.
  */
 function blankRanges(source: string, ranges: readonly Range[]): string {
   const characters = source.split("");
@@ -165,8 +164,8 @@ function blankRanges(source: string, ranges: readonly Range[]): string {
  * Source with comments blanked out, so a construct named in prose is never
  * mistaken for one the file actually performs.
  *
- * Literals are kept rather than blanked. They are part of the code, and one
- * guard below reads the provider name out of one.
+ * Literals are kept. They are part of the code, and one guard below reads the
+ * provider name out of one.
  */
 function stripComments(source: string): string {
   return blankRanges(source, commentRanges(parse(source)));
@@ -174,8 +173,8 @@ function stripComments(source: string): string {
 
 /**
  * Source with everything that is not code blanked out, so an index into it is an
- * index into the original and every character it still shows is code. This is
- * what the call counting below reads: a string holding a call and a pattern such
+ * index into the original and every character it still shows is code. The call
+ * counting below reads this, because a string holding a call and a pattern such
  * as /expect\(/ both name calls that happen nowhere.
  */
 function codeMask(source: string): string {
@@ -185,10 +184,10 @@ function codeMask(source: string): string {
 
 /**
  * Prose with markdown backticks removed and every run of whitespace collapsed to a
- * single space, so an assertion compares the sentence a reader sees rather than the
- * line breaks and markup a formatter chose. Two documents in two formats are being
- * compared below, and an assertion that does not state what it treats as equal is a
- * guess: a rewrap must not flap it, and a reworded sentence must still fail it.
+ * single space, so an assertion compares the sentence a reader sees and not the line
+ * breaks and markup a formatter chose. Two documents in two formats are compared
+ * below, and this states what they are treated as equal on: a rewrap must not flap
+ * the assertion, and a reworded sentence must still fail it.
  */
 function normalizeProse(source: string): string {
   return source.replace(/`/g, "").replace(/\s+/g, " ");
@@ -200,7 +199,7 @@ function normalizeProse(source: string): string {
  * the provenance paragraph lived in a block comment, so an absence assertion that
  * skipped the strip would pass on a reintroduced copy for the wrong reason; the
  * amended address invariant is carried in line comments, so a presence assertion that
- * skipped them would fail on markup rather than on the prose it is reading.
+ * skipped them would fail on markup instead of reading the prose.
  */
 function normalizeComment(source: string): string {
   return normalizeProse(source.replace(/^[ \t]*(?:\*|\/\/)[ ]?/gm, ""));
@@ -218,8 +217,7 @@ function isCallTo(
 /**
  * Whether the subtree performs a call to the named callee.
  *
- * Asked of the tree rather than of the text, because the question is whether the
- * call happens. A name written inside a string is not a call, and a teardown hook
+ * Asked of the tree, because the question is whether the call happens. A name written inside a string is not a call, and a teardown hook
  * that only mentions the restore has not performed one.
  */
 function containsCall(
@@ -249,8 +247,8 @@ function findCalls(file: ts.SourceFile, callee: string): ts.CallExpression[] {
 
 /**
  * Every call to a method on the input library's default export other than the
- * session opener. Matched on the property being called rather than on a pattern
- * over the source, so a method named inside a string is not one of these.
+ * session opener. Matched on the property being called, so a method named inside
+ * a string is not one of these.
  */
 function directUserEventCalls(file: ts.SourceFile): ts.CallExpression[] {
   const found: ts.CallExpression[] = [];
@@ -292,8 +290,8 @@ function bindsClock(call: ts.CallExpression): boolean {
 
     // A spread names no property to read and a computed key is not known here,
     // so neither can answer for one. Everything else is read through the name's
-    // own text rather than through its source, because the source of a quoted
-    // key carries the quotation marks and the key does not.
+    // own text, because the source of a quoted key carries the quotation marks
+    // and the key does not.
     if (
       name === undefined ||
       !(ts.isIdentifier(name) || ts.isStringLiteralLike(name))
@@ -319,10 +317,10 @@ const SKIPPED_DIRECTORIES = new Set([
 ]);
 
 /**
- * Every file the runner would collect, found by walking rather than by asking git so
- * the guard still works from an exported tarball. The pattern tracks the runner's own
- * default include rather than the narrower shape this project happens to use today,
- * so a first `.spec.ts` or `tests/` file is covered the day someone writes it.
+ * Every file the runner would collect, found by walking the tree so the guard still
+ * works from an exported tarball, where git cannot answer. The pattern tracks the
+ * runner's own default include, which is wider than the shape this project uses
+ * today, so a first `.spec.ts` or `tests/` file is covered the day someone writes it.
  */
 function findTestFiles(directory: string): string[] {
   const found: string[] = [];
@@ -341,9 +339,9 @@ function findTestFiles(directory: string): string[] {
 
 /**
  * Every module under a directory that is not a test file, so a guard can ask a
- * question of the application rather than of the suite, because a call site
- * written into a test is a test double and a call site written into a module is
- * the application doing it.
+ * question of the application and not of the suite, because a call site written
+ * into a test is a test double and a call site written into a module is the
+ * application doing it.
  *
  * Not quite the complement of findTestFiles: a `.test-d.ts` is in neither walk.
  * The runner never collects one, so it is not a file findTestFiles describes,
@@ -389,34 +387,33 @@ const IMPORTS_USER_EVENT = /from\s+["']@testing-library\/user-event["']/;
 
 /**
  * The two clock calls, named as the tree writes them. The guard below asks the
- * tree whether each one happens rather than asking the text whether it appears.
+ * tree whether each one happens, because the text only says whether it appears.
  */
 const FAKE_CLOCK_CALL = "vi.useFakeTimers";
 const REAL_CLOCK_CALL = "vi.useRealTimers";
 
-// A test file that mounts more than it asserts is spending its runtime producing
-// coverage rather than evidence, and the coverage gate cannot tell the two apart.
+// A test file that mounts more than it asserts spends its runtime producing
+// coverage instead of evidence, and the coverage gate cannot tell the two apart.
 // A file that asserts nothing at all is the limiting case of the same thing, and
 // the inequality alone lets it through, so it is named separately below.
 // Two counting decisions are written out here because the naive reading gets them
 // wrong in opposite directions and neither is visible in the pattern itself. A
-// member call such as a root's own render method is counted, deliberately: the
-// stricter reading costs nothing today and a bootstrap test driving a root
-// directly is exactly where the first one would appear. A rerender call is not
+// member call such as a root's own render method is counted deliberately, because
+// the stricter reading costs nothing today and a bootstrap test driving a root
+// directly is where the first one would appear. A rerender call is not
 // counted, because there is no word boundary inside that identifier and the rule
 // names the two mounting entry points only.
 const COUNTS_AS_RENDER = /\b(?:renderHook|render)\s*\(/g;
 const COUNTS_AS_ASSERTION = /\bexpect\s*\(/g;
 
-// The complete coverage exclude list. Four entries, named here rather than
-// derived: a list that grows quietly is how the guard stops being one. Three
+// The complete coverage exclude list. Four entries, named here and not derived,
+// because a list that grows quietly is how the guard stops being one. Three
 // of them match artifacts that never execute; src/test/** matches the shared
 // scaffolding, which does execute on every run and is excluded because it is
-// support code for the tests rather than code the product ships. An
-// application source file appearing beside them would be the gate being fitted
-// to the code instead of the code being written to the gate, and the lint rule
-// in eslint.config.js is what stops the one executing entry becoming that same
-// hole by being imported from outside a test.
+// support code for the tests and not code the product ships. An application
+// source file appearing beside them would fit the gate to the code instead of
+// the code to the gate, and the lint rule in eslint.config.js stops the one
+// executing entry becoming that same hole by being imported from outside a test.
 const COVERAGE_EXCLUDE_PATTERNS = [
   "src/**/*.test.{ts,tsx}",
   "src/**/*.test-d.ts",
@@ -426,9 +423,9 @@ const COVERAGE_EXCLUDE_PATTERNS = [
 
 // A suppression comment in any provider's spelling, matched against raw source
 // because a hint is itself a comment and blanking comments first would make the
-// guard vacuous. None exists in this tree: the standing convention is that an
+// guard vacuous. None exists in this tree. The standing convention is that an
 // otherwise-unreachable branch records the condition that would make it
-// reachable, never that it is hidden from the report.
+// reachable, and is never hidden from the report.
 const COVERAGE_IGNORE_HINT = /\b(?:v8|c8|istanbul|node)\s+ignore\b/;
 
 const CONFIG_FILE = "vite.config.ts";
@@ -437,19 +434,19 @@ const WORKFLOW_FILE = ".github/workflows/ci.yml";
 const SONAR_FILE = "sonar-project.properties";
 
 // The two test runners this repository is written to hold, each paired with the
-// file that configures it. Named as pairs rather than as two loose lists so
-// neither half can be asserted without the other: a runner declared with no
+// file that configures it. Named as pairs so neither half can be asserted
+// without the other: a runner declared with no
 // config is a dependency nothing drives, and a config with no runner declared is
 // a file nothing reads.
 //
-// Two runners rather than one, deliberately. The first runner's browser project
-// exposes a page object with no navigation method of any kind, so a real
-// navigation, a reload and a history traversal cannot be reached from it at all.
-// Four flows need exactly those: the address restored across a reload, the
-// arrival edges canonicalized on a fresh load, the entry ledger across a back
-// and forward traversal, and the theme stamped before any module runs. That is
-// what the second runner was taken for, and it is the shape of question that
-// would force a third to be a decision rather than a drift.
+// Two runners, deliberately. The first runner's browser project exposes a page
+// object with no navigation method of any kind, so a real navigation, a reload
+// and a history traversal cannot be reached from it at all. Four flows need
+// exactly those: the address restored across a reload, the arrival edges
+// canonicalized on a fresh load, the entry ledger across a back and forward
+// traversal, and the theme stamped before any module runs. The second runner was
+// taken for those, and a third would have to answer a question of the same shape
+// to be a decision instead of a drift.
 //
 // Coverage is deliberately not generalized across the two. The second runner
 // collects none, the hundred percent threshold stays measured over the first
@@ -461,10 +458,11 @@ const TEST_RUNNERS = [
 ];
 
 // Test-runner packages this repository has not taken. The first seven belong to
-// the runner that was removed rather than ported, and any one of them
+// the runner that was removed instead of ported, and any one of them
 // reappearing means that runner is back. The rest are the runners a contributor
 // is most likely to reach for next, listed so a third runner arriving as a
-// dependency is a red test rather than a fact the tree quietly stops stating.
+// dependency goes red here instead of quietly becoming a fact the tree stops
+// stating.
 // The driver package the second runner sits on is not here, because it is a
 // direct dependency of this tree by design.
 const UNTAKEN_TEST_RUNNERS = [
@@ -501,10 +499,10 @@ const KNOWN_TEST_RUNNERS = [
 
 // Both files that launch a browser, held below against the one browser install
 // line in the pipeline. There was one launch site for as long as there was one
-// runner, and there are two now, so the holding is evaluated per file: a check
+// runner, and there are two now, so the holding is evaluated per file. A check
 // taken across the pair passes on a file contributing nothing as long as the
-// other file still contributes a match, which is the vacuous pass the whole
-// exercise is written against.
+// other file still contributes a match, and this whole exercise is written
+// against that vacuous pass.
 const LAUNCH_CONFIG_FILES = [CONFIG_FILE, E2E_CONFIG_FILE];
 
 // The browser a config launches, matched under either key the two runners use
@@ -520,10 +518,9 @@ const UPLOADED_REPORT_PATH = /^junit\/[^/]*junit[^/]*\.xml$/;
 /**
  * One coverage exclude pattern written in Sonar's dialect, which is the same
  * statement in a matcher with two fewer features: it expands no braces, and its
- * patterns are rooted at the project rather than at the source directory. Both
- * differences are mechanical, so the Sonar list is derived here rather than
- * written out a second time and left to drift from the list it has to agree
- * with.
+ * patterns are rooted at the project instead of at the source directory. Both
+ * differences are mechanical, so the Sonar list is derived here. Writing it out
+ * a second time would leave it to drift from the list it has to agree with.
  */
 function sonarEquivalents(pattern: string): string[] {
   const braces = /\{([^}]*)\}/.exec(pattern);
@@ -556,7 +553,7 @@ function coverageBlock(): string {
 
 // The written-out patterns of one coverage key, read out of the block above.
 // Returns null when the key is absent, so a deleted list fails as a missing
-// list rather than passing as an empty one.
+// list; an empty one would otherwise pass.
 function coveragePatterns(key: string): string[] | null {
   const declared = new RegExp(`${key}\\s*:\\s*\\[([^\\]]*)\\]`).exec(
     coverageBlock(),
@@ -571,8 +568,8 @@ function coveragePatterns(key: string): string[] | null {
 
 /**
  * Every file that can install something on the whole suite: the config itself,
- * and each setup file it declares. Derived rather than named, because the config
- * carries one setupFiles array per project, the browser project's is empty
+ * and each setup file it declares. Derived, because the config carries one
+ * setupFiles array per project, the browser project's is empty
  * today, and a third project or a setup file added to that one would sit outside
  * a written-out pair and never be read.
  */
@@ -583,8 +580,8 @@ function suiteWideFiles(): string[] {
     ).matchAll(/setupFiles\s*:\s*\[([^\]]*)\]/g),
   ];
 
-  // An absence here would quietly shrink the guard to the config alone, which
-  // is why the count is asserted at the call site rather than assumed.
+  // An absence here would quietly shrink the guard to the config alone, so the
+  // count is asserted at the call site.
   const files = declared.flatMap((match) =>
     [...required(match[1], "the declared list").matchAll(/"([^"]*)"/g)].map(
       (entry) => required(entry[1], "a quoted entry").replace(/^\.\//, ""),
@@ -595,7 +592,7 @@ function suiteWideFiles(): string[] {
 }
 
 // The three things CC BY 4.0 obliges this repository to state, written out here
-// so the assertion below matches the committed copy exactly rather than a shape
+// so the assertion below matches the committed copy exactly and not a shape
 // that resembles it.
 const ATTRIBUTION_SOURCE_URL = "https://simplemaps.com/data/world-cities";
 const ATTRIBUTION_LICENSE_URL = "https://creativecommons.org/licenses/by/4.0/";
@@ -620,11 +617,11 @@ const PROVENANCE_REGENERATION =
  * the provenance sentences above are: a rewrite in either document that carries
  * it cannot move both sides of the assertion at once.
  *
- * Two documents rather than one because the question arrives from two
- * directions. A reader evaluating the internationalization opens the README; a
- * reader wondering why a country name is still English is already looking at the
- * module that defines the city type. Stating it twice is deliberate, and this is
- * what stops the two from becoming two different statements.
+ * Two documents, because the question arrives from two directions. A reader
+ * evaluating the internationalization opens the README; a reader wondering why a
+ * country name is still English is already looking at the module that defines the
+ * city type. Stating it twice is deliberate, and this guard stops the two from
+ * becoming two different statements.
  */
 const CITY_SOURCE_FORM_CEILING =
   "City and country names stay in their source form in every locale: the " +
@@ -655,15 +652,15 @@ const SOURCE_FORM_CEILINGS = [
 ];
 
 /**
- * A literal expression's value, built from the tree rather than evaluated.
+ * A literal expression's value, built from the tree instead of evaluated.
  *
  * The parity guard below compares two copies of one rule that cannot import
  * each other, so both sides have to be read as written. Importing the module
- * side would report what it evaluates to, which is not the same question: a
- * reader looking at index.html and at the module is comparing literals, and a
- * literal is what the guard has to compare too. Anything that is not a string,
- * an array or an object of those throws, so a rule that grows a computed value
- * fails here rather than being silently skipped.
+ * side would report what it evaluates to, a different question: a reader looking
+ * at index.html and at the module is comparing literals, so the guard compares
+ * literals too. Anything that is not a string, an array or an object of those
+ * throws, so a rule that grows a computed value fails here instead of being
+ * silently skipped.
  */
 function literalValue(node: ts.Node, file: ts.SourceFile): unknown {
   if (
@@ -706,8 +703,8 @@ function literalValue(node: ts.Node, file: ts.SourceFile): unknown {
 /**
  * The value a named variable is declared with, found anywhere in the file.
  *
- * Anywhere rather than at the top level, because one of the two files read
- * below wraps everything it declares in an immediately invoked function.
+ * Anywhere, not just at the top level, because one of the two files read below
+ * wraps everything it declares in an immediately invoked function.
  */
 function declaredLiteral(
   file: ts.SourceFile,
@@ -751,8 +748,8 @@ function firstArguments(file: ts.SourceFile, callee: string): string[] {
  * Matched with the expression the policy plugin in vite.config.ts uses to find
  * the script it hashes, so this guard reads exactly the script that ships. That
  * plugin already throws unless there is exactly one; asserting it here as well
- * means the guard says which of the two failed rather than reporting a parse of
- * the wrong script.
+ * means the guard names which of the two failed, and never parses the wrong
+ * script.
  */
 function inlineScript(shell: string): ts.SourceFile {
   const html = readFileSync(join(projectRoot, shell), "utf8");
@@ -787,7 +784,7 @@ const BROWSER_SWEEPS = [
  * The shells to read, with the count guarded.
  *
  * Without the count the loops below pass vacuously the day someone renames a
- * shell, which is the failure mode a list-driven guard always brings with it.
+ * shell, the failure mode a list-driven guard always brings with it.
  * Same idiom the address-document loop uses, for the same reason.
  */
 function shells(): string[] {
@@ -820,10 +817,9 @@ const SCHEMA_MODULE = "src/components/DataTable/tableStateUrl.ts";
 /**
  * Every module allowed to write the address, one per page, sorted.
  *
- * Two rather than one is a decision and not a trend: the site ships two pages,
- * each a separate document with its own query string, and neither writer can
- * see the other's. A third writer appearing without a third page having been
- * planned for is what this list exists to reject.
+ * There are two because the site ships two pages, each a separate document with
+ * its own query string, and neither writer can see the other's. A third writer
+ * appearing without a third page planned for fails this list.
  */
 const ADDRESS_WRITERS = [ADDRESS_WRITER, FILMS_ADDRESS_WRITER].toSorted();
 
@@ -833,10 +829,10 @@ const ADDRESS_WRITING_PAGES = 2;
 /**
  * The four keys the query string owns, sorted.
  *
- * Pinned as a set rather than asserted as a floor, because the risk this guards
- * runs in the other direction: a fifth entry for the locale would make the
- * reader's language part of the view state a link reproduces, which is the one
- * thing the amendment below says the address deliberately does not do.
+ * Pinned as a set instead of asserted as a floor, because the risk runs in the
+ * other direction. A fifth entry for the locale would make the reader's language
+ * part of the view state a link reproduces, which the amendment below says the
+ * address deliberately does not do.
  */
 const SCHEMA_KEYS = ["page", "q", "size", "sort"];
 
@@ -845,9 +841,9 @@ const SCHEMA_KEYS = ["page", "q", "size", "sort"];
  * the same reason the provenance sentences above are: a rewrite in any document
  * that carries it cannot move both sides of the assertion at once.
  *
- * The statement is amended rather than new. Following the reader's locale is
- * what made the previous wording false, so the wording moved in the same change
- * set that made it move, and this is the first machine check it has had.
+ * The statement is amended, not new. Following the reader's locale made the
+ * previous wording false, so the wording moved in the same change set that made
+ * it move, and this is the first machine check it has had.
  */
 const ADDRESS_INVARIANT =
   "One address is one view, per resolved locale: the query string carries " +
@@ -864,9 +860,9 @@ const ADDRESS_INVARIANT =
  * The first two are committed. The last two are the generated project
  * instructions and the codebase map they are generated from, and this
  * repository keeps both out of version control, so they are asserted where they
- * exist and skipped where they do not rather than failing a fresh clone for
- * missing a file it was never given. The count below is what stops that
- * tolerance from quietly emptying the loop.
+ * exist and skipped where they do not, so a fresh clone does not fail for
+ * missing a file it was never given. The count below stops that tolerance from
+ * quietly emptying the loop.
  */
 const ADDRESS_DOCUMENTS = [
   "README.md",
@@ -880,11 +876,11 @@ const COMMITTED_ADDRESS_DOCUMENTS = 2;
 
 /**
  * Every history-mutating call this file performs, one entry per call site, named
- * by the method rather than by the receiver.
+ * by the method and not by the receiver.
  *
- * Asked of the tree rather than of the text, so a method named inside a string or
- * a comment is not a call. Matched on the property being called rather than on
- * the whole callee as written, because the invariant is about the mutation
+ * Asked of the tree, so a method named inside a string or a comment is not a
+ * call. Matched on the property being called instead of on the whole callee as
+ * written, because the invariant is about the mutation
  * happening at all: a destructured binding or a receiver held in a local is the
  * same second writer under a different spelling.
  */
@@ -914,8 +910,8 @@ function historyMutations(file: ts.SourceFile): string[] {
  * The keys the query-string schema declares, sorted, read out of the schema's own
  * property names.
  *
- * Read from the construct rather than from a token search, and read as names
- * rather than through literalValue over the whole array, because each entry also
+ * Read from the construct, and read as names instead of through literalValue
+ * over the whole array, because each entry also
  * carries a parse and a serialize function and a literal evaluator would refuse
  * the array outright.
  */
@@ -965,7 +961,7 @@ const FORMATTER_MODULE = "src/i18n/format.ts";
  * The value-level locale-aware helpers on strings, numbers and dates.
  *
  * Every one of these reads a locale from the machine when it is called with no
- * argument, which is the defect this phase exists to close: four independent
+ * argument, which is the defect the locale layer closed: four independent
  * defaults where the application resolves exactly one locale. They are also
  * expensive in the same way the constructors are, because each call builds a
  * formatter and throws it away.
@@ -984,13 +980,12 @@ const LOCALE_AWARE_METHODS = new Set([
  * internationalization namespace constructor, or a call to one of the
  * value-level helpers above.
  *
- * Asked of the tree rather than of the text, which is this file's own standard
- * and is load-bearing twice over here. A namespace named inside a block comment
- * is not a call site, and this guard is worthless if the paragraph explaining
- * why the rule exists can fail it. A type annotation naming the same
- * constructor is not one either: the comparator's fourth parameter is declared
- * as a collator and constructs nothing, which is the entire point of it being a
- * parameter.
+ * Asked of the tree, this file's own standard, and load-bearing twice over here.
+ * A namespace named inside a block comment is not a call site, and this guard
+ * would be worthless if the paragraph explaining why the rule exists could fail
+ * it. Nor is a type annotation naming the same constructor: the comparator's
+ * fourth parameter is declared as a collator and constructs nothing, which is
+ * the point of it being a parameter.
  */
 function localeCallSites(file: ts.SourceFile): string[] {
   const found: string[] = [];
@@ -1016,14 +1011,14 @@ function localeCallSites(file: ts.SourceFile): string[] {
 }
 
 describe("toolchain baseline", () => {
-  // This guard used to ban a list of names belonging to the runner that was
-  // removed, and nothing else. A second runner arriving with a config of its own
+  // This guard used to ban only a list of names belonging to the runner that was
+  // removed. A second runner arriving with a config of its own
   // and a dependency of its own passed it mechanically, while the founding claim
   // it stood for, that the whole suite runs under one runner reading one config,
   // had quietly stopped being true. A guard that passes while the intent it
-  // names is violated is worse than a red test, so the statement is widened
-  // rather than the runner declined: two runners, named, with the file that
-  // configures each, and a third is red.
+  // names is violated is worse than a red test, so the statement was widened and
+  // the runner kept: two runners, named, with the file that configures each, and
+  // a third is red.
   it("holds the tree to the two test runners it is written to run", () => {
     const declared = new Set(
       Object.entries(manifest)
@@ -1035,8 +1030,8 @@ describe("toolchain baseline", () => {
         ),
     );
 
-    // Both halves of each pair, so the statement is a fact rather than an
-    // aspiration.
+    // Both halves of each pair, so the statement is checked and not merely
+    // declared.
     for (const runner of TEST_RUNNERS) {
       expect(
         declared.has(runner.package),
@@ -1060,11 +1055,11 @@ describe("toolchain baseline", () => {
   });
 
   // The one runner is driven in single-pass mode, so a pipeline run cannot be left
-  // holding a watch process. The script also has to say which project it means:
-  // with more than one project declared, a run that names none fans out to every
-  // one of them, including the project that needs a browser engine installed.
-  // Asserted as those three properties rather than as one string, so adding a flag
-  // is free and dropping the project filter is not.
+  // holding a watch process. The script also has to say which project it means,
+  // because with more than one project declared a run that names none fans out to
+  // every one of them, including the project that needs a browser engine
+  // installed. Asserted as those three properties instead of as one string, so
+  // adding a flag is free and dropping the project filter is not.
   it("keeps the test script on the current runner in single-pass mode against one project", () => {
     const script = manifest.scripts?.test ?? "";
 
@@ -1087,7 +1082,7 @@ describe("toolchain baseline", () => {
       readFileSync(join(projectRoot, E2E_CONFIG_FILE), "utf8"),
     );
     // The path is read off the reporter that writes it, so a script naming an
-    // output file it no longer produces reads as absent rather than as valid.
+    // output file it no longer produces reads as absent instead of valid.
     const scriptReport = (name: string) => {
       const script = manifest.scripts?.[name] ?? "";
       return /--reporter=junit\b/.test(script)
@@ -1117,8 +1112,8 @@ describe("toolchain baseline", () => {
 
   // A gate nothing invokes is not a gate. Every project, config and spec file
   // survives the deletion of the step that runs it, so the pipeline is asserted
-  // to name each script rather than the manifest alone being trusted to imply
-  // that something calls them.
+  // to name each script; the manifest alone only implies that something calls
+  // them.
   it("runs every test gate from the pipeline", () => {
     // Judged on live lines only, for the reason the pre-commit guard is:
     // commenting a step out leaves every expected string in the file.
@@ -1141,15 +1136,16 @@ describe("toolchain baseline", () => {
 
   // The step above installs one browser binary and two config files each launch
   // one, with none of the three mentioning either of the others. They agree
-  // today through a runner default rather than through anything written down: a
-  // headless launch naming no channel resolves to the headless shell, which is
-  // the only thing --only-shell downloads. Turn headless off to debug locally,
-  // or name a channel, and the pipeline fails on a missing executable that says
+  // today through a runner default and nothing written down. A headless launch
+  // naming no channel resolves to the headless shell, which is the only thing
+  // --only-shell downloads. Turn headless off to debug locally, or name a
+  // channel, and the pipeline fails on a missing executable whose message says
   // nothing about what the gate was measuring. Asserted here so it fails in the
-  // suite a developer runs first, and as one implication rather than as an
-  // equality: installing more than a launch needs is wasteful, not broken.
+  // suite a developer runs first, and asserted as one implication instead of an
+  // equality, because installing more than a launch needs is wasteful and not
+  // broken.
   //
-  // Every check below is inside the loop rather than taken over the two files
+  // Every check below is inside the loop, not taken over the two files
   // together. A count summed across the pair is satisfied by one file while the
   // other contributes nothing, and a shell resolution read off the concatenated
   // pair is satisfied by one file being headless while the other is not.
@@ -1178,10 +1174,10 @@ describe("toolchain baseline", () => {
       // The names above are read off explicit keys. A device preset carries a
       // browser type of its own, so one spread into either file would add a
       // launch this guard never sees and the install check below would pass on
-      // a binary the pipeline never fetched. Banned rather than parsed: the
-      // preset table lives in the runner's own package, and reproducing it here
-      // to keep it in step is a worse trade than making this guard be extended
-      // on the day a preset is actually wanted.
+      // a binary the pipeline never fetched. Banned instead of parsed, because
+      // the preset table lives in the runner's own package, and reproducing it
+      // here to keep it in step is a worse trade than extending this guard on
+      // the day a preset is actually wanted.
       expect(
         config,
         `${name} configures a device preset, which carries a browser type past the check above`,
@@ -1207,18 +1203,18 @@ describe("toolchain baseline", () => {
 
   // Nothing under src/ imports the icon or the manifest. index.html names each
   // by href and the bundler copies both out of public/ verbatim, so a rename
-  // breaks neither the build nor the type check: it surfaces as a request for a
+  // breaks neither the build nor the type check. It surfaces as a request for a
   // file that is not there, in a browser, after the fact. That is how the
   // manifest came to ship into every build referenced by nothing at all, with an
   // empty icons array, and stayed that way.
   //
-  // Read outward from the shell rather than from a second copy of the filenames
-  // kept here, so renaming a file and its href together stays green and renaming
-  // one of them does not.
+  // Read outward from the shell, with no second copy of the filenames kept here,
+  // so renaming a file and its href together stays green and renaming one of
+  // them does not.
   it("keeps the icon and manifest links in every shell resolving to shipped files", () => {
     const publicDirectory = join(projectRoot, "public");
 
-    // Over the shell list rather than over index.html alone. Every other shell
+    // Over the shell list, not over index.html alone. Every other shell
     // guard in this file iterates it, and a second shell carrying the same two
     // links is a second copy free to rot in the documented way.
     expect(
@@ -1273,11 +1269,10 @@ describe("toolchain baseline", () => {
   // agreed. Stamping the locale from the same script doubles it, so both rules
   // are held here instead of one being documented and neither being checked.
   //
-  // Both sides are read as written rather than imported. A reader comparing
-  // index.html with the module compares literals, so the guard compares literals
-  // too, and set equality rather than substring presence: a guard that searched
-  // index.html for the storage key would pass on the mention of it in the
-  // comment above the script.
+  // Both sides are read as written, not imported. A reader comparing index.html
+  // with the module compares literals, so the guard compares literals too, and it
+  // compares them by set equality: a guard that searched index.html for the
+  // storage key would pass on the mention of it in the comment above the script.
   describe("the inline script and the resolvers", () => {
     it("agrees on both storage keys", () => {
       for (const shell of shells()) {
@@ -1370,8 +1365,8 @@ describe("toolchain baseline", () => {
       ) as Record<string, { catalog: string; tag: string; dir: string }>;
 
       // The script stamps two attributes and has no use for the third field, so
-      // it carries two. Compared field by field rather than whole, so the guard
-      // states which of the two rules drifted.
+      // it carries two. Compared field by field, so the guard states which of
+      // the two rules drifted.
       for (const shell of shells()) {
         expect(
           declaredLiteral(inlineScript(shell), "LOCALES", shell),
@@ -1398,13 +1393,14 @@ describe("toolchain baseline", () => {
   // A faked clock plus the user input library deadlocks unless the library is told
   // which clock to advance, and a file that never restores the real clock leaks the
   // fake one into whatever runs next. Both were found the hard way during the
-  // migration, so both are asserted across the whole tree rather than in the one
-  // file that happened to hit them.
+  // migration, so both are asserted across the whole tree and not only in the
+  // one file that happened to hit them.
   //
   // This is the second guard reading the scanned file list, so it gained the
   // second runner's directory as an input the day that directory appeared.
-  // Stating it is the point: a guard silently gaining a new input is the kind of
-  // thing that gets discovered rather than known. It is inert for those specs,
+  // A guard silently gaining a new input is the kind of thing that gets
+  // discovered rather than known, so it is written down here. It is inert for
+  // those specs,
   // which fake no clock and import no input library, so both loops below skip
   // them on their first condition.
   it("binds every faked clock correctly in every test file", () => {
@@ -1419,8 +1415,8 @@ describe("toolchain baseline", () => {
 
       const name = relative(projectRoot, file);
 
-      // Required inside the teardown hook rather than anywhere in the file, since a
-      // restore that only ever runs on the happy path is not a restore.
+      // Required inside the teardown hook, because a restore that only ever runs
+      // on the happy path is not a restore.
       const restores = findCalls(tree, "afterEach").some((call) =>
         call.arguments.some((argument) =>
           containsCall(argument, REAL_CLOCK_CALL, tree),
@@ -1442,8 +1438,8 @@ describe("toolchain baseline", () => {
         );
       }
 
-      // Judged per call site: one bound session elsewhere in the file says nothing
-      // about this one.
+      // Judged per call site, because one bound session elsewhere in the file
+      // cannot answer for this one.
       for (const call of findCalls(tree, "userEvent.setup")) {
         if (!bindsClock(call)) {
           offenders.push(
@@ -1458,10 +1454,9 @@ describe("toolchain baseline", () => {
 
   // The guard above only sees files it recognizes as tests. A clock installed from
   // shared setup would put the whole suite on a frozen clock from a file it never
-  // reads, so that possibility is closed here rather than left implicit. The
-  // files read are the ones the config actually names, so a project that grows a
-  // setup file is covered the day it is added rather than the day someone
-  // remembers this list.
+  // reads, so that possibility is closed here. The files read are the ones the
+  // config actually names, so a project that grows a setup file is covered the
+  // day it is added, not the day someone remembers this list.
   it("installs no global fake clock outside the test files", () => {
     const scanned = suiteWideFiles();
 
@@ -1484,27 +1479,25 @@ describe("toolchain baseline", () => {
     }
   });
 
-  // A file whose mounts outnumber its assertions is measured here rather than in
+  // A file whose mounts outnumber its assertions is measured here instead of in
   // review, because the number a reviewer would have to count is the one thing a
   // machine counts reliably. Each file is read from disk with nothing carried
   // between iterations, so the offender list is the same on one worker or many.
   //
   // This rule reaches the second runner's specs unmodified, and the mechanism is
   // worth writing down because it reads like a change that would be needed and
-  // is not. The walk starts at the project root rather than at the source
-  // directory, it skips four directories and the second runner's is not one of
-  // them, and the filename pattern it matches is the runner-default shape rather
-  // than the narrower one this project happens to use, so a spec in that
-  // directory is graded the day it is written with no configuration change at
-  // all.
+  // is not. The walk starts at the project root, it skips four directories and
+  // the second runner's is not one of them, and the filename pattern it matches
+  // is the runner-default shape, wider than the one this project happens to use,
+  // so a spec in that directory is graded the day it is written with no
+  // configuration change at all.
   //
-  // Which half of the rule bites such a spec is the other thing worth stating.
-  // It mounts nothing and asserts something, so it satisfies the inequality
-  // trivially; what catches it is the zero-assertion branch below, which is
-  // exactly the file that navigates, produces a green run and proves nothing.
-  // The setup module in the same directory does not match the filename pattern
-  // and is therefore not graded, which is correct, because it asserts nothing by
-  // design.
+  // The half of the rule that bites such a spec is worth stating too. It mounts
+  // nothing and asserts something, so it satisfies the inequality trivially, and
+  // the zero-assertion branch below is what catches a spec that navigates and
+  // produces a green run without asserting anything. The setup module in the
+  // same directory does not match the filename pattern and is therefore not
+  // graded, correctly, because it asserts nothing by design.
   //
   // Two alternatives were rejected. Widening the mounting pattern to count
   // navigations was rejected because it makes the rule mean two different things
@@ -1514,8 +1507,8 @@ describe("toolchain baseline", () => {
   it("asserts something, and no more renders than assertions, in every test file", () => {
     expect(scannedFiles.length).toBeGreaterThan(0);
 
-    // Without this the recording above goes stale silently: adding that
-    // directory to the skipped set would stop grading every end-to-end spec
+    // Without this the recording above goes stale silently. Adding that
+    // directory to the skipped set would stop grading every end-to-end spec,
     // with the comment still sitting here saying they are graded.
     expect(
       scannedFiles.some(isEndToEndSpec),
@@ -1525,7 +1518,7 @@ describe("toolchain baseline", () => {
     const offenders: string[] = [];
 
     for (const file of scannedFiles) {
-      // codeMask rather than stripComments: this counts call sites, and
+      // codeMask, not stripComments, because this counts call sites and
       // stripComments deliberately keeps literals, so a string such as
       // "call render(x) before expect(y)" would score one of each. The provider
       // guard is the only one that needs the literals it keeps.
@@ -1534,9 +1527,9 @@ describe("toolchain baseline", () => {
       const assertions = source.match(COUNTS_AS_ASSERTION)?.length ?? 0;
       const name = relative(projectRoot, file);
 
-      // Named ahead of the comparison rather than left to it: zero renders
-      // against zero assertions satisfies the inequality while being the
-      // clearest case of a file that produces coverage and no evidence.
+      // Named ahead of the comparison, because zero renders against zero
+      // assertions satisfies the inequality while being the clearest case of a
+      // file that produces coverage and no evidence.
       if (assertions === 0) {
         offenders.push(`${name}: asserts nothing`);
       } else if (renders > assertions) {
@@ -1589,8 +1582,8 @@ describe("toolchain baseline", () => {
     );
   });
 
-  // The other way to reach the number without writing the test: name the provider
-  // whose suppression syntax the tree happens to carry, and suppress. Both halves
+  // There is another way to reach the number without writing the test: name the
+  // provider whose suppression syntax the tree happens to carry, and suppress. Both halves
   // are asserted, and the config is scanned alongside the source because it is the
   // file that holds the coverage block.
   it("uses the v8 provider and carries no coverage ignore hint anywhere", () => {
@@ -1624,16 +1617,16 @@ describe("toolchain baseline", () => {
     expect(offenders.map((file) => relative(projectRoot, file))).toEqual([]);
   });
 
-  // Each real-engine sweep mounts a container rather than its entry module, so
+  // Each real-engine sweep mounts a container instead of its entry module, so
   // it has to pull in the global stylesheet itself. That is a second copy of the
   // fact of which sheets this app ships, and the sweep it feeds is the contrast
-  // one: a sheet added to an entry module alone leaves that page's sweep reading
-  // a page no reader ever loads, and reporting green on it. Compared as a set of
-  // side-effect imports, which is what a global sheet is; a module stylesheet
-  // arrives bound to a name and is nobody's global.
+  // one, so a sheet added to an entry module alone leaves that page's sweep
+  // reading a page no reader ever loads, and reporting green on it. Compared as a
+  // set of side-effect imports, which is what a global sheet is; a module
+  // stylesheet arrives bound to a name and is nobody's global.
   //
   // Driven over a pair per page with a count beside it, so a page whose sweep
-  // was renamed empties the loop into a failure rather than into silence.
+  // was renamed empties the loop into a failure instead of into silence.
   it("keeps each browser sweep on the same global stylesheets its entry module ships", () => {
     const globalSheets = (file: string): string[] =>
       [
@@ -1663,8 +1656,8 @@ describe("toolchain baseline", () => {
   // question. Two copies of one fact is how the provenance account came to have
   // a corrected half and a disproved half sitting beside each other, so this
   // pair is held from one literal in the same idiom. The code copy is a block
-  // comment, so the comparison strips the leading asterisks: a guard that failed
-  // on markup would be a guard nobody keeps.
+  // comment, so the comparison strips the leading asterisks, because a guard
+  // that failed on markup would be a guard nobody keeps.
   it("keeps one account of each dataset ceiling in the README and the data module", () => {
     for (const { ceiling, documents } of SOURCE_FORM_CEILINGS) {
       for (const name of documents) {
@@ -1703,8 +1696,8 @@ describe("toolchain baseline", () => {
   // the README claiming a fresh CSV run the artifact's own tie-break ordering
   // disproves. Removal was guarded in neither document and divergence was guarded
   // in neither, so the wrong copy sat beside the right one with the suite green.
-  // Both documents are asserted here from one pair of literals, which makes a
-  // rewrite of either one alone a red test rather than a silent contradiction.
+  // Both documents are asserted here from one pair of literals, so a rewrite of
+  // either one alone is a red test instead of a silent contradiction.
   it("keeps one account of the dataset's provenance in the README and the license file", () => {
     const sentences = [PROVENANCE_SERIALIZATION, PROVENANCE_REGENERATION];
 
@@ -1720,8 +1713,8 @@ describe("toolchain baseline", () => {
       }
     }
 
-    // An absence rather than a presence: the account belongs in the two documents
-    // a reader consults for provenance, and the third copy in the data module is
+    // An absence assertion, because the account belongs in the two documents a
+    // reader consults for provenance, and the third copy in the data module is
     // what let the disproved sentence survive a correction of the other two. The
     // comparison strips the block comment's asterisk prefixes, so a copy pasted
     // back in as a comment cannot pass on its markup.
@@ -1749,8 +1742,8 @@ describe("toolchain baseline", () => {
     expect(section, "the README has no Stack section").toBeDefined();
 
     // A bullet opening with a link and following it with a bare number. The
-    // link text is captured rather than assumed, so a renamed label fails the
-    // set comparison below instead of dropping out of it in silence.
+    // link text is captured, so a renamed label fails the set comparison below
+    // instead of dropping out of it in silence.
     const named = new Map<string, string>();
 
     for (const line of (section ?? "").split("\n")) {
@@ -1783,9 +1776,9 @@ describe("toolchain baseline", () => {
   // The address design had four invariants and no machine check of any of them:
   // the single writer, the absence of a push, the guarded write and the omitted
   // defaults were prose, plus behavior tests that would still pass beside a
-  // second writer nobody noticed. Following the reader's locale is what made the
-  // headline statement move, so the statement is amended and guarded in the same
-  // change set rather than left to be discovered wrong later.
+  // second writer nobody noticed. Following the reader's locale made the headline
+  // statement move, so the statement is amended and guarded in the same change
+  // set instead of being left to be discovered wrong later.
   //
   // Three questions, all asked of constructs. Whether anything but the one
   // component mutates history, whether the query string still owns exactly the
@@ -1819,8 +1812,8 @@ describe("toolchain baseline", () => {
       "the address is written from somewhere other than exactly the two writers",
     ).toEqual(ADDRESS_WRITERS);
 
-    // Against a written-out number rather than the list above, in the idiom the
-    // address-document loop already uses: a rename that moved both constants
+    // Against a written-out number instead of the list above, in the idiom the
+    // address-document loop already uses. A rename that moved both constants
     // and the containers together would otherwise satisfy the comparison with
     // whatever set it found, including an empty one.
     expect(
@@ -1856,8 +1849,8 @@ describe("toolchain baseline", () => {
     }
 
     // Without this the loop above passes vacuously the day someone renames the
-    // README or moves the writer, which is the failure mode a tolerance for
-    // missing files always brings with it.
+    // README or moves the writer, the failure mode a tolerance for missing files
+    // always brings with it.
     expect(
       read,
       "fewer documents carrying the address invariant were found than are committed",
@@ -1878,8 +1871,8 @@ describe("toolchain baseline", () => {
   // module with its caches deleted.
   it("asks the platform for a locale only where the lint rule cannot reach", () => {
     // The inline script resolves a locale of its own before any module loads.
-    // It reaches its answer through a literal map rather than through the
-    // platform, so it should contribute nothing.
+    // It reaches its answer through a literal map, so it should contribute
+    // nothing.
     for (const shell of shells()) {
       expect(
         localeCallSites(inlineScript(shell)),
@@ -1895,9 +1888,9 @@ describe("toolchain baseline", () => {
     ).toEqual([
       "Intl.Collator",
       "Intl.ListFormat",
-      // Twice, and not a duplicate to be tidied away: one plain number formatter
-      // for grouped counts and one unit formatter for the runtime, cached apart
-      // because they are configured differently and both are per tag.
+      // Twice on purpose: one plain number formatter for grouped counts and one
+      // unit formatter for the runtime, cached apart because they are configured
+      // differently and both are per tag.
       "Intl.NumberFormat",
       "Intl.NumberFormat",
       "Intl.PluralRules",
@@ -1907,7 +1900,7 @@ describe("toolchain baseline", () => {
 
 describe("the plugin rule sets the lint gate claims to run", () => {
   // A flat-config block that spreads a shared config and then declares its own
-  // rules key replaces that config's rules wholesale rather than merging with
+  // rules key replaces that config's rules wholesale instead of merging with
   // them. The gate stays green, because the rules are simply absent. Same
   // per-object replacement hazard eslint.config.js records for
   // no-restricted-imports, one level up, and no disallow rule can state the
@@ -1964,9 +1957,9 @@ describe("the plugin rule sets the lint gate claims to run", () => {
   });
 
   // The other three sets the gate spreads. Held the same way and for the same
-  // reason: a green lint run proves no file violates an active rule and says
-  // nothing at all about a rule that quietly stopped being active.
-  // The specifiers are variables rather than literals because one of the two
+  // reason: a green lint run proves no file violates an active rule, and a rule
+  // that quietly stopped being active is violated by nothing.
+  // The specifiers are variables instead of literals because one of the two
   // plugins ships no type declarations, and a literal specifier would make that
   // a typecheck failure here while eslint.config.js, being JavaScript, imports
   // it happily.
@@ -2023,8 +2016,8 @@ describe("the plugin rule sets the lint gate claims to run", () => {
         .filter(([, entry]) => !isOff(entry))
         .map(([name]) => name);
 
-      // A floor rather than an exact count, so an upstream set that grows does
-      // not fail the gate, while an empty one cannot pass it vacuously.
+      // A floor, not an exact count, so an upstream set that grows does not fail
+      // the gate, while an empty one cannot pass it vacuously.
       expect(enabled.length, "the set resolved empty").toBeGreaterThanOrEqual(
         floor,
       );
@@ -2064,7 +2057,7 @@ describe("the plugin rule sets the lint gate claims to run", () => {
 describe("the coverage gate the pipeline rests on", () => {
   // The exclude list beside it already has a guard. The threshold did not, and
   // it is the half that decides whether a drop fails the build or is written
-  // into a log nobody reads. Asserted as the shorthand rather than as four
+  // into a log nobody reads. Asserted as the shorthand instead of as four
   // numbers, because the shorthand is what makes it total over the metrics.
   it("still asks for a hundred on every metric", () => {
     const source = readFileSync(join(projectRoot, "vite.config.ts"), "utf8");

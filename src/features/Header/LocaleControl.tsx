@@ -7,9 +7,9 @@ import styles from "./LocaleControl.module.scss";
 
 /**
  * The language picker: follow the machine, then one option per shipped catalog,
- * each named in its own language. A native select rather than the segmented
- * control beside it, because five options do not fit a row of buttons and the
- * native control brings its keyboard and mobile behavior with it.
+ * each named in its own language. A native select, because five options do not
+ * fit the row of buttons the segmented control beside it uses, and the native
+ * control brings its keyboard and mobile behavior with it.
  */
 export function LocaleControl() {
   const { catalog, choice, setChoice } = useLocale();
@@ -19,9 +19,9 @@ export function LocaleControl() {
 
   return (
     <div className={styles.control}>
-      {/* a11y: off screen rather than absent. The options name themselves, so a
-          sighted reader needs no visible label, but the control still has to
-          have a name in the accessibility tree. */}
+      {/* a11y: the label is rendered off screen. The options name themselves,
+          so a sighted reader needs no visible label, but the control still has
+          to have a name in the accessibility tree. */}
       <label className={styles.label} htmlFor={selectId}>
         {catalog.common.languageName}
       </label>

@@ -10,18 +10,18 @@ import FilmsApp from "./FilmsApp";
 import { describeViolations, incompleteRuleIds } from "./test/axeSweep";
 import { stubFilmDatasetFetch } from "./test/fetchStub";
 
-// The sweep below runs over the whole document rather than over the body, which
-// is what puts the page-level rules in play. The runner hands each file a bare
-// document, though, so those rules would report on the harness shell rather than
-// on the one this page ships: no language and no title, neither of which is true
-// of movies.html.
+// The sweep below runs over the whole document, which puts the page-level rules
+// in play. The runner hands each file a bare document, though, so those rules
+// would report on the harness shell and not on the one this page ships. That
+// harness shell has no language and no title, neither of which is true of
+// movies.html.
 //
-// The two facts are therefore lifted off the committed second shell rather than
-// written out here, exactly as the city sweep lifts them off the first, and the
-// closing case asserts the lift found something. That case is not ceremony: the
-// application's own locale effect restamps documentElement.lang as it renders,
-// so a shell that dropped the attribute would still be swept against a language
-// the application supplied, and the rule engine alone would never say so.
+// The two facts are therefore lifted off the committed second shell, exactly as
+// the city sweep lifts them off the first, and the closing case asserts the lift
+// found something. The application's own locale effect restamps
+// documentElement.lang as it renders, so a shell that dropped the attribute
+// would still be swept against a language the application supplied, and the
+// rule engine alone would never say so.
 const shell = readFileSync(
   join(
     (import.meta as ImportMeta & { dirname: string }).dirname,
@@ -37,13 +37,13 @@ const shellTitle = /<title>([^<]*)<\/title>/.exec(shell)?.[1] ?? "";
 document.documentElement.lang = shellLang;
 document.title = shellTitle;
 
-// The same expectation the city jsdom sweep asserts, and asserted the same way:
-// by set equality rather than by ignoring. Deliberately not widened. A rule this
-// page cannot satisfy is a violation to fix, not an entry to add here, because
-// an entry is a rule the gate stops deciding.
+// The same expectation the city jsdom sweep asserts, and asserted the same way,
+// by set equality. Deliberately not widened: a rule this page cannot satisfy is
+// a violation to fix, because every entry here is a rule the gate stops
+// deciding.
 //
-// Three entries, all of one cause: jsdom implements no layout, so a rule that
-// has to ask what is painted where cannot reach a verdict. color-contrast is
+// jsdom implements no layout, so a rule that has to ask what is painted where
+// cannot reach a verdict. That accounts for all three entries. color-contrast is
 // decided over the token values in src/theme/tokens.test.ts, and the two
 // page-level rules are decided for real by src/a11y.films.browser.test.tsx.
 const EXPECTED_INCOMPLETE = Object.freeze([
@@ -54,7 +54,8 @@ const EXPECTED_INCOMPLETE = Object.freeze([
 
 /**
  * Every state this page is swept in, in the order the sweeps run. Written out
- * rather than derived, so it can disagree with what actually ran.
+ * by hand, so it can disagree with what actually ran; a derived list could
+ * not.
  */
 const SWEPT_STATES = Object.freeze(["data", "empty", "error"]);
 
@@ -66,8 +67,8 @@ const sweptStates: string[] = [];
  * assertions, so a state added to the walk cannot arrive with only half of
  * them. The state name rides along as the assertion message.
  *
- * The context is the document rather than the body, for the reason the city
- * sweep widens its own: nine rules match the html element, and a body context
+ * The context is the document, not the body, for the reason the city sweep
+ * widens its own: nine rules match the html element, and a body context
  * reports them neither as violations nor as undecided.
  */
 async function sweep(state: string): Promise<void> {
@@ -75,7 +76,7 @@ async function sweep(state: string): Promise<void> {
     resultTypes: ["violations", "incomplete"],
   });
 
-  // A sweep that reached a verdict on nothing is caught here rather than by the
+  // A sweep that reached a verdict on nothing is caught here, not by the
   // allowlist below, which is non-empty today and would catch it by accident.
   expect(results.passes.length, state).toBeGreaterThan(0);
 
@@ -91,7 +92,7 @@ describe("films accessibility", () => {
   beforeEach(() => {
     // Installed over the city stub the setup file puts in place. Without it the
     // parse boundary refuses the payload and every case below fails on a column
-    // order failure rather than on an accessibility finding.
+    // order failure, hiding whatever the accessibility sweep would have found.
     stubFilmDatasetFetch();
   });
 
@@ -116,7 +117,7 @@ describe("films accessibility", () => {
 
   // The failure state needs its own mount. The loader caches its dataset request
   // at module scope, so the case above leaves a warm cache no stub can fail;
-  // resetting the registry and re-importing is what makes it cold enough.
+  // resetting the registry and re-importing makes it cold enough.
   it("reports no violation when the film dataset fails to load", async () => {
     stubFilmDatasetFetch().mockResolvedValueOnce(
       new Response("not found", { status: 404 }),
@@ -133,16 +134,16 @@ describe("films accessibility", () => {
     await sweep("error");
   });
 
-  // Its own case rather than the tail of whichever sweep runs last, for the
-  // reason the city sweep gives: selected alone it would fail with a short list,
-  // which reads as an accessibility regression rather than as an ordering fact.
+  // Its own case, for the reason the city sweep gives: as the tail of whichever
+  // sweep runs last it would fail with a short list whenever selected alone, and
+  // that reads as an accessibility regression when it is only an ordering fact.
   it("swept every state it says it sweeps", () => {
     expect(sweptStates).toEqual(SWEPT_STATES);
   });
 
   // The positive floor under the lift above. A shell that lost either fact
-  // leaves the matching value empty and fails here, which is the only place a
-  // dropped language attribute can fail: the sweeps themselves read a document
+  // leaves the matching value empty and fails here, the only place a dropped
+  // language attribute can fail, because the sweeps themselves read a document
   // the application has already restamped.
   it("takes both page-level facts from the shell that ships", () => {
     expect(shellLang).not.toBe("");

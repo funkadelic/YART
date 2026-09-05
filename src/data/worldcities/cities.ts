@@ -60,7 +60,7 @@ const COLUMNS = [
   "population",
 ] as const;
 
-/** A search cache rather than a fact about a city, so it stays off City. */
+/** An index for searching and not a fact about a city, so it stays off City. */
 interface IndexedCity extends City {
   searchKey: string;
 }
@@ -103,8 +103,9 @@ function parseCityRows(rows: unknown[]): IndexedCity[] {
       countryIso3,
       capital,
       population,
-      // Four of the five rendered columns. Capital is left out: its upstream
-      // codes would make "in" match 31,388 rows of 50,250 instead of 19,051.
+      // Four of the five rendered columns. Capital is left out because its
+      // upstream codes would make "in" match 31,388 rows of 50,250 instead of
+      // 19,051.
       searchKey: [name, nameAscii, country, countryIso3]
         .join(SEARCH_KEY_SEPARATOR)
         .toLowerCase(),
@@ -112,7 +113,7 @@ function parseCityRows(rows: unknown[]): IndexedCity[] {
   });
 }
 
-/** The cache the factory holds is what makes a double mount issue one request. */
+/** The cache the factory holds is why a double mount issues one request. */
 export const loadCities = createEnvelopeLoader({
   url: citiesUrl,
   dataset: "city",

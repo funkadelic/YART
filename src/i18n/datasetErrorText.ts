@@ -1,5 +1,5 @@
-// Taken from the shared envelope loader rather than from either dataset seam.
-// This module serves both pages, so naming one seam would pull that dataset's
+// Taken from the shared envelope loader, not from either dataset seam. This
+// module serves both pages, so naming one seam would pull that dataset's
 // loader into the chunk both entries share, and the other page would download
 // a dataset it never renders.
 import { DatasetError } from "../data/loadEnvelope";
@@ -11,8 +11,8 @@ import type { DomainCatalog } from "./catalogs/en";
  * at the catch, which would put the locale in the fetch effect's dependencies.
  * The second of the two branches is the one a rejection with no error reaches.
  *
- * Given one domain's half of the catalog rather than the whole of it: this
- * reads the error record and nothing else, so the caller names which failed.
+ * Given one domain's half of the catalog, because this reads only the error
+ * record and the caller names which domain failed.
  */
 export function datasetErrorText(
   error: Error,

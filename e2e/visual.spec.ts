@@ -12,9 +12,8 @@ import { expect, test } from "@chromatic-com/playwright";
 // so the wait matches the one the other end-to-end specs declare.
 const DATASET_READY_TIMEOUT_MS = 20_000;
 
-// The two storage keys the blocking script in index.html reads, restated
-// rather than imported so this file cannot pass for whatever value the
-// subject happens to hold.
+// The two storage keys the blocking script in index.html reads, restated here
+// so this file cannot pass for whatever value the subject happens to hold.
 const THEME_STORAGE_KEY = "yart-theme";
 const LOCALE_STORAGE_KEY = "yart-locale";
 
@@ -40,8 +39,8 @@ test("searched, sorted and paged view", async ({ page }) => {
   await expect(page.getByRole("table")).toBeVisible({
     timeout: DATASET_READY_TIMEOUT_MS,
   });
-  // The row count settles after the table appears, so the snapshot is of the
-  // finished page rather than a mid-render one.
+  // The row count settles after the table appears, so waiting on it holds the
+  // snapshot to the finished page and not a mid-render frame.
   await expect(page.locator("tbody tr")).toHaveCount(25);
 });
 
@@ -58,8 +57,8 @@ test("dark theme", async ({ page }) => {
   await expect(page.getByRole("table")).toBeVisible({
     timeout: DATASET_READY_TIMEOUT_MS,
   });
-  // A snapshot that silently captured the light theme fails here rather than
-  // passing as a new baseline.
+  // This fails a snapshot that silently captured the light theme, which would
+  // otherwise be accepted as a new baseline.
   await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
 });
 
@@ -103,12 +102,12 @@ test("hovered row", async ({ page }) => {
   const hovered = await background();
   expect(hovered).not.toBe(resting);
 
-  // The archive Chromatic replays carries the DOM, never the pointer, so a
-  // :hover rule paints in none of it. Writing the colour the rule just produced
-  // onto the row puts it somewhere the archive reaches. Read from the rendered
-  // page rather than restated here, so a token change moves the snapshot and a
-  // deleted rule fails the assertion above before this line runs. Set through
-  // the CSSOM because the shell's style-src forbids a style attribute.
+  // The archive Chromatic replays carries the DOM but not the pointer, so a
+  // :hover rule never paints in it. Writing the color the rule just produced
+  // onto the row puts it somewhere the archive reaches. The color is read from
+  // the rendered page, so a token change moves the snapshot and a deleted rule
+  // fails the assertion above before this line runs. Set through the CSSOM
+  // because the shell's style-src forbids a style attribute.
   await row.evaluate((el, color) => {
     el.style.backgroundColor = color;
   }, hovered);
@@ -117,10 +116,9 @@ test("hovered row", async ({ page }) => {
 });
 
 // ponytail: two films states and no more. Each one is billed on every future
-// build rather than only on this one, so this is a ceiling rather than a
-// starting point; add a third knowingly. The right-to-left variant is the one
-// worth having, because the films page carries three multi-valued text columns
-// the city page does not.
+// build, so treat this as a ceiling and add a third knowingly. The
+// right-to-left variant is the one worth having, because the films page carries
+// three multi-valued text columns the city page does not.
 test("films default view", async ({ page }) => {
   await page.goto(FILMS_PATH);
   await expect(page.getByRole("table")).toBeVisible({
