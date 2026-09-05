@@ -47,8 +47,8 @@ not exist.
 - Query date: 2026-09-04.
 - Generator: `scripts/generate-films.mjs`, which reads a downloaded result file and imports no network
   client.
-- Rows in the committed asset: pending, written by the generator run.
-- Emitted byte size: pending, written by the generator run.
+- Rows in the committed asset: 8,945.
+- Emitted byte size: 1,243,148 bytes.
 
 Modifications from the raw query result: unused bindings dropped, the three multi-valued properties
 collapsed from pipe-joined literals to JSON arrays, and rows limited to films carrying at least 20
