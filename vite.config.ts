@@ -90,10 +90,24 @@ function contentSecurityPolicy(): Plugin {
  * preload scanner reaches it immediately and the two downloads overlap.
  *
  * The name is content-hashed and exists only once the bundle does, which is why
- * this reads it off the bundle rather than being written into index.html by
+ * this reads it off the build rather than being written into index.html by
  * hand. A shell carrying a stale hash would preload a file that is not there,
  * pay for the request and still fetch the real one afterwards, so the lookup
  * throws rather than skipping quietly when it finds anything but one match.
+ *
+ * The lookup is per entry chunk rather than over the bundle. context.bundle is
+ * the whole build's bundle and every shell is handed the same one, so with two
+ * entries a name-based filter over it matches the same single asset for both
+ * shells and the guard never fires. That was measured with a two-entry probe
+ * build rather than inferred, and the shell that gets the wrong preload reports
+ * nothing.
+ *
+ * The ceiling that comes with reading the entry: importedAssets is attributed
+ * to the chunk that imports the asset, so a dataset module landing in the shared
+ * chunk instead of an entry chunk leaves the entry's set empty and the plugin
+ * throws on a count of zero. That is the intended loud failure, a red build
+ * rather than a wrong preload. Each dataset module here is reached from exactly
+ * one entry, so the case does not arise today.
  */
 function preloadDataset(): Plugin {
   return {
@@ -102,11 +116,9 @@ function preloadDataset(): Plugin {
     transformIndexHtml: {
       order: "post",
       handler(_html, context) {
-        const datasets = Object.values(context.bundle ?? {}).filter(
-          (output) =>
-            output.type === "asset" &&
-            /(^|\/)cities-[^/]*\.json$/.test(output.fileName),
-        );
+        const datasets = [
+          ...(context.chunk?.viteMetadata?.importedAssets ?? []),
+        ].filter((fileName) => fileName.endsWith(".json"));
 
         // A length check does not narrow an index access under
         // noUncheckedIndexedAccess, so the guard rides on a destructured
@@ -133,7 +145,7 @@ function preloadDataset(): Plugin {
               // Written relative here rather than root-absolute, because the
               // base this build uses is relative and a tag injected at this
               // point is past the rewrite that would otherwise apply it.
-              href: `./${dataset.fileName}`,
+              href: `./${dataset}`,
             },
           },
         ];
