@@ -20,10 +20,11 @@ export interface Column<T, Id extends string = string> {
  * flipped by its caller, because blanks sort last in both.
  *
  * ponytail: a caller-supplied comparator keeps the three parameters it has
- * always had and never receives the collator, so a caller that wants to collate
- * text itself has to reach for one of its own. Nothing in this tree does. The
- * day one does, the collator arrives the same way the accessor does: fused in
- * at construction, one line below.
+ * always had and never receives the collator, and the one in this tree that
+ * collates text needs no fourth. A feature builder already builds a collator to
+ * hand to this factory, so a comparator declared in that same body closes over
+ * it. Widen these options for a caller that cannot do that, not for one that
+ * can.
  */
 export interface ColumnOptions<T, V> {
   readonly label: string;
