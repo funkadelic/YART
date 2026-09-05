@@ -47,9 +47,19 @@ const COLUMN_ORDER = Object.freeze([
   "countries",
 ]);
 
-/** The three fields GROUP_CONCAT returns pipe-joined, in column order. */
+/** The three fields GROUP_CONCAT returns joined, in column order. */
 const MULTI_VALUED = Object.freeze(["directors", "genres", "countries"]);
 
+/**
+ * The character films.rq joins each group on.
+ *
+ * ponytail: a label containing this character splits into two names and is
+ * accepted, because a joined string cannot say which it was. No English label
+ * in the current export carries one. Switch both this and films.rq to a control
+ * character such as U+001F if that ever stops being true, which costs a fresh
+ * download because the recorded query has to run again to produce a result the
+ * new separator can split.
+ */
 const SEPARATOR = "|";
 
 // buildEnvelope and formatEnvelope are copied from scripts/generate-cities.mjs,
@@ -112,8 +122,10 @@ function literal(binding, name) {
 /**
  * Maps a SPARQL JSON result onto the envelope's column order.
  *
- * Rows are ordered by ascending Q-id, so two exports of the same data serialize
- * identically and a corrected film stays a one-line diff.
+ * Rows are ordered by ascending Q-id and every multi-valued field is sorted, so
+ * two exports of the same data serialize identically and a corrected film stays
+ * a one-line diff. Neither order comes from upstream: SPARQL promises no row
+ * order and GROUP_CONCAT none within a group.
  */
 export function parseSparqlResult(text) {
   const bindings = JSON.parse(text)?.results?.bindings;
@@ -168,18 +180,24 @@ export function parseSparqlResult(text) {
     }
 
     // Split here, once, at generation time, so no comparator and no cell renderer
-    // ever has to take a pipe-joined string apart. An empty element means a label
-    // contained the separator and one name became two, which every later check
-    // accepts because two strings are as valid as one.
+    // ever has to take a joined string apart, and sorted so the committed asset
+    // is canonical and a regeneration cannot permute it. GROUP_CONCAT promises no
+    // order within a group.
+    //
+    // The empty-element check catches a value that begins or ends with the
+    // separator. It cannot catch a separator in the middle of a label, which
+    // splits into two non-empty names and is accepted: the joined string is
+    // genuinely ambiguous and no check downstream can recover the intent. See
+    // the ceiling recorded on SEPARATOR.
     for (const name of MULTI_VALUED) {
       const raw = literal(binding, name);
       const values = raw === undefined ? [] : raw.split(SEPARATOR);
       if (values.some((value) => value === "")) {
         throw new Error(
-          `Film ${id} has a ${name} value containing the separator: ${JSON.stringify(raw)}`,
+          `Film ${id} has a ${name} value that starts or ends with the separator: ${JSON.stringify(raw)}`,
         );
       }
-      row.push(values);
+      row.push(values.sort());
     }
 
     return row;
