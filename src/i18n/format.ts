@@ -9,8 +9,9 @@
 const collators = new Map<string, Intl.Collator>();
 const numberFormats = new Map<string, Intl.NumberFormat>();
 const pluralRules = new Map<string, Intl.PluralRules>();
+const listFormats = new Map<string, Intl.ListFormat>();
 
-/** The one lookup the three below share. Absence, not truthiness. */
+/** The one lookup the four below share. Absence, not truthiness. */
 function cached<T>(
   cache: Map<string, T>,
   tag: string,
@@ -39,6 +40,14 @@ export function numberFormatFor(tag: string): Intl.NumberFormat {
 /** The rules every plural noun in a catalog is selected over. */
 export function pluralRulesFor(tag: string): Intl.PluralRules {
   return cached(pluralRules, tag, (forTag) => new Intl.PluralRules(forTag));
+}
+
+/**
+ * The formatter every multi-valued cell is joined by, so no component and no
+ * column builder writes a separator of its own.
+ */
+export function listFormatFor(tag: string): Intl.ListFormat {
+  return cached(listFormats, tag, (forTag) => new Intl.ListFormat(forTag));
 }
 
 /** Over the categories the tag reports, not a singular-or-other pair. */

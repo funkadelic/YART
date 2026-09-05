@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   collatorFor,
+  listFormatFor,
   numberFormatFor,
   pluralRulesFor,
   selectPlural,
@@ -25,6 +26,12 @@ const PLAIN = "nz";
  * category that only two of the three tags report. One value proves both.
  */
 const LARGE = 1234567;
+
+/**
+ * Three values, because the separator before the last one is the part a tag
+ * decides and a two-item list never shows.
+ */
+const MANY = ["Drama", "Comedy", "Western"];
 
 describe("collatorFor", () => {
   it("hands back the identical instance for a repeated tag", () => {
@@ -88,6 +95,31 @@ describe("pluralRulesFor", () => {
     expect(
       pluralRulesFor("es-ES").resolvedOptions().pluralCategories.toSorted(),
     ).toEqual(["many", "one", "other"]);
+  });
+});
+
+describe("listFormatFor", () => {
+  it("hands back the identical instance for a repeated tag", () => {
+    expect(listFormatFor("en-US")).toBe(listFormatFor("en-US"));
+  });
+
+  it("hands back a different instance for a different tag", () => {
+    expect(listFormatFor("en-US")).not.toBe(listFormatFor("es-ES"));
+  });
+
+  // Computed rather than typed, for the same reason the grouping case is: the
+  // conjunction and the serial comma differ by tag and a typed expectation
+  // would be asserting this file's own idea of Spanish.
+  it("joins by the tag it was asked for", () => {
+    for (const tag of ["en-US", "es-ES", "fr-FR"]) {
+      expect(listFormatFor(tag).format(MANY)).toBe(
+        new Intl.ListFormat(tag).format(MANY),
+      );
+    }
+
+    expect(listFormatFor("es-ES").format(MANY)).not.toBe(
+      listFormatFor("en-US").format(MANY),
+    );
   });
 });
 
