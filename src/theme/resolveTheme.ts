@@ -18,8 +18,9 @@ export const PREFERS_DARK_QUERY = "(prefers-color-scheme: dark)";
 
 /**
  * Turns a choice plus the system preference into the theme the document element
- * carries; the attribute is never "system". Written a second time as a literal
- * in index.html's inline script, and the parity guard holds the two together.
+ * carries; the attribute is never "system". Written again as a literal in the
+ * inline script of every shell, and the parity guard holds all the copies
+ * together.
  */
 export function resolveTheme(
   choice: ThemeChoice,

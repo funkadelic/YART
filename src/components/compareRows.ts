@@ -9,11 +9,14 @@ function isBlank(value: unknown): boolean {
 const TYPE_RANK = { number: 0, string: 1, other: 2 } as const;
 
 /**
- * Places a value in the ordering above. The `other` rank is reached routinely,
- * because a row type carrying array fields lands here on every one of them, and
- * an array compares by `String(array)` unless the column supplies a comparator
- * of its own. An empty array is not blank by the test above, so a column that
- * leaves this to the default sorts its empty lists among the letters.
+ * Places a value in the ordering above.
+ *
+ * No shipped column reaches the `other` rank today: every column whose field is
+ * neither a number nor a string supplies its own comparator. A column that did
+ * not would land here, and an array would then compare by `String(array)`, which
+ * is not the order any reader expects. An empty array is not blank by the test
+ * above either, so such a column would sort its empty lists among the letters
+ * instead of last. The arm stays for that case and is covered directly.
  */
 function rank(value: unknown): number {
   if (typeof value === "number") return TYPE_RANK.number;

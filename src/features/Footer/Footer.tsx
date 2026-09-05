@@ -35,9 +35,9 @@ const LINK_URLS = new Map<string, string>([
 ]);
 
 // Escaped on the way in, because the keys are prose and the dots in "CC BY 4.0"
-// and "simplemaps.com" are wildcards unless quoted. Harmless over today's four,
-// and a future source name carrying a parenthesis or a plus throws here, where
-// a reader can connect the failure to the name that caused it.
+// and "simplemaps.com" are wildcards unless quoted. Unescaped, a future source
+// name carrying a parenthesis or a plus would either throw here or split the
+// sentence somewhere the catalog never put a boundary.
 const escapeForPattern = (name: string) =>
   name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 

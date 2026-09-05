@@ -64,8 +64,8 @@ function primarySubtag(tag: string): string {
 
 /**
  * Turns a choice plus a preference list into a resolved locale, always one of
- * four module constants, so identity is stable. Written a second time as a
- * literal in index.html's inline script; the parity guard holds the two.
+ * four module constants, so identity is stable. Written again as a literal in
+ * the inline script of every shell; the parity guard holds all the copies.
  */
 export function resolveLocale(
   choice: LocaleChoice,
