@@ -100,7 +100,20 @@ function parseFilmRows(rows: unknown[]): Film[] {
 
     // The runtime is taken as published. A fractional one is real and rounding
     // it here would be data loss no reader could see.
-    return { id, title, year, runtime, directors, genres, countries };
+    //
+    // The multi-valued fields are sorted here because the query groups them and
+    // SPARQL promises no order within a group, so the asset's order is arbitrary
+    // and a regeneration may permute it. Sorting once at the boundary is what
+    // makes both the cell text and the column's order reproducible.
+    return {
+      id,
+      title,
+      year,
+      runtime,
+      directors: [...directors].sort(),
+      genres: [...genres].sort(),
+      countries: [...countries].sort(),
+    };
   });
 }
 

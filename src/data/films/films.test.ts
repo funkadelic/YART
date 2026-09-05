@@ -267,6 +267,35 @@ describe("loadFilms values", () => {
     expect(unreleased.runtime).toBeNull();
   });
 
+  // The query groups the multi-valued properties and SPARQL promises no order
+  // within a group, so the asset's order is arbitrary and a regeneration may
+  // permute it. Sorting at the boundary is what keeps both the cell text and
+  // the column's order reproducible, and it is invisible from a rendered cell.
+  it("sorts every multi-valued field, whatever order the asset holds", async () => {
+    const scrambled = {
+      ...FILM_FIXTURE_ENVELOPE,
+      rows: [
+        [
+          "Q1",
+          "A Film",
+          2000,
+          100,
+          ["Zoe", "Adil"],
+          ["war", "epic"],
+          ["Peru", "Chad"],
+        ],
+      ],
+    };
+    stubDatasetFetch(scrambled);
+    const loadFilms = await freshLoadFilms();
+
+    const [row] = await loadFilms();
+
+    expect(row?.directors).toEqual(["Adil", "Zoe"]);
+    expect(row?.genres).toEqual(["epic", "war"]);
+    expect(row?.countries).toEqual(["Chad", "Peru"]);
+  });
+
   // The two ends of the range the committed asset actually spans, so a check
   // that ever grew a plausible-year rule would have to be written against the
   // real data rather than against a guess at it.
