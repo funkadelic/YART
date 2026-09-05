@@ -38,6 +38,8 @@ import { join } from "node:path";
 import { build } from "vite";
 import { expect, it } from "vitest";
 
+import { required } from "./test/required";
+
 // Resolved from this file's own location rather than from the working directory,
 // which is wherever the runner happened to be invoked and is not the project root
 // under an IDE runner or an explicit root argument.
@@ -49,9 +51,15 @@ const projectRoot = join(here.dirname, "..");
 // so a value import of either dataset is caught.
 const SENTINELS = ["Guangzhou", "Eraserhead"];
 
-// The shells the site ships, one per page. Each carries its own preload and its
-// own policy, and neither is asserted by the other.
+// The shells the site ships, one per page, each paired with the dataset its own
+// entry imports. The pairing is the claim: asserting only that the two shells
+// preload different assets passes a build that swapped them, which is the same
+// wrong-page request as preloading nothing.
 const SHELLS = ["index.html", "movies.html"];
+const SHELL_DATASET: Readonly<Record<string, string>> = {
+  "index.html": "cities",
+  "movies.html": "films",
+};
 
 // The build tool's own chunk-size warning threshold: a little over twice the real
 // chunk, and roughly a seventh of what a re-bundled regression produces, so it sits
@@ -166,6 +174,19 @@ it(
           preload ?? "",
           `${shell} preloads without crossorigin, so the dataset downloads twice`,
         ).toContain("crossorigin");
+
+        // Which asset, not merely some asset. The set comparison below catches
+        // two shells naming one file; only this catches the two names being
+        // swapped, which serves every reader of both pages the wrong dataset.
+        const expected = required(
+          SHELL_DATASET[shell],
+          `a declared dataset for ${shell}`,
+        );
+
+        expect(
+          named,
+          `${shell} preloads ${named ?? "nothing"} rather than its own ${expected} asset`,
+        ).toMatch(new RegExp(`^${expected}-`));
 
         preloaded.push(named ?? "");
 

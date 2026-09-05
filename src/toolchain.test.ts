@@ -1944,4 +1944,116 @@ describe("the plugin rule sets the lint gate claims to run", () => {
       "rules of the React recommended set are not on",
     ).toEqual([]);
   });
+
+  // The other three sets the gate spreads. Held the same way and for the same
+  // reason: a green lint run proves no file violates an active rule and says
+  // nothing at all about a rule that quietly stopped being active.
+  // The specifiers are variables rather than literals because one of the two
+  // plugins ships no type declarations, and a literal specifier would make that
+  // a typecheck failure here while eslint.config.js, being JavaScript, imports
+  // it happily.
+  const rulesOf = async (
+    specifier: string,
+    at: (module: Record<string, unknown>) => unknown,
+  ): Promise<Record<string, unknown>> => {
+    const loaded = (await import(specifier)) as { default?: unknown };
+    const plugin = (loaded.default ?? loaded) as Record<string, unknown>;
+    return (at(plugin) ?? {}) as Record<string, unknown>;
+  };
+
+  const path = (plugin: Record<string, unknown>, ...keys: string[]): unknown =>
+    keys.reduce<unknown>(
+      (node, key) => (node as Record<string, unknown> | undefined)?.[key],
+      plugin,
+    );
+
+  it.each([
+    [
+      "the React Hooks",
+      () =>
+        rulesOf("eslint-plugin-react-hooks", (plugin) =>
+          path(plugin, "configs", "flat", "recommended", "rules"),
+        ),
+      2,
+    ],
+    [
+      "the JSX accessibility",
+      () =>
+        rulesOf("eslint-plugin-jsx-a11y", (plugin) =>
+          path(plugin, "flatConfigs", "recommended", "rules"),
+        ),
+      10,
+    ],
+  ])(
+    "has every rule of %s recommended set active",
+    async (_name, load, floor) => {
+      const { ESLint } = await import("eslint");
+
+      const target = join(
+        projectRoot,
+        "src/components/DataTable/TableHead.tsx",
+      );
+      expect(existsSync(target), "the guard's sample file moved").toBe(true);
+
+      const resolved: unknown = await new ESLint({
+        cwd: projectRoot,
+      }).calculateConfigForFile(target);
+      const active =
+        (resolved as { rules?: Record<string, unknown> }).rules ?? {};
+
+      const enabled = Object.entries((await load()) ?? {})
+        .filter(([, entry]) => !isOff(entry))
+        .map(([name]) => name);
+
+      // A floor rather than an exact count, so an upstream set that grows does
+      // not fail the gate, while an empty one cannot pass it vacuously.
+      expect(enabled.length, "the set resolved empty").toBeGreaterThanOrEqual(
+        floor,
+      );
+
+      expect(
+        enabled.filter((name) => isOff(active[name])),
+        "rules of the set are not on",
+      ).toEqual([]);
+    },
+  );
+
+  it("has the stylelint standard-scss set active over a component stylesheet", async () => {
+    const stylelint = (await import("stylelint")).default;
+
+    const target = join(
+      projectRoot,
+      "src/components/DataTable/DataTable.module.scss",
+    );
+    expect(existsSync(target), "the guard's sample file moved").toBe(true);
+
+    const resolved = await stylelint.resolveConfig(target);
+    const rules = resolved?.rules ?? {};
+
+    // One rule the shared set brings and this repo's own file never declares,
+    // so its presence can only come from the extends line still being honored.
+    expect(
+      Object.keys(rules),
+      "the standard-scss set is not reaching component stylesheets",
+    ).toContain("scss/at-rule-no-unknown");
+    expect(
+      Object.keys(rules).length,
+      "the resolved stylelint rule set is implausibly small",
+    ).toBeGreaterThan(20);
+  });
+});
+
+describe("the coverage gate the pipeline rests on", () => {
+  // The exclude list beside it already has a guard. The threshold did not, and
+  // it is the half that decides whether a drop fails the build or is written
+  // into a log nobody reads. Asserted as the shorthand rather than as four
+  // numbers, because the shorthand is what makes it total over the metrics.
+  it("still asks for a hundred on every metric", () => {
+    const source = readFileSync(join(projectRoot, "vite.config.ts"), "utf8");
+
+    expect(
+      source,
+      "the coverage threshold is no longer the total shorthand",
+    ).toMatch(/thresholds:\s*\{\s*100:\s*true\s*\}/);
+  });
 });
