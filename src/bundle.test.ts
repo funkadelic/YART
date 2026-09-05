@@ -44,9 +44,14 @@ import { expect, it } from "vitest";
 const here = import.meta as ImportMeta & { dirname: string };
 const projectRoot = join(here.dirname, "..");
 
-// Present in the dataset, and unlike Tokyo or Paris unlikely to appear in a
-// fixture, a comment, or a dependency.
-const SENTINEL_CITY = "Guangzhou";
+// One value from each dataset, each unlike Tokyo or Paris unlikely to appear in
+// a fixture, a comment, or a dependency. Both are checked against every chunk,
+// so a value import of either dataset is caught.
+const SENTINELS = ["Guangzhou", "Eraserhead"];
+
+// The shells the site ships, one per page. Each carries its own preload and its
+// own policy, and neither is asserted by the other.
+const SHELLS = ["index.html", "movies.html"];
 
 // The build tool's own chunk-size warning threshold: a little over twice the real
 // chunk, and roughly a seventh of what a re-bundled regression produces, so it sits
@@ -56,20 +61,24 @@ const SENTINEL_CITY = "Guangzhou";
 // being a gate.
 const JS_CHUNK_SIZE_CEILING_BYTES = 512000;
 
-// The emitted dataset carries a content hash in its name. That is what makes a
+// Each emitted dataset carries a content hash in its name. That is what makes a
 // corrected dataset reach a returning visitor rather than their cache.
+//
+// Both names are spelled out rather than dropped from the pattern: the pattern's
+// job is to prove a hash is present, and one matching any JSON at all would pass
+// for an asset emitted without one.
 //
 // e2e/dataset.spec.ts holds the same claim from the transport side, restating
 // this pattern rather than importing it: this file owns the emitted artifact,
 // that one owns what the running page actually pulled over the wire.
-const HASHED_JSON_ASSET = /^cities-[A-Za-z0-9_-]{6,}\.json$/;
+const HASHED_JSON_ASSET = /^(?:cities|films)-[A-Za-z0-9_-]{6,}\.json$/;
 
 // The build takes under a second warm. The generous allowance covers a cold
 // runner plus a dependency optimize pass.
 const BUILD_TIMEOUT_MS = 60000;
 
 it(
-  "emits no city data in any JavaScript chunk",
+  "emits no dataset rows in any JavaScript chunk",
   async () => {
     // Built into a temporary directory rather than the default output path, so a
     // developer running the suite does not have their own build output replaced
@@ -95,10 +104,13 @@ it(
       ).toBeGreaterThan(0);
 
       for (const chunk of chunks) {
-        expect(
-          readFileSync(join(assets, chunk), "utf8"),
-          `${chunk} carries city data`,
-        ).not.toContain(SENTINEL_CITY);
+        const compiled = readFileSync(join(assets, chunk), "utf8");
+
+        for (const sentinel of SENTINELS) {
+          expect(compiled, `${chunk} carries dataset rows`).not.toContain(
+            sentinel,
+          );
+        }
 
         expect(
           statSync(join(assets, chunk)).size,
@@ -113,71 +125,99 @@ it(
         "the two datasets were not emitted exactly once each",
       ).toHaveLength(2);
 
-      const cities = datasets.find((name) => HASHED_JSON_ASSET.test(name));
-
-      expect(
-        cities,
-        `${datasets.join(", ")} carries no content-hashed city dataset, so a corrected dataset would keep the same URL`,
-      ).toBeDefined();
-
-      // The shell names the emitted dataset so the preload scanner can start
-      // the largest request on the page before the entry chunk has parsed. It
-      // has to name the file exactly: a preload for a name that is not there
-      // costs a request and still leaves the real fetch to make, and one
-      // without crossorigin is not reusable by that fetch, so the dataset
-      // arrives twice. Both failures are silent in a browser and neither is
-      // visible in the source, since the name only exists once the bundle does.
-      const preload = /<link[^>]*rel="preload"[^>]*>/.exec(
-        readFileSync(join(outDir, "index.html"), "utf8"),
-      )?.[0];
-
-      expect(
-        preload,
-        "the built shell carries no dataset preload",
-      ).toBeDefined();
-      expect(
-        preload ?? "",
-        "the preload does not name the emitted dataset",
-      ).toContain(`assets/${cities ?? ""}`);
-      expect(
-        preload ?? "",
-        "the preload carries no crossorigin, so the dataset downloads twice",
-      ).toContain("crossorigin");
-
-      // The policy names the inline theme script by hash, and a hash taken over
-      // anything but the script the shell ships silently drops it: the browser
-      // reports a refusal nobody reads, the theme lands after first paint, and
-      // the page still works. Recomputed here from the built shell rather than
-      // trusted, so a transform that touches the script after the hash is taken
-      // fails this rather than the reader's first frame.
-      const shell = readFileSync(join(outDir, "index.html"), "utf8");
-      const policy =
-        /<meta[^>]*http-equiv="Content-Security-Policy"[^>]*>/.exec(shell)?.[0];
-
-      expect(policy, "the built shell carries no policy").toBeDefined();
-
-      const inline = [
-        ...shell.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g),
+      // Compared as a set rather than by position: chunk emission order is not
+      // a property this file should depend on, and two names collapsing into
+      // one is exactly the regression the cross-shell assertion below rests on.
+      const hashed = [
+        ...new Set(datasets.filter((name) => HASHED_JSON_ASSET.test(name))),
       ];
 
-      expect(inline, "the built shell has no inline script").toHaveLength(1);
-
-      const script = inline[0]?.[1] ?? "";
-
-      expect(script, "the inline script is empty").not.toBe("");
       expect(
-        policy ?? "",
-        "the policy does not name the inline script this shell carries",
-      ).toContain(
-        `sha256-${createHash("sha256").update(script, "utf8").digest("base64")}`,
-      );
+        hashed,
+        `${datasets.join(", ")} is not two distinct content-hashed dataset assets, so a corrected dataset would keep the same URL`,
+      ).toHaveLength(2);
 
-      // A policy delivered this way governs only what follows it, so one placed
-      // after the script it names is a policy the script never sees.
+      const preloaded: string[] = [];
+
+      for (const shell of SHELLS) {
+        const markup = readFileSync(join(outDir, shell), "utf8");
+
+        // The shell names the emitted dataset so the preload scanner can start
+        // the largest request on the page before the entry chunk has parsed. It
+        // has to name the file exactly: a preload for a name that is not there
+        // costs a request and still leaves the real fetch to make, and one
+        // without crossorigin is not reusable by that fetch, so the dataset
+        // arrives twice. Both failures are silent in a browser and neither is
+        // visible in the source, since the name only exists once the bundle
+        // does.
+        const preload = /<link[^>]*rel="preload"[^>]*>/.exec(markup)?.[0];
+
+        expect(preload, `${shell} carries no dataset preload`).toBeDefined();
+
+        const named = hashed.find((name) =>
+          (preload ?? "").includes(`assets/${name}`),
+        );
+
+        expect(
+          named,
+          `${shell} preloads no asset this build emitted`,
+        ).toBeDefined();
+        expect(
+          preload ?? "",
+          `${shell} preloads without crossorigin, so the dataset downloads twice`,
+        ).toContain("crossorigin");
+
+        preloaded.push(named ?? "");
+
+        // The policy names the inline theme script by hash, and a hash taken
+        // over anything but the script the shell ships silently drops it: the
+        // browser reports a refusal nobody reads, the theme lands after first
+        // paint, and the page still works. Recomputed here from each built
+        // shell's own script rather than trusted from the plugin, so a
+        // transform touching the script after the hash is taken fails this
+        // rather than the reader's first frame.
+        const policy =
+          /<meta[^>]*http-equiv="Content-Security-Policy"[^>]*>/.exec(
+            markup,
+          )?.[0];
+
+        expect(policy, `${shell} carries no policy`).toBeDefined();
+
+        const inline = [
+          ...markup.matchAll(
+            /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g,
+          ),
+        ];
+
+        expect(inline, `${shell} has no inline script`).toHaveLength(1);
+
+        const script = inline[0]?.[1] ?? "";
+
+        expect(script, `${shell} carries an empty inline script`).not.toBe("");
+        expect(
+          policy ?? "",
+          `the policy in ${shell} does not name the inline script it carries`,
+        ).toContain(
+          `sha256-${createHash("sha256").update(script, "utf8").digest("base64")}`,
+        );
+
+        // A policy delivered this way governs only what follows it, so one
+        // placed after the script it names is a policy the script never sees.
+        expect(
+          markup.indexOf("Content-Security-Policy"),
+          `the policy in ${shell} is declared after the script it names`,
+        ).toBeLessThan(markup.indexOf("<script"));
+      }
+
+      // The test half of the entry-aware preload. Each shell above resolves its
+      // preload against the build output, which a shell naming the other page's
+      // asset would still pass; only comparing the two catches that, and it is
+      // the failure a whole-bundle lookup produces with nothing else reporting
+      // it.
       expect(
-        shell.indexOf("Content-Security-Policy"),
-        "the policy is declared after the script it names",
-      ).toBeLessThan(shell.indexOf("<script"));
+        [...new Set(preloaded)],
+        `the shells preload ${preloaded.join(", ")}, so an entry did not get its own asset`,
+      ).toHaveLength(SHELLS.length);
     } finally {
       // Assigning undefined would store the string "undefined" rather than
       // clearing the variable, so an absent NODE_ENV has to be deleted.
