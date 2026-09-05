@@ -55,6 +55,7 @@
     "dev": "vite",
     "build": "vite build",
     "generate:cities": "node scripts/generate-cities.mjs",
+    "generate:films": "node scripts/generate-films.mjs",
     "preview": "vite preview",
     "lint": "eslint . --max-warnings 0 && stylelint \"src/**/*.{css,scss}\"",
     "lint:fix": "eslint src e2e --fix && stylelint \"src/**/*.{css,scss}\" --fix",
