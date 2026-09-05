@@ -10,6 +10,7 @@ const collators = new Map<string, Intl.Collator>();
 const numberFormats = new Map<string, Intl.NumberFormat>();
 const pluralRules = new Map<string, Intl.PluralRules>();
 const listFormats = new Map<string, Intl.ListFormat>();
+const durationFormats = new Map<string, Intl.NumberFormat>();
 
 /** The one lookup the four below share. Absence, not truthiness. */
 function cached<T>(
@@ -48,6 +49,25 @@ export function pluralRulesFor(tag: string): Intl.PluralRules {
  */
 export function listFormatFor(tag: string): Intl.ListFormat {
   return cached(listFormats, tag, (forTag) => new Intl.ListFormat(forTag));
+}
+
+/**
+ * Minutes, with the unit the language writes them in. A runtime rendered as a
+ * bare number leaves the reader to guess between minutes, seconds and hours,
+ * and the platform already carries the word, so this costs no catalog entry
+ * and no translation.
+ */
+export function durationFormatFor(tag: string): Intl.NumberFormat {
+  return cached(
+    durationFormats,
+    tag,
+    (forTag) =>
+      new Intl.NumberFormat(forTag, {
+        style: "unit",
+        unit: "minute",
+        unitDisplay: "short",
+      }),
+  );
 }
 
 /** Over the categories the tag reports, not a singular-or-other pair. */
