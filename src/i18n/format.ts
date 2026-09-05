@@ -12,7 +12,7 @@ const pluralRules = new Map<string, Intl.PluralRules>();
 const listFormats = new Map<string, Intl.ListFormat>();
 const durationFormats = new Map<string, Intl.NumberFormat>();
 
-/** The one lookup the four below share. Absence, not truthiness. */
+/** The one lookup every builder below shares. Absence, not truthiness. */
 function cached<T>(
   cache: Map<string, T>,
   tag: string,
