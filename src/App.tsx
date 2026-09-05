@@ -1,6 +1,6 @@
 import { useEffect, useCallback, useReducer, useState } from "react";
 
-import { DatasetError, getCities } from "./api/getCities";
+import { DatasetError, getCities, type City } from "./api/getCities";
 import { INITIAL_APP_STATE, applyAppAction } from "./appState";
 import { useLocale } from "./hooks/useLocale";
 import { datasetErrorText } from "./i18n/datasetErrorText";
@@ -14,8 +14,10 @@ const App = () => {
   const [searchTerm, setSearchTerm] = useState(() =>
     parseSearchTerm(window.location.search),
   );
-  const [{ cities, error, loading, datasetReady, retryAttempt }, dispatch] =
-    useReducer(applyAppAction, INITIAL_APP_STATE);
+  // The row type is supplied here rather than inferred, because the initial
+  // state is typed over no row and would otherwise pin the reducer to that.
+  const [{ rows, error, loading, datasetReady, retryAttempt }, dispatch] =
+    useReducer(applyAppAction<City>, INITIAL_APP_STATE);
   const { catalog, tag } = useLocale();
 
   useEffect(() => {
@@ -30,7 +32,7 @@ const App = () => {
     getCities({ searchTerm })
       .then((searchResult) => {
         if (ignore) return;
-        dispatch({ type: "resolved", cities: searchResult });
+        dispatch({ type: "resolved", rows: searchResult });
       })
       .catch((err: unknown) => {
         if (ignore) return;
@@ -80,7 +82,7 @@ const App = () => {
     <RootLayout>
       <h1>{catalog.appTitle}</h1>
       <CityTable
-        data={cities}
+        data={rows}
         onSearchChange={handleSearchChange}
         loading={loading}
         datasetReady={datasetReady}
