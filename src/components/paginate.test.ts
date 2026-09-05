@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import { paginate } from "./paginate";
 
-// Plain rows declared here rather than imported from a fixture: the module is
-// generic over its row type and nothing about paging reads a field, so a
-// domain row would only add noise to the expectations.
+// Plain rows declared here, because the module is generic over its row type and
+// nothing about paging reads a field. A fixture row from the domain would only
+// add noise to the expectations.
 const ROWS = ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k"];
 
 const PAGE_SIZE = 4;
@@ -47,7 +47,7 @@ describe("paginate", () => {
   it("restores an out-of-range position once the collection grows back under it", () => {
     // The clamp is a read, not a write. Nothing here hands the caller a
     // corrected page to store, so the same position against a wider collection
-    // is the page the user was on rather than the page a narrowed set allowed.
+    // gives back the page the user was on; the narrowing only clamped the read.
     const page = 3;
     const narrowed = paginate(ROWS.slice(0, 2), page, PAGE_SIZE);
     const widened = paginate(ROWS, page, PAGE_SIZE);

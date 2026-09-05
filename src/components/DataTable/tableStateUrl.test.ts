@@ -7,9 +7,9 @@ import {
   serializeTableState,
 } from "./tableStateUrl";
 
-// A made-up pair of ids rather than the city columns: the module takes the
-// valid ids as an argument precisely so it never learns what a row is, and
-// borrowing a real column id here would quietly suggest otherwise.
+// A made-up pair of ids, because the module takes the valid ids as an argument
+// precisely so it never learns what a row is. Borrowing a real column id here
+// would quietly suggest otherwise.
 type WidgetColumnId = "name" | "size";
 
 const WIDGET_COLUMN_IDS: readonly WidgetColumnId[] = ["name", "size"];
@@ -19,8 +19,8 @@ const stateWith = (
 ): TableState<WidgetColumnId> => ({ ...DEFAULT_TABLE_STATE, ...fields });
 
 // Every value here has to be rejected without a corrected one taking its place,
-// because an omitted field is what makes the caller's spread over the defaults
-// the only fallback anywhere in the round trip.
+// because an omitted field leaves the caller's spread over the defaults as the
+// only fallback anywhere in the round trip.
 const REJECTED_PAGES: ReadonlyArray<readonly [string, string]> = [
   ["a word", "?page=abc"],
   ["zero", "?page=0"],
@@ -32,7 +32,7 @@ const REJECTED_PAGES: ReadonlyArray<readonly [string, string]> = [
 ];
 
 // A signed token that does not name a column of the supplied set, which is the
-// only rule the sort parameter has: there is no separate direction to reject,
+// only rule the sort parameter has. There is no separate direction to reject,
 // because the direction cannot be stated without a column to attach it to.
 const REJECTED_SORTS: ReadonlyArray<readonly [string, string]> = [
   ["a column that does not exist", "?sort=nope"],
@@ -67,8 +67,8 @@ describe("parseTableState", () => {
   });
 
   // The term is the one owned key with no rule to fail, so a stated empty term
-  // is read rather than rejected. It happens to be the default, which is why
-  // the view a reader sees is the same either way.
+  // is read and not rejected. It happens to be the default, so the view a
+  // reader sees is the same either way.
   it("reads a stated empty term as the empty term, which is also the default", () => {
     const restored = parseTableState("?q=", WIDGET_COLUMN_IDS);
 
@@ -163,10 +163,9 @@ describe("parseTableState", () => {
     });
   });
 
-  // The whole hostile query from the roadmap, which is the point of the total
-  // parse: every parameter fails on its own terms and none of them takes any
-  // other one down with it, so the reader gets the default view rather than a
-  // broken one.
+  // The whole hostile query at once, which is the point of the total parse.
+  // Every parameter fails on its own terms and none of them takes any other one
+  // down with it, so the reader gets the default view and not a broken one.
   it("falls back on every parameter of a hostile query at once, and builds a plain object doing it", () => {
     const restored = parseTableState(
       "?page=abc&size=1e9&sort=__proto__&dir=sideways",
@@ -250,7 +249,7 @@ describe("serializeTableState", () => {
     });
   });
 
-  // Canonical order is the schema table's own order, which is what makes two
+  // Canonical order is the schema table's own order, which makes two
   // equivalent views produce one string. An order that followed the incoming
   // query would make the output a function of the input and there would be no
   // canonical form to compare against.
@@ -278,9 +277,9 @@ describe("serializeTableState", () => {
     ).toBe("?page=3&utm_source=x&dir=sideways");
   });
 
-  // Under one signed sort token there is no direction key to own, so the
-  // roadmap's own `dir=sideways` is an unknown parameter rather than an invalid
-  // one. Its survival is the preservation rule working, not a validation miss.
+  // Under one signed sort token there is no direction key to own, so
+  // `dir=sideways` is an unknown parameter and not an invalid one. Its survival
+  // is the preservation rule working, not a validation miss.
   it("preserves the unrecognized direction key from the hostile query", () => {
     expect(
       serializeTableState(
@@ -412,8 +411,8 @@ describe("the round trip for a column id that begins with the prefix", () => {
   }
 
   // The exact match is tried first, so an id that exists as written wins over
-  // the id the prefix would produce from it. Nothing else could: one token
-  // carrying both the column and the direction cannot tell the two apart.
+  // the id the prefix would produce from it. Nothing else could, since one
+  // token carrying both the column and the direction cannot tell the two apart.
   it("reads a token naming a real id as that id rather than as a sign on another", () => {
     expect(parseTableState("?sort=-rank", PREFIXED_COLUMN_IDS)).toEqual({
       sortColumnId: "-rank",
@@ -436,8 +435,7 @@ describe("parseSearchTerm", () => {
   });
 
   // Same schema, so the term is decoded the same way whichever entry point
-  // reads it. A second decoding rule living here is the drift this narrow
-  // entry point exists to avoid.
+  // reads it. A second decoding rule living here would drift from the first.
   it("decodes a term exactly as the four-key reader does", () => {
     expect(parseSearchTerm("?q=a%26b%3Dc%23d")).toBe("a&b=c#d");
     expect(parseSearchTerm("?q=new+york")).toBe("new york");

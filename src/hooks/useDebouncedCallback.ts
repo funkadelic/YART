@@ -14,8 +14,8 @@ export function useDebouncedCallback<A extends unknown[]>(
   const pending = useRef<ReturnType<typeof setTimeout>>(undefined);
   const latest = useRef(callback);
 
-  // Written after the render commits rather than during it, so a render React
-  // discards cannot leave this pointing at a callback that never took effect.
+  // Written after the render commits, so a render React discards cannot leave
+  // this pointing at a callback that never took effect.
   useEffect(() => {
     latest.current = callback;
   });
@@ -31,8 +31,8 @@ export function useDebouncedCallback<A extends unknown[]>(
     (...args: A) => {
       clearTimeout(pending.current);
       pending.current = setTimeout(() => {
-        // Dropped as it fires: a handle the platform has already retired must
-        // not be clearable a second time.
+        // Dropped as it fires, because a handle the platform has already
+        // retired must not be clearable a second time.
         pending.current = undefined;
         latest.current(...args);
       }, delay);
@@ -40,8 +40,8 @@ export function useDebouncedCallback<A extends unknown[]>(
     [delay],
   );
 
-  // The handle is dropped as well as cleared, so a second cancel clears nothing
-  // rather than an identifier the platform has since reissued.
+  // The handle is dropped as well as cleared, so a second cancel has nothing to
+  // clear and cannot reach an identifier the platform has since reissued.
   const cancel = useCallback(() => {
     clearTimeout(pending.current);
     pending.current = undefined;

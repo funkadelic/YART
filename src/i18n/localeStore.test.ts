@@ -12,12 +12,11 @@ import { LOCALE_STORAGE_KEY } from "./resolveLocale";
  * Runs a case with one subscriber registered, and unregisters it however the
  * case ends.
  *
- * Every case goes through here rather than reading the store cold, because the
- * store is a module singleton and the file is one module instance: the choice
- * one case leaves behind would otherwise be the state the next case starts
- * from. Subscribing is what re-reads the store, so a case that seeds storage
- * first sees what it seeded. The finally is what stops a failing case from
- * leaving a listener behind for the case after it.
+ * Every case goes through here because the store is a module singleton and the
+ * file is one module instance, so the choice one case leaves behind would be the
+ * state the next case starts from. Subscribing re-reads the store, so a case
+ * that seeds storage first sees what it seeded. The finally stops a failing case
+ * from leaving a listener behind for the case after it.
  */
 function withSubscriber<T>(run: (notifications: () => number) => T): T {
   let notifications = 0;
@@ -33,8 +32,8 @@ function withSubscriber<T>(run: (notifications: () => number) => T): T {
 }
 
 /**
- * Makes the store hostile for one case. The property access is what throws when
- * site data is blocked, so this is the shape the guard has to survive.
+ * Makes the store hostile for one case. The property access throws when site
+ * data is blocked, so this is the shape the guard has to survive.
  */
 function breakStorage(method: "getItem" | "setItem" | "removeItem"): void {
   vi.spyOn(Storage.prototype, method).mockImplementation(() => {
@@ -167,9 +166,9 @@ describe("the locale store", () => {
   });
 
   describe("the subscribers", () => {
-    // The whole reason this is a store rather than a copy of the theme hook:
-    // the picker in the header and the table below it both read it, and both
-    // have to be told at once or the two disagree about what the page is in.
+    // The picker in the header and the table below it both read the locale, and
+    // both have to be told at once or the two disagree about what the page is
+    // in. That is why this is a store and not a copy of the theme hook.
     it("notifies every subscriber registered at once", () => {
       withSubscriber((first) => {
         withSubscriber((second) => {
@@ -204,7 +203,8 @@ describe("the locale store", () => {
 
       withSubscriber(() => {
         withSubscriber(() => {
-          // Nothing yet: one reader is leaving and one is staying.
+          // One reader is leaving and one is staying, so nothing is removed
+          // yet.
         });
 
         expect(removed).not.toHaveBeenCalled();

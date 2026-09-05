@@ -11,9 +11,9 @@ import {
 
 describe("resolveLocale", () => {
   describe("an explicit choice", () => {
-    // Written out rather than generated. Four catalogs against three fields is
-    // shorter as a table than as the loop that would build it, and the table is
-    // the only place the whole mapping is visible in one glance.
+    // Four catalogs against three fields is shorter written out as a table than
+    // as the loop that would build it, and the table is the only place the whole
+    // mapping is visible in one glance.
     it.each([
       ["en", "en-US", "ltr"],
       ["es", "es-ES", "ltr"],
@@ -57,8 +57,8 @@ describe("resolveLocale", () => {
     });
 
     // The pseudo-locale's primary subtag is ar, and a reader who genuinely
-    // prefers Arabic must not be handed a catalog of bracketed English. It is
-    // reachable the only way it should be, by being chosen.
+    // prefers Arabic must not be handed a catalog of bracketed English. It
+    // stays reachable by being chosen.
     it("never negotiates the pseudo-locale", () => {
       expect(resolveLocale("system", ["ar-SA", "ar"]).catalog).toBe("en");
     });

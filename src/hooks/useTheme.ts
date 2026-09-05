@@ -40,7 +40,7 @@ function readPrefersDark(): boolean {
   return window.matchMedia(PREFERS_DARK_QUERY).matches;
 }
 
-/** Through useSyncExternalStore, not an effect, which leaves a window. */
+/** Through useSyncExternalStore, because an effect leaves a window open. */
 function subscribePrefersDark(onStoreChange: () => void): () => void {
   if (!supportsMediaQueries()) {
     return () => {};
@@ -103,8 +103,8 @@ export function useTheme() {
 
     try {
       if (next === "system") {
-        // A delete, not the word: the default has one representation, the key
-        // not being there.
+        // The key is removed. The default has one representation, which is
+        // the key not being there.
         localStorage.removeItem(THEME_STORAGE_KEY);
       } else {
         localStorage.setItem(THEME_STORAGE_KEY, next);

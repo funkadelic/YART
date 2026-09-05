@@ -8,9 +8,9 @@ import {
   type ThemeChoice,
 } from "./resolveTheme";
 
-// All six combinations, written out rather than generated. The function has two
-// inputs and one of them has three values, so the exhaustive table is shorter
-// than the loop that would cover it and says plainly which case is which.
+// All six combinations. The function has two inputs and one of them has three
+// values, so the exhaustive table written out is shorter than the loop that
+// would cover it and says plainly which case is which.
 const CASES: Array<[ThemeChoice, boolean, string]> = [
   ["light", false, "light"],
   ["light", true, "light"],
@@ -28,9 +28,9 @@ describe("resolveTheme", () => {
   }
 
   // An explicit choice is the user overriding the operating system, so the
-  // preference must not reach the result at all. Asserted as its own property
-  // rather than left implied by the table above, because a resolver that ignored
-  // the choice for one value would still pass four of those six rows.
+  // preference must not reach the result at all. It gets its own assertion
+  // because a resolver that ignored the choice for one value would still pass
+  // four of the six rows above.
   it("ignores the system preference whenever the choice is explicit", () => {
     for (const choice of ["light", "dark"] as const) {
       expect(resolveTheme(choice, true)).toBe(resolveTheme(choice, false));
@@ -48,9 +48,9 @@ describe("theme constants", () => {
   });
 
   // The vocabulary the hook's stored-choice check and the parity guard both
-  // read. Pinned here so adding a fourth state, or dropping one, is a decision
-  // rather than a diff nobody noticed: the inline script accepts exactly the
-  // non-default members of this tuple and the guard holds it to that.
+  // read. Pinned here so adding a fourth state, or dropping one, has to be a
+  // deliberate edit. The inline script accepts exactly the non-default members
+  // of this tuple and the guard holds it to that.
   it("keeps the three states and their order", () => {
     expect(THEME_CHOICES).toEqual(["light", "dark", "system"]);
   });

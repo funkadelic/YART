@@ -2,7 +2,7 @@
 // selector can match. Everything the inline script in index.html duplicates by
 // hand is declared here.
 
-/** A value rather than a bare union, so the accepted set has one definition. */
+/** A tuple, so the accepted set has one definition the type is derived from. */
 export const THEME_CHOICES = ["light", "dark", "system"] as const;
 
 /** The literal union of the words above, formed with no assertion anywhere. */

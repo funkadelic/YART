@@ -14,10 +14,10 @@ type Commit = (term: string) => void;
 /**
  * Renders the hook over a recording callback, handing back the scheduler and
  * cancel of the latest render alongside the recorder, so a case can assert how
- * many times the call actually landed rather than only what it landed
- * with. No user input library is constructed in this file: the controlled
- * clock is deliberately isolated from the library that deadlocks against it,
- * so a failure here points at the timer setup and nothing else.
+ * many times the call actually landed and not only what it landed with. No
+ * user input library is constructed in this file, because the controlled clock
+ * is deliberately isolated from the library that deadlocks against it, so a
+ * failure here points at the timer setup and nothing else.
  */
 function renderDebouncedCallback(initialDelay: number = DELAY) {
   const commit = vi.fn<Commit>();
@@ -79,8 +79,9 @@ describe("useDebouncedCallback", () => {
         vi.advanceTimersByTime(DELAY - 50);
       }
 
-      // Nothing has landed yet: each call cleared the timer the previous one
-      // scheduled, so the pending timeout never reached its boundary.
+      // Nothing has landed yet, because each call cleared the timer the
+      // previous one scheduled and the pending timeout never reached its
+      // boundary.
       expect(commit).not.toHaveBeenCalled();
 
       vi.advanceTimersByTime(DELAY);
@@ -128,7 +129,7 @@ describe("useDebouncedCallback", () => {
     CASE_TIMEOUT_MS,
   );
 
-  // Unmount is not the only way a pending call stops being wanted: a caller
+  // A pending call stops being wanted for reasons other than unmount. A caller
   // that has just replaced the state the call was typed against needs to drop
   // it, and without this its only alternative is to let the stale value land on
   // top of the new one.
@@ -185,9 +186,9 @@ describe("useDebouncedCallback", () => {
 
         expect(clear).toHaveBeenCalledWith(undefined);
       } finally {
-        // Restored inside the case rather than left to the shared teardown,
-        // which runs after this file has put the real clock back and would
-        // therefore reinstall the controlled clock's own function.
+        // Restored inside the case, because the shared teardown runs after
+        // this file has put the real clock back and would therefore reinstall
+        // the controlled clock's own function.
         clear.mockRestore();
       }
 
@@ -215,9 +216,9 @@ describe("useDebouncedCallback", () => {
   );
 
   // The case the hook exists to make impossible to get wrong. A caller handing
-  // over a fresh callback on every render, which is what an inline arrow is,
-  // used to have its pending call run the closure of the render that scheduled
-  // it: the arguments were current and the implementation was not.
+  // over a fresh callback on every render, as an inline arrow does, used to have
+  // its pending call run the closure of the render that scheduled it, with
+  // current arguments and a stale implementation.
   it(
     "runs the callback of the latest render rather than the one current when the call was scheduled",
     () => {
@@ -245,13 +246,13 @@ describe("useDebouncedCallback", () => {
       expect(result.current.schedule).toBe(first);
 
       // Nothing about the callback reaches the memo, because the callback is
-      // read out of a ref at fire time rather than captured, so the identity
-      // the caller holds is one guarantee rather than an argument about how
-      // some component two layers up wrote its own memo.
+      // read out of a ref at fire time and never captured. The identity the
+      // caller holds is a guarantee, not an argument about how some component
+      // two layers up wrote its own memo.
       rerender({ callback: vi.fn<Commit>(), delay: DELAY });
       expect(result.current.schedule).toBe(first);
 
-      // The delay does reach it: a scheduling call has to be able to read the
+      // The delay does reach it, because a scheduling call has to read the
       // window the current render states.
       rerender({ callback: commit, delay: 400 });
       expect(result.current.schedule).not.toBe(first);
