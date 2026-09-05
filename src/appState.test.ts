@@ -14,19 +14,19 @@ const ROWS: City[] = CITY_FIXTURE.slice(0, 2);
 
 const FAILURE = new Error("The city service is unreachable");
 
-const attempted: AppState = {
+const attempted: AppState<City> = {
   ...INITIAL_APP_STATE,
   loading: true,
 };
 
-const failed: AppState = {
+const failed: AppState<City> = {
   ...attempted,
   error: FAILURE,
 };
 
-const resolved: AppState = {
+const resolved: AppState<City> = {
   ...attempted,
-  cities: ROWS,
+  rows: ROWS,
   datasetReady: true,
 };
 
@@ -48,22 +48,22 @@ describe("applyAppAction: starting an attempt", () => {
   it("leaves the rows that are already on screen alone", () => {
     const next = applyAppAction(resolved, { type: "attempt" });
 
-    expect(next.cities).toBe(ROWS);
+    expect(next.rows).toBe(ROWS);
   });
 });
 
 describe("applyAppAction: an attempt that resolves", () => {
   it("stores the rows and records that the collection has arrived", () => {
-    const next = applyAppAction(attempted, { type: "resolved", cities: ROWS });
+    const next = applyAppAction(attempted, { type: "resolved", rows: ROWS });
 
-    expect(next.cities).toBe(ROWS);
+    expect(next.rows).toBe(ROWS);
     expect(next.datasetReady).toBe(true);
   });
 
   it("keeps the arrival flag raised through a later attempt", () => {
     const arrived = applyAppAction(attempted, {
       type: "resolved",
-      cities: ROWS,
+      rows: ROWS,
     });
 
     expect(applyAppAction(arrived, { type: "attempt" }).datasetReady).toBe(
@@ -72,7 +72,7 @@ describe("applyAppAction: an attempt that resolves", () => {
   });
 
   it("clears an error it lands on top of", () => {
-    const next = applyAppAction(failed, { type: "resolved", cities: ROWS });
+    const next = applyAppAction(failed, { type: "resolved", rows: ROWS });
 
     expect(next.error).toBeNull();
   });
@@ -88,13 +88,13 @@ describe("applyAppAction: an attempt that fails", () => {
   it("leaves the rows and the arrival flag exactly as they were", () => {
     const next = applyAppAction(resolved, { type: "failed", error: FAILURE });
 
-    expect(next.cities).toBe(ROWS);
+    expect(next.rows).toBe(ROWS);
     expect(next.datasetReady).toBe(true);
   });
 });
 
 describe("applyAppAction: settling", () => {
-  const SETTLED_FROM: Array<[string, AppState]> = [
+  const SETTLED_FROM: Array<[string, AppState<City>]> = [
     ["resolved", resolved],
     ["failed", failed],
   ];
@@ -124,9 +124,9 @@ describe("applyAppAction: retrying", () => {
 });
 
 describe("applyAppAction: purity", () => {
-  const EVERY_ACTION: AppAction[] = [
+  const EVERY_ACTION: AppAction<City>[] = [
     { type: "attempt" },
-    { type: "resolved", cities: ROWS },
+    { type: "resolved", rows: ROWS },
     { type: "failed", error: FAILURE },
     { type: "settled" },
     { type: "retry" },
@@ -155,7 +155,7 @@ describe("applyAppAction: purity", () => {
 describe("INITIAL_APP_STATE", () => {
   it("holds no rows, no error, nothing in flight, nothing arrived, and no attempt made", () => {
     expect(INITIAL_APP_STATE).toEqual({
-      cities: [],
+      rows: [],
       error: null,
       loading: false,
       datasetReady: false,

@@ -1,11 +1,10 @@
-import type { City } from "./api/getCities";
-
 /**
  * Everything the container remembers about the collection it is fetching. One
- * object, because the effect moves several of these together.
+ * object, because the effect moves several of these together. Generic over the
+ * row type, so a second container reuses it rather than copying it.
  */
-export interface AppState {
-  readonly cities: City[];
+export interface AppState<T> {
+  readonly rows: readonly T[];
   readonly error: Error | null;
   readonly loading: boolean;
   /** Whether the collection has arrived once, which loading cannot say. */
@@ -19,16 +18,19 @@ export interface AppState {
  * folding it in would leave the no-permanent-spinner guarantee resting on two
  * branches agreeing forever.
  */
-export type AppAction =
+export type AppAction<T> =
   | { readonly type: "attempt" }
-  | { readonly type: "resolved"; readonly cities: City[] }
+  | { readonly type: "resolved"; readonly rows: readonly T[] }
   | { readonly type: "failed"; readonly error: Error }
   | { readonly type: "settled" }
   | { readonly type: "retry" };
 
-/** Where the container starts: mounted, with its effect not yet run. */
-export const INITIAL_APP_STATE: AppState = {
-  cities: [],
+/**
+ * Where the container starts: mounted, with its effect not yet run. Typed over
+ * no row at all, so it fits a state over any row type without a cast.
+ */
+export const INITIAL_APP_STATE: AppState<never> = {
+  rows: [],
   error: null,
   loading: false,
   datasetReady: false,
@@ -36,7 +38,10 @@ export const INITIAL_APP_STATE: AppState = {
 };
 
 /** The only thing that moves the container from one request state to the next. */
-export function applyAppAction(state: AppState, action: AppAction): AppState {
+export function applyAppAction<T>(
+  state: AppState<T>,
+  action: AppAction<T>,
+): AppState<T> {
   switch (action.type) {
     case "attempt":
       // Clear the last failure as the new attempt starts, so a retry does not
@@ -45,7 +50,7 @@ export function applyAppAction(state: AppState, action: AppAction): AppState {
     case "resolved":
       return {
         ...state,
-        cities: action.cities,
+        rows: action.rows,
         error: null,
         datasetReady: true,
       };

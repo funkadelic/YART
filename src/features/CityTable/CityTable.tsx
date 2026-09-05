@@ -27,7 +27,7 @@ import styles from "./CityTable.module.scss";
 const SEARCH_DEBOUNCE_MS = 150;
 
 interface CityTableProps {
-  readonly data: City[];
+  readonly data: readonly City[];
   // Receives the committed term, meaning one call per pause in typing rather
   // than one per keystroke.
   readonly onSearchChange: (term: string) => void;
