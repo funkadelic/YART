@@ -775,6 +775,15 @@ const SHELLS = ["index.html", "movies.html"];
 const COMMITTED_SHELLS = 2;
 
 /**
+ * Each entry module beside the real-engine sweep that mounts the same page
+ * without it. One pair per shell, held at that count below.
+ */
+const BROWSER_SWEEPS = [
+  { entry: "src/index.tsx", sweep: "src/a11y.browser.test.tsx" },
+  { entry: "src/movies.tsx", sweep: "src/a11y.films.browser.test.tsx" },
+];
+
+/**
  * The shells to read, with the count guarded.
  *
  * Without the count the loops below pass vacuously the day someone renames a
@@ -1601,14 +1610,17 @@ describe("toolchain baseline", () => {
     expect(offenders.map((file) => relative(projectRoot, file))).toEqual([]);
   });
 
-  // The real-engine sweep mounts App rather than the entry module, so it has to
-  // pull in the global stylesheet itself. That is a second copy of the fact of
-  // which sheets this app ships, and the sweep it feeds is the contrast one: a
-  // sheet added to the entry module alone leaves the sweep reading a page no
-  // reader ever loads, and reporting green on it. Compared as a set of
+  // Each real-engine sweep mounts a container rather than its entry module, so
+  // it has to pull in the global stylesheet itself. That is a second copy of the
+  // fact of which sheets this app ships, and the sweep it feeds is the contrast
+  // one: a sheet added to an entry module alone leaves that page's sweep reading
+  // a page no reader ever loads, and reporting green on it. Compared as a set of
   // side-effect imports, which is what a global sheet is; a module stylesheet
   // arrives bound to a name and is nobody's global.
-  it("keeps the browser sweep on the same global stylesheets the entry module ships", () => {
+  //
+  // Driven over a pair per page with a count beside it, so a page whose sweep
+  // was renamed empties the loop into a failure rather than into silence.
+  it("keeps each browser sweep on the same global stylesheets its entry module ships", () => {
     const globalSheets = (file: string): string[] =>
       [
         ...stripComments(
@@ -1618,14 +1630,18 @@ describe("toolchain baseline", () => {
         .map((match) => required(match[1], "the imported stylesheet"))
         .toSorted();
 
-    const shipped = globalSheets("src/index.tsx");
+    expect(BROWSER_SWEEPS).toHaveLength(COMMITTED_SHELLS);
 
-    expect(
-      shipped.length,
-      "src/index.tsx imports no global stylesheet",
-    ).toBeGreaterThan(0);
+    for (const { entry, sweep } of BROWSER_SWEEPS) {
+      const shipped = globalSheets(entry);
 
-    expect(globalSheets("src/a11y.browser.test.tsx")).toEqual(shipped);
+      expect(
+        shipped.length,
+        `${entry} imports no global stylesheet`,
+      ).toBeGreaterThan(0);
+
+      expect(globalSheets(sweep), sweep).toEqual(shipped);
+    }
   });
 
   // The dataset ceiling is written twice on purpose, once where a reader
