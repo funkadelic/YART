@@ -18,13 +18,13 @@ export { DATASET_ERROR_CODES, DatasetError } from "../loadEnvelope";
  * recorded in license.md and the README, not here.
  *
  * Upstream quirks preserved deliberately:
- * - One row has no year and 59 have no runtime, each recorded as null rather
- *   than as zero, because a film with no recorded length is not a film of no
- *   length.
- * - One runtime is fractional. It is kept as it was published rather than
- *   rounded, since rounding at a parse boundary is data loss with no record.
+ * - One row has no year and 59 have no runtime, each recorded as null and not
+ *   as zero, because a film with no recorded length is not a film of no length.
+ * - One runtime is fractional and is kept as published, since rounding at a
+ *   parse boundary is data loss with no record.
  * - Around a hundred rows carry an empty array for a multi-valued property,
- *   which is the query returning no binding rather than a film with no country.
+ *   which means the query returned no binding, not that the film has no
+ *   country.
  *
  * Film, director, genre and country names stay in their source form in every
  * locale: the query asks for English labels and nothing else, so a reader of
@@ -103,8 +103,8 @@ function parseFilmRows(rows: unknown[]): Film[] {
     //
     // The multi-valued fields are sorted here because the query groups them and
     // SPARQL promises no order within a group, so the asset's order is arbitrary
-    // and a regeneration may permute it. Sorting once at the boundary is what
-    // makes both the cell text and the column's order reproducible.
+    // and a regeneration may permute it. Sorting once at the boundary makes
+    // both the cell text and the column's order reproducible.
     return {
       id,
       title,
@@ -117,7 +117,7 @@ function parseFilmRows(rows: unknown[]): Film[] {
   });
 }
 
-/** The cache the factory holds is what makes a double mount issue one request. */
+/** The cache the factory holds is why a double mount issues one request. */
 export const loadFilms = createEnvelopeLoader({
   url: filmsUrl,
   dataset: "film",

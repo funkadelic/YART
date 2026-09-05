@@ -9,18 +9,17 @@ import { CityTable } from "../CityTable";
 
 const THROWN_MESSAGE = "a render threw this";
 
-// The copy the layout hands down, read from the base catalog rather than
-// restated, so a reworded fallback moves both sides at once. The boundary is a
-// class and cannot read a catalog itself, which is the whole reason it takes
-// these as props.
+// The copy the layout hands down, read from the base catalog, so a reworded
+// fallback moves both sides at once. The boundary is a class and cannot read a
+// catalog itself, so it takes these as props.
 const FALLBACK_LABELS = {
   message: en.cities.renderFailure,
   action: en.common.renderFailureRetry,
 };
 
-// The flag is module-local rather than a prop so the same component instance
-// can throw on one render and succeed on the next, which is what the recovery
-// cases need. A prop would be read from a subtree the boundary has unmounted.
+// The flag is module-local so the same component instance can throw on one
+// render and succeed on the next, which the recovery cases need. A prop would
+// be read from a subtree the boundary has unmounted.
 let shouldThrow = true;
 
 function ThrowingChild() {
@@ -169,8 +168,8 @@ describe("ErrorBoundary mounted in the layout", () => {
 
     // The boundary returns either the fallback or its children and never both,
     // so the subtree holding the table's inline error region is unmounted here.
-    // Asserted rather than assumed, because the two error surfaces are
-    // maintained independently and nothing else pins them mutually exclusive.
+    // Asserted here, because the two error surfaces are maintained
+    // independently and nothing else pins them mutually exclusive.
     expect(screen.getAllByRole("alert")).toHaveLength(1);
     expect(
       screen.queryByRole("button", { name: "Try again" }),

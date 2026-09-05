@@ -1,4 +1,4 @@
-// A module rather than a folder, which every other entry here is. One builder
+// A module, where every other entry in this directory is a folder. One builder
 // serves both pages, and putting it inside either feature would make the other
 // import across a feature boundary.
 
@@ -7,10 +7,10 @@ import type { SearchInputLabels } from "../components/SearchInput";
 import type { Catalog, DomainId } from "../i18n/catalogs/en";
 
 /**
- * The catalog, narrowed to the object the shared table takes: the chrome comes
+ * The catalog, narrowed to the object the shared table takes. The chrome comes
  * off the common half and the page copy off the named domain. Closing the tag
- * into the locale-sensitive entries here is what keeps the table's contract at
- * the arity it has always had.
+ * into the locale-sensitive entries here keeps the table's contract at the
+ * arity it has always had.
  */
 export function buildTableLabels(
   catalog: Catalog,
@@ -45,7 +45,7 @@ export function buildTableLabels(
   };
 }
 
-/** The search box's own two strings. No tag: neither weaves a number. */
+/** The search box's own two strings. No tag: neither of them weaves a number. */
 export function buildSearchLabels(
   catalog: Catalog,
   domain: DomainId,

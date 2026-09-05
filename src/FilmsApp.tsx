@@ -14,12 +14,12 @@ import { FilmTable, parseSearchTerm } from "./features/FilmTable";
 // arrives, or sooner if the two copies start to disagree.
 const FilmsApp = () => {
   // Seeded from the address, or every shared link costs two requests on a cold
-  // start. A read and it stays one: the single write is one layer down.
+  // start. This is a read only, and the single write is one layer down.
   const [searchTerm, setSearchTerm] = useState(() =>
     parseSearchTerm(window.location.search),
   );
-  // The row type is supplied here rather than inferred, because the initial
-  // state is typed over no row and would otherwise pin the reducer to that.
+  // The row type is supplied here because the initial state is typed over no
+  // row, and inference would pin the reducer to that.
   const [{ rows, error, loading, datasetReady, retryAttempt }, dispatch] =
     useReducer(applyAppAction<Film>, INITIAL_APP_STATE);
   const { catalog, tag } = useLocale();
@@ -65,8 +65,8 @@ const FilmsApp = () => {
     };
   }, [searchTerm, retryAttempt]);
 
-  // Receives the settled term rather than every keystroke. Memoized with an
-  // empty dependency array, because the child holds on to it.
+  // Receives only the settled term, so no keystroke lands here. Memoized with
+  // an empty dependency array, because the child holds on to it.
   const handleSearchChange = useCallback((term: string) => {
     setSearchTerm(term);
   }, []);
@@ -77,8 +77,8 @@ const FilmsApp = () => {
     dispatch({ type: "retry" });
   }, []);
 
-  // Derived during render rather than at the catch, which is inside the fetch
-  // effect: reading the catalog there would make the locale a dependency of it.
+  // Derived during render. The catch sits inside the fetch effect, and reading
+  // the catalog there would make the locale a dependency of that effect.
   const errorMessage =
     error === null ? null : datasetErrorText(error, catalog.films, tag);
 

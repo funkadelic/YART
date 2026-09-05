@@ -93,8 +93,8 @@ describe("LocaleControl", () => {
       expect(stamped()).toEqual({ lang: "fr-FR", dir: "ltr" });
     });
 
-    // The one option that is not a language. Its strings stay English, which is
-    // what makes it reviewable, and only the direction moves.
+    // The one option that is not a language. Its strings stay English, so it
+    // stays reviewable, and only the direction moves.
     it("turns the document around for the pseudo-locale", async () => {
       const user = userEvent.setup();
       render(<LocaleControl />);
@@ -129,10 +129,10 @@ describe("LocaleControl", () => {
     expect(picker()).toHaveValue("es");
   });
 
-  // The whole seam in one case: the picker in the header and the table below it
-  // are two separate subscribers to one store, so choosing here has to repaint
-  // there. Two hooks holding their own copy of the choice would pass every case
-  // above and fail this one.
+  // The picker in the header and the table below it are two separate
+  // subscribers to one store, so choosing here has to repaint there. Two hooks
+  // holding their own copy of the choice would pass every case above and fail
+  // this one.
   it("repaints the table below it in the chosen language", async () => {
     const user = userEvent.setup();
 

@@ -14,8 +14,9 @@ import { FilmTable } from "./FilmTable";
  */
 const SEARCH_DEBOUNCE_MS = 150;
 
-// Fifty rows, which at the default page size is five pages: the smallest set a
-// position can be restored into, paged away from, and pushed past the end of.
+// Fifty rows, which at the default page size is five pages. That is the
+// smallest set a position can be restored into, paged away from, and pushed
+// past the end of.
 const PAGED_FILMS: Film[] = Array.from({ length: 50 }, (_, index) => ({
   id: `Q${index + 1}`,
   title: `Film ${index + 1}`,
@@ -42,13 +43,14 @@ const openAt = (search: string) => {
 
 beforeEach(() => {
   // Installed over the city stub the setup file puts in place, so a suite that
-  // forgets fails with a column-order failure rather than passing quietly.
+  // forgets fails with a column-order failure where it would otherwise pass
+  // quietly.
   stubFilmDatasetFetch();
 });
 
-// A restore rather than a guard: a file that installs a controlled clock in one
-// block and never puts the real one back leaks the frozen clock into whatever
-// runs next, and a restore that only runs on the happy path is not a restore.
+// Unconditional, because a file that installs a controlled clock in one block
+// and never puts the real one back leaks the frozen clock into whatever runs
+// next, and a restore that only runs on the happy path leaves that hole open.
 afterEach(() => {
   vi.useRealTimers();
 });
@@ -78,7 +80,7 @@ describe("FilmTable and its own address", () => {
     expect(window.location.search).toBe("?sort=-year&page=2&size=25");
   });
 
-  // The one rule this page shares with the other and holds separately: the
+  // The one rule this page shares with the other and holds separately. The
   // address is replaced, never pushed, so one Back press leaves the site.
   it("writes the position through a replacing call and never a pushing one", async () => {
     const user = userEvent.setup({ delay: null });
@@ -104,7 +106,7 @@ describe("FilmTable and its own address", () => {
     expect(replaceState).not.toHaveBeenCalled();
   });
 
-  // The case a suite that only ever sets parameters never reaches: an empty
+  // A suite that only ever sets parameters never reaches this case. An empty
   // query has to be written as the path, because the empty string resolves to
   // the address it was given and leaves the stale query in place.
   it("writes the path and the fragment, not a bare question mark, when the query empties", async () => {
@@ -133,9 +135,9 @@ describe("FilmTable and its own address", () => {
   });
 
   // The address is a convenience and the table is not. Browsers rate limit
-  // history mutation and throw rather than ignoring the call, and unguarded the
-  // throw lands in a commit-phase effect, where the boundary around the main
-  // slot replaces the whole view with its fallback.
+  // history mutation, and past the limit the call throws; unguarded, that throw
+  // lands in a commit-phase effect, where the boundary around the main slot
+  // replaces the whole view with its fallback.
   it("keeps the table rendered when the browser refuses the address write", async () => {
     const user = userEvent.setup({ delay: null });
     vi.spyOn(window.history, "replaceState").mockImplementation(() => {
@@ -192,7 +194,7 @@ describe("FilmTable and a browsing-history event", () => {
 
   // A restored sort is still a first render, so announcing it would tell a
   // reader who has just followed a link that something happened when nothing
-  // did. A traversal after a real press is the opposite case.
+  // did. A traversal after a real press does have something to announce.
   it("stays silent for a restored sort the reader never applied, and speaks after one they did", async () => {
     const user = userEvent.setup({ delay: null });
     const { container } = render(<FilmTable {...defaultProps} />);
@@ -224,9 +226,9 @@ describe("FilmTable and a browsing-history event", () => {
   });
 });
 
-// The clock is installed here and nowhere else in this file: the cases above
-// run on a real one, and the pair below is about when a write happens rather
-// than what it says, which is not observable without owning the clock.
+// The clock is installed here and nowhere else in this file. The cases above
+// run on a real one, and the pair below is about when a write happens, which is
+// not observable without owning the clock.
 describe("FilmTable and the debounced address write", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -275,7 +277,7 @@ describe("FilmTable and the debounced address write", () => {
       window.dispatchEvent(new PopStateEvent("popstate"));
     });
 
-    // Well past the boundary the cancelled commit would have fired at.
+    // Well past the boundary the canceled commit would have fired at.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS * 2);
     });

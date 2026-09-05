@@ -6,11 +6,10 @@ import { es } from "./catalogs/es";
 import { datasetErrorText } from "./datasetErrorText";
 
 /**
- * The one place a failure code becomes a sentence. Two branches, and both of
- * them matter: a dataset error is what the loader produces, and everything else
- * is what a stubbed seam, a browser extension or a future caller can produce.
- * The second branch is the one that decides whether an application that has
- * already failed also tells the reader nothing.
+ * The one place a failure code becomes a sentence. Two branches: a dataset
+ * error is what the loader produces, and everything else is what a stubbed
+ * seam, a browser extension or a future caller can produce. The second branch
+ * decides whether an application that has already failed can still say why.
  */
 describe("datasetErrorText", () => {
   it("says what happened for every code the loader can carry", () => {
@@ -54,7 +53,8 @@ describe("datasetErrorText", () => {
   });
 
   // The preserved cause is engine text kept for a developer, and the message is
-  // written for a developer too. Neither is what this returns, in either branch.
+  // written for a developer too. This returns the catalog's sentence in either
+  // branch.
   it("returns neither the failure's own message nor its cause", () => {
     const cause = new Error("TypeError: NetworkError when attempting to fetch");
     const failure = new DatasetError(

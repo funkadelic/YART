@@ -6,19 +6,19 @@ import { collatorFor, durationFormatFor } from "../../i18n/format";
 import { resolveLocale } from "../../i18n/resolveLocale";
 
 /**
- * The columns the film table shows, built for one resolved locale: both the
+ * The columns the film table shows, built for one resolved locale. Both the
  * label and the grouped runtime cell follow the reader, and the collator is
- * fused into the default comparator here. A new identity every call, which is
- * the hazard: the caller memoizes on the catalog and the tag, or the sort and
- * page memos downstream re-run on every render.
+ * fused into the default comparator here. Every call returns a new identity, so
+ * the caller has to memoize on the catalog and the tag, or the sort and page
+ * memos downstream re-run on every render.
  *
- * The year is deliberately not grouped: a year is an identifier a reader reads
- * as four digits, and a thousands separator in it is wrong in every locale.
+ * The year is deliberately not grouped, because a year is an identifier a
+ * reader reads as four digits and a thousands separator in it is wrong in every
+ * locale.
  */
 export function buildFilmColumns(catalog: Catalog, tag: string) {
-  // Named rather than passed straight through, because the list comparator
-  // below closes over it. That closure is why the shared column options keep
-  // the three parameters they have always had.
+  // Named so the list comparator below can close over it. That closure is why
+  // the shared column options keep the three parameters they have always had.
   const collator = collatorFor(tag);
   const col = columns<Film>(collator);
   const duration = durationFormatFor(tag);
@@ -28,11 +28,11 @@ export function buildFilmColumns(catalog: Catalog, tag: string) {
   // no cell here writes a separator of its own.
   const list = (values: readonly string[]) => catalog.common.list(tag, values);
 
-  // Every multi-valued column needs this rather than the default comparator,
-  // which files an array as an other-typed value, orders it by the accidental
-  // string form, and does not call an empty list blank. Ordering by the joined
-  // text is what makes the column agree with what the cell shows; ordering by
-  // length would put a one-genre film above a two-genre one whatever they read.
+  // Every multi-valued column needs this. The default comparator files an array
+  // as an other-typed value, orders it by the accidental string form, and does
+  // not call an empty list blank. Ordering by the joined text keeps the column
+  // agreeing with what the cell shows; ordering by length would put a one-genre
+  // film above a two-genre one whatever they read.
   const compareList = (
     a: readonly string[],
     b: readonly string[],
@@ -60,8 +60,8 @@ export function buildFilmColumns(catalog: Catalog, tag: string) {
       numeric: true,
       // Carries its unit, because the heading says Runtime and a bare 112 reads
       // as minutes, seconds or hours depending on the reader. A film with no
-      // recorded runtime paints an empty cell, which is what the default
-      // renderer would do and what this one has to keep doing.
+      // recorded runtime paints an empty cell, matching what the default
+      // renderer does and what this one has to keep doing.
       renderCell: (value) => (value === null ? "" : duration.format(value)),
     }),
     col.key("directors", {
@@ -83,24 +83,24 @@ export function buildFilmColumns(catalog: Catalog, tag: string) {
 }
 
 /**
- * One build at module scope, for the id union and the closed set below and for
- * nothing else. Which columns exist is the same in every language; only what
- * they are called moves.
+ * One build at module scope, used only for the id union and the closed set
+ * below. Which columns exist is the same in every language; only what they are
+ * called moves.
  */
 const BASE_COLUMNS = buildFilmColumns(en, resolveLocale("en", []).tag);
 
 /** The literal union of the ids above, formed with no assertion anywhere. */
 export type FilmColumnId = (typeof BASE_COLUMNS)[number]["id"];
 
-/** The closed set a restored sort id is checked against, derived not listed. */
+/** The closed set a restored sort id is checked against, derived above. */
 export const FILM_COLUMN_IDS: readonly FilmColumnId[] = BASE_COLUMNS.map(
   (column) => column.id,
 );
 
 /**
- * The Wikidata identifier, unpadded. Unlike the city side it needs no padding:
- * the identifier is already injective, and the identity comparison is a
- * tiebreak rather than a displayed order, so any deterministic total order over
- * it will do.
+ * The Wikidata identifier, unpadded. Unlike the city side it needs no padding,
+ * because the identifier is already injective and the identity comparison is a
+ * tiebreak the reader never sees, so any deterministic total order over it will
+ * do.
  */
 export const filmRowId = (film: Film) => film.id;

@@ -11,11 +11,11 @@ import { stubFilmDatasetFetch } from "./test/fetchStub";
 
 import type { Film } from "./api/getFilms";
 
-// The search seam is spied on rather than stubbed out: the factory delegates to
-// the real module, so the integration cases below keep exercising real
-// behaviour, and a case that needs a specific outcome overrides it for itself.
-// A rejection carrying something other than an Error is only reachable this
-// way, because the real module never produces one.
+// The search seam is spied on, with the factory delegating to the real module,
+// so the integration cases below keep exercising real behavior and a case that
+// needs a specific outcome overrides it for itself. A rejection carrying
+// something other than an Error is only reachable this way, because the real
+// module never produces one.
 vi.mock("./api/getFilms", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./api/getFilms")>();
   return { ...actual, getFilms: vi.fn(actual.getFilms) };
@@ -34,11 +34,11 @@ const SEAM_LATENCY_MS = 200;
  * The loader caches its dataset request at module scope, so without the reset a
  * case that counts requests inherits an earlier case's populated cache.
  *
- * The mock is re-declared here rather than left to the hoisted one above,
- * because resetting the registry does not re-evaluate a mock factory: the
- * container would keep importing the seam belonging to the registry that was
- * thrown away, while the loader it now calls belongs to the new one, and the
- * two would hold two different dataset error classes. The spy object itself is
+ * The mock is re-declared here too, because resetting the registry does not
+ * re-evaluate a mock factory. The container would keep importing the seam
+ * belonging to the registry that was thrown away, while the loader it now calls
+ * belongs to the new one, and the two would hold two different dataset error
+ * classes. The spy object itself is
  * deliberately the same one, so a call count spans the reset.
  */
 async function freshFilmsApp() {
@@ -66,7 +66,7 @@ const SAMPLE_FILMS: Film[] = [
 describe("FilmsApp", () => {
   beforeEach(async () => {
     // Installed over the city stub the setup file puts in place, so a case that
-    // reaches the real loader answers film data rather than city data.
+    // reaches the real loader is answered with film data.
     stubFilmDatasetFetch();
 
     const actual =
@@ -192,7 +192,7 @@ describe("FilmsApp", () => {
     getFilmsSeam.mockImplementationOnce(() => Promise.resolve(laterRows));
 
     // This case runs on the real clock, so the inter-keystroke delay is dropped
-    // rather than bound.
+    // and not bound to a fake one.
     const user = userEvent.setup({ delay: null });
 
     render(<FilmsApp />);
@@ -243,8 +243,8 @@ describe("FilmsApp", () => {
     await act(async () => {
       failEarlier(new Error("The film service is unreachable"));
       // The container's own catch arm settles this rejection. Awaiting it here
-      // only orders the assertions after it, so the await is swallowed rather
-      // than allowed to fail the case it is sequencing.
+      // only orders the assertions after it, so the await is swallowed and
+      // cannot fail the case it is sequencing.
       await earlier.catch(() => {});
     });
 

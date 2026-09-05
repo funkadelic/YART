@@ -9,15 +9,15 @@ import { FILM_FIXTURE_ENVELOPE } from "./filmFixture";
  *
  * The DOM environment supplies no fetch, so the global under test is Node's own
  * implementation. It requires an absolute URL and rejects the root-relative path
- * the dataset URL resolves to under the runner, which means an unstubbed load
- * fails with a URL parse error rather than a network error. Every stub here
+ * the dataset URL resolves to under the runner, so an unstubbed load fails
+ * with a URL parse error, not a network error. Every stub here
  * replaces that global, so a test asserts against a request it controls.
  */
 
-// Resolved from this file's own location rather than from the working directory,
-// which is wherever the runner happened to be invoked. Read off import.meta
-// directly rather than through a URL, because the DOM environment replaces the
-// global URL class and node:url will not convert the result.
+// Resolved from this file's own location, because the working directory is
+// wherever the runner happened to be invoked. Read off import.meta directly
+// instead of through a URL, because the DOM environment replaces the global URL
+// class and node:url will not convert the result.
 const here = import.meta as ImportMeta & { dirname: string };
 const assetPath = join(
   here.dirname,
@@ -52,10 +52,10 @@ export function stubDatasetFetchFromDisk(body: string) {
 /**
  * Serves the film envelope in place of the city one the setup file installs.
  *
- * Deliberately not a URL-discriminating stub: the shared stub above answers
+ * Deliberately not a URL-discriminating stub. The shared stub above answers
  * whatever is asked for, and a films test installs this one over it in its own
  * hook, which runs after the setup file's. A films test that forgets fails with
- * a column-order failure rather than passing quietly against city data.
+ * a column-order failure and does not pass quietly against city data.
  */
 export function stubFilmDatasetFetch(payload: unknown = FILM_FIXTURE_ENVELOPE) {
   return stubDatasetFetch(payload);

@@ -20,9 +20,9 @@ describe("buildTableLabels", () => {
   });
 
   // The two function-valued entries are where the catalog and the table disagree
-  // about arity: the catalog takes the resolved tag first so a number or a
+  // about arity. The catalog takes the resolved tag first so a number or a
   // plural can move behind the entry later, and the table takes only what it
-  // knows. Closing the tag in here is what keeps those two contracts apart.
+  // knows. Closing the tag in here keeps those two contracts apart.
   it("closes the resolved tag into the entries the table calls", () => {
     const labels = buildTableLabels(en, "cities", "en-US");
 
@@ -50,9 +50,9 @@ describe("buildTableLabels", () => {
     );
   });
 
-  // The whole reason there is one builder rather than two: the domain decides
-  // the page copy and decides nothing else. A second near-copy differing only in
-  // which keys it read is exactly what the split catalog exists to prevent.
+  // There is one builder because the domain decides the page copy and nothing
+  // more. A second near-copy differing only in which keys it read is what the
+  // split catalog rules out.
   it("takes the page copy from the domain it is given and the chrome from neither", () => {
     const cities = buildTableLabels(en, "cities", "en-US");
     const films = buildTableLabels(en, "films", "en-US");
@@ -69,9 +69,9 @@ describe("buildTableLabels", () => {
     expect(films.pagination.nextPage).toBe(cities.pagination.nextPage);
   });
 
-  // The page controls' strings are a slice of one object rather than a second
-  // one the caller assembles, because the table hands them on rather than
-  // rendering them, and two objects would be two things to keep in step.
+  // The page controls' strings are a slice of one object, because the table
+  // hands them on without rendering them and two objects would be two things to
+  // keep in step.
   it("nests the page controls' strings inside the table's own", () => {
     const labels = buildTableLabels(en, "cities", "en-US");
 
@@ -84,10 +84,10 @@ describe("buildTableLabels", () => {
     expect(labels.pagination.pageStatus(2, 3)).toBe("Page 2 of 3");
   });
 
-  // The page numbers are grouped by the tag closed in here, which is the only
-  // reason that entry is a function rather than a template. Both expectations
-  // are computed through the platform: the French group separator is a narrow
-  // no-break space, and a typed literal holding an ordinary one fails on a
+  // The page numbers are grouped by the tag closed in here, which is why that
+  // entry is a function and not a template. Both expectations are computed
+  // through the platform, because the French group separator is a narrow
+  // no-break space and a typed literal holding an ordinary one fails on a
   // difference no terminal renders.
   it("groups the page numbers on the tag it was built with", () => {
     const labels = buildTableLabels(fr, "cities", "fr-FR");
@@ -103,8 +103,8 @@ describe("buildTableLabels", () => {
 
 describe("buildSearchLabels", () => {
   // The accessible name is the same word on both pages and the placeholder is
-  // not, which is the whole split: one entry off the common half and one off the
-  // domain. No tag, because neither of them weaves a number.
+  // not, so one entry comes off the common half and one off the domain. No tag,
+  // because neither of them weaves a number.
   it("names the box in common and places its hint per domain", () => {
     const cities = buildSearchLabels(en, "cities");
     const films = buildSearchLabels(en, "films");

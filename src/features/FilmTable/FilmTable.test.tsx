@@ -13,20 +13,19 @@ import { buildTableLabels } from "../tableLabels";
 import { FilmTable } from "./FilmTable";
 import { buildFilmColumns } from "./filmColumns";
 
-// A spy over the real builder rather than a replacement for it, so every case
-// in this file goes on exercising the shipping columns. The one thing a spy can
-// see that the rendered output cannot is how many times the array was built,
-// which is the whole content of the claim that its identity follows the locale
-// and nothing else.
+// A spy that delegates to the real builder, so every case in this file goes on
+// exercising the shipping columns. How many times the array was built is
+// invisible in the rendered output, so the count is asserted directly to pin
+// the array's identity to the locale.
 vi.mock("./filmColumns", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./filmColumns")>();
 
   return { ...actual, buildFilmColumns: vi.fn(actual.buildFilmColumns) };
 });
 
-// The same spy over the labels builder, and for the same reason. The object it
-// returns is held by the table across renders, so how often it is built is the
-// whole content of the claim that its identity follows the locale.
+// The same spy over the labels builder, and for the same reason. The table
+// holds the object it returns across renders, so the build count is the
+// assertion that its identity follows the locale.
 vi.mock("../tableLabels", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../tableLabels")>();
 
@@ -55,8 +54,8 @@ const WITHOUT_YEAR = required(
 );
 
 /**
- * A run of rows wide enough to page, generated rather than written out. Nothing
- * in the content is asserted; only how many there are and where they sit.
+ * A run of rows wide enough to page, generated in a loop. Nothing in the
+ * content is asserted, only how many there are and where they sit.
  */
 function pagedFixture(count: number): Film[] {
   return Array.from({ length: count }, (_, index) => ({
@@ -93,15 +92,15 @@ function onlyRowCells() {
 
 beforeEach(() => {
   // Installed over the city stub the setup file puts in place. A films suite
-  // that forgets this fails with a column-order failure rather than passing
-  // quietly against city data.
+  // that forgets this fails with a column-order failure where it would
+  // otherwise pass quietly against city data.
   stubFilmDatasetFetch();
   vi.clearAllMocks();
   vi.useFakeTimers();
 });
 
-// A restore rather than a guard: a file that installs a controlled clock and
-// never puts the real one back leaks the frozen clock into whatever runs next.
+// Unconditional, because a file that installs a controlled clock and never puts
+// the real one back leaks the frozen clock into whatever runs next.
 afterEach(() => {
   vi.useRealTimers();
 });
@@ -116,7 +115,7 @@ describe("FilmTable", () => {
     expect(screen.getByText(WITH_RUNTIME.title)).toBeInTheDocument();
   });
 
-  // The nullable half of the row type, read from the only place it shows: a
+  // The nullable half of the row type, read from the only place it shows. A
   // cell painting the word null would be a rendered value nobody authored.
   it("paints an empty cell for a film with no recorded runtime", () => {
     render(<FilmTable {...defaultProps} data={[WITHOUT_RUNTIME]} />);
@@ -135,17 +134,16 @@ describe("FilmTable", () => {
   });
 
   // A year is an identifier a reader reads as four digits, so it is the one
-  // number on this page that is not grouped.
-  // The runtime carries its unit and the year does not: a runtime is a quantity
-  // whose unit a reader cannot infer from 1,234, and a year is an identifier
-  // that a group separator would only make wrong.
+  // number on this page that is not grouped and a group separator in it would
+  // only be wrong. The runtime does carry its unit, because a reader cannot
+  // infer minutes from a bare 1,234.
   it("groups the runtime with its unit and leaves the year ungrouped", () => {
     const long: Film = { ...WITH_RUNTIME, year: 2011, runtime: 1234 };
 
     render(<FilmTable {...defaultProps} data={[long]} />);
 
-    // Computed through the platform rather than typed, so the case states the
-    // rule rather than one locale's rendering of it.
+    // Computed through the platform, so the case states the rule and not one
+    // locale's rendering of it.
     const runtime = durationFormatFor("en-US").format(1234);
 
     expect(runtime).toContain("1,234");
@@ -213,8 +211,8 @@ describe("FilmTable sorting", () => {
     expect(header()).toHaveAttribute("aria-sort", "none");
   });
 
-  // The blank arm of the shared comparator, reached here through a real column:
-  // a film with no runtime has nothing to order by and belongs at the end
+  // The blank arm of the shared comparator, reached here through a real column.
+  // A film with no runtime has nothing to order by and belongs at the end
   // whichever way the reader turns the column.
   it("sorts films with no runtime last in both directions", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
@@ -317,8 +315,8 @@ describe("FilmTable loading and failure", () => {
   });
 
   // A table torn down whenever a request is in flight flashes on every
-  // keystroke, so the full replacement is gated on the dataset rather than on
-  // the request.
+  // keystroke, so the full replacement is gated on the dataset and not on the
+  // request.
   it("keeps the table mounted while refetching over rows already on screen", () => {
     render(<FilmTable {...defaultProps} loading={true} />);
 
@@ -373,8 +371,8 @@ describe("FilmTable and the locale", () => {
 
     render(<FilmTable {...defaultProps} data={[long]} />);
 
-    // Computed through the platform rather than typed: the separator above is
-    // invisible in every terminal a failure is read in.
+    // Computed through the platform, because the separator above is invisible
+    // in every terminal a failure is read in.
     const french = durationFormatFor("fr-FR").format(1234);
     const english = durationFormatFor("en-US").format(1234);
 
@@ -401,14 +399,14 @@ describe("FilmTable and the locale", () => {
     expect(screen.getByText(WITH_RUNTIME.title)).toBeInTheDocument();
   });
 
-  // The array identity is what the sort and page memos downstream depend on: a
+  // The sort and page memos downstream depend on the array identity, so a
   // build on a render where the locale did not move would re-sort the whole
   // collection and re-slice the page for nothing.
   it("builds the column array once per locale and not once per render", () => {
     const built = vi.mocked(buildFilmColumns);
 
-    // Pinned before the first render rather than left to the machine, so the
-    // store has nothing left to settle on once the table is mounted.
+    // Pinned before the first render, so the store has nothing left to settle
+    // on once the table is mounted.
     setLocaleChoice("en");
 
     const { rerender } = render(<FilmTable {...defaultProps} />);
@@ -426,9 +424,9 @@ describe("FilmTable and the locale", () => {
 
     expect(built).toHaveBeenCalledTimes(2);
 
-    // Narrowed rather than read straight: a recorded result is either a return
-    // or a throw, so its value is untyped until it is treated as the opaque
-    // thing this assertion actually needs.
+    // Narrowed here, because a recorded result is either a return or a throw,
+    // so its value is untyped until it is treated as the opaque thing this
+    // assertion needs.
     const [first, second] = built.mock.results.map(
       (call) => call.value as unknown,
     );

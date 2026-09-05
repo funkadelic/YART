@@ -43,8 +43,8 @@ describe("collatorFor", () => {
   });
 
   // The reason this module exists. Naming no tag takes whatever the machine
-  // running the code happens to prefer, which is four independent defaults
-  // rather than one resolved locale.
+  // running the code happens to prefer, giving four independent defaults where
+  // one resolved locale is wanted.
   it("orders a pair by the tag it was asked for", () => {
     expect(collatorFor("es-ES").compare(TILDE, PLAIN)).toBeGreaterThan(0);
     expect(collatorFor("en-US").compare(TILDE, PLAIN)).toBeLessThan(0);
@@ -61,7 +61,7 @@ describe("numberFormatFor", () => {
     expect(numberFormatFor("fr-FR")).not.toBe(numberFormatFor("es-ES"));
   });
 
-  // Every expected string here is computed rather than typed. The French
+  // Every expected string here is computed, never typed out. The French
   // group separator is a narrow no-break space, and the difference between it
   // and an ordinary space is invisible in every terminal a failure is read in.
   it("groups by the tag it was asked for", () => {
@@ -86,8 +86,8 @@ describe("pluralRulesFor", () => {
     expect(pluralRulesFor("es-ES")).not.toBe(pluralRulesFor("en-US"));
   });
 
-  // Two categories against three is the whole reason a ternary on the count is
-  // wrong in half the catalogs that ship.
+  // Two categories against three is why a ternary on the count is wrong in
+  // half the catalogs that ship.
   it("reports the categories its own tag has, not the base tag's", () => {
     expect(
       pluralRulesFor("en-US").resolvedOptions().pluralCategories.toSorted(),
@@ -107,8 +107,8 @@ describe("listFormatFor", () => {
     expect(listFormatFor("en-US")).not.toBe(listFormatFor("es-ES"));
   });
 
-  // Computed rather than typed, for the same reason the grouping case is: the
-  // conjunction and the serial comma differ by tag and a typed expectation
+  // Computed, never typed out, for the same reason the grouping case is: the
+  // conjunction and the serial comma differ by tag, and a typed expectation
   // would be asserting this file's own idea of Spanish.
   it("joins by the tag it was asked for", () => {
     for (const tag of ["en-US", "es-ES", "fr-FR"]) {
@@ -135,8 +135,7 @@ describe("selectPlural", () => {
   });
 
   // Zero is the singular category in French and the plural one in Spanish and
-  // English, which is a rule no count-driven ternary in this tree could have
-  // expressed.
+  // English, a rule no count-driven ternary in this tree could express.
   it("selects over the reporting tag's categories rather than a pair", () => {
     expect(pluralRulesFor("es-ES").select(1000000)).toBe("many");
     expect(selectPlural("es-ES", 1000000, SPANISH)).toBe(SPANISH.many);

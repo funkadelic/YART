@@ -12,11 +12,10 @@ import { stubDatasetFetch } from "../../test/fetchStub";
  *
  * Every case starts from the known-good fixture envelope and changes exactly
  * one thing, so the case name and the mutation line together say what is being
- * rejected. Every case asserts the message it expects rather than the mere fact
- * of a rejection: a case that accepts any rejection passes when the load failed
- * for an unrelated reason, which is the specific way this kind of test goes
- * quietly wrong. The messages are written here as literals rather than imported
- * from the loader, so a rename cannot move both sides at once.
+ * rejected. Every case asserts the message it expects, because a case that
+ * accepts any rejection passes when the load failed for an unrelated reason.
+ * The messages are written here as literals and not imported from the loader,
+ * so a rename cannot move both sides at once.
  */
 
 /**
@@ -58,7 +57,7 @@ function rowAt(payload: Envelope, at: number): unknown[] {
 
 /**
  * The message and the code a load rejected with. Resolving is itself a failure
- * here, and it is reported as one rather than left to a later assertion on an
+ * here and is reported as one, so no later assertion has to trip over an
  * undefined value.
  */
 async function rejection(
@@ -70,8 +69,8 @@ async function rejection(
   try {
     await films.loadFilms();
   } catch (error) {
-    // The class is read off the freshly loaded module rather than imported at
-    // the top of this file. Every case here resets the module registry, which
+    // The class is read off the freshly loaded module, not imported at the top
+    // of this file. Every case here resets the module registry, which
     // hands the loader a new class object each time, and a class imported once
     // would stop recognizing its own instances after the first reset.
     if (error instanceof films.DatasetError) {
@@ -269,8 +268,8 @@ describe("loadFilms values", () => {
 
   // The query groups the multi-valued properties and SPARQL promises no order
   // within a group, so the asset's order is arbitrary and a regeneration may
-  // permute it. Sorting at the boundary is what keeps both the cell text and
-  // the column's order reproducible, and it is invisible from a rendered cell.
+  // permute it. Sorting at the boundary keeps both the cell text and the
+  // column's order reproducible, and it is invisible from a rendered cell.
   it("sorts every multi-valued field, whatever order the asset holds", async () => {
     const scrambled = {
       ...FILM_FIXTURE_ENVELOPE,
@@ -298,7 +297,7 @@ describe("loadFilms values", () => {
 
   // The two ends of the range the committed asset actually spans, so a check
   // that ever grew a plausible-year rule would have to be written against the
-  // real data rather than against a guess at it.
+  // real data and not against a guess at it.
   it("parses the earliest and the latest year the fixture carries", async () => {
     stubDatasetFetch(FILM_FIXTURE_ENVELOPE);
     const loadFilms = await freshLoadFilms();

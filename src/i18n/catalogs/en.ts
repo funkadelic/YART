@@ -10,10 +10,10 @@ const FILM = { one: "film", other: "films" };
 const RESULT = { one: "result", other: "results" };
 const ENTRY = { one: "entry", other: "entries" };
 
-/** Declared here rather than imported: a catalog must not learn about tables. */
+/** Declared here, because a catalog must not learn about tables. */
 export type SortedDirection = "asc" | "desc";
 
-/** A record rather than a suffix: "ascend" plus "ing" is one language only. */
+/** A record, because "ascend" plus "ing" is one language only. */
 const DIRECTION: Readonly<Record<SortedDirection, string>> = {
   asc: "ascending",
   desc: "descending",
@@ -30,8 +30,8 @@ export type DatasetErrorText = Readonly<
 /**
  * What both domain blocks carry. The columns record is keyed loosely because the
  * two domains have different columns; every other key is identical by
- * construction, which is what makes a films entry missing from a translated
- * catalog a compile error rather than a test nobody wrote.
+ * construction, so a films entry missing from a translated catalog is a
+ * compile error.
  */
 export interface DomainCatalog {
   readonly appTitle: string;
@@ -65,9 +65,9 @@ const CITY_ERROR_TEXT: DatasetErrorText = {
 };
 
 /**
- * Written out rather than derived from the city set with the noun as an
- * argument. A caller handing over a word has made a grammatical decision one
- * layer too early, and gender and agreement break it in Spanish and French.
+ * Written out in full. Deriving these from the city set by passing the noun as
+ * an argument would make the caller decide grammar one layer too early, and
+ * gender and agreement break that in Spanish and French.
  */
 const FILM_ERROR_TEXT: DatasetErrorText = {
   notAnObject: () => "The film data could not be read.",
@@ -117,8 +117,8 @@ export const en = {
 
       return `Page ${number.format(page)} of ${number.format(totalPages)}`;
     },
-    // Here rather than in a domain: joining a list is a rule of the language
-    // rather than a fact about films, and no cell may write a separator.
+    // Joining a list is a rule of the language and not a fact about films, so
+    // it sits here and no cell writes a separator of its own.
     list: (tag: string, values: readonly string[]) =>
       listFormatFor(tag).format(values),
   },
@@ -152,9 +152,9 @@ export const en = {
     appTitle: "Film List",
     renderFailure:
       "This part of the page could not be displayed. The film data is still loaded, so showing it again may work.",
-    // A courtesy rather than an obligation, and the sentence says so: CC0
-    // requires no attribution at all, and the upstream data access page asks
-    // for the mention rather than demanding it.
+    // A courtesy, and the sentence says so. CC0 requires no attribution at
+    // all, and the upstream data access page asks for the mention without
+    // demanding it.
     attribution: (source: string, license: string) =>
       `Film data from ${source}, released under ${license}. Credited as a courtesy, since none is required. Modified: unused bindings dropped, multi-valued properties collapsed to arrays, rows limited by sitelink count.`,
     loading: "Downloading the film data...",
@@ -183,5 +183,5 @@ export const en = {
 /** Derived from the base, so a missing key in another catalog fails to type. */
 export type Catalog = typeof en;
 
-/** Derived rather than declared, so a third domain arrives here on its own. */
+/** Derived, so a third domain arrives here on its own. */
 export type DomainId = Exclude<keyof Catalog, "common">;

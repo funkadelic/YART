@@ -21,22 +21,21 @@ const LINKS = [
 ] as const;
 
 /**
- * The city attribution is a licence obligation, not decoration, and the film
- * credit is a courtesy the upstream data access page asks for. This file is what
- * stops either being removed by a refactor that does not know why it is there:
- * delete an anchor, or reword a modification sentence, and these cases go red
- * instead of the repository quietly falling out of compliance.
+ * The city attribution is a license obligation and the film credit is a
+ * courtesy the upstream data access page asks for. These cases stop either
+ * being removed by a refactor that does not know why it is there: delete an
+ * anchor, or reword a modification sentence, and they go red instead of the
+ * repository quietly falling out of compliance.
  *
- * Every assertion reads the accessible name and the href rather than the markup
- * structure, so a later phase can restyle the footer without touching this file.
- * Accessible-name matching normalizes whitespace, so a line wrap in the JSX
- * cannot flap these.
+ * Every assertion reads the accessible name and the href, never the markup
+ * structure, so a later change can restyle the footer without touching this
+ * file. Accessible-name matching normalizes whitespace, so a line wrap in the
+ * JSX cannot flap these.
  *
- * The sentences themselves are asserted against the catalog entries rather than
- * against literals restating them. A literal here would be a second copy of the
- * copy, and the two would drift the first time a word changed. What is asserted
- * is the obligation: whatever the sentences say, all four identifiers are in
- * them and all four are links, in every language.
+ * The sentences themselves are asserted against the catalog entries. A literal
+ * restating them would be a second copy of the copy, and the two would drift
+ * the first time a word changed. So whatever the sentences say, all four
+ * identifiers are in them and all four are links, in every language.
  */
 
 /** Rendered text with runs of whitespace collapsed, so JSX line wrapping is invisible. */
@@ -66,9 +65,9 @@ describe("Footer", () => {
     expect(rendered).toContain("Modified:");
   });
 
-  // Crediting a source that requires no credit is worth nothing if it reads as
-  // an obligation the project is discharging. The sentence has to say which it
-  // is, because the licence names in the footer look alike to a reader.
+  // Crediting a source that requires no credit misleads if it reads as an
+  // obligation the project is discharging. The sentence has to say which it is,
+  // because the license names in the footer look alike to a reader.
   it("says the film credit is a courtesy rather than a requirement", () => {
     const { container } = render(<Footer />);
 
@@ -89,8 +88,8 @@ describe("Footer", () => {
     expect(rendered).toContain(
       normalize(es.films.attribution(FILMS_SOURCE, FILMS_LICENSE)),
     );
-    // The sentences are translated; the source names, the licence identifiers
-    // and the addresses are not. They are identifiers rather than copy.
+    // The sentences are translated; the source names, the license identifiers
+    // and the addresses are not, because they are identifiers and not copy.
     for (const [name, href] of LINKS) {
       expect(screen.getByRole("link", { name })).toHaveAttribute("href", href);
     }

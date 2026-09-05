@@ -1,7 +1,7 @@
 /**
  * Everything the container remembers about the collection it is fetching. One
  * object, because the effect moves several of these together. Generic over the
- * row type, so a second container reuses it rather than copying it.
+ * row type, so a second container can reuse it.
  */
 export interface AppState<T> {
   readonly rows: readonly T[];
@@ -56,7 +56,7 @@ export function applyAppAction<T>(
       };
     case "failed":
       // The rows on screen stay correct until something replaces them, so a
-      // failure paints beside them rather than emptying the table.
+      // failure paints beside them and the table keeps its contents.
       return { ...state, error: action.error };
     case "settled":
       return { ...state, loading: false };

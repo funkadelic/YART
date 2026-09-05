@@ -35,9 +35,9 @@ describe("ThemeControl", () => {
     }
   });
 
-  // The three option names and the group's own name are copy, not state tokens:
-  // the value the control writes stays the English word either way, which is
-  // what the document element is stamped with and what storage holds.
+  // The three option names and the group's own name are copy, not state tokens.
+  // The value the control writes stays the English word either way, and that
+  // word is what the document element is stamped with and what storage holds.
   it("names the group and its three options in the chosen language", () => {
     localStorage.setItem(LOCALE_STORAGE_KEY, "es");
 
@@ -169,9 +169,9 @@ describe("ThemeControl", () => {
       .getAllByRole("radio")
       .map((radio) => radio.getAttribute("id"));
 
-    // Duplicate ids are invalid HTML, and the label binding is what breaks
-    // first: htmlFor finds the first matching input, so clicking the second
-    // control's label would check the first control's radio.
+    // Duplicate ids are invalid HTML, and the label binding breaks first.
+    // htmlFor finds the first matching input, so clicking the second control's
+    // label would check the first control's radio.
     expect(new Set(ids).size).toBe(ids.length);
 
     await user.click(within(second).getByRole("radio", { name: "Dark" }));

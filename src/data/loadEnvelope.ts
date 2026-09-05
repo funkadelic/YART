@@ -2,7 +2,7 @@
  * The ways loading can fail. Codes, because the messages below are English.
  * Six are thrown here, two by each dataset's own row check, and "unexpected" is
  * App's fallback for a rejection that carries no Error. A tuple, so the catalog
- * test walks the set rather than restating it.
+ * test can walk the set.
  */
 export const DATASET_ERROR_CODES = [
   "notAnObject",
@@ -34,12 +34,12 @@ export class DatasetError extends Error {
 
 /**
  * Joins the indexed fields. The address can carry one (`?q=%00`) and trim does
- * not strip it, so whichever seam owns a search key removes it from the needle
- * rather than this being a character no input produces.
+ * not strip it, so it is reachable input and whichever seam owns a search key
+ * removes it from the needle.
  */
 export const SEARCH_KEY_SEPARATOR = "\u0000";
 
-/** Generous: a wall-clock deadline sized for the larger asset, which cannot resume. */
+/** A generous wall-clock deadline, sized for the larger asset, which cannot resume. */
 const LOAD_TIMEOUT_MS = 60_000;
 
 /** A download that did not finish. A stall and a drop are one failure. */
@@ -68,8 +68,8 @@ export interface EnvelopeLoaderOptions<Row> {
  * Builds a loader over one dataset asset: the transport, status, JSON and
  * envelope boundaries, and one promise cache.
  *
- * A factory rather than a function, because the cache is closed over per call.
- * One module-scope cache shared by every dataset would let one request resolve
+ * A factory, so the cache is closed over per call. One module-scope cache
+ * shared by every dataset would let one request resolve
  * with another dataset's rows, which this shape makes unrepresentable.
  */
 export function createEnvelopeLoader<Row>({
@@ -118,15 +118,16 @@ export function createEnvelopeLoader<Row>({
     return parseRows(rows as unknown[]);
   }
 
-  /** The cache is what makes a double mount issue one request. */
+  /** The cache is why a double mount issues one request. */
   return function load(): Promise<Row[]> {
     if (cached) return cached;
 
     const pending = fetch(url, {
       signal: AbortSignal.timeout(LOAD_TIMEOUT_MS),
     })
-      // The browser's own text tells the reader nothing, so it is replaced and
-      // kept as the cause. Attached here, so a read failure is not reported as one.
+      // The browser's own text is unusable as reader-facing copy, so it is
+      // replaced and kept as the cause. Attached here, so a read failure is not
+      // reported as one.
       .catch((reason: unknown) => {
         throw transportError(dataset, reason);
       })
@@ -141,8 +142,8 @@ export function createEnvelopeLoader<Row>({
         // A static host serving its own page for a missing file answers with a
         // success status and HTML, so the status check stays ahead of this.
         return response.json().catch((reason: unknown) => {
-          // A body that is not JSON fails the parse and nothing else does, so
-          // everything else reaching here is the download stopping partway.
+          // A body that is not JSON is the only thing that fails the parse,
+          // so everything else reaching here is the download stopping partway.
           if (!(reason instanceof SyntaxError)) {
             throw transportError(dataset, reason);
           }
@@ -156,8 +157,8 @@ export function createEnvelopeLoader<Row>({
       })
       .then(parseEnvelope);
 
-    // Attached at store time: any delay leaves a window in which a retry
-    // re-awaits the already-rejected promise. Unconditional is safe, because a
+    // Attached at store time, because any delay leaves a window in which a
+    // retry re-awaits the already-rejected promise. Unconditional is safe, as a
     // new entry is only stored after this handler has cleared the old one.
     pending.catch(() => {
       cached = undefined;

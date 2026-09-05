@@ -27,7 +27,7 @@ export function pseudoize(message: string): string {
 
 /**
  * Entry by entry, because a built record would need a cast to be typed. Taken
- * over the domain rather than written twice, so a new failure code is one line.
+ * over the domain, so a new failure code costs one line here and not two.
  */
 function pseudoErrors(domain: DomainId): DatasetErrorText {
   const base = en[domain].datasetError;
