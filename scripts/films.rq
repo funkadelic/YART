@@ -1,0 +1,23 @@
+# Recommended. Measured 31.0s / 8,944 rows / 1.29 MB CSV on 2026-09-04.
+# Each multi-valued property is aggregated in its own subquery; a single flat
+# GROUP BY over the same joins exceeds the service's 60 second deadline.
+SELECT ?film ?title ?year ?runtime ?directors ?genres ?countries WHERE {
+  { SELECT ?film ?title (MIN(YEAR(?date)) AS ?year) (MIN(?r) AS ?runtime) WHERE {
+      ?film wdt:P31 wd:Q11424 ; wikibase:sitelinks ?s . FILTER(?s >= 20)
+      ?film rdfs:label ?title . FILTER(LANG(?title) = "en")
+      OPTIONAL { ?film wdt:P577 ?date }
+      OPTIONAL { ?film wdt:P2047 ?r }
+    } GROUP BY ?film ?title }
+  OPTIONAL { SELECT ?film (GROUP_CONCAT(DISTINCT ?n; separator="|") AS ?directors) WHERE {
+      ?film wdt:P31 wd:Q11424 ; wikibase:sitelinks ?s . FILTER(?s >= 20)
+      ?film wdt:P57 ?d . ?d rdfs:label ?n . FILTER(LANG(?n)="en")
+    } GROUP BY ?film }
+  OPTIONAL { SELECT ?film (GROUP_CONCAT(DISTINCT ?n; separator="|") AS ?genres) WHERE {
+      ?film wdt:P31 wd:Q11424 ; wikibase:sitelinks ?s . FILTER(?s >= 20)
+      ?film wdt:P136 ?g . ?g rdfs:label ?n . FILTER(LANG(?n)="en")
+    } GROUP BY ?film }
+  OPTIONAL { SELECT ?film (GROUP_CONCAT(DISTINCT ?n; separator="|") AS ?countries) WHERE {
+      ?film wdt:P31 wd:Q11424 ; wikibase:sitelinks ?s . FILTER(?s >= 20)
+      ?film wdt:P495 ?c . ?c rdfs:label ?n . FILTER(LANG(?n)="en")
+    } GROUP BY ?film }
+}
