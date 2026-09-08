@@ -2,7 +2,7 @@
 
 [![codecov](https://codecov.io/gh/funkadelic/YART/branch/main/graph/badge.svg)](https://codecov.io/gh/funkadelic/YART)
 
-A React and TypeScript single-page app for browsing a large dataset in the browser: search, sort, and paginate a list of world cities without a table library.
+A React and TypeScript single-page app for browsing large datasets in the browser: search, sort, and paginate world cities or films without a table library.
 
 **[Live demo](https://funkadelic.github.io/YART/)**, published from `main` by the pipeline once every gate passes. A second table over a films dataset is served beside it at **[`movies.html`](https://funkadelic.github.io/YART/movies.html)**, and everything described below holds for both pages. The two do not link to each other: this is the route to the second one.
 
@@ -41,6 +41,7 @@ A React and TypeScript single-page app for browsing a large dataset in the brows
 
 - Search cities by city name, ascii name, country name, or country code
 - The Capital column is rendered but not searched, because its only values are the upstream classification codes `primary`, `admin`, and `minor`
+- Search films by title only, so a director or genre a reader types matches nothing
 - Empty state when a search matches nothing
 - A failed dataset load replaces the table with the message and a retry control
 - Search is debounced by 150ms after the last keystroke, using a hand-rolled `useDebouncedCallback` hook rather than a utility library
@@ -162,7 +163,7 @@ The history contains a one-time commit that reformatted every file. Run `git con
 
 The table comes in two pieces. `DataTable<T, Id>` renders any collection and holds nothing: sort, page, page size and the committed query all arrive in one object and leave as callbacks describing what the user did. A container decides what the next object is and supplies the columns, the row identity and every string that names what the rows are.
 
-`CityTable` is that container for this app. Writing another one is how the table renders something other than cities.
+`CityTable` is that container for this app, and `FilmTable` is a second one over a different row type. Writing another is how the table renders something else.
 
 Start with the columns. `columns<T>()` is curried because TypeScript infers all of a call's type arguments or none of them: the row type is the one thing you know and the compiler cannot guess, so you supply it once and the column id and value type are inferred per call.
 
@@ -204,19 +205,22 @@ Every string that names what the rows are comes from the same place, because a s
 ```tsx
 export function buildTableLabels(
   catalog: Catalog,
+  domain: DomainId,
   tag: string,
 ): DataTableLabels {
+  const copy = catalog[domain];
+
   return {
-    loading: catalog.loading,
-    empty: catalog.empty,
-    emptyAnnouncement: catalog.emptyAnnouncement,
-    results: (shown, total) => catalog.results(tag, shown, total),
-    caption: (total, sortSummary) => catalog.caption(tag, total, sortSummary),
+    loading: copy.loading,
+    empty: copy.empty,
+    emptyAnnouncement: copy.emptyAnnouncement,
+    results: (shown, total) => copy.results(tag, shown, total),
+    caption: (total, sortSummary) => copy.caption(tag, total, sortSummary),
   };
 }
 ```
 
-Five of the entries are shown. The rest, the retry and error copy, the sort announcements and summary, and the whole pagination slice, are built the same way in `src/features/CityTable/cityLabels.ts`; the type is what makes a missing one a compile error.
+Five of the entries are shown. The rest, the retry and error copy, the sort announcements and summary, and the whole pagination slice, come off the catalog's common half in `src/features/tableLabels.ts`; the type is what makes a missing one a compile error.
 
 An entry that weaves a value takes that value rather than an already-composed phrase. A caller handing over a finished word has made a grammatical decision one layer too early, which is what made the old sort summary untranslatable.
 
@@ -232,7 +236,13 @@ import {
   type TableState,
 } from "./components/DataTable/tableState";
 
-function CityTable({ data, loading, datasetReady, error, onRetry }: Props) {
+function CityTable({
+  data,
+  loading,
+  datasetReady,
+  errorMessage,
+  onRetry,
+}: Props) {
   const [state, setState] =
     useState<TableState<CityColumnId>>(DEFAULT_TABLE_STATE);
 
@@ -261,7 +271,7 @@ function CityTable({ data, loading, datasetReady, error, onRetry }: Props) {
       onPageSizeChange={handlePageSizeChange}
       loading={loading}
       datasetReady={datasetReady}
-      error={error}
+      errorMessage={errorMessage}
       onRetry={onRetry}
       labels={cityTableLabels}
     />
@@ -271,22 +281,22 @@ function CityTable({ data, loading, datasetReady, error, onRetry }: Props) {
 
 ### Props
 
-| Prop               | Type                         | Description                                                                                                                                                                                     |
-| ------------------ | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `rows`             | `readonly T[]`               | Rows to display. Already filtered by the caller.                                                                                                                                                |
-| `columns`          | `readonly Column<T, Id>[]`   | Built with `columns<T>()`. The id union is inferred from this array alone.                                                                                                                      |
-| `getRowId`         | `(row: T) => string`         | Must be injective. See below.                                                                                                                                                                   |
-| `state`            | `TableState<Id>`             | Sort column and direction, page, page size, committed query, and whether a sort has ever been applied.                                                                                          |
-| `onSortChange`     | `(columnId: Id) => void`     | A header was activated. Feed it to `applyTableAction` to get the next state.                                                                                                                    |
-| `onPageChange`     | `(page: number) => void`     | A pagination control was activated.                                                                                                                                                             |
-| `onPageSizeChange` | `(pageSize: number) => void` | The page size select changed.                                                                                                                                                                   |
-| `loading`          | `boolean`                    | True while a request is in flight. A refetch leaves the table mounted and marks it busy.                                                                                                        |
-| `datasetReady`     | `boolean`                    | False until the collection has arrived at least once. The download message renders only while `loading` is true and this is false, so a refetch that returns no rows does not claim a download. |
-| `error`            | `Error \| null`              | Renders the error message in place of the table, in a live region so it is announced. Pass `onRetry` alongside it when the failure is not something editing the query can correct.              |
-| `onRetry`          | `() => void`                 | Optional. Called when the user activates the retry control. Omit it when the caller has no retry to offer.                                                                                      |
-| `labels`           | `DataTableLabels`            | Every rendered string that names what the rows are: `loading`, `empty`, `emptyAnnouncement`, and the `results` and `caption` functions that weave counts into a sentence.                       |
+| Prop               | Type                         | Description                                                                                                                                                                                                                    |
+| ------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `rows`             | `readonly T[]`               | Rows to display. Already filtered by the caller.                                                                                                                                                                               |
+| `columns`          | `readonly Column<T, Id>[]`   | Built with `columns<T>()`. The id union is inferred from this array alone.                                                                                                                                                     |
+| `getRowId`         | `(row: T) => string`         | Must be injective. See below.                                                                                                                                                                                                  |
+| `state`            | `TableState<Id>`             | Sort column and direction, page, page size, committed query, and whether a sort has ever been applied.                                                                                                                         |
+| `onSortChange`     | `(columnId: Id) => void`     | A header was activated. Feed it to `applyTableAction` to get the next state.                                                                                                                                                   |
+| `onPageChange`     | `(page: number) => void`     | A pagination control was activated.                                                                                                                                                                                            |
+| `onPageSizeChange` | `(pageSize: number) => void` | The page size select changed.                                                                                                                                                                                                  |
+| `loading`          | `boolean`                    | True while a request is in flight. A refetch leaves the table mounted and marks it busy.                                                                                                                                       |
+| `datasetReady`     | `boolean`                    | False until the collection has arrived at least once. The download message renders only while `loading` is true and this is false, so a refetch that returns no rows does not claim a download.                                |
+| `errorMessage`     | `string \| null`             | Renders in place of the table, in a live region so it is announced. Text, not an error object, so no component tier sees a cause. Pass `onRetry` alongside it when the failure is not something editing the query can correct. |
+| `onRetry`          | `() => void`                 | Optional. Called when the user activates the retry control. Omit it when the caller has no retry to offer.                                                                                                                     |
+| `labels`           | `DataTableLabels`            | Every rendered string that names what the rows are: `loading`, `empty`, `emptyAnnouncement`, and the `results` and `caption` functions that weave counts into a sentence.                                                      |
 
-If both `loading` and `error` are set, `error` wins.
+If both `loading` and `errorMessage` are set, `errorMessage` wins.
 
 Every column is sortable. There is no per-column opt out, because the previous one existed to keep a hand-written `<tbody>` in step with the header array, and neither is hand-written now.
 
@@ -318,7 +328,7 @@ Cancelling covers a back navigation that lands inside the window. Without it, th
 Columns are built with `columns<T>()`, which returns two methods. `key` names a field on the row and reads it; `accessor` computes a value the row does not carry:
 
 ```tsx
-const col = columns<Part>();
+const col = columns<Part>(collatorFor(tag));
 
 col.key("name", { label: "Part" });
 col.accessor("total", (row) => row.qty * row.unitPrice, { label: "Total" });
@@ -346,7 +356,7 @@ Adding or reordering a column is one edit to the array. The header and the cells
 
 The shared comparator takes the direction rather than being flipped by its caller, which is what lets blanks sort last in both directions. Negating a direction-free comparator instead puts every blank first on descending, and on real data that is a first page of empty cells.
 
-It dispatches on the runtime type of the value: numbers compare as numbers, everything else through a single module-scope `Intl.Collator`. There is one collator, built once, because constructing one per comparison is the expensive part.
+It dispatches on the runtime type of the value: numbers compare as numbers, everything else through an `Intl.Collator` handed in as a parameter. `collatorFor` in `src/i18n/format.ts` holds one per resolved language tag for the life of the module, because constructing one per comparison is the expensive part.
 
 Rows whose values compare equal are then ordered by `getRowId`, so the result is total: the same rows in the same order however they arrived.
 
@@ -417,7 +427,8 @@ The pipeline sends three reports to [Codecov](https://codecov.io/gh/funkadelic/Y
 | `npm run lint`            | Run ESLint then Stylelint; a warning fails it (`lint:fix` to autofix)      |
 | `npm run format`          | Run Prettier                                                               |
 | `npm run format:check`    | Check formatting without rewriting anything                                |
-| `npm run generate:cities` | Regenerate the committed dataset asset from the upstream CSV export        |
+| `npm run generate:cities` | Regenerate the committed cities asset from the upstream CSV export         |
+| `npm run generate:films`  | Regenerate the committed films asset from the recorded SPARQL query        |
 
 `npm run test:browser` and `npm run test:e2e` both drive a real Chromium. `npm ci` downloads neither that browser nor the system libraries it needs, so a clean clone fetches both once with `npx playwright install --with-deps --only-shell chromium`, whose `--with-deps` half needs `sudo` on Linux. CI runs that same command, so every path installs the same binary.
 
@@ -429,10 +440,10 @@ The three suites CI runs each write a JUnit report into `junit/`, which is gitig
 
 ## Notes and next steps
 
-There is no server. `getCities` fakes network latency over an array held in memory, so everything below is what a real backend would change. Worth doing before it ships:
+There is no server. `getCities` and `getFilms` fake network latency over an array held in memory, so everything below is what a real backend would change. Worth doing before it ships:
 
 - The dataset arrives as a separate content-hashed JSON asset rather than being compiled into the bundle, but filtering and sorting still run over the whole result set on the main thread. That is fine at this size. Past it, the work belongs behind a paginated, sorted API rather than in the browser.
-- Every row renders, so a page size of 100 is 100 rows in the DOM and there is no way to ask for all 50,250. Virtualization would fix both.
+- Every row renders, so a page size of 100 is 100 rows in the DOM and there is no way to ask for every row. Virtualization would fix both.
 - Sorting multiple columns at once is not implemented.
 
 ## License
@@ -440,3 +451,5 @@ There is no server. `getCities` fakes network latency over an array held in memo
 The source in this repository is MIT licensed; see `LICENSE`.
 
 The city dataset is not covered by that license. It is redistributed from SimpleMaps under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and keeps those terms, which the Data attribution section above states.
+
+The film dataset is not covered by it either. It is drawn from Wikidata and dedicated to the public domain under [CC0](https://creativecommons.org/publicdomain/zero/1.0/), which asks for nothing and gets the credit above as a courtesy.
