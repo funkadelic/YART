@@ -624,7 +624,7 @@ const PROVENANCE_REGENERATION =
  * becoming two different statements.
  */
 const CITY_SOURCE_FORM_CEILING =
-  "City and country names stay in their source form in every locale: the " +
+  "City and country names stay in their source form in every locale. The " +
   "dataset carries a name and an ascii name and nothing else, so a reader of " +
   "the French interface still reads the English country name. Translating " +
   "them would need a translated column and a regenerated asset, which is a " +
@@ -633,7 +633,7 @@ const CITY_SOURCE_FORM_CEILING =
 /** The same ceiling for the second dataset, whose reason differs in its detail. */
 const FILM_SOURCE_FORM_CEILING =
   "Film, director, genre and country names stay in their source form in " +
-  "every locale: the query asks for English labels and nothing else, so a " +
+  "every locale. The query asks for English labels and nothing else, so a " +
   "reader of the French interface still reads the English genre name. " +
   "Translating them would need a translated label per property and a " +
   "regenerated asset, which is a data pipeline rather than an " +

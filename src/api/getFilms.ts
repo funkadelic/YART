@@ -1,7 +1,7 @@
 import type { Film } from "../data/films/films";
 import { loadFilms } from "../data/films/films";
 
-// Re-exported so no consumer's import path changed when the definition moved.
+// Re-exported so a consumer needs one import path rather than two.
 export type { Film };
 
 // The failure vocabulary reaches the tree through this seam too, so the loader
@@ -17,12 +17,8 @@ export interface GetFilmsParams {
 const LATENCY_MS = 200;
 
 /**
- * Matches a term against the title.
- *
- * A sibling of src/api/getCities.ts, kept separate because the search semantics
- * differ. The city seam matches a derived key joining four fields, which only
- * cities have and which brings a separator guard with it, and a shared seam
- * would carry that guard for a dataset that has no key to guard.
+ * Matches a term against the title. Separate from getCities, which searches a
+ * joined key and carries a separator guard this dataset has no need for.
  */
 export async function getFilms({
   searchTerm = "",

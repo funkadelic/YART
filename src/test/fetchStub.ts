@@ -51,11 +51,8 @@ export function stubDatasetFetchFromDisk(body: string) {
 
 /**
  * Serves the film envelope in place of the city one the setup file installs.
- *
- * Deliberately not a URL-discriminating stub. The shared stub above answers
- * whatever is asked for, and a films test installs this one over it in its own
- * hook, which runs after the setup file's. A films test that forgets fails with
- * a column-order failure and does not pass quietly against city data.
+ * Not URL-discriminating: a films test that forgets it fails on column order
+ * rather than passing quietly against city data.
  */
 export function stubFilmDatasetFetch(payload: unknown = FILM_FIXTURE_ENVELOPE) {
   return stubDatasetFetch(payload);

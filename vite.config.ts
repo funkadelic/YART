@@ -96,18 +96,12 @@ function contentSecurityPolicy(): Plugin {
  * still fetch the real one afterwards, so the lookup throws when it finds
  * anything but one match.
  *
- * The lookup is per entry chunk. context.bundle is the whole build's bundle and
- * every shell is handed the same one, so with two entries a name-based filter
- * over it matches the same single asset for both shells and the guard never
- * fires. That was measured with a two-entry probe build, and the shell that gets
- * the wrong preload fails silently.
+ * The lookup is per entry chunk, because context.bundle is the whole build and a
+ * name filter over it matches the same asset for both shells.
  *
- * Reading the entry comes with a ceiling. importedAssets is attributed to the
- * chunk that imports the asset, so a dataset module landing in the shared chunk
- * instead of an entry chunk leaves the entry's set empty and the plugin throws
- * on a count of zero. That loud failure is the intended one, a red build in
- * place of a wrong preload. Each dataset module here is reached from exactly one
- * entry, so the case does not arise today.
+ * importedAssets is attributed to the chunk that imports the asset, so a dataset
+ * module landing in the shared chunk would leave the entry's set empty and throw
+ * on a count of zero. Each is reached from exactly one entry today.
  */
 function preloadDataset(): Plugin {
   return {

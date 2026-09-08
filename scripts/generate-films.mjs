@@ -2,11 +2,9 @@
  * Generates the committed film dataset asset, src/data/films/films.json, from a
  * SPARQL result downloaded from the Wikidata Query Service.
  *
- * Run it with `npm run generate:films`. Its only inputs and outputs are files
- * inside this repository: no network client is imported, so regenerating the
- * dataset can never introduce a build-time trust boundary. The query, the curl
- * invocation that downloads its result, and the service limits that make a
- * manual run the right shape are recorded in src/data/films/license.md.
+ * Run it with `npm run generate:films`. It only reads and writes local files.
+ * The query, the curl invocation that downloads its result, and the service
+ * limits behind the manual run are recorded in src/data/films/license.md.
  */
 
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
@@ -22,13 +20,9 @@ const DEFAULT_INPUT_PATH = join(import.meta.dirname, "films-result.json");
 const OUTPUT_PATH = join(dataDir, "films.json");
 
 /**
- * The version stamped into the envelope: the date the query was run, followed by
- * a repo-local revision counter.
- *
- * Wikidata publishes no release number, so the query date is the only stable
- * upstream identifier available. Bump the +rN suffix whenever this generator's
- * output changes for a reason other than a fresh export, because the date alone
- * cannot distinguish two different local transforms of the same export.
+ * The query date, which is the only stable upstream identifier Wikidata offers,
+ * plus a repo-local counter. Bump the +rN suffix whenever this generator's
+ * output changes for a reason other than a fresh export.
  */
 const DATASET_VERSION = "2026-09-04+r1";
 
@@ -53,12 +47,10 @@ const MULTI_VALUED = Object.freeze(["directors", "genres", "countries"]);
 /**
  * The character films.rq joins each group on.
  *
- * ponytail: a label containing this character splits into two names and is
- * accepted, because a joined string cannot say which it was. No English label
- * in the current export carries one. Switch both this and films.rq to a control
- * character such as U+001F if that ever stops being true, which costs a fresh
- * download because the recorded query has to run again to produce a result the
- * new separator can split.
+ * ponytail: a label containing it splits into two names and is accepted, since
+ * a joined string cannot say which it was. No English label in the current
+ * export carries one. Switch this and films.rq to a control character such as
+ * U+001F if that changes, which costs a fresh download.
  */
 const SEPARATOR = "|";
 
@@ -85,12 +77,8 @@ export function buildEnvelope(rows) {
 }
 
 /**
- * Serializes the envelope with every row on its own line.
- *
- * The line-per-row layout is why the tuple shape was chosen, because it makes a
- * single corrected film a one-line diff. A plain JSON.stringify puts the whole
- * payload on one line, and the reviewability argument for this shape collapses
- * with it.
+ * Serializes the envelope with every row on its own line, which is what makes a
+ * corrected film a one-line diff. JSON.stringify alone puts it all on one line.
  */
 export function formatEnvelope(envelope) {
   const lines = [
@@ -120,12 +108,9 @@ function literal(binding, name) {
 }
 
 /**
- * Maps a SPARQL JSON result onto the envelope's column order.
- *
- * Rows are ordered by ascending Q-id and every multi-valued field is sorted, so
- * two exports of the same data serialize identically and a corrected film stays
- * a one-line diff. Neither order comes from upstream: SPARQL promises no row
- * order and GROUP_CONCAT none within a group.
+ * Maps a SPARQL JSON result onto the envelope's column order. Rows are sorted by
+ * Q-id and every multi-valued field is sorted, so two exports of the same data
+ * serialize identically. SPARQL promises neither order.
  */
 export function parseSparqlResult(text) {
   const bindings = JSON.parse(text)?.results?.bindings;
@@ -179,16 +164,10 @@ export function parseSparqlResult(text) {
       row.push(value);
     }
 
-    // Split here, once, at generation time, so no comparator and no cell renderer
-    // ever has to take a joined string apart, and sorted so the committed asset
-    // is canonical and a regeneration cannot permute it. GROUP_CONCAT promises no
-    // order within a group.
-    //
-    // The empty-element check catches a value that begins or ends with the
-    // separator. It cannot catch a separator in the middle of a label, which
-    // splits into two non-empty names and is accepted: the joined string is
-    // genuinely ambiguous and no check downstream can recover the intent. See
-    // the ceiling recorded on SEPARATOR.
+    // Split and sorted once here, so nothing downstream takes a joined string
+    // apart and a regeneration cannot permute the asset. The empty-element check
+    // catches a leading or trailing separator; one mid-label is ambiguous and is
+    // accepted, as the ceiling on SEPARATOR records.
     for (const name of MULTI_VALUED) {
       const raw = literal(binding, name);
       const values = raw === undefined ? [] : raw.split(SEPARATOR);

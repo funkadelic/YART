@@ -30,7 +30,7 @@ export {
  *   >= 1004003059, so these cannot collide.
  * - 2 rows have an empty city_ascii and fall back to the city name.
  *
- * City and country names stay in their source form in every locale: the dataset
+ * City and country names stay in their source form in every locale. The dataset
  * carries a name and an ascii name and nothing else, so a reader of the French
  * interface still reads the English country name. Translating them would need a
  * translated column and a regenerated asset, which is a data pipeline rather

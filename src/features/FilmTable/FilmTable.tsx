@@ -43,14 +43,11 @@ interface FilmTableProps {
 
 /**
  * The shared table wired to the film columns, the film copy and the view state
- * that drives them. The search box lives here too, holding what is being typed
- * and the term typing settles on, and reporting the settled term upward.
+ * that drives them. The search box lives here too, reporting the settled term
+ * upward.
  *
- * ponytail: a near-copy of CityTable, deliberately. Two consumers is not yet
- * evidence of what a third would need, and what the two share is the state and
- * address logic, none of it domain-free enough to lift today. Factor the
- * debounce, the guarded replaceState and the popstate read into one hook when a
- * third table arrives, or sooner if the two copies start to disagree.
+ * ponytail: near-copy of CityTable; lift the debounce, the guarded
+ * replaceState and the popstate read into a hook when a third table arrives.
  */
 export function FilmTable({
   data,

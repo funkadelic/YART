@@ -34,8 +34,8 @@ export class DatasetError extends Error {
 
 /**
  * Joins the indexed fields. The address can carry one (`?q=%00`) and trim does
- * not strip it, so it is reachable input and whichever seam owns a search key
- * removes it from the needle.
+ * not strip it, so a seam that owns a search key answers zero rows for a term
+ * carrying one rather than stripping it.
  */
 export const SEARCH_KEY_SEPARATOR = "\u0000";
 
@@ -65,12 +65,9 @@ export interface EnvelopeLoaderOptions<Row> {
 }
 
 /**
- * Builds a loader over one dataset asset: the transport, status, JSON and
- * envelope boundaries, and one promise cache.
- *
- * A factory, so the cache is closed over per call. One module-scope cache
- * shared by every dataset would let one request resolve
- * with another dataset's rows, which this shape makes unrepresentable.
+ * One loader per dataset asset: the transport, status, JSON and envelope
+ * boundaries, plus a promise cache closed over per call so no dataset can
+ * answer another's request.
  */
 export function createEnvelopeLoader<Row>({
   url,

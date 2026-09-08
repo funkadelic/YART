@@ -6,15 +6,10 @@ import { collatorFor, durationFormatFor } from "../../i18n/format";
 import { resolveLocale } from "../../i18n/resolveLocale";
 
 /**
- * The columns the film table shows, built for one resolved locale. Both the
- * label and the grouped runtime cell follow the reader, and the collator is
- * fused into the default comparator here. Every call returns a new identity, so
- * the caller has to memoize on the catalog and the tag, or the sort and page
- * memos downstream re-run on every render.
- *
- * The year is deliberately not grouped, because a year is an identifier a
- * reader reads as four digits and a thousands separator in it is wrong in every
- * locale.
+ * The columns the film table shows, built for one resolved locale. Memoize on
+ * the catalog and the tag, or the sort and page memos downstream re-run every
+ * render. The year is not grouped, because a separator in a four-digit year is
+ * wrong in every locale.
  */
 export function buildFilmColumns(catalog: Catalog, tag: string) {
   // Named so the list comparator below can close over it. That closure is why
@@ -28,11 +23,8 @@ export function buildFilmColumns(catalog: Catalog, tag: string) {
   // no cell here writes a separator of its own.
   const list = (values: readonly string[]) => catalog.common.list(tag, values);
 
-  // Every multi-valued column needs this. The default comparator files an array
-  // as an other-typed value, orders it by the accidental string form, and does
-  // not call an empty list blank. Ordering by the joined text keeps the column
-  // agreeing with what the cell shows; ordering by length would put a one-genre
-  // film above a two-genre one whatever they read.
+  // Arrays need this: the default comparator would order them by String(array)
+  // and would not treat an empty list as blank.
   const compareList = (
     a: readonly string[],
     b: readonly string[],

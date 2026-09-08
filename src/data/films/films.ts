@@ -1,33 +1,20 @@
-// The ?url suffix is load-bearing: a plain value import would compile several
-// megabytes of dataset into the JavaScript chunk with no visible error.
+// The ?url suffix matters: a plain value import would compile the whole
+// dataset into the JavaScript chunk with no visible error.
 import filmsUrl from "./films.json?url";
 import { DatasetError, createEnvelopeLoader } from "../loadEnvelope";
 
-// The failure vocabulary reaches the tree through this module, so no consumer's
-// import path moved when the shared boundaries were extracted. Same trick
-// src/api/getFilms.ts uses on this module, for the same reason.
+// The failure vocabulary reaches the tree through this module, so a consumer
+// needs one import path rather than two. src/api/getFilms.ts does the same.
 export type { DatasetErrorCode } from "../loadEnvelope";
 export { DATASET_ERROR_CODES, DatasetError } from "../loadEnvelope";
 
 /**
  * Wikidata films, queried through the Query Service and released under CC0 1.0.
- * See license.md.
- *
- * Only the properties this type needs are kept, rows are ordered by ascending
- * Q-id, and multi-valued properties are collapsed to arrays. Provenance is
- * recorded in license.md and the README, not here.
- *
- * Upstream quirks preserved deliberately:
- * - One row has no year and 59 have no runtime, each recorded as null and not
- *   as zero, because a film with no recorded length is not a film of no length.
- * - One runtime is fractional and is kept as published, since rounding at a
- *   parse boundary is data loss with no record.
- * - Around a hundred rows carry an empty array for a multi-valued property,
- *   which means the query returned no binding, not that the film has no
- *   country.
+ * Provenance is in license.md. A missing year or runtime is null rather than
+ * zero, and films.asset.test.ts holds that and the other preserved quirks.
  *
  * Film, director, genre and country names stay in their source form in every
- * locale: the query asks for English labels and nothing else, so a reader of
+ * locale. The query asks for English labels and nothing else, so a reader of
  * the French interface still reads the English genre name. Translating them
  * would need a translated label per property and a regenerated asset, which is
  * a data pipeline rather than an internationalization change.
@@ -68,8 +55,8 @@ function isStringArray(value: unknown): value is string[] {
   );
 }
 
-// Code-unit order, not the reader's collation: the asset is parsed once and
-// cached, and the locale is not fixed for the life of that cache.
+// Code-unit order, because the asset is parsed once and cached while the
+// locale can still change.
 const byCodeUnit = (a: string, b: string) => {
   if (a === b) return 0;
   return a < b ? -1 : 1;
@@ -105,13 +92,8 @@ function parseFilmRows(rows: unknown[]): Film[] {
       );
     }
 
-    // The runtime is taken as published. A fractional one is real and rounding
-    // it here would be data loss no reader could see.
-    //
-    // The multi-valued fields are sorted here because the query groups them and
-    // SPARQL promises no order within a group, so the asset's order is arbitrary
-    // and a regeneration may permute it. Sorting once at the boundary makes
-    // both the cell text and the column's order reproducible.
+    // Runtime kept as published; a fractional one is real. The multi-valued
+    // fields are sorted here because GROUP_CONCAT promises no order.
     return {
       id,
       title,
