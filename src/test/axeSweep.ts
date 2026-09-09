@@ -3,15 +3,14 @@ import type { AxeResults } from "axe-core";
 /**
  * Shared readers over a rule engine result.
  *
- * The formatter is written by hand rather than taken from a published matcher
- * because the failure message is the entire point. A matcher that reports only
- * that some rule failed leaves the reader opening a browser to find out which
- * element it was; the strings below carry the rule, its impact, its help URL,
- * and the selector of every offending node, so the console output is enough to
- * start fixing.
+ * The formatter is written by hand because a published matcher reports only
+ * that some rule failed, which leaves the reader opening a browser to find out
+ * which element it was. The strings below carry the rule, its impact, its help
+ * URL, and the selector of every offending node, so the console output is enough
+ * to start fixing.
  *
  * Both functions are pure and neither registers anything on expect. The
- * assertions stay in the calling test file so that they are visible to the
+ * assertions stay in the calling test file so they are visible to the
  * renders-against-assertions guard, which reads call sites out of the file it
  * is checking and would count a helper's assertions as belonging to nobody.
  */
@@ -19,8 +18,8 @@ import type { AxeResults } from "axe-core";
 /**
  * One readable line per violation, in the order the engine reported them.
  *
- * Compared against the empty array rather than against a count, so a failure
- * prints the violations themselves instead of the number of them.
+ * Callers compare against the empty array, so a failure prints the violations
+ * themselves instead of a count of them.
  */
 export function describeViolations(results: AxeResults): string[] {
   return results.violations.map((violation) => {

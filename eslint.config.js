@@ -13,8 +13,8 @@ import { defineConfig } from "eslint/config";
 // by the app, which would put executing application code outside the measured
 // set with every guard still green.
 //
-// Declared once rather than written into each block below, because
-// no-restricted-imports is configured per rule and not per pattern: a later
+// Declared once here and composed into each block below, because
+// no-restricted-imports is configured per rule and not per pattern. A later
 // block naming the rule replaces the earlier configuration outright for the
 // files it matches, so a second block that forgot this group would silently
 // unrestrict it for exactly those files.
@@ -26,8 +26,8 @@ const TEST_SCAFFOLDING_IMPORT = {
 
 // The four attributes whose string value a reader perceives. `aria-sort` and
 // `aria-live` carry strings in that layer too and are deliberately outside the
-// set: both take a value the standard defines and assistive technology matches
-// on, so translating either would break the feature rather than localize it.
+// set, because both take a value the standard defines and assistive technology
+// matches on. Translating either would break the feature, not localize it.
 //
 // no-restricted-syntax is configured per rule and not per selector, exactly as
 // no-restricted-imports is above, so each selector set is declared once here and
@@ -46,9 +46,9 @@ const READER_FACING_ATTRIBUTE = {
 // own reintroduces the defect the locale layer closed, and does it invisibly on a
 // machine whose own preference is the base tag.
 //
-// Matched on the tree rather than on the text, which matters twice here: a
-// namespace named inside a comment is not a call site, and a type annotation
-// naming the same constructor is not one either.
+// Matched on the tree, because matching the text would flag two things that are
+// not call sites: a namespace named inside a comment, and a type annotation
+// naming the same constructor.
 const LOCALE_CALL_SITE = [
   {
     selector:
@@ -64,8 +64,8 @@ const LOCALE_CALL_SITE = [
   },
 ];
 
-// The way the mirror rule is undone in JavaScript rather than in CSS: a branch
-// choosing between two glyph components on the reading direction. It is
+// A branch choosing between two glyph components on the reading direction is how
+// the mirror rule gets undone in JavaScript instead of in CSS. It is
 // invisible to the stylelint rules that hold the stylesheets, because it is not
 // CSS, and invisible to the literal rule above, because a glyph component is
 // neither a text child nor a string.
@@ -77,11 +77,11 @@ const DIRECTION_BRANCH = [
       "Two glyph components chosen on a condition are a prop, a branch and a coverage line for what one transform: scaleX(-1) under an attribute selector already does. Mirror in the stylesheet.",
   },
   {
-    // Both sides, by shape: esquery cannot scope :has() to a named property,
+    // Both sides, by shape. esquery cannot scope :has() to a named property,
     // so an else-if chain and a return that is not first in its block are out
-    // of reach. Recorded in GUARD-DISPOSITION.md rather than answered with a
-    // looser selector, because the guarded render this used to flag is the
-    // false positive that gets a rule deleted.
+    // of reach. That gap is recorded in GUARD-DISPOSITION.md and left open
+    // instead of closed with a looser selector, because the guarded render this
+    // used to flag is the false positive that gets a rule deleted.
     selector:
       "IfStatement" +
       ":matches([consequent.argument.type=/^JSX(Element|Fragment)$/], [consequent.body.0.argument.type=/^JSX(Element|Fragment)$/])" +
@@ -112,12 +112,12 @@ export default defineConfig([
     languageOptions: { globals: globals.browser },
   },
   eslint.configs.recommended,
-  // Type-aware rather than syntax-only, which is what puts the promise rules in
-  // play: a floating promise and a promise passed where a void callback is
-  // expected are both invisible without types, and this tree is built on a
-  // request seam, effects and a debounce. projectService reads the tsconfig
-  // this repository already has, so the linted set and the typechecked set are
-  // the same set by construction rather than by a second list kept here.
+  // Type-aware, which puts the promise rules in play. A floating promise and a
+  // promise passed where a void callback is expected are both invisible without
+  // types, and this tree is built on a request seam, effects and a debounce.
+  // projectService reads the tsconfig this repository already has, so the linted
+  // set and the typechecked set are the same set by construction, with no second
+  // list kept here.
   tseslint.configs.recommendedTypeChecked,
   {
     languageOptions: {
@@ -138,24 +138,24 @@ export default defineConfig([
       },
     },
     rules: {
-      // Spread again: the key above replaces the recommended rules wholesale
-      // rather than merging with them, which silently disabled all 22.
+      // Spread again, because the key above replaces the recommended rules
+      // wholesale instead of merging with them, which silently disabled all 22.
       ...react.configs.flat.recommended.rules,
       "react/react-in-jsx-scope": "off",
     },
   },
-  // The plugin's own flat config rather than a hand-built entry, so the shape
-  // tracks the installed major instead of the one this file was written against.
+  // The plugin's own flat config, so the shape tracks the installed major
+  // instead of the one this file was written against.
   // Note it enables the React Compiler rule family, not just the two classic
   // hook rules.
   reactHooks.configs.flat.recommended,
   // The axe sweeps assert what a rendered tree does; this asserts what the JSX
-  // says, which is the half that has no test to render it. A control that no
-  // case mounts is invisible to both sweeps and visible here.
+  // says, the half that has no test to render it. A control that no case mounts
+  // is invisible to both sweeps and visible here.
   //
-  // recommended rather than strict: strict turns on rules whose correct answer
-  // depends on the surrounding markup, which is what makes them noisy in a tree
-  // this small rather than more careful.
+  // recommended, not strict. Strict turns on rules whose correct answer depends
+  // on the surrounding markup, which makes them noisy in a tree this small
+  // without making them more careful.
   jsxA11y.flatConfigs.recommended,
   // Test files are exempt from the scaffolding restriction because importing
   // that scaffolding is what it is for.
@@ -169,8 +169,8 @@ export default defineConfig([
       ],
     },
   },
-  // The shared components take every rendered string as a prop, which is the
-  // one property that lets them show something other than cities. A component
+  // The shared components take every rendered string as a prop, the one
+  // property that lets them show something other than cities. A component
   // reaching the locale layer directly would weld the table to this app's copy
   // and to this app's idea of a catalog, and it would do so invisibly: the tree
   // still renders, the tests still pass, and the layer rule is gone. Cheaper to
@@ -189,6 +189,15 @@ export default defineConfig([
               message:
                 "src/components/ takes its strings as props so that it stays reusable. Pass them in through the labels prop instead of reaching for a catalog here.",
             },
+            {
+              // The other direction of the same layer rule. A domain type here
+              // welds the generic table to one dataset and defeats the type
+              // parameter, and it does so invisibly, with the tree still
+              // rendering and every test still passing.
+              group: ["**/api/**", "**/data/**"],
+              message:
+                "src/components/ renders any row type, so it may not name one. Pass the shape through Column<T>, getRowId and the labels prop instead of importing a domain type here.",
+            },
           ],
         },
       ],
@@ -196,11 +205,10 @@ export default defineConfig([
   },
   // The formatter module is exempt because it is the module the rule names. The
   // test globs are exempt because a test asserting a formatted string has to
-  // compute its expectation through the platform rather than type it: the French
-  // group separator is a narrow no-break space, and a typed literal fails on a
-  // difference no terminal renders. src/test/ is not exempt: it holds executing
-  // helpers rather than assertions, and the sweep it drives is shipped code's
-  // reach.
+  // compute its expectation through the platform. The French group separator is
+  // a narrow no-break space, and a typed literal fails on a difference no
+  // terminal renders. src/test/ stays covered, because it holds executing
+  // helpers and not assertions, and the sweep it drives is shipped code's reach.
   {
     files: ["src/**/*.{ts,tsx}"],
     ignores: [
@@ -212,10 +220,10 @@ export default defineConfig([
       "no-restricted-syntax": ["error", ...LOCALE_CALL_SITE],
     },
   },
-  // The same layer rule one level down from the imports above: a hardcoded
+  // The same layer rule one level down from the imports above. A hardcoded
   // sentence needs no import, so the two import rules cannot see it. ignoreProps
   // is deliberate, because the attribute half is narrower than every prop and is
-  // the selector beside it.
+  // handled by the selector beside it.
   {
     files: ["src/components/**/*.{ts,tsx}"],
     ignores: ["src/**/*.test.{ts,tsx}", "src/**/*.test-d.ts"],
@@ -232,7 +240,7 @@ export default defineConfig([
     },
   },
   // The component holding the four glyphs that mean a direction. All three
-  // selector sets, because no-restricted-syntax is configured per rule: this
+  // selector sets, because no-restricted-syntax is configured per rule. This
   // block replaces the two above outright for this file, and naming only the
   // direction set would unrestrict the other two for exactly the component most
   // likely to regain a literal.
@@ -250,8 +258,8 @@ export default defineConfig([
   // The type-aware rules need declarations to reason about, and the plain
   // JavaScript in this tree has none: a build script reading an untyped CSV
   // parser and a flat config importing a plugin that ships no types. Every
-  // value there is `any`, so the rules report the absence of types rather than
-  // a defect. Syntax and correctness rules still apply.
+  // value there is `any`, so the rules report the absence of types instead of a
+  // defect. Syntax and correctness rules still apply.
   {
     files: ["**/*.{js,mjs,cjs}"],
     extends: [tseslint.configs.disableTypeChecked],

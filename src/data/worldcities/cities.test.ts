@@ -5,32 +5,30 @@ import { CITY_FIXTURE_ENVELOPE } from "../../test/cityFixture";
 import { stubDatasetFetch } from "../../test/fetchStub";
 
 /**
- * Guards over the parse boundary, which is the only runtime type check the
- * dataset still has now that it arrives over the network instead of through the
- * compiler. Without a case per rejection path, a malformed asset does not fail
- * loudly: it fills the table with undefined cells and surfaces much later as a
- * cryptic sort crash, at which point nothing points back here.
+ * Guards over the half of the parse boundary that is this dataset's own: the
+ * per-row typecheck and the derived search key. The transport, status, JSON and
+ * envelope-shape boundaries are shared by every dataset and are covered in
+ * src/data/loadEnvelope.test.ts.
  *
  * Every case starts from the known-good fixture envelope and changes exactly
  * one thing, so the case name and the mutation line together say what is being
- * rejected. Every case asserts the message it expects rather than the mere fact
- * of a rejection: a case that accepts any rejection passes when the load failed
- * for an unrelated reason, which is the specific way this kind of test goes
- * quietly wrong. The messages are written here as literals rather than imported
- * from the loader, so a rename cannot move both sides at once.
+ * rejected. Every case asserts the message it expects, because a case that
+ * accepts any rejection passes when the load failed for an unrelated reason.
+ * The messages are written here as literals and not imported from the loader,
+ * so a rename cannot move both sides at once.
  */
 
 /**
- * The separator the loader joins the derived key with, written out here rather
- * than imported for the same reason the messages are.
+ * The separator the loader joins the derived key with, written out here as a
+ * literal for the same reason the messages are.
  */
 const SEARCH_KEY_SEPARATOR = "\u0000";
 
 /**
- * A cold copy of the loader. The dataset promise is cached at module scope and
- * that cache survives between tests inside one file, so a plain re-import
- * returns an already-populated cache and never reaches the parse boundary at
- * all.
+ * A cold copy of the loader. The dataset promise is cached in the loader this
+ * module builds at import time and that cache survives between tests inside one
+ * file, so a plain re-import returns an already-populated cache and never
+ * reaches the parse boundary at all.
  */
 async function freshCities() {
   vi.resetModules();
@@ -59,22 +57,17 @@ function rowsOf(payload: Envelope): unknown[] {
   return payload.rows as unknown[];
 }
 
-function columnsOf(payload: Envelope): unknown[] {
-  return payload.columns as unknown[];
-}
-
 function rowAt(payload: Envelope, at: number): unknown[] {
   return rowsOf(payload)[at] as unknown[];
 }
 
 /**
  * The message and the code a load rejected with. Resolving is itself a failure
- * here, and it is reported as one rather than left to a later assertion on an
+ * here and is reported as one, so no later assertion has to trip over an
  * undefined value.
  *
- * The two travel together because they are asserted together everywhere: a
- * failure is the pair, and reading only one of them leaves the other free to
- * drift.
+ * The two travel together because they are asserted together everywhere, and
+ * reading only one of them leaves the other free to drift.
  */
 async function rejection(
   payload: unknown,
@@ -85,8 +78,8 @@ async function rejection(
   try {
     await cities.loadCities();
   } catch (error) {
-    // The class is read off the freshly loaded module rather than imported at
-    // the top of this file. Every case here resets the module registry, which
+    // The class is read off the freshly loaded module, not imported at the top
+    // of this file. Every case here resets the module registry, which
     // hands the loader a new class object each time, and a class imported once
     // would stop recognizing its own instances after the first reset.
     if (error instanceof cities.DatasetError) {
@@ -103,8 +96,8 @@ async function rejection(
 
 /**
  * The error a load rejected with, for the cases that assert more than a message.
- * Resolving is itself a failure here, and it is reported as one rather than left
- * to a later assertion on an undefined value.
+ * Resolving is itself a failure here and is reported as one, so no later
+ * assertion has to trip over an undefined value.
  */
 async function rejectionOf(
   cities: typeof import("./cities"),
@@ -122,75 +115,7 @@ async function rejectionOf(
   throw new Error("The load resolved when it was expected to reject.");
 }
 
-describe("loadCities payload validation", () => {
-  it("rejects a payload that is not an object", async () => {
-    expect(await rejection("the city data, honestly")).toEqual({
-      message: "The city data could not be read.",
-      code: "notAnObject",
-    });
-  });
-
-  it("rejects a null payload", async () => {
-    expect(await rejection(null)).toEqual({
-      message: "The city data could not be read.",
-      code: "notAnObject",
-    });
-  });
-
-  it("rejects a payload with no rows array", async () => {
-    const payload = envelope();
-    delete (payload as Partial<Envelope>).rows;
-
-    expect(await rejection(payload)).toEqual({
-      message: "The city data is missing its rows array.",
-      code: "missingRows",
-    });
-  });
-
-  it("rejects a payload whose rows is an object rather than an array", async () => {
-    const payload = envelope();
-    payload.rows = { 0: rowAt(envelope(), 0) };
-
-    expect(await rejection(payload)).toEqual({
-      message: "The city data is missing its rows array.",
-      code: "missingRows",
-    });
-  });
-
-  it("rejects a payload with no columns array", async () => {
-    const payload = envelope();
-    delete (payload as Partial<Envelope>).columns;
-
-    expect(await rejection(payload)).toEqual({
-      message:
-        "The city data has an unexpected column order and was not loaded.",
-      code: "columnOrder",
-    });
-  });
-
-  it("rejects a payload whose columns are transposed", async () => {
-    const payload = envelope();
-    const columns = columnsOf(payload);
-    [columns[1], columns[2]] = [columns[2], columns[1]];
-
-    expect(await rejection(payload)).toEqual({
-      message:
-        "The city data has an unexpected column order and was not loaded.",
-      code: "columnOrder",
-    });
-  });
-
-  it("rejects a payload whose columns are short by one", async () => {
-    const payload = envelope();
-    payload.columns = columnsOf(payload).slice(0, 6);
-
-    expect(await rejection(payload)).toEqual({
-      message:
-        "The city data has an unexpected column order and was not loaded.",
-      code: "columnOrder",
-    });
-  });
-
+describe("loadCities row validation", () => {
   it("rejects a row that is not an array, naming its index", async () => {
     const payload = envelope();
     rowsOf(payload)[3] = "Manila, Philippines, 24922000";
@@ -264,11 +189,12 @@ describe("loadCities payload validation", () => {
   });
 });
 
-describe("loadCities transport", () => {
-  it("rejects a non-ok response by status, without reading the body", async () => {
-    // The body served here would fail validation on its own, so a message that
-    // names the status is proof the status was checked before anything was
-    // parsed.
+describe("loadCities envelope wiring", () => {
+  it("names the city dataset in the messages the shared loader throws", async () => {
+    // The shared loader takes the dataset's name for its own six messages, and
+    // the row cases above cannot see it being handed the wrong one. The status
+    // boundary itself is covered in src/data/loadEnvelope.test.ts; what this
+    // case adds is that the name reaching it is this dataset's.
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response("the city data, honestly", { status: 500 }),
     );
@@ -280,99 +206,6 @@ describe("loadCities transport", () => {
       "The city data could not be downloaded (status 500).",
     );
     expect(error.code).toBe("status");
-    // The status travels as the detail, which is what lets the sentence a
-    // reader is shown name it without parsing it back out of the message.
-    expect(error.detail).toBe(500);
-  });
-
-  it("rejects a request that never reaches the host with copy written for a reader", async () => {
-    // The text a failed request carries is the browser's own, it differs
-    // between browsers, and none of it tells the reader what to do. The
-    // authored message is written here as a literal rather than imported from
-    // the loader, so a rename cannot move both sides at once.
-    const transportFailure = new Error("Failed to fetch");
-    vi.spyOn(globalThis, "fetch").mockRejectedValue(transportFailure);
-    const cities = await freshCities();
-
-    const error = await rejectionOf(cities);
-
-    expect(error.message).toBe(
-      "The city data could not be downloaded. Check your connection and try again.",
-    );
-    expect(error.code).toBe("transport");
-    expect(error.message).not.toContain("Failed to fetch");
-    // The reader sees the authored sentence, a developer still has the reason.
-    expect(error.cause).toBe(transportFailure);
-  });
-
-  it("arms a timeout on the request, so a stall rejects rather than hanging", async () => {
-    // A stalled request is the one failure that produces no rejection of its
-    // own: nothing settles, the download message renders forever, and the
-    // reader is never offered the retry. Asserting the signal is an AbortSignal
-    // would not say that, since a controller's signal that never fires is one
-    // too. What has to hold is that the signal handed to the request is a
-    // timeout, and that its budget is a plausible one.
-    const timeoutSpy = vi.spyOn(AbortSignal, "timeout");
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValue(new Response(JSON.stringify(CITY_FIXTURE_ENVELOPE)));
-    const loadCities = await freshLoadCities();
-
-    await loadCities();
-
-    const budget = timeoutSpy.mock.calls[0]?.[0];
-    // The band, rather than the value: a test naming the constant would only
-    // restate it, but a zero or a millisecond would fail every load and a day
-    // would be the hang this replaces.
-    expect(budget).toBeGreaterThanOrEqual(5_000);
-    expect(budget).toBeLessThanOrEqual(120_000);
-    // The signal the timeout produced is the signal the request carries.
-    expect(fetchSpy.mock.calls[0]?.[1]?.signal).toBe(
-      timeoutSpy.mock.results[0]?.value,
-    );
-  });
-
-  it("reports a body read that stopped as a failed download, not a bad body", async () => {
-    // A connection that dies after the headers arrive rejects the body read
-    // rather than the request, and so does the timeout signal, which covers
-    // the body too. Neither is a file the parser could not read, and reporting
-    // one as such sends the reader looking for a corrupt data file rather than
-    // at their connection.
-    const dropped = new TypeError("terminated");
-    const response = new Response("{");
-    vi.spyOn(response, "json").mockRejectedValue(dropped);
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
-    const cities = await freshCities();
-
-    const error = await rejectionOf(cities);
-
-    expect(error.code).toBe("transport");
-    expect(error.message).toBe(
-      "The city data could not be downloaded. Check your connection and try again.",
-    );
-    expect(error.cause).toBe(dropped);
-  });
-
-  it("rejects a success response carrying a page instead of the data file", async () => {
-    // What a static host returns for a file it cannot find: the application's
-    // own page, under a success status. The parser then reports a syntax error
-    // naming a character, which is no help to anyone reading the screen.
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        "<!doctype html><html><body>Yet Another React Table</body></html>",
-        { status: 200, headers: { "content-type": "text/html" } },
-      ),
-    );
-    const cities = await freshCities();
-
-    const error = await rejectionOf(cities);
-
-    expect(error.message).toBe(
-      "The city data was downloaded but could not be read as JSON.",
-    );
-    expect(error.code).toBe("notJson");
-    expect(error.message).not.toContain("Unexpected token");
-    expect(error.cause).toBeInstanceOf(Error);
   });
 });
 
@@ -383,7 +216,7 @@ describe("loadCities indexing", () => {
 
     const rows = await loadCities();
     // A row whose ascii name differs from its name, so the joined key is a
-    // claim about four fields rather than about one field repeated.
+    // claim about four fields and not about one field repeated.
     const row = rows.find((city) => city.nameAscii !== city.name);
     if (!row) {
       throw new Error(
@@ -397,8 +230,9 @@ describe("loadCities indexing", () => {
         .toLowerCase(),
     );
 
-    // The derived key is a search cache rather than a fact about a city, so it
-    // stays off the exported type. If it ever appears there, the assignment
+    // The derived key is an index for searching and not a fact about a city,
+    // so it stays off the exported type. If it ever appears there, the
+    // assignment
     // below stops compiling, which is the only place that can be caught.
     type CityCarriesSearchKey = "searchKey" extends keyof City ? true : false;
     const cityCarriesSearchKey: CityCarriesSearchKey = false;

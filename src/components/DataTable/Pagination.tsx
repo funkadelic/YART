@@ -94,8 +94,8 @@ export function Pagination({
             title={labels.firstPage}
             // a11y: named by the action alone, as the sort headers are. A name
             // carrying the position changes under focus, which re-announces the
-            // whole control on every press; the live region below is what
-            // reports where the user landed.
+            // whole control on every press; the live region below reports the
+            // new position.
             aria-label={labels.firstPage}
             className={styles.navButton}
           >

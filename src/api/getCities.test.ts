@@ -16,7 +16,7 @@ const COMMITTED_ASSET = readCommittedAsset();
 
 /**
  * The dataset request stub installed for the current case. Held here because
- * the load-once claim can only be stated as a call count: a timing observation
+ * the load-once claim can only be stated as a call count. A timing observation
  * passes against a second request that happened to be fast.
  */
 let fetchSpy: ReturnType<typeof stubDatasetFetchFromDisk>;
@@ -40,9 +40,9 @@ async function freshGetCities() {
 
 /**
  * The dataset error a call rejected with, so its code can be asserted beside
- * the message it already asserts. The code is what chooses the sentence a
- * reader is shown, and a code on the wrong throw produces a fluent sentence
- * about the wrong failure, which no message assertion can see.
+ * the message it already asserts. The code chooses the sentence a reader is
+ * shown, and a code on the wrong throw produces a fluent sentence about the
+ * wrong failure, which no message assertion can see.
  */
 async function datasetRejection(
   api: typeof import("./getCities"),
@@ -51,9 +51,9 @@ async function datasetRejection(
   try {
     await call;
   } catch (error) {
-    // The class is read off the freshly loaded module rather than the one
-    // imported at the top of this file. Every case here resets the module
-    // registry, so a class imported once stops recognizing its own instances.
+    // The class is read off the freshly loaded module. Every case here resets
+    // the module registry, so a class imported once at the top of this file
+    // stops recognizing its own instances.
     if (error instanceof api.DatasetError) return error;
     throw new Error(
       `The call rejected with something other than a dataset error: ${String(error)}`,
@@ -66,11 +66,10 @@ async function datasetRejection(
 
 /**
  * The per-field matcher the derived search key replaced, over the same fields
- * the key is built from. The parity cases compare the seam against this rather
- * than against a recorded count, so a divergence of the same size but different
- * membership still fails. Capital is absent here because it is absent from the
- * key, so a loader that started folding it in would break parity rather than
- * pass quietly.
+ * the key is built from. The parity cases compare the seam against this, so a
+ * divergence of the same size but different membership still fails, which a
+ * recorded count would miss. Capital is absent here because it is absent from
+ * the key, so a loader that started folding it in breaks parity.
  */
 function matchedBefore(city: City, searchTerm: string): boolean {
   const needle = searchTerm.trim().toLowerCase();
@@ -82,10 +81,9 @@ function matchedBefore(city: City, searchTerm: string): boolean {
 
 /**
  * Needles a space-separated search key would answer differently. The first six
- * span a field boundary, which is the divergence itself, and the last three are
- * the multi-word and padded terms a separator is easiest to get wrong on. This
- * group is a correctness test of the separator, not a performance test of the
- * derived key.
+ * span a field boundary, and the last three are the multi-word and padded terms
+ * a separator is easiest to get wrong on. The group tests the separator for
+ * correctness.
  */
 const PARITY_NEEDLES = [
   "a b",
@@ -159,24 +157,25 @@ describe("getCities", () => {
   it("matches on country code", async () => {
     const result = await getCities({ searchTerm: "jpn" });
 
-    // The term returned nothing at all before the code was indexed, which is
-    // what made a shared "?q=jpn" link paint an empty table for its recipient.
+    // The term returned nothing at all before the code was indexed, so a shared
+    // "?q=jpn" link painted an empty table for its recipient.
     expect(result.length).toBeGreaterThan(0);
     expect(result.some((city) => city.countryIso3 === "JPN")).toBe(true);
   });
 
   it("does not match on the capital classification", async () => {
-    // Deliberate, not an oversight: the column renders "primary", "admin", and
-    // "minor", and indexing them would bleed those substrings into every short
-    // needle. The loader's key comment carries the measurement.
+    // Deliberate. The column renders "primary", "admin", and "minor", and
+    // indexing them would bleed those substrings into every short needle. The
+    // loader's key comment carries the measurement.
     expect(await getCities({ searchTerm: "primary" })).toHaveLength(0);
     expect(await getCities({ searchTerm: "admin" })).toHaveLength(0);
   });
 
   it("matches nothing for a term carrying the field separator", async () => {
-    // The address is an input path the box is not: ?q=%00 decodes to a real
-    // separator and trim leaves it, so a term could otherwise span the join.
-    // No field's content holds a separator, so such a term matches nothing.
+    // The address is an input path the search box is not, since ?q=%00 decodes
+    // to a real separator and trim leaves it, so a term could otherwise span
+    // the join. No field's content holds a separator, so such a term matches
+    // nothing.
     const spanning = await getCities({
       searchTerm: `Tokyo${SEARCH_KEY_SEPARATOR}Tokyo`,
     });
@@ -209,10 +208,10 @@ describe("getCities", () => {
 
     const api = await freshApi();
 
-    // The injected text does not reach the seam: the loader replaces a
+    // The injected text does not reach the seam, because the loader replaces a
     // transport failure with copy a reader can act on and keeps the original as
-    // the cause, which is asserted where the wrap lives rather than here. The
-    // same holds for every load-failure assertion below.
+    // the cause. That wrap is asserted where it lives. The same holds for every
+    // load-failure assertion below.
     const rejection = await datasetRejection(api, api.getCities());
 
     expect(rejection.message).toBe(
@@ -258,7 +257,7 @@ describe("getCities dataset requests", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
 
     // Sharing one in-flight load must not collapse the two calls into one
-    // answer: each still filters the shared rows for its own term.
+    // answer, so each still filters the shared rows for its own term.
     expect(tokyoRows).not.toHaveLength(japanRows.length);
     expect(tokyoRows.every((city) => matchedBefore(city, "tokyo"))).toBe(true);
     expect(japanRows.every((city) => matchedBefore(city, "japan"))).toBe(true);
@@ -286,8 +285,8 @@ describe("getCities dataset requests", () => {
 
     const coldGetCities = await freshGetCities();
 
-    // Both callers land on the one in-flight load, so what they see is a single
-    // request failing once rather than two failures.
+    // Both callers land on the one in-flight load, so they share a single
+    // request failing once.
     const first = coldGetCities();
     const second = coldGetCities();
 
@@ -299,8 +298,8 @@ describe("getCities dataset requests", () => {
     );
 
     // The retry is the second request. The shared rejection cleared the cache
-    // entry, so the next call downloads again rather than re-awaiting a promise
-    // that has already failed.
+    // entry, so the next call downloads again. A kept entry would re-await a
+    // promise that has already failed.
     await expect(coldGetCities()).rejects.toThrow(
       "The city data could not be downloaded. Check your connection and try again.",
     );
@@ -323,8 +322,8 @@ describe("getCities latency", () => {
 
     // Let the already-resolved loader hand back its rows so the latency timer
     // is registered before the clock moves. An implementation that resolved in
-    // a microtask instead would be settled here, at zero milliseconds, which is
-    // exactly what this case rules out.
+    // a microtask would be settled here, at zero milliseconds, and the
+    // assertion below catches that.
     await vi.advanceTimersByTimeAsync(0);
     expect(settled).toBe(false);
 
@@ -383,8 +382,8 @@ describe("getCities search parity", () => {
     // Both imports come from the one registry reset above, so the seam and the
     // loader share a cache and the rows mutated here are the rows it filters.
     // The key is reachable through the loader's resolved element type and
-    // deliberately absent from the exported domain type, which is the whole
-    // reason it has to be reached this way.
+    // deliberately absent from the exported domain type, so it has to be
+    // reached this way.
     const rows = await loadCities();
     const target = required(rows[0], "the first loaded row");
     const ownName = target.name;

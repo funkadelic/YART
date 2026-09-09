@@ -24,11 +24,12 @@ export async function getCities({
 
   const needle = searchTerm.trim().toLowerCase();
 
-  // Answered here rather than at the URL parser, so a term arriving any other
-  // way is answered the same. The separator marks a field boundary in the
-  // search key, so no field's content holds one and a term carrying one matches
-  // nothing. Deleting it instead would answer a different search, and a term of
-  // nothing but a separator would answer every row.
+  // The guard sits at this seam, because a URL parser would cover only terms
+  // arriving from the address. Here a term arriving any other way is answered
+  // the same. The separator marks a field boundary in the search key, so no
+  // field's content holds one and a term carrying one matches nothing. Deleting
+  // it instead would answer a different search, and a term of nothing but a
+  // separator would answer every row.
   //
   // The empty term returns a copy, so the module-scope cache cannot escape.
   let matched: City[];

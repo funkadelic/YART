@@ -4,7 +4,7 @@ import {
   type TableState,
 } from "./tableState";
 
-/** One key rather than two, so the invalid pair is unrepresentable. */
+/** One key carries column and direction, so the invalid pair cannot occur. */
 const SORT_DESCENDING_PREFIX = "-";
 
 /** Parsing returns a partial; serializing returns null for a default. */
@@ -36,7 +36,8 @@ const PARAM_SCHEMA: readonly UrlParamEntry[] = [
     key: "sort",
     // Located with find, so the result arrives already typed as a caller's id.
     // The whole token is tried before the prefix is stripped, because an id may
-    // begin with it: stripping first leaves such an id unreachable ascending.
+    // begin with it, and stripping first would leave such an id unreachable
+    // ascending.
     parse: (raw, validColumnIds) => {
       const ascending = validColumnIds.find((candidate) => candidate === raw);
       if (ascending !== undefined) {
@@ -61,9 +62,9 @@ const PARAM_SCHEMA: readonly UrlParamEntry[] = [
   },
   {
     key: "page",
-    // Coerced whole rather than with the radix parser, which reads exponent
-    // notation as a single digit. Any positive integer, with no upper bound:
-    // the read-side clamp is what bounds it.
+    // Coerced whole, because the radix parser reads exponent notation as a
+    // single digit. Any positive integer, with no upper bound; the read-side
+    // clamp bounds it.
     parse: (raw) => {
       const page = Number(raw);
       return Number.isInteger(page) && page > 0 ? { page } : undefined;
@@ -88,8 +89,8 @@ const PARAM_SCHEMA: readonly UrlParamEntry[] = [
 
 /**
  * Reads whatever of the view state a query string carries. Total by
- * construction: a value failing validation is left out, so no parameter needs a
- * fallback arm. The column ids arrive as an argument.
+ * construction, since a value failing validation is left out, so no parameter
+ * needs a fallback arm. The column ids arrive as an argument.
  */
 export function parseTableState<Id extends string>(
   search: string,
@@ -100,7 +101,7 @@ export function parseTableState<Id extends string>(
 
   for (const entry of PARAM_SCHEMA) {
     // The first occurrence of a repeated key; the extras are dropped by the
-    // write that follows rather than by a rule of their own.
+    // write that follows, with no rule of their own.
     const raw = params.get(entry.key);
     if (raw === null) continue;
 

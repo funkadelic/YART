@@ -8,24 +8,23 @@ import { numberFormatFor } from "../../i18n/format";
 import { setLocaleChoice } from "../../i18n/localeStore";
 import { required } from "../../test/required";
 import { buildCityColumns } from "./cityColumns";
-import { buildTableLabels } from "./cityLabels";
+import { buildTableLabels } from "../tableLabels";
 
-// A spy over the real builder rather than a replacement for it, so every case
-// in this file goes on exercising the shipping columns. The one thing a spy can
-// see that the rendered output cannot is how many times the array was built,
-// which is the whole content of the claim that its identity follows the locale
-// and nothing else.
+// A spy that delegates to the real builder, so every case in this file goes on
+// exercising the shipping columns. How many times the array was built is
+// invisible in the rendered output, so the count is asserted directly to pin
+// the array's identity to the locale.
 vi.mock("./cityColumns", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./cityColumns")>();
 
   return { ...actual, buildCityColumns: vi.fn(actual.buildCityColumns) };
 });
 
-// The same spy over the labels builder, and for the same reason. The object it
-// returns is held by the table across renders, so how often it is built is the
-// whole content of the claim that its identity follows the locale.
-vi.mock("./cityLabels", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./cityLabels")>();
+// The same spy over the labels builder, and for the same reason. The table
+// holds the object it returns across renders, so the build count is the
+// assertion that its identity follows the locale.
+vi.mock("../tableLabels", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../tableLabels")>();
 
   return { ...actual, buildTableLabels: vi.fn(actual.buildTableLabels) };
 });
@@ -80,8 +79,8 @@ const mockCities: City[] = [
 ];
 
 /**
- * A run of rows wide enough to page, generated rather than written out. Nothing
- * in the content is asserted; only how many there are.
+ * A run of rows wide enough to page, generated in a loop. Nothing in the
+ * content is asserted, only how many there are.
  */
 function pagedFixture(count: number): City[] {
   return Array.from({ length: count }, (_, index) => ({
@@ -152,7 +151,7 @@ describe("CityTable", () => {
       await user.type(searchInput, "Tok");
 
       // The commit waits for the pause, so three keystrokes settle into one
-      // call carrying the whole word rather than three carrying prefixes.
+      // call carrying the whole word, with no calls for the prefixes.
       await waitFor(() => {
         expect(mockOnSearchChange).toHaveBeenCalledWith("Tok");
       });
@@ -199,7 +198,7 @@ describe("CityTable", () => {
     });
 
     it("renders no download copy while refetching over a dataset that has already arrived", () => {
-      // The user path this stands for: a search that returned nothing,
+      // The user path this stands for is a search that returned nothing,
       // followed by one more keystroke. Nothing is downloading, and a row
       // count cannot tell that apart from a cold start.
       render(
@@ -275,8 +274,8 @@ describe("CityTable", () => {
     it("keeps the download copy off screen while refetching with rows on show", () => {
       render(<CityTable {...defaultProps} loading={true} />);
 
-      // The refetch path. Replacing the view here is what would unmount the
-      // table on every keystroke.
+      // The refetch path. Replacing the view here would unmount the table on
+      // every keystroke.
       expect(
         screen.queryByText("Downloading the city data..."),
       ).not.toBeInTheDocument();
@@ -413,10 +412,10 @@ describe("CityTable", () => {
     }));
 
     /*
-     * Fifty rows rather than the twenty-five the neighbouring cases use. At the
-     * default page size of ten that is five pages, which is what the narrowing
-     * regression case needs: a page position deep enough that shrinking the set
-     * leaves it well past the end. Twenty-five rows reach only page three.
+     * Fifty rows, where the neighboring cases use twenty-five. At the default
+     * page size of ten that is five pages, deep enough that shrinking the set
+     * leaves the position well past the end. Twenty-five rows reach only page
+     * three.
      */
     const fiftyRowData = Array.from({ length: 50 }, (_, i) => ({
       id: i + 1,
@@ -572,7 +571,7 @@ describe("CityTable", () => {
       await user.click(screen.getByRole("button", { name: /Go to last page/ }));
       expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
 
-      // Rerendering the mounted instance is what reproduces the trap. A fresh
+      // Rerendering the mounted instance reproduces the trap. A fresh
       // render would start on page one and never reach the state where the
       // navigation has vanished and no control on screen offers a way back.
       rerender(<CityTable {...defaultProps} data={fiftyRowData.slice(0, 3)} />);
@@ -604,13 +603,13 @@ describe("CityTable", () => {
       expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
     });
 
-    // This case is a guard rather than a proof, and the assertions in it pass
-    // against the unfixed code too. The page count is rendered inside the
+    // This case is a guard, and the assertions in it pass against the unfixed
+    // code too. The page count is rendered inside the
     // navigation, the navigation is hidden below two pages, and both sit inside
     // the branch taken only when rows exist, so a page count of zero was never
     // reachable in the rendered output either before or after the arithmetic
-    // was corrected. What this case catches is a future change that lets an
-    // empty result set reach the navigation at all.
+    // was corrected. It catches a future change that lets an empty result set
+    // reach the navigation at all.
     it("renders the empty state and no navigation when the result set narrows to nothing", async () => {
       const user = userEvent.setup();
       const { rerender } = render(
@@ -630,9 +629,9 @@ describe("CityTable", () => {
     });
 
     it("restores the original page when the result set widens again", async () => {
-      // The clamp reads the position without rewriting it, which is what makes
-      // the narrowing recoverable: it shows the user a different page without
-      // moving them off the one they chose.
+      // The clamp reads the position without rewriting it, so the narrowing is
+      // recoverable. The user is shown a different page without being moved off
+      // the one they chose.
       const user = userEvent.setup();
       const { rerender } = render(
         <CityTable {...defaultProps} data={fiftyRowData} />,
@@ -771,9 +770,9 @@ describe("CityTable", () => {
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
       screen.getByRole("button", { name: "City" }).focus();
 
-      // Two presses, two states. A doubled activation would skip descending
-      // and land back on none, which is what makes this the single-fire
-      // assertion rather than a keyboard-reachability one.
+      // Two presses, two states. A doubled activation would skip descending and
+      // land back on none, so this case asserts a single fire and not merely
+      // that the key reaches the control.
       await user.keyboard(" ");
       expect(cityHeader).toHaveAttribute("aria-sort", "ascending");
 
@@ -810,9 +809,9 @@ describe("CityTable", () => {
         <CityTable {...defaultProps} data={pagedData} />,
       );
 
-      // Matched on the exact attribute name rather than on a substring of the
-      // serialized markup, so a differently cased or partly matching
-      // attribute cannot satisfy the assertion.
+      // Matched on the exact attribute name, so a differently cased or partly
+      // matching substring of the serialized markup cannot satisfy the
+      // assertion.
       expect(container.querySelectorAll("[aria-current]")).toHaveLength(0);
 
       // And again in the single-page state, where the navigation carrying it
@@ -833,13 +832,13 @@ describe("CityTable", () => {
       await user.click(screen.getByRole("button", { name: "City" }));
 
       // The control no longer renames itself to say what just happened, so
-      // this region is what carries it.
+      // this region carries it.
       expect(announcer).toHaveTextContent(
         "Table sorted by City in ascending order",
       );
 
-      // The label rather than the field name: countryIso3 is not the name of
-      // anything on screen, and it is not a string a screen reader renders.
+      // The label, because the field name countryIso3 appears nowhere on screen
+      // and is not a string a screen reader renders.
       await user.click(screen.getByRole("button", { name: "Country Code" }));
       expect(announcer).toHaveTextContent(
         "Table sorted by Country Code in ascending order",
@@ -936,9 +935,9 @@ describe("CityTable", () => {
 
     it("has the results region already mounted before the first rows arrive", () => {
       // A live region created with its message already inside it announces
-      // nothing. Mounting it empty ahead of the data is what makes the first
-      // row count, on a cold start and again after a retry, an addition to an
-      // existing region rather than a new region with content.
+      // nothing. Mounting it empty ahead of the data makes the first row count,
+      // on a cold start and again after a retry, an addition to an existing
+      // region instead of a new region arriving with content.
       const { container, rerender } = render(
         <CityTable
           {...defaultProps}
@@ -950,7 +949,7 @@ describe("CityTable", () => {
 
       // The sort region is declared first and the results region second; the
       // page-position region is not rendered in this state. Both are empty
-      // here, which is the point, so they are told apart by position.
+      // here, so they are told apart by position.
       const regions = container.querySelectorAll('[aria-live="polite"]');
       expect(regions).toHaveLength(2);
       const resultsRegion = regions[1];
@@ -1001,15 +1000,14 @@ describe("CityTable", () => {
      * Testing Library collapses every run of whitespace in the text it matches
      * against, and the French group separator is a narrow no-break space, which
      * is whitespace. The default normalizer would therefore rewrite the very
-     * character being asserted about. Trimming and nothing else is what leaves
-     * the separator intact on both sides of the comparison.
+     * character being asserted about. Trimming and nothing else leaves the
+     * separator intact on both sides of the comparison.
      */
     const asWritten = { normalizer: (text: string) => text.trim() };
 
-    // Both expected strings are computed through the platform rather than
-    // typed. The separator above is invisible in every terminal a failure is
-    // read in, so a typed literal holding an ordinary space fails on a
-    // difference nobody can see.
+    // Both expected strings are computed through the platform. The separator
+    // above is invisible in every terminal a failure is read in, so a typed
+    // literal holding an ordinary space fails on a difference nobody can see.
     it("groups the population column on the resolved locale", () => {
       setLocaleChoice("fr");
 
@@ -1028,8 +1026,10 @@ describe("CityTable", () => {
 
       render(<CityTable {...defaultProps} />);
 
-      expect(screen.getByText(fr.columnName)).toBeInTheDocument();
-      expect(screen.getByText(fr.columnCountryCode)).toBeInTheDocument();
+      expect(screen.getByText(fr.cities.columns.name)).toBeInTheDocument();
+      expect(
+        screen.getByText(fr.cities.columns.countryIso3),
+      ).toBeInTheDocument();
       expect(screen.queryByText("Country Code")).not.toBeInTheDocument();
     });
 
@@ -1049,27 +1049,31 @@ describe("CityTable", () => {
         />,
       );
 
-      expect(screen.getByText(fr.loading)).toBeInTheDocument();
+      expect(screen.getByText(fr.cities.loading)).toBeInTheDocument();
 
       rerender(<CityTable {...defaultProps} />);
 
-      // Re-read rather than held, because the assertion is about what the
-      // caption says now and the second read happens after a re-render.
+      // Re-read on each call, because the assertion is about what the caption
+      // says now and the second read happens after a re-render.
       const captionText = () =>
         screen.getByRole("table").querySelector("caption")?.textContent ?? "";
 
-      expect(captionText()).toContain(fr.unsorted);
+      expect(captionText()).toContain(fr.common.unsorted);
 
       const announcer = container.querySelector(
         '[aria-live="polite"][aria-atomic="true"]',
       );
 
-      await user.click(screen.getByRole("button", { name: fr.columnName }));
+      await user.click(
+        screen.getByRole("button", { name: fr.cities.columns.name }),
+      );
 
       expect(announcer).toHaveTextContent(
-        fr.sortedAnnouncement(fr.columnName, "asc"),
+        fr.common.sortedAnnouncement(fr.cities.columns.name, "asc"),
       );
-      expect(captionText()).toContain(fr.sortSummary(fr.columnName, "asc"));
+      expect(captionText()).toContain(
+        fr.common.sortSummary(fr.cities.columns.name, "asc"),
+      );
     });
 
     it("takes the failure and the way back from the catalog", () => {
@@ -1085,10 +1089,13 @@ describe("CityTable", () => {
       );
 
       expect(
-        screen.getByText(fr.error("quelque chose a mal tourné"), asWritten),
+        screen.getByText(
+          fr.common.error("quelque chose a mal tourné"),
+          asWritten,
+        ),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: fr.retry }),
+        screen.getByRole("button", { name: fr.common.retry }),
       ).toBeInTheDocument();
     });
 
@@ -1097,8 +1104,8 @@ describe("CityTable", () => {
 
       render(<CityTable {...defaultProps} />);
 
-      const box = screen.getByRole("textbox", { name: fr.searchName });
-      expect(box).toHaveAttribute("placeholder", fr.searchPlaceholder);
+      const box = screen.getByRole("textbox", { name: fr.common.searchName });
+      expect(box).toHaveAttribute("placeholder", fr.cities.searchPlaceholder);
     });
 
     // One catalog entry per control, read twice. Two entries would let a
@@ -1110,15 +1117,19 @@ describe("CityTable", () => {
       render(<CityTable {...defaultProps} data={pagedFixture(25)} />);
 
       expect(
-        screen.getByRole("navigation", { name: fr.paginationNavigation }),
+        screen.getByRole("navigation", {
+          name: fr.common.paginationNavigation,
+        }),
       ).toBeInTheDocument();
-      expect(screen.getByLabelText(fr.pageSize, asWritten)).toBeInTheDocument();
+      expect(
+        screen.getByLabelText(fr.common.pageSize, asWritten),
+      ).toBeInTheDocument();
 
       for (const name of [
-        fr.firstPage,
-        fr.previousPage,
-        fr.nextPage,
-        fr.lastPage,
+        fr.common.firstPage,
+        fr.common.previousPage,
+        fr.common.nextPage,
+        fr.common.lastPage,
       ]) {
         expect(screen.getByRole("button", { name })).toHaveAttribute(
           "title",
@@ -1128,10 +1139,10 @@ describe("CityTable", () => {
     });
 
     // Enough pages that the total carries a group separator, so the assertion
-    // is about grouping rather than about a number too small to group. Both
-    // sides are computed through the catalog on the resolved tag: the French
-    // separator is a narrow no-break space and a typed literal holding an
-    // ordinary one fails on a difference no terminal renders.
+    // reaches the grouping at all. Both sides are computed through the catalog
+    // on the resolved tag, because the French separator is a narrow no-break
+    // space and a typed literal holding an ordinary one fails on a difference
+    // no terminal renders.
     it("groups the page label's numbers on the resolved locale", () => {
       setLocaleChoice("fr");
 
@@ -1140,13 +1151,13 @@ describe("CityTable", () => {
 
       render(<CityTable {...defaultProps} data={rows} />);
 
-      const expected = fr.pageStatus("fr-FR", 1, totalPages);
+      const expected = fr.common.pageStatus("fr-FR", 1, totalPages);
 
       expect(expected).not.toBe(`Page 1 sur ${String(totalPages)}`);
       expect(screen.getByText(expected, asWritten)).toBeInTheDocument();
     });
 
-    // The same claim the column array carries, and for the same reason: the
+    // The same claim the column array carries, and for the same reason. The
     // table holds this object across renders and several of its entries are
     // closures, so its identity has to move when the locale does and must not
     // move otherwise.
@@ -1171,16 +1182,16 @@ describe("CityTable", () => {
       expect(built).toHaveBeenCalledTimes(2);
     });
 
-    // The array identity is what the sort and page memos downstream depend on:
-    // a build on a render where the locale did not move would re-sort the whole
-    // collection and re-slice the page for nothing. A second call to the
-    // builder is exactly what a changed identity looks like from here, which is
-    // why the count is the assertion.
+    // The sort and page memos downstream depend on the array identity, so a
+    // build on a render where the locale did not move would re-sort the whole
+    // collection and re-slice the page for nothing. From here a changed
+    // identity shows up as a second call to the builder, so the count is what
+    // this case asserts.
     it("builds the column array once per locale and not once per render", () => {
       const built = vi.mocked(buildCityColumns);
 
-      // Pinned before the first render rather than left to the machine, so the
-      // store has nothing left to settle on once the table is mounted.
+      // Pinned before the first render, so the store has nothing left to settle
+      // on once the table is mounted.
       setLocaleChoice("en");
 
       const { rerender } = render(<CityTable {...defaultProps} />);
@@ -1198,9 +1209,9 @@ describe("CityTable", () => {
 
       expect(built).toHaveBeenCalledTimes(2);
 
-      // Narrowed rather than read straight: a recorded result is either a
-      // return or a throw, so its value is untyped until it is treated as the
-      // opaque thing this assertion actually needs.
+      // Narrowed here, because a recorded result is either a return or a throw,
+      // so its value is untyped until it is treated as the opaque thing this
+      // assertion needs.
       const [first, second] = built.mock.results.map(
         (call) => call.value as unknown,
       );

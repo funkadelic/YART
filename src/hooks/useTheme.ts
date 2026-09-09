@@ -40,7 +40,7 @@ function readPrefersDark(): boolean {
   return window.matchMedia(PREFERS_DARK_QUERY).matches;
 }
 
-/** Through useSyncExternalStore, not an effect, which leaves a window. */
+/** Through useSyncExternalStore, because an effect leaves a window open. */
 function subscribePrefersDark(onStoreChange: () => void): () => void {
   if (!supportsMediaQueries()) {
     return () => {};
@@ -62,9 +62,9 @@ function subscribePrefersDark(onStoreChange: () => void): () => void {
  * element is not, so two callers hold two choices and their two effects race on
  * one element. Lift this behind a provider before adding a second caller.
  *
- * The choice-plus-preference rule is written a second time as a literal in the
- * blocking inline script in index.html, which cannot import a module. Change
- * both together; the parity guard in src/toolchain.test.ts holds them.
+ * The choice-plus-preference rule is written again as a literal in the blocking
+ * inline script of every shell, which cannot import a module. Change every copy
+ * together; the parity guard in src/toolchain.test.ts holds them.
  */
 export function useTheme() {
   const [choice, setChoiceState] = useState<ThemeChoice>(readStoredChoice);
@@ -103,8 +103,8 @@ export function useTheme() {
 
     try {
       if (next === "system") {
-        // A delete, not the word: the default has one representation, the key
-        // not being there.
+        // The key is removed. The default has one representation, which is
+        // the key not being there.
         localStorage.removeItem(THEME_STORAGE_KEY);
       } else {
         localStorage.setItem(THEME_STORAGE_KEY, next);

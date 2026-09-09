@@ -11,10 +11,10 @@ import { columns } from "./column";
 import type { DataTableProps } from "./DataTable";
 
 /**
- * True only when two types are identical, rather than merely assignable to one
- * another. The two deferred conditionals are what make the comparison exact:
- * the compiler can only decide they are the same signature by deciding X and Y
- * are the same type.
+ * True only when two types are identical; mutual assignability is not enough.
+ * The two deferred conditionals make the comparison exact, because the compiler
+ * can only decide they are the same signature by deciding X and Y are the same
+ * type.
  */
 export type Equal<X, Y> =
   (<A>() => A extends X ? 1 : 2) extends <A>() => A extends Y ? 1 : 2
@@ -22,11 +22,11 @@ export type Equal<X, Y> =
     : false;
 
 /**
- * The assertion itself. Every claim below is written as one of these, never as
- * an expected compile error: a suppression comment passes on the wrong error
- * just as readily as on the right one, and this project bans those comments
- * anyway. Each is exported because an unexported alias is an unused one, and
- * the lint rule is right about that.
+ * The assertion itself. Every claim below is written as one of these. A
+ * suppression comment marking an expected compile error passes on the wrong
+ * error just as readily as on the right one, and this project bans those
+ * comments anyway. Each alias is exported because an unexported one is unused,
+ * and the lint rule is right about that.
  */
 export type Expect<T extends true> = T;
 
@@ -49,15 +49,15 @@ interface Widget {
 }
 
 /**
- * A collator on the base tag, because the factory no longer holds one and every
- * caller states which reader's ordering it is building for. Nothing in this
- * file depends on which tag it is; it depends on there being exactly one.
+ * A collator on the base tag. The factory holds none, so every caller states
+ * which reader's ordering it is building for, and nothing in this file depends
+ * on which tag that is, only on there being exactly one.
  */
 const widget = columns<Widget>(collatorFor("en-US"));
 
 export const widgetColumns = [
   widget.key("sku", { label: "SKU" }),
-  // The value is computed rather than read, and the renderer below calls a
+  // The value is computed by the accessor, and the renderer below calls a
   // method only a number has. If the value type ever stops reaching the
   // renderer, this line is where it is noticed.
   widget.accessor("total", (row) => row.qty * 2, {
@@ -77,25 +77,24 @@ export type AssertWidgetIdIsNotString = Expect<
 >;
 
 /**
- * Whether a key is required rather than optional, decided by asking whether an
- * object with no properties at all satisfies the one-key slice. It does when
- * the key is optional and it does not when the key is required, which is the
- * only difference the two shapes have left once everything else is picked away.
+ * Whether a key is required, decided by asking whether an object with no
+ * properties at all satisfies the one-key slice. It does when the key is
+ * optional and it does not when the key is required, and that is the only
+ * difference the two shapes have left once everything else is picked away.
  */
 export type IsRequired<T, K extends keyof T> =
   Record<never, never> extends Pick<T, K> ? false : true;
 
 /**
- * The table's own prop type, instantiated against the row type above rather
- * than the one this application happens to have, so nothing asserted below
- * touches a domain type.
+ * The table's own prop type, instantiated against the row type above, so
+ * nothing asserted below touches a domain type.
  */
 type WidgetTableProps = DataTableProps<Widget, WidgetColumnId>;
 
 /**
- * The identity function is required. Omitting it is what silently drops the
- * sort tiebreak and the row keys together, so the table must not compile
- * without one.
+ * The identity function is required. Omitting it silently drops the sort
+ * tiebreak and the row keys together, so the table must not compile without
+ * one.
  */
 export type AssertRowIdCannotBeOmitted = Expect<
   IsRequired<WidgetTableProps, "getRowId">
@@ -109,14 +108,14 @@ export type AssertTablePropsAreNotAny = Expect<Not<IsAny<WidgetTableProps>>>;
 
 /**
  * The id union reaches the prop that carries the columns, so the array a caller
- * passes is what fixes the id everywhere else on the surface.
+ * passes fixes the id everywhere else on the surface.
  */
 export type AssertColumnPropCarriesIds = Expect<
   Equal<WidgetTableProps["columns"][number]["id"], WidgetColumnId>
 >;
 
 /**
- * The same union arrives at the state prop, which is where a misspelt id is
+ * The same union arrives at the state prop, which is where a misspelled id is
  * reported. Without the no-inference wrapper on that prop the compiler would
  * take a candidate from it too, and this would still hold while a wrong id
  * quietly joined the union at the call site.

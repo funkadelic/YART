@@ -6,8 +6,8 @@ import { compareIdentities, sortRows } from "./sortRows";
 
 /**
  * A row type this module could plausibly be handed and the application never
- * will be. The point of the module is that it knows nothing about what it is
- * ordering, so its own tests say nothing about the application's rows either.
+ * will be. The module is generic over what it orders, so its own tests stay
+ * clear of the application's rows.
  */
 interface Part {
   sku: string;
@@ -20,9 +20,9 @@ interface Part {
  * and the recording column below describes the region column a second time.
  * Every column here is handed to the sort on its own, never as an array.
  *
- * The collator is on the base tag, because the factory no longer holds one and
- * every caller states which reader's ordering it is building for. Nothing in
- * this file depends on which tag it is; it depends on there being exactly one.
+ * The collator names the base tag. The factory holds none, so every caller
+ * states which reader's ordering it is building for, and nothing in this file
+ * depends on which tag that is, only on there being exactly one.
  */
 const col = () => columns<Part>(collatorFor("en-US"));
 
@@ -97,9 +97,8 @@ describe("sortRows", () => {
   });
 
   it("breaks a tie on ascending identity in both directions", () => {
-    // Same region on every row, so the column comparator decides nothing and
-    // the tiebreak decides everything. It is never flipped, which is what makes
-    // the two directions agree here.
+    // Same region on every row, so the tiebreak alone decides the order. It is
+    // never flipped, so the two directions agree here.
     const rows = [
       part("c", "north", 3),
       part("a", "north", 1),
@@ -154,8 +153,9 @@ describe("sortRows", () => {
 
     sortRows(rows, column, "desc", partId);
 
-    // Which of the two rows the engine passes first is its business; that both
-    // reached the comparator, and that the direction came with them, is not.
+    // Which row the engine passes first is the engine's own business, so the
+    // case asserts only that both reached the comparator and that the direction
+    // came with them.
     expect(calls.length).toBeGreaterThan(0);
     for (const [first, second, direction] of calls) {
       expect([first, second].sort()).toEqual(["north", "south"]);
@@ -164,8 +164,8 @@ describe("sortRows", () => {
   });
 
   it("orders blanks last in both directions with the default comparator", () => {
-    // The rule that breaks if the direction is applied by negating a
-    // direction-free comparator: blanks would lead the descending page.
+    // If the direction were applied by negating a direction-free comparator,
+    // blanks would lead the descending page.
     const rows = [
       part("a", "", 1),
       part("b", "north", 2),
@@ -186,8 +186,8 @@ describe("sortRows", () => {
 
   it("orders a numeric column by value rather than as text", () => {
     // Nine before ten, which a text ordering would reverse. The default
-    // comparator is what decides this, so the case also pins that the factory
-    // wired one in.
+    // comparator decides this, so the case also pins that the factory wired one
+    // in.
     const rows = [part("a", "north", 10), part("b", "south", 9)];
 
     expect(sortRows(rows, WEIGHT, "asc", partId).map(partId)).toEqual([
@@ -207,10 +207,10 @@ describe("compareIdentities", () => {
     expect(compareIdentities("b", "a")).toBe(1);
   });
 
-  // The caller owes the table an injective identity, so this arm answers a
-  // broken one rather than a legitimate tie. It reports equal instead of
-  // picking a winner, which leaves the surrounding sort's order untouched
-  // rather than making one up from rows it cannot tell apart.
+  // The caller owes the table an injective identity, so this arm only ever
+  // answers a broken one. It reports equal, which leaves the surrounding sort's
+  // order untouched; picking a winner would invent an order from rows it cannot
+  // tell apart.
   it("reports two equal identities as equal", () => {
     expect(compareIdentities("a", "a")).toBe(0);
   });

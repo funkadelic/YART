@@ -2,6 +2,10 @@
 # it would dominate every format run and every commit for no benefit.
 src/data/worldcities/cities.json
 
+# Generated film dataset, machine written for the same reason and skipped for the
+# same one.
+src/data/films/films.json
+
 # Build output.
 dist
 

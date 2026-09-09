@@ -11,20 +11,20 @@ import styles from "./ThemeControl.module.scss";
  * is as explicit as choosing a theme.
  *
  * a11y: every keyboard behavior the radiogroup pattern calls for comes from the
- * native inputs. Nothing here handles a key, and nothing here should. The
- * checked state is left to the inputs, because an ARIA attribute layered on top
- * of the property can only ever go stale against it.
+ * native inputs, so no key handler belongs here. The checked state is left to
+ * the inputs, because an ARIA attribute layered on top of the property can only
+ * ever go stale against it.
  */
 export function ThemeControl() {
   const { choice, setChoice } = useTheme();
   const { catalog } = useLocale();
 
-  // A record rather than a label beside each value, so the option list stays
-  // the one definition of what the states are.
+  // A record keyed by value, so the option list stays the one definition of
+  // what the states are.
   const names: Readonly<Record<ThemeChoice, string>> = {
-    light: catalog.themeLight,
-    dark: catalog.themeDark,
-    system: catalog.themeSystem,
+    light: catalog.common.themeLight,
+    dark: catalog.common.themeDark,
+    system: catalog.common.themeSystem,
   };
 
   // Document-global, so a constant would put a second mounted control's radios
@@ -35,7 +35,7 @@ export function ThemeControl() {
     <div
       className={styles.control}
       role="radiogroup"
-      aria-label={catalog.themeGroup}
+      aria-label={catalog.common.themeGroup}
     >
       {THEME_CHOICES.map((value) => (
         <Fragment key={value}>

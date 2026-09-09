@@ -61,3 +61,8 @@ src/__screenshots__/
 chromatic.log
 chromatic-diagnostics.json
 build-archive.log
+
+# The Wikidata SPARQL result a human downloads with the curl invocation recorded
+# in src/data/films/license.md. It is the films generator's input, not a
+# committed artifact: the committed dataset is src/data/films/films.json.
+scripts/films-result.json

@@ -5,8 +5,8 @@ import { columns } from "./column";
 
 /**
  * A row type the application never has, for the same reason the sorting tests
- * use one: the builder knows nothing about what it describes, so its tests say
- * nothing about the application's rows either.
+ * use one. The builder is generic over the row it describes, so its tests stay
+ * clear of the application's rows too.
  */
 interface Part {
   sku: string;
@@ -18,9 +18,9 @@ interface Part {
  * A builder per test, because a builder rejects an id it has already issued and
  * several tests below describe the same column.
  *
- * The collator is on the base tag, because the factory no longer holds one and
- * every caller states which reader's ordering it is building for. Nothing in
- * this file depends on which tag it is; it depends on there being exactly one.
+ * The collator names the base tag. The factory holds none, so every caller
+ * states which reader's ordering it is building for, and nothing in this file
+ * depends on which tag that is, only on there being exactly one.
  */
 const col = () => columns<Part>(collatorFor("en-US"));
 
@@ -50,8 +50,8 @@ describe("columns().key", () => {
 });
 
 describe("columns().accessor", () => {
-  // The value is computed rather than read, so the id names nothing on the row
-  // and the accessor is the only thing that knows where the value came from.
+  // The value is computed by the accessor, so the id names no field on the row
+  // and only the accessor knows where the value came from.
   it("renders the value its read function computes, not a field", () => {
     const column = col().accessor("total", (row) => row.qty * row.unitPrice, {
       label: "Total",
