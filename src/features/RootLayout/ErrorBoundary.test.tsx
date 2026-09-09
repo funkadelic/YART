@@ -49,7 +49,7 @@ describe("ErrorBoundary", () => {
     );
 
     const fallback = screen.getByRole("alert");
-    expect(fallback).toHaveTextContent(/could not be displayed/i);
+    expect(fallback).toHaveTextContent("could not be displayed");
     expect(
       screen.getByRole("button", { name: "Show it again" }),
     ).toBeInTheDocument();
@@ -144,13 +144,13 @@ describe("ErrorBoundary mounted in the layout", () => {
     );
 
     expect(screen.getByRole("alert")).toHaveTextContent(
-      /could not be displayed/i,
+      "could not be displayed",
     );
     expect(screen.getByRole("banner")).toBeInTheDocument();
     expect(screen.getByRole("contentinfo")).toBeInTheDocument();
     expect(screen.getByText("YART")).toBeInTheDocument();
     expect(screen.getByRole("contentinfo")).toHaveTextContent(
-      /simplemaps.com World Cities/,
+      "simplemaps.com World Cities",
     );
     expect(consoleError).toHaveBeenCalled();
   });

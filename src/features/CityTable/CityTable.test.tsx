@@ -880,7 +880,9 @@ describe("CityTable", () => {
       const table = screen.getByRole("table");
       const caption = table.querySelector("caption");
       expect(caption).toBeInTheDocument();
-      expect(caption).toHaveTextContent(/City data with \d+ entries/);
+      // Matched on the text rather than through toHaveTextContent, whose
+      // regex overload the browser project's matcher types shadow.
+      expect(caption?.textContent).toMatch(/City data with \d+ entries/);
     });
 
     it("has proper ARIA labels on pagination buttons", () => {
@@ -957,7 +959,9 @@ describe("CityTable", () => {
 
       rerender(<CityTable {...defaultProps} />);
 
-      expect(resultsRegion).toHaveTextContent(/^Showing \d+ cities out of \d+/);
+      expect(resultsRegion?.textContent).toMatch(
+        /^Showing \d+ cities out of \d+/,
+      );
     });
 
     it("has live regions for dynamic updates", () => {
