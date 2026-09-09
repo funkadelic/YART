@@ -4,7 +4,7 @@
 
 A React and TypeScript single-page app for browsing large datasets in the browser: search, sort, and paginate world cities or films without a table library.
 
-**[Live demo](https://funkadelic.github.io/YART/)**, published from `main` by the pipeline once every gate passes. A second table over a films dataset is served beside it at **[`movies.html`](https://funkadelic.github.io/YART/movies.html)**, and everything described below holds for both pages. The two do not link to each other, so this link is the only route to the second.
+**[Live demo](https://funkadelic.github.io/YART/)**, published from `main` by the pipeline once every gate passes. A second table over a films dataset is served beside it at **[`movies.html`](https://funkadelic.github.io/YART/movies.html)**, and everything described below holds for both pages. The header links each page to the other.
 
 ## Contents
 

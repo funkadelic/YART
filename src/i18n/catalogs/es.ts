@@ -70,6 +70,7 @@ export const es = {
     themeSystem: "Sistema",
     languageName: "Idioma",
     languageSystem: "Sistema",
+    datasetNav: "Conjuntos de datos",
     renderFailureRetry: "Mostrar de nuevo",
     error: (message: string) => `Error: ${message}`,
     retry: "Reintentar",
@@ -96,6 +97,7 @@ export const es = {
   },
   cities: {
     appTitle: "Lista de ciudades",
+    nav: "Ciudades",
     renderFailure:
       "Esta parte de la página no se pudo mostrar. Los datos de las ciudades siguen cargados, así que volver a mostrarla puede funcionar.",
     attribution: (source: string, license: string) =>
@@ -122,6 +124,7 @@ export const es = {
   } satisfies DomainCatalog,
   films: {
     appTitle: "Lista de películas",
+    nav: "Películas",
     renderFailure:
       "Esta parte de la página no se pudo mostrar. Los datos de las películas siguen cargados, así que volver a mostrarla puede funcionar.",
     attribution: (source: string, license: string) =>

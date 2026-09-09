@@ -21,7 +21,7 @@ export function RootLayout({ children, domain }: RootLayoutProps) {
 
   return (
     <div className={styles.layout}>
-      <Header />
+      <Header domain={domain} />
       <main className={styles.main}>
         <ErrorBoundary
           labels={{

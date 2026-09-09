@@ -29,3 +29,20 @@
   font-weight: 600;
   color: var(--color-text);
 }
+
+.nav {
+  display: flex;
+  gap: var(--space-4);
+  margin-inline-start: var(--space-4);
+}
+
+.link {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+/* The page being shown reads as a heading rather than a way out. */
+.link[aria-current="page"] {
+  font-weight: 600;
+  text-decoration: none;
+}

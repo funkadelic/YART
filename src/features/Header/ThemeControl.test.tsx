@@ -184,7 +184,7 @@ describe("ThemeControl", () => {
   });
 
   it("is mounted in the header, so the page it themes is the page it sits on", () => {
-    render(<Header />);
+    render(<Header domain="cities" />);
 
     expect(screen.getByRole("radiogroup")).toBeInTheDocument();
     expect(screen.getAllByRole("radio")).toHaveLength(OPTION_NAMES.length);

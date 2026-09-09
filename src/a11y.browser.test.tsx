@@ -231,9 +231,11 @@ describe("accessibility in a real engine", () => {
     // The four page controls read first, previous, next, last from the reading
     // start, which under this direction runs right to left across the row. Their
     // document order is that order, so their resolved left edges must descend.
-    const controls = within(screen.getByRole("navigation")).getAllByRole(
-      "button",
-    );
+    // Named, because the header holds a second navigation landmark. Matched
+    // loosely, because this run reads the pseudo-locale.
+    const controls = within(
+      screen.getByRole("navigation", { name: /pagination/ }),
+    ).getAllByRole("button");
 
     expect(controls).toHaveLength(4);
 

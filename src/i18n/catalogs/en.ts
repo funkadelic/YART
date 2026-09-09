@@ -35,6 +35,7 @@ export type DatasetErrorText = Readonly<
  */
 export interface DomainCatalog {
   readonly appTitle: string;
+  readonly nav: string;
   readonly renderFailure: string;
   readonly attribution: (source: string, license: string) => string;
   readonly loading: string;
@@ -96,6 +97,7 @@ export const en = {
     themeSystem: "System",
     languageName: "Language",
     languageSystem: "System",
+    datasetNav: "Datasets",
     renderFailureRetry: "Show it again",
     error: (message: string) => `Error: ${message}`,
     retry: "Try again",
@@ -124,6 +126,7 @@ export const en = {
   },
   cities: {
     appTitle: "City List",
+    nav: "Cities",
     renderFailure:
       "This part of the page could not be displayed. The city data is still loaded, so showing it again may work.",
     attribution: (source: string, license: string) =>
@@ -150,6 +153,7 @@ export const en = {
   } satisfies DomainCatalog,
   films: {
     appTitle: "Film List",
+    nav: "Films",
     renderFailure:
       "This part of the page could not be displayed. The film data is still loaded, so showing it again may work.",
     // A courtesy, and the sentence says so. CC0 requires no attribution at

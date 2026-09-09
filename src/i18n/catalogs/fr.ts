@@ -68,6 +68,7 @@ export const fr = {
     themeSystem: "Système",
     languageName: "Langue",
     languageSystem: "Système",
+    datasetNav: "Jeux de données",
     renderFailureRetry: "Afficher à nouveau",
     error: (message: string) => `Erreur${NARROW_NO_BREAK_SPACE}: ${message}`,
     retry: "Réessayer",
@@ -94,6 +95,7 @@ export const fr = {
   },
   cities: {
     appTitle: "Liste des villes",
+    nav: "Villes",
     renderFailure:
       "Cette partie de la page n'a pas pu être affichée. Les données des villes sont toujours chargées, donc l'afficher à nouveau peut fonctionner.",
     attribution: (source: string, license: string) =>
@@ -120,6 +122,7 @@ export const fr = {
   } satisfies DomainCatalog,
   films: {
     appTitle: "Liste des films",
+    nav: "Films",
     renderFailure:
       "Cette partie de la page n'a pas pu être affichée. Les données des films sont toujours chargées, donc l'afficher à nouveau peut fonctionner.",
     attribution: (source: string, license: string) =>

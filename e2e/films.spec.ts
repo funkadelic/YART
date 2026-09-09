@@ -220,3 +220,33 @@ test("a films search matching nothing empties the results and no more", async ({
   );
   await expect(page.getByRole("heading", { name: "Film List" })).toBeVisible();
 });
+
+test("the header nav reaches the other dataset and back", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("table")).toBeVisible({
+    timeout: DATASET_READY_TIMEOUT_MS,
+  });
+
+  const nav = page.getByRole("navigation", { name: "Datasets" });
+
+  await expect(nav.getByRole("link", { name: "Cities" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+
+  await nav.getByRole("link", { name: "Films" }).click();
+  await expect(page).toHaveURL(FILMS_PATH);
+  await expect(page.getByRole("table")).toBeVisible({
+    timeout: DATASET_READY_TIMEOUT_MS,
+  });
+  await expect(nav.getByRole("link", { name: "Films" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+
+  await nav.getByRole("link", { name: "Cities" }).click();
+  await expect(page).toHaveURL("/");
+  await expect(page.getByRole("table")).toBeVisible({
+    timeout: DATASET_READY_TIMEOUT_MS,
+  });
+});

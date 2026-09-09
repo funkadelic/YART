@@ -54,6 +54,7 @@ export const pseudo = {
     themeSystem: pseudoize(en.common.themeSystem),
     languageName: pseudoize(en.common.languageName),
     languageSystem: pseudoize(en.common.languageSystem),
+    datasetNav: pseudoize(en.common.datasetNav),
     renderFailureRetry: pseudoize(en.common.renderFailureRetry),
     error: (message: string) => pseudoize(en.common.error(message)),
     retry: pseudoize(en.common.retry),
@@ -77,6 +78,7 @@ export const pseudo = {
   },
   cities: {
     appTitle: pseudoize(en.cities.appTitle),
+    nav: pseudoize(en.cities.nav),
     renderFailure: pseudoize(en.cities.renderFailure),
     attribution: (source: string, license: string) =>
       pseudoize(en.cities.attribution(source, license)),
@@ -99,6 +101,7 @@ export const pseudo = {
   } satisfies DomainCatalog,
   films: {
     appTitle: pseudoize(en.films.appTitle),
+    nav: pseudoize(en.films.nav),
     renderFailure: pseudoize(en.films.renderFailure),
     attribution: (source: string, license: string) =>
       pseudoize(en.films.attribution(source, license)),
