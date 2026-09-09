@@ -16,7 +16,7 @@ const PAGES: Readonly<Record<DomainId, string>> = {
 const DOMAIN_IDS = Object.keys(PAGES) as readonly DomainId[];
 
 interface HeaderProps {
-  /** The page being shown, which is the one link that is not a link out. */
+  /** The page being shown, whose link carries aria-current. */
   readonly domain: DomainId;
 }
 
@@ -43,8 +43,8 @@ export function Header({ domain }: HeaderProps) {
           the footer do. It is what the app calls itself, not copy about it. */}
       <span className={styles.title}>YART</span>
       {/* Plain links, because the datasets are two documents. A select that
-          navigated on change would be the on-input trap, and it would drop
-          the keyboard reader's middle-click and open-in-new-tab too. */}
+          navigated on change would be the on-input trap, and it would lose
+          middle-click and open-in-new-tab. */}
       {/* a11y: named, because the pagination landmark is a nav as well. */}
       <nav className={styles.nav} aria-label={catalog.common.datasetNav}>
         {DOMAIN_IDS.map((id) => (

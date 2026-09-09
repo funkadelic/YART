@@ -41,7 +41,7 @@
   color: var(--color-text);
 }
 
-/* The page being shown reads as a heading rather than a way out. */
+/* No underline on the page being shown, since its link goes nowhere. */
 .link[aria-current="page"] {
   font-weight: 600;
   text-decoration: none;
