@@ -111,7 +111,7 @@ The static head of the document stays in the base language too. Its title, its d
 - [TypeScript](https://www.typescriptlang.org) 6
 - [React](https://reactjs.org) 19
 - [Vite](https://vitejs.dev/) 8
-- [Vitest](https://vitest.dev) 4 and [Testing Library](https://testing-library.com/)
+- [Vitest](https://vitest.dev) 5 and [Testing Library](https://testing-library.com/)
 - [Playwright](https://playwright.dev) for the end-to-end suite
 - [Sass](https://sass-lang.com/) for the CSS Modules stylesheets
 - [React Icons](https://react-icons.github.io/react-icons/)
