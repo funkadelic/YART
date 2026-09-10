@@ -203,7 +203,7 @@ it(
 
         const inline = [
           ...markup.matchAll(
-            /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g,
+            /<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gi,
           ),
         ];
 

@@ -459,10 +459,10 @@ describe.each(SHELLS)("the theme script in %s", (shell) => {
   // three fails silently, which is why it is worth a guard. An attribute that
   // changes nothing about when the script runs is not worth one, and a CSP nonce
   // is the one this file will need first.
-  const blocking = [...head.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)]
+  const blocking = [...head.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/gi)]
     .filter(
       (match) =>
-        !/\b(?:type=["']module["']|defer|async)\b/.test(
+        !/\b(?:type=["']module["']|defer|async)\b/i.test(
           required(match[1], "the script tag's attributes"),
         ),
     )
@@ -481,7 +481,7 @@ describe.each(SHELLS)("the theme script in %s", (shell) => {
   it("places it before the module script", () => {
     expect(blocking, "no blocking script to place").toHaveLength(1);
 
-    const moduleScript = html.search(/<script[^>]*\btype=["']module["']/);
+    const moduleScript = html.search(/<script[^>]*\btype=["']module["']/i);
 
     expect(moduleScript, `${shell} loads no module script`).toBeGreaterThan(-1);
     expect(
