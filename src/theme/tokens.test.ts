@@ -1,4 +1,4 @@
-// @vitest-environment node
+// @vitest-environment jsdom
 //
 // Token layering and contrast, the theme script's placement in each shell, and
 // the halves of the stylesheet rules stylelint has no way to express: an SCSS
@@ -8,13 +8,13 @@
 // named at the line it sits on rather than at the end of a walk.
 //
 // The stylesheet is the single source of truth for every color in the app, so
-// this guard reads the shipped file, never a copy of its values. It runs under
-// Node for two measured reasons: the runner replaces CSS imports with empty
-// strings, so nothing is loaded into a document to inspect; and jsdom does not
-// substitute var() in getComputedStyle, so even a mounted page would hand back
-// the literal string "var(--gray-50)" instead of a color. Resolving the
-// indirection here is the only way to assert on the values that actually reach a
-// screen.
+// this guard reads the shipped file, never a mounted page, for two measured
+// reasons: the runner replaces CSS imports with empty strings, so nothing is
+// loaded into a document to inspect; and jsdom does not substitute var() in
+// getComputedStyle, so even a mounted page would hand back the literal string
+// "var(--gray-50)" instead of a color. Resolving the indirection here is the
+// only way to assert on the values that actually reach a screen. The
+// environment is jsdom for the shell guard's DOM parser, which Node has none of.
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -450,26 +450,22 @@ const SHELLS = ["index.html", "movies.html"];
 
 describe.each(SHELLS)("the theme script in %s", (shell) => {
   const html = readFileSync(join(projectRoot, shell), "utf8");
-  const headStart = html.indexOf("<head>");
-  const headEnd = html.indexOf("</head>");
-  const head = html.slice(headStart, headEnd);
+  // Parsed rather than scraped: the markup this guard has to reject is exactly
+  // the markup a hand-written tag matcher gets wrong. querySelectorAll returns
+  // document order, so an index into this list says which script runs first.
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const scripts = [...doc.querySelectorAll("script")];
 
-  // Filtered on the three attributes that actually defer a script past first
-  // paint, so a script carrying an unrelated attribute still counts. Each of the
-  // three fails silently, which is why it is worth a guard. An attribute that
-  // changes nothing about when the script runs is not worth one, and a CSP nonce
-  // is the one this file will need first.
-  const blocking = [...head.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)]
-    .filter(
-      (match) =>
-        !/\b(?:type=["']module["']|defer|async)\b/.test(
-          required(match[1], "the script tag's attributes"),
-        ),
-    )
-    .map((match) => ({
-      body: match[2],
-      offset: headStart + (match.index ?? 0),
-    }));
+  // Filtered on the three things that actually defer a script past first paint,
+  // so a script carrying an unrelated attribute still counts. Each of the three
+  // fails silently, which is why it is worth a guard, and a CSP nonce is the one
+  // this file will need first.
+  const blocking = [...doc.head.querySelectorAll("script")].filter(
+    (script) =>
+      script.type.toLowerCase() !== "module" &&
+      !script.hasAttribute("defer") &&
+      !script.hasAttribute("async"),
+  );
 
   it("carries exactly one blocking classic script inside the head", () => {
     expect(
@@ -481,11 +477,13 @@ describe.each(SHELLS)("the theme script in %s", (shell) => {
   it("places it before the module script", () => {
     expect(blocking, "no blocking script to place").toHaveLength(1);
 
-    const moduleScript = html.search(/<script[^>]*\btype=["']module["']/);
+    const moduleScript = scripts.findIndex(
+      (script) => script.type.toLowerCase() === "module",
+    );
 
     expect(moduleScript, `${shell} loads no module script`).toBeGreaterThan(-1);
     expect(
-      required(blocking[0], "the blocking script").offset,
+      scripts.indexOf(required(blocking[0], "the blocking script")),
       `the theme script in ${shell} does not precede the module script`,
     ).toBeLessThan(moduleScript);
   });
@@ -496,7 +494,7 @@ describe.each(SHELLS)("the theme script in %s", (shell) => {
   it("reads the same storage key the resolver exports", () => {
     expect(blocking, "no blocking script to read a key from").toHaveLength(1);
     expect(
-      required(blocking[0], "the blocking script").body,
+      required(blocking[0], "the blocking script").textContent,
       `the theme script in ${shell} does not mention the storage key ${THEME_STORAGE_KEY}`,
     ).toContain(THEME_STORAGE_KEY);
   });

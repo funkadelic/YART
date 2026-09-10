@@ -754,7 +754,7 @@ function firstArguments(file: ts.SourceFile, callee: string): string[] {
 function inlineScript(shell: string): ts.SourceFile {
   const html = readFileSync(join(projectRoot, shell), "utf8");
   const found = [
-    ...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g),
+    ...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gi),
   ];
 
   expect(
