@@ -432,6 +432,13 @@ const CONFIG_FILE = "vite.config.ts";
 const E2E_CONFIG_FILE = "playwright.config.ts";
 const WORKFLOW_FILE = ".github/workflows/ci.yml";
 const SONAR_FILE = "sonar-project.properties";
+const FALLOW_FILE = ".fallowrc.json";
+
+// What fallow ignores beyond the Sonar list. The catalogs are parallel by
+// construction, and fallow reports that shape as clones at a granularity
+// Sonar's copy detector never reaches, so there is nothing to exclude on the
+// other side.
+const FALLOW_ONLY_DUPLICATE_IGNORES = ["src/i18n/catalogs/**"];
 
 // The two test runners this repository is written to hold, each paired with the
 // file that configures it. Named as pairs so neither half can be asserted
@@ -1579,6 +1586,42 @@ describe("toolchain baseline", () => {
 
     expect(patterns.toSorted()).toEqual(
       COVERAGE_EXCLUDE_PATTERNS.flatMap(sonarEquivalents).toSorted(),
+    );
+  });
+
+  // The near-copy containers are carved out of two copy detectors, and each
+  // states the carve in its own file. Drift shows up as a clone group one tool
+  // reports and the other does not, which reads as a finding rather than as a
+  // stale list. Derived from the Sonar side plus the written-out extras, so
+  // adding a path to either file, or dropping one, fails here.
+  it("keeps the fallow duplicate ignores agreeing with the Sonar copy-detector exclusions", () => {
+    const declared = /^sonar\.cpd\.exclusions=(.*)$/m.exec(
+      readFileSync(join(projectRoot, SONAR_FILE), "utf8"),
+    );
+
+    expect(
+      declared,
+      `${SONAR_FILE} declares no copy-detector exclusions`,
+    ).not.toBeNull();
+
+    const sonarPaths = (declared?.[1] ?? "")
+      .split(",")
+      .map((path) => path.trim())
+      .filter((path) => path !== "");
+
+    expect(sonarPaths.length).toBeGreaterThan(0);
+
+    const config = JSON.parse(
+      readFileSync(join(projectRoot, FALLOW_FILE), "utf8"),
+    ) as { duplicates?: { ignore?: string[] } };
+
+    expect(
+      config.duplicates?.ignore,
+      `${FALLOW_FILE} declares no duplicate ignore list`,
+    ).toBeDefined();
+
+    expect(config.duplicates?.ignore?.toSorted()).toEqual(
+      [...sonarPaths, ...FALLOW_ONLY_DUPLICATE_IGNORES].toSorted(),
     );
   });
 

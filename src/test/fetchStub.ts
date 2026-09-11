@@ -26,7 +26,6 @@ const assetPath = join(
   "worldcities",
   "cities.json",
 );
-const filmAssetPath = join(here.dirname, "..", "data", "films", "films.json");
 
 /**
  * Serves a payload as the dataset response, serializing it first.
@@ -63,11 +62,4 @@ export function stubFilmDatasetFetch(payload: unknown = FILM_FIXTURE_ENVELOPE) {
  */
 export function readCommittedAsset(): string {
   return readFileSync(assetPath, "utf8");
-}
-
-/**
- * Reads the committed film dataset asset off disk.
- */
-export function readCommittedFilmAsset(): string {
-  return readFileSync(filmAssetPath, "utf8");
 }

@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  "entry": ["src/**/*.test-d.ts"],
+  "ignoreExportsUsedInFile": { "type": true },
+  "duplicates": {
+    "ignore": [
+      "src/App.tsx",
+      "src/FilmsApp.tsx",
+      "src/features/CityTable/CityTable.tsx",
+      "src/features/FilmTable/FilmTable.tsx",
+      "src/i18n/catalogs/**"
+    ]
+  }
+}
