@@ -146,6 +146,20 @@ describe("CityTable", () => {
       expect(searchInput).toBeInTheDocument();
       expect(searchInput).toHaveAttribute("placeholder", "Search for a city");
     });
+
+    // Matched as a substring, because the runner hands a CSS Module a proxy
+    // that decorates the key, so the class on the element is not the key the
+    // source writes.
+    it("marks the population sort control as numeric and no other", () => {
+      render(<CityTable {...defaultProps} />);
+
+      expect(
+        screen.getByRole("button", { name: "Population" }).className,
+      ).toContain("sortButtonNumeric");
+      expect(
+        screen.getByRole("button", { name: "City" }).className,
+      ).not.toContain("sortButtonNumeric");
+    });
   });
 
   describe("Search Functionality", () => {
@@ -541,7 +555,8 @@ describe("CityTable", () => {
       expect(screen.getByText("Page 3 of 3")).toBeInTheDocument();
     });
 
-    it("disables navigation buttons appropriately", () => {
+    it("disables navigation buttons appropriately", async () => {
+      const user = userEvent.setup();
       render(<CityTable {...defaultProps} data={largeMockData} />);
 
       // On first page, prev and first should be disabled
@@ -558,6 +573,23 @@ describe("CityTable", () => {
       ).not.toBeDisabled();
       expect(
         screen.getByRole("button", { name: /Go to last page/ }),
+      ).not.toBeDisabled();
+
+      // And the far end, where the pair that was live goes dead and the pair
+      // that was dead comes back.
+      await user.click(screen.getByRole("button", { name: /Go to last page/ }));
+
+      expect(
+        screen.getByRole("button", { name: /Go to next page/ }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: /Go to last page/ }),
+      ).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: /Go to previous page/ }),
+      ).not.toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: /Go to first page/ }),
       ).not.toBeDisabled();
     });
 

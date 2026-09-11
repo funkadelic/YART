@@ -109,8 +109,12 @@ describe("Footer", () => {
   });
 
   it("renders every link with no props supplied", () => {
-    render(<Footer />);
+    const { container } = render(<Footer />);
 
     expect(screen.getAllByRole("link")).toHaveLength(LINKS.length);
+    // The file's one departure from reading accessible names and hrefs. An
+    // anchor with no address carries no link role, so the query above cannot
+    // see a wrapper put around the plain text between the identifiers.
+    expect(container.querySelectorAll("a")).toHaveLength(LINKS.length);
   });
 });

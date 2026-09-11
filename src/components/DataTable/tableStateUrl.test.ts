@@ -40,6 +40,10 @@ const REJECTED_SORTS: ReadonlyArray<readonly [string, string]> = [
   ["a key with no value", "?sort="],
   ["a direction with no column", "?sort=-"],
   ["a shouted id, since membership compares exactly", "?sort=NAME"],
+  // The tail names a real column and the first character is not the descending
+  // prefix, so a parser that sliced unconditionally would read a descending
+  // sort out of a token the address never meant as one.
+  ["a column name behind a character that is not the prefix", "?sort=Xname"],
 ];
 
 // Everything outside the offered list, because the table's own select cannot
