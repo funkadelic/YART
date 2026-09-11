@@ -254,6 +254,9 @@ describe("useTheme", () => {
       const { result } = renderTheme();
 
       act(() => {
+        // The store moves too, so the guard is that the handler does not look,
+        // rather than that there was nothing to see.
+        localStorage.setItem(THEME_STORAGE_KEY, "light");
         window.dispatchEvent(new StorageEvent("storage", { key: "unrelated" }));
       });
 

@@ -62,14 +62,20 @@ export function installMatchMediaStub(): void {
       get matches() {
         return query === PREFERS_DARK_QUERY && prefersDark;
       },
-      addEventListener: (_type: string, listener: MediaPreferenceListener) => {
-        mediaListeners.add(listener);
+      // The DOM matches a listener on the event name, so a stub that ignores
+      // the name cannot fail on a consumer subscribing to the wrong one.
+      addEventListener: (type: string, listener: MediaPreferenceListener) => {
+        if (type === "change") {
+          mediaListeners.add(listener);
+        }
       },
       removeEventListener: (
-        _type: string,
+        type: string,
         listener: MediaPreferenceListener,
       ) => {
-        mediaListeners.delete(listener);
+        if (type === "change") {
+          mediaListeners.delete(listener);
+        }
       },
     };
   });

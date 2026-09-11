@@ -146,35 +146,28 @@ describe("loadCities row validation", () => {
     });
   });
 
-  it("rejects a row whose id is the string form of its number", async () => {
-    const payload = envelope();
-    rowAt(payload, 5)[0] = String(rowAt(payload, 5)[0]);
+  // All seven, in destructure order, so dropping any one conjunct of the row
+  // typecheck leaves a case with nothing to reject.
+  it.each([
+    ["id", 0, "1392685764"],
+    ["name", 1, 1360771077],
+    ["nameAscii", 2, 1360771077],
+    ["country", 3, 392],
+    ["countryIso3", 4, 392],
+    ["capital", 5, true],
+    ["population", 6, null],
+  ] as const)(
+    "rejects a row whose %s is of the wrong type",
+    async (_field, index, wrong) => {
+      const payload = envelope();
+      rowAt(payload, 2)[index] = wrong;
 
-    expect(await rejection(payload)).toEqual({
-      message: "City row 5 has a field of the wrong type and was not loaded.",
-      code: "rowFieldType",
-    });
-  });
-
-  it("rejects a row whose population is null", async () => {
-    const payload = envelope();
-    rowAt(payload, 6)[6] = null;
-
-    expect(await rejection(payload)).toEqual({
-      message: "City row 6 has a field of the wrong type and was not loaded.",
-      code: "rowFieldType",
-    });
-  });
-
-  it("rejects a row whose name is a number", async () => {
-    const payload = envelope();
-    rowAt(payload, 1)[1] = 1360771077;
-
-    expect(await rejection(payload)).toEqual({
-      message: "City row 1 has a field of the wrong type and was not loaded.",
-      code: "rowFieldType",
-    });
-  });
+      expect(await rejection(payload)).toEqual({
+        message: "City row 2 has a field of the wrong type and was not loaded.",
+        code: "rowFieldType",
+      });
+    },
+  );
 
   it("carries the failing row's index as the detail, not only in the message", async () => {
     const payload = envelope();
