@@ -410,6 +410,18 @@ A second suite under `e2e/` runs in a real browser against a production build, c
 
 The pipeline sends three reports to [Codecov](https://codecov.io/gh/funkadelic/YART): the coverage the hundred percent gate is measured on, a JUnit report from each of the three suites, and the size of every emitted asset. A test that fails intermittently is flagged as a flake. The asset sizes come from Codecov's standalone analyzer, which reports assets and not individual modules.
 
+[StrykerJS](https://stryker-mutator.io) is configured for mutation testing, run by hand as `npm run test:mutation`. Its runner support stops at Vitest 4.1, so install the older runner first and put the tree back afterward. Run all three:
+
+```bash
+npm i -D --no-save --legacy-peer-deps vitest@4
+npm run test:mutation
+npm ci
+```
+
+A run takes about ten minutes and writes `reports/mutation/mutation.html`, which is gitignored.
+
+`npm run fallow` is the other check run by hand, a static analysis pass over the TypeScript tree. Both exit non-zero on a finding and neither runs in CI, so a finding is something to read and decide about rather than a broken build.
+
 ## Scripts
 
 | Script                    | What it does                                                               |
@@ -422,8 +434,10 @@ The pipeline sends three reports to [Codecov](https://codecov.io/gh/funkadelic/Y
 | `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%           |
 | `npm run test:browser`    | Run the accessibility checks in a real Chromium                            |
 | `npm run test:e2e`        | Run the end-to-end suite in a real Chromium against a built bundle         |
+| `npm run test:mutation`   | Change the source a piece at a time and report what no test catches        |
 | `npm run chromatic`       | Upload the snapshots a full `npm run test:e2e` archived, for visual review |
 | `npm run typecheck`       | Check types without emitting output                                        |
+| `npm run fallow`          | Report unreachable code, duplication and per-file maintainability          |
 | `npm run lint`            | Run ESLint then Stylelint; a warning fails it (`lint:fix` to autofix)      |
 | `npm run format`          | Run Prettier                                                               |
 | `npm run format:check`    | Check formatting without rewriting anything                                |
