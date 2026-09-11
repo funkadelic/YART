@@ -864,19 +864,18 @@ const ADDRESS_INVARIANT =
 /**
  * Every document that carries that account, most-consulted first.
  *
- * The first two are committed. The last two are the generated project
- * instructions and the codebase map they are generated from, and this
- * repository keeps both out of version control, so they are asserted where they
- * exist and skipped where they do not, so a fresh clone does not fail for
+ * The first two are committed. The third is the project instructions, which
+ * this repository keeps out of version control, so it is asserted where it
+ * exists and skipped where it does not and a fresh clone does not fail for
  * missing a file it was never given. The count below stops that tolerance from
  * quietly emptying the loop.
+ *
+ * The codebase map sat here too and came out. It is regenerated wholesale
+ * rather than edited, so holding it to a sentence written by hand fails on
+ * every refresh that rewords the paragraph, locally and never in CI, which is
+ * the shape of guard that gets ignored rather than fixed.
  */
-const ADDRESS_DOCUMENTS = [
-  "README.md",
-  ADDRESS_WRITER,
-  ".claude/CLAUDE.md",
-  ".planning/codebase/ARCHITECTURE.md",
-];
+const ADDRESS_DOCUMENTS = ["README.md", ADDRESS_WRITER, ".claude/CLAUDE.md"];
 
 /** How many of those documents are committed, and therefore always readable. */
 const COMMITTED_ADDRESS_DOCUMENTS = 2;
