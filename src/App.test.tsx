@@ -99,6 +99,20 @@ describe("App", () => {
     });
   });
 
+  it("clears the busy flag once the first search settles", async () => {
+    render(<App />);
+
+    // Asserted inside the poll, not after one that returned on the table
+    // appearing: the resolve and the settle are two separate dispatches, so
+    // the table is on screen one render before the flag clears.
+    await waitFor(() => {
+      expect(screen.getByRole("table").closest("[aria-busy]")).toHaveAttribute(
+        "aria-busy",
+        "false",
+      );
+    });
+  });
+
   it("renders the sentence the failure's code names, not the failure's own message", async () => {
     const failure = new DatasetError(
       "notJson",

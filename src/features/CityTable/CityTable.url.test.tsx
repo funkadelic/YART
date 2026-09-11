@@ -162,6 +162,22 @@ describe("CityTable and the address", () => {
     expect(window.location.search).toBe("");
   });
 
+  it("writes the path and the fragment, not a bare question mark, when the query empties", async () => {
+    const user = userEvent.setup({ delay: null });
+    openAt("?page=5#credits");
+    const pathBefore = window.location.pathname;
+
+    render(<CityTable {...defaultProps} />);
+
+    await user.click(screen.getByRole("button", { name: "Go to first page" }));
+
+    // All three: an address built from the wrong operator is not a string at
+    // all, and the empty search alone is satisfied by that too.
+    expect(window.location.search).toBe("");
+    expect(window.location.pathname).toBe(pathBefore);
+    expect(window.location.hash).toBe("#credits");
+  });
+
   it("paints the sort named in the address on the first render", () => {
     openAt("?sort=-population");
 

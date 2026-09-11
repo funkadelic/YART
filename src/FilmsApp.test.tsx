@@ -101,6 +101,24 @@ describe("FilmsApp", () => {
     expect(screen.queryByText("Downloading the film data...")).toBeNull();
   });
 
+  it("clears the busy flag once the first search settles", async () => {
+    vi.useFakeTimers();
+    const FreshFilmsApp = await freshFilmsApp();
+
+    render(<FreshFilmsApp />);
+
+    // The resolve and the settle are two separate dispatches; the advance
+    // flushes both, so the flag is readable straight after it.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+    });
+
+    expect(screen.getByRole("table").closest("[aria-busy]")).toHaveAttribute(
+      "aria-busy",
+      "false",
+    );
+  });
+
   it("renders the film sentence the failure's code names, not the failure's own message", async () => {
     vi.useFakeTimers();
     getFilmsSeam.mockRejectedValueOnce(
