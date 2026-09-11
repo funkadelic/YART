@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, globSync, readdirSync, readFileSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -126,26 +126,6 @@ function commentRanges(file: ts.SourceFile): Range[] {
 }
 
 /**
- * Every string, template chunk, regular expression and run of JSX text.
- *
- * A template's interpolations are code and stay code, so only the literal chunks
- * around them are listed here. That is why the template head, middle and tail
- * are named separately, and the template expression that holds them is not.
- */
-function literalRanges(file: ts.SourceFile): Range[] {
-  return collect(file, (node) =>
-    ts.isStringLiteralLike(node) ||
-    ts.isRegularExpressionLiteral(node) ||
-    ts.isTemplateHead(node) ||
-    ts.isTemplateMiddle(node) ||
-    ts.isTemplateTail(node) ||
-    ts.isJsxText(node)
-      ? ([node.getStart(file), node.getEnd()] as Range)
-      : undefined,
-  );
-}
-
-/**
  * The source with every listed range reduced to spaces, keeping the line breaks
  * so an index into the result is still an index into the original.
  *
@@ -177,17 +157,6 @@ function stripComments(source: string): string {
 }
 
 /**
- * Source with everything that is not code blanked out, so an index into it is an
- * index into the original and every character it still shows is code. The call
- * counting below reads this, because a string holding a call and a pattern such
- * as /expect\(/ both name calls that happen nowhere.
- */
-function codeMask(source: string): string {
-  const file = parse(source);
-  return blankRanges(source, [...commentRanges(file), ...literalRanges(file)]);
-}
-
-/**
  * Prose with markdown backticks removed and every run of whitespace collapsed to a
  * single space, so an assertion compares the sentence a reader sees and not the line
  * breaks and markup a formatter chose. Two documents in two formats are compared
@@ -208,6 +177,15 @@ function normalizeProse(source: string): string {
  */
 function normalizeComment(source: string): string {
   return normalizeProse(source.replace(/^[ \t]*(?:\*|\/\/)[ ]?/gm, ""));
+}
+
+/** The name a call names, whether it is bare or a member call. */
+function calleeName(call: ts.CallExpression): string | undefined {
+  const callee = call.expression;
+
+  if (ts.isPropertyAccessExpression(callee)) return callee.name.text;
+
+  return ts.isIdentifier(callee) ? callee.text : undefined;
 }
 
 /** Whether a node is a call to the named callee, matched as the tree writes it. */
@@ -241,22 +219,6 @@ function containsCall(
 function findCalls(file: ts.SourceFile, callee: string): ts.CallExpression[] {
   return collect(file, (node) =>
     isCallTo(node, callee, file) ? node : undefined,
-  );
-}
-
-/**
- * Every call to a method on the input library's default export other than the
- * session opener. Matched on the property being called, so a method named inside
- * a string is not one of these.
- */
-function directUserEventCalls(file: ts.SourceFile): ts.CallExpression[] {
-  return collect(file, (node) =>
-    ts.isCallExpression(node) &&
-    ts.isPropertyAccessExpression(node.expression) &&
-    node.expression.expression.getText(file) === "userEvent" &&
-    node.expression.name.text !== "setup"
-      ? node
-      : undefined,
   );
 }
 
@@ -299,65 +261,50 @@ function bindsClock(call: ts.CallExpression): boolean {
   });
 }
 
-const SKIPPED_DIRECTORIES = new Set([
-  "node_modules",
-  "dist",
-  "coverage",
-  ".git",
-]);
-
 /**
- * Every file the runner would collect, found by walking the tree so the guard still
- * works from an exported tarball, where git cannot answer. The pattern tracks the
- * runner's own default include, which is wider than the shape this project uses
- * today, so a first `.spec.ts` or `tests/` file is covered the day someone writes it.
+ * Every file matching a pattern, walked with the platform's own glob.
+ *
+ * withFileTypes and the isFile filter are not decoration. A failed browser run
+ * leaves src/__screenshots__/<spec name>.tsx, which is a directory whose name
+ * ends in .tsx, and the glob returns it like any other match. Handing that to
+ * readFileSync dies of EISDIR for a reason unrelated to what the guard checks.
  */
-function findTestFiles(directory: string): string[] {
-  const found: string[] = [];
-
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      if (SKIPPED_DIRECTORIES.has(entry.name)) continue;
-      found.push(...findTestFiles(join(directory, entry.name)));
-    } else if (/\.(test|spec)\.[cm]?[jt]sx?$/.test(entry.name)) {
-      found.push(join(directory, entry.name));
-    }
-  }
-
-  return found;
+function projectFiles(pattern: string): string[] {
+  return globSync(pattern, {
+    cwd: projectRoot,
+    withFileTypes: true,
+    exclude: (entry) =>
+      entry.isDirectory() &&
+      /^(?:node_modules|dist|coverage|\.git)$/.test(entry.name),
+  })
+    .filter((entry) => entry.isFile())
+    .map((entry) => join(entry.parentPath, entry.name));
 }
 
 /**
- * Every module under a directory that is not a test file, so a guard can ask a
+ * Every file the runner would collect. The pattern tracks the runner's own
+ * default include, which is wider than the shape this project uses today, so a
+ * first `.spec.ts` is covered the day someone writes it.
+ */
+function testFiles(): string[] {
+  return projectFiles("**/*.{test,spec}.?([cm])[jt]s?(x)");
+}
+
+/**
+ * Every module under src/ that is not a test file, so a guard can ask a
  * question of the application rather than of the suite. A call site in a test is
  * a test double; a call site in a module is the application doing it.
  *
- * Not quite the complement of findTestFiles: a `.test-d.ts` is in neither walk,
- * because the runner never collects one and nothing it contains ships.
+ * A `.test-d.ts` is in neither walk, because the runner never collects one and
+ * nothing it contains ships.
  */
-function findSourceFiles(directory: string): string[] {
-  const found: string[] = [];
-
-  for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    const path = join(directory, entry.name);
-
-    if (entry.isDirectory()) {
-      if (SKIPPED_DIRECTORIES.has(entry.name)) continue;
-      found.push(...findSourceFiles(path));
-    } else if (
-      /\.[cm]?[jt]sx?$/.test(entry.name) &&
-      !/\.(test|spec)(-d)?\.[cm]?[jt]sx?$/.test(entry.name)
-    ) {
-      found.push(path);
-    }
-  }
-
-  return found;
+function sourceModules(): string[] {
+  return projectFiles("src/**/*.?([cm])[jt]s?(x)").filter(
+    (file) => !/\.(test|spec)(-d)?\.[cm]?[jt]sx?$/.test(file),
+  );
 }
 
-const scannedFiles = findTestFiles(projectRoot).filter(
-  (file) => file !== guardFile,
-);
+const scannedFiles = testFiles().filter((file) => file !== guardFile);
 
 // The directory holding the second runner's specs. Named here because two
 // guards below read it and one of them asserts it is still being read.
@@ -370,7 +317,6 @@ function isEndToEndSpec(file: string): boolean {
 
 const FAKES_CLOCK = /\buseFakeTimers\s*\(/;
 const CONFIGURES_CLOCK = /\bfakeTimers\s*:/;
-const IMPORTS_USER_EVENT = /from\s+["']@testing-library\/user-event["']/;
 
 /**
  * The two clock calls, named as the tree writes them. The guard below asks the
@@ -384,12 +330,10 @@ const REAL_CLOCK_CALL = "vi.useRealTimers";
 // apart. Zero assertions satisfies the inequality, so it is named separately
 // below.
 //
-// Two counting decisions the pattern does not show. A member call such as a
-// root's own render method is counted, because a bootstrap test driving a root
-// is where the first one would appear. A rerender call is not: there is no word
-// boundary inside that identifier.
-const COUNTS_AS_RENDER = /\b(?:renderHook|render)\s*\(/g;
-const COUNTS_AS_ASSERTION = /\bexpect\s*\(/g;
+// Counted off the tree by callee name, so a member call such as a root's own
+// render method counts and a rerender does not.
+const COUNTS_AS_MOUNT = new Set(["render", "renderHook"]);
+const COUNTS_AS_ASSERTION = "expect";
 
 // The complete coverage exclude list. Four entries, named here and not derived,
 // because a list that grows quietly is how the guard stops being one. Three
@@ -826,14 +770,7 @@ const COMMITTED_ADDRESS_DOCUMENTS = 2;
  */
 function historyMutations(file: ts.SourceFile): string[] {
   return collect(file, (node) => {
-    if (!ts.isCallExpression(node)) return undefined;
-
-    const callee = node.expression;
-    const name = ts.isPropertyAccessExpression(callee)
-      ? callee.name.text
-      : ts.isIdentifier(callee)
-        ? callee.text
-        : undefined;
+    const name = ts.isCallExpression(node) ? calleeName(node) : undefined;
 
     return name === "replaceState" || name === "pushState" ? name : undefined;
   });
@@ -1316,17 +1253,6 @@ describe("toolchain baseline", () => {
         offenders.push(`${name}: never restores the clock in an afterEach`);
       }
 
-      if (!IMPORTS_USER_EVENT.test(source)) continue;
-
-      // The library's direct entry points construct their own session with a no-op
-      // clock advance, so they wait on a real timer the frozen clock never fires.
-      // There is no argument to correct; the session form is the only bindable one.
-      if (directUserEventCalls(tree).length > 0) {
-        offenders.push(
-          `${name}: calls the input library directly, which cannot be bound to a fake clock`,
-        );
-      }
-
       // Judged per call site, because one bound session elsewhere in the file
       // cannot answer for this one.
       for (const call of findCalls(tree, "userEvent.setup")) {
@@ -1389,13 +1315,14 @@ describe("toolchain baseline", () => {
     const offenders: string[] = [];
 
     for (const file of scannedFiles) {
-      // codeMask, not stripComments, because this counts call sites and
-      // stripComments deliberately keeps literals, so a string such as
-      // "call render(x) before expect(y)" would score one of each. The provider
-      // guard is the only one that needs the literals it keeps.
-      const source = codeMask(readFileSync(file, "utf8"));
-      const renders = source.match(COUNTS_AS_RENDER)?.length ?? 0;
-      const assertions = source.match(COUNTS_AS_ASSERTION)?.length ?? 0;
+      const tree = parse(readFileSync(file, "utf8"));
+      const called = collect(tree, (node) =>
+        ts.isCallExpression(node) ? calleeName(node) : undefined,
+      );
+      const renders = called.filter((call) => COUNTS_AS_MOUNT.has(call)).length;
+      const assertions = called.filter(
+        (call) => call === COUNTS_AS_ASSERTION,
+      ).length;
       const name = relative(projectRoot, file);
 
       // Named ahead of the comparison, because zero renders against zero
@@ -1685,7 +1612,7 @@ describe("toolchain baseline", () => {
   // says the same thing about what a link reproduces. A token search would pass
   // on all three from a mention inside a comment.
   it("keeps one address writer per page, four query keys, and one account of what a link carries", () => {
-    const sources = findSourceFiles(join(projectRoot, "src"));
+    const sources = sourceModules();
 
     const writers: string[] = [];
     const pushes: string[] = [];

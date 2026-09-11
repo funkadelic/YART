@@ -255,6 +255,24 @@ export default defineConfig([
       ],
     },
   },
+  // userEvent's direct entry points open a session of their own with a no-op
+  // clock advance, so under a faked clock they wait on a timer that never fires.
+  // The matching check, that a session in a file that fakes a clock is bound to
+  // it, stays in src/toolchain.test.ts, because a selector cannot read the file.
+  {
+    files: ["src/**/*.test.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            'CallExpression[callee.type="MemberExpression"][callee.object.name="userEvent"]:not([callee.property.name="setup"])',
+          message:
+            "userEvent's direct entry points open their own session, which cannot be bound to a fake clock. Use userEvent.setup() and call the method on the session it returns.",
+        },
+      ],
+    },
+  },
   // The type-aware rules need declarations to reason about, and the plain
   // JavaScript in this tree has none: a build script reading an untyped CSV
   // parser and a flat config importing a plugin that ships no types. Every
