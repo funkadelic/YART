@@ -170,6 +170,20 @@ describe("envelope validation", () => {
     });
   });
 
+  // Kept beside the transposed case rather than folded into it. Transposing a
+  // pair gets both columns wrong, so a rule that demanded every column be wrong
+  // would still fire; one renamed column is what tells the two apart.
+  it("rejects a payload with one column renamed and the rest correct", async () => {
+    const payload = envelope();
+    columnsOf(payload)[1] = "name";
+
+    expect(await rejection(payload)).toEqual({
+      message:
+        "The widget data has an unexpected column order and was not loaded.",
+      code: "columnOrder",
+    });
+  });
+
   it("rejects a payload whose columns are short by one", async () => {
     const payload = envelope();
     payload.columns = columnsOf(payload).slice(0, 1);
@@ -200,6 +214,16 @@ describe("envelope validation", () => {
       { id: 1, label: "one" },
       { id: 2, label: "two" },
     ]);
+  });
+
+  // The name is what a stack trace and a logged error lead with, and a subclass
+  // that never sets one reports itself as a plain Error.
+  it("names the rejection after the class that threw it", async () => {
+    stubFetch("the widget data, honestly");
+
+    const error = await rejectionOf(widgetLoader());
+
+    expect(error.name).toBe("DatasetError");
   });
 });
 

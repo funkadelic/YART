@@ -190,7 +190,11 @@ describe("compareValues", () => {
     // over two of the three groups the comparator declares.
     const number = rowWithCapital(1, 9);
     const text = rowWithCapital(2, "primary");
-    const object = rowWithCapital(3, { toString: () => "zzz" });
+    // It has to collate ahead of the text row: a ranking that put the two in
+    // one group would then decide the pair by their stringifications, and a
+    // stringification collating after the text would produce the expected
+    // order for the wrong reason.
+    const object = rowWithCapital(3, { toString: () => "aaa" });
 
     expect(sortedIds([object, text, number], "capital", "asc")).toEqual([
       1, 2, 3,
