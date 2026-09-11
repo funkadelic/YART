@@ -94,6 +94,16 @@ function pagedFixture(count: number): City[] {
   }));
 }
 
+/**
+ * The glyph count of every header, in column order. Nothing else inside a
+ * header carries an svg, so the count is the sort indicator.
+ */
+function sortGlyphCounts(): number[] {
+  return screen
+    .getAllByRole("columnheader")
+    .map((header) => header.querySelectorAll("svg").length);
+}
+
 const defaultProps = {
   data: mockCities,
   onSearchChange: vi.fn(),
@@ -377,6 +387,25 @@ describe("CityTable", () => {
         name: /^Country$/,
       });
       expect(countryHeader).toHaveAttribute("aria-sort", "none");
+    });
+
+    it("draws one glyph, on the sorted column and only while sorted", async () => {
+      const user = userEvent.setup();
+      render(<CityTable {...defaultProps} />);
+
+      const citySortButton = screen.getByRole("button", { name: "City" });
+
+      // Order is City, Country, Capital, Country Code, Population. The zeros
+      // are load-bearing: a guard that always fires draws both glyphs on every
+      // unsorted column.
+      expect(sortGlyphCounts()).toEqual([0, 0, 0, 0, 0]);
+
+      await user.click(citySortButton);
+      expect(sortGlyphCounts()).toEqual([1, 0, 0, 0, 0]);
+
+      // Descending is the only state that reaches the second guard.
+      await user.click(citySortButton);
+      expect(sortGlyphCounts()).toEqual([1, 0, 0, 0, 0]);
     });
 
     it("switches sort when clicking different column", async () => {
@@ -962,6 +991,48 @@ describe("CityTable", () => {
       expect(resultsRegion?.textContent).toMatch(
         /^Showing \d+ cities out of \d+/,
       );
+    });
+
+    it("stays silent while a refresh runs over a dataset already in hand", () => {
+      // A count taken mid-request names rows that are about to go.
+      const { container, rerender } = render(
+        <CityTable
+          {...defaultProps}
+          data={[]}
+          loading={true}
+          datasetReady={true}
+        />,
+      );
+
+      // Two regions here, told apart by position: the page-position region
+      // renders only on the data branch.
+      const regions = container.querySelectorAll('[aria-live="polite"]');
+      expect(regions).toHaveLength(2);
+      const resultsRegion = required(regions[1], "the results region");
+      expect(resultsRegion).toBeEmptyDOMElement();
+
+      // The same state with the request settled does speak, so the silence
+      // above is not vacuous.
+      rerender(<CityTable {...defaultProps} data={[]} loading={false} />);
+      expect(resultsRegion).toHaveTextContent(
+        "No cities found for that search",
+      );
+    });
+
+    it("stays silent while a failure shows over a dataset already in hand", () => {
+      const { container } = render(
+        <CityTable
+          {...defaultProps}
+          errorMessage="Dataset unavailable"
+          datasetReady={true}
+        />,
+      );
+
+      // The failure branch is a role="alert" with no aria-live, so the count
+      // is still two.
+      const regions = container.querySelectorAll('[aria-live="polite"]');
+      expect(regions).toHaveLength(2);
+      expect(required(regions[1], "the results region")).toBeEmptyDOMElement();
     });
 
     it("has live regions for dynamic updates", () => {
