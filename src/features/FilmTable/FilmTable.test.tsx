@@ -454,4 +454,22 @@ describe("FilmTable and the locale", () => {
 
     expect(built).toHaveBeenCalledTimes(2);
   });
+
+  // Switched after mount, unlike its neighbors: the memo behind these two
+  // strings recomputes only when the catalog moves, and a switch made before
+  // the first render is captured by the initial computation either way.
+  it("takes the search box's own two strings from the catalog", () => {
+    // Pinned first, so the switch below is what the mounted memo sees rather
+    // than a locale an earlier case left behind.
+    setLocaleChoice("en");
+
+    render(<FilmTable {...defaultProps} />);
+
+    act(() => {
+      setLocaleChoice("fr");
+    });
+
+    const box = screen.getByRole("textbox", { name: fr.common.searchName });
+    expect(box).toHaveAttribute("placeholder", fr.films.searchPlaceholder);
+  });
 });

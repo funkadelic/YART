@@ -47,12 +47,12 @@ describe("getFilms", () => {
     expect(rows).toHaveLength(FILM_FIXTURE_ENVELOPE.rows.length);
   });
 
-  it("matches a term against the title regardless of case", async () => {
+  it("matches a term against the title regardless of case or padding", async () => {
     stubDatasetFetch(FILM_FIXTURE_ENVELOPE);
     vi.useFakeTimers();
     const getFilms = await freshGetFilms();
 
-    const rows = await settle(getFilms({ searchTerm: "ANGRY" }));
+    const rows = await settle(getFilms({ searchTerm: "  ANGRY  " }));
 
     expect(rows.map((film) => film.title)).toEqual(["12 Angry Men"]);
   });

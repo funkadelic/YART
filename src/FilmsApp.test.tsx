@@ -321,4 +321,24 @@ describe("FilmsApp", () => {
       screen.getByText(`Error: ${en.films.datasetError.transport("en-US", 0)}`),
     ).toBeInTheDocument();
   });
+
+  // A shared link costs one request, not one for the empty term followed by
+  // one for the term the link carries.
+  it("issues one request, for the term the link carries, on a cold start", () => {
+    window.history.replaceState(null, "", "?q=angry");
+    // Never settles, so the request is counted without a resolution landing
+    // outside the render. What went out is the claim, not what came back.
+    getFilmsSeam.mockReturnValue(new Promise<Film[]>(() => {}));
+
+    // Restored here, because this file's teardown does not and a leaked query
+    // would re-aim every case after it.
+    try {
+      render(<FilmsApp />);
+
+      expect(getFilmsSeam).toHaveBeenCalledTimes(1);
+      expect(getFilmsSeam).toHaveBeenCalledWith({ searchTerm: "angry" });
+    } finally {
+      window.history.replaceState(null, "", "/");
+    }
+  });
 });

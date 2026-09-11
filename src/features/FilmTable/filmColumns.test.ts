@@ -6,7 +6,7 @@ import { collatorFor } from "../../i18n/format";
 import { resolveLocale } from "../../i18n/resolveLocale";
 import { FILM_FIXTURE } from "../../test/filmFixture";
 import { required } from "../../test/required";
-import { buildFilmColumns } from "./filmColumns";
+import { buildFilmColumns, filmRowId } from "./filmColumns";
 
 /** The tag the base build uses, so the collator here is the one the columns hold. */
 const TAG = resolveLocale("en", []).tag;
@@ -219,5 +219,17 @@ describe("the two numeric columns", () => {
         "asc",
       ),
     ).toBe(-1);
+  });
+});
+
+describe("the film row identity", () => {
+  it("is the identifier the row carries", () => {
+    expect(filmRowId(film({ id: "Q42" }))).toBe("Q42");
+  });
+
+  // React reuses DOM nodes across rows that share an identity, and the sort
+  // tiebreak stops being stable, so the whole fixture is checked for collisions.
+  it("stays unique across the fixture", () => {
+    expect(new Set(FILM_FIXTURE.map(filmRowId)).size).toBe(FILM_FIXTURE.length);
   });
 });
