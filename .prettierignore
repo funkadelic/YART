@@ -15,3 +15,8 @@ coverage
 # Written and owned by the package manager. A second formatter rewriting it would put
 # the two tools in conflict and make the gate flap.
 package-lock.json
+
+# Mutation pass output. The sandbox is a copy of this tree, so formatting it walks
+# every source file twice, and the report beside it is machine written.
+.stryker-tmp
+reports

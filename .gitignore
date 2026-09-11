@@ -66,3 +66,8 @@ build-archive.log
 # in src/data/films/license.md. It is the films generator's input, not a
 # committed artifact: the committed dataset is src/data/films/films.json.
 scripts/films-result.json
+
+# What the mutation pass writes. .stryker-tmp/ is the copy of this tree it
+# mutates, normally removed at the end of a run; reports/ holds the HTML report.
+/.stryker-tmp
+/reports

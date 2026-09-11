@@ -39,9 +39,11 @@
     "e2e",
     "vitest.setup.ts",
     "vite.config.ts",
+    "vitest.stryker.config.ts",
     "playwright.config.ts",
     "eslint.config.js",
     "postcss.config.js",
+    "stryker.conf.js",
     "scripts"
   ]
 }
