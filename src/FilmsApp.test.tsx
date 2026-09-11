@@ -163,6 +163,26 @@ describe("FilmsApp", () => {
     expect(document.body).not.toHaveTextContent("was not an error");
   });
 
+  // Null rather than a string, unlike the case above. A string reaches the
+  // catalog lookup, which answers with the unexpected sentence for anything
+  // that is not a dataset error, so it cannot tell a rejection that took the
+  // synthesizing branch from one that skipped it.
+  it("renders the unexpected sentence when the search rejects with nothing at all", async () => {
+    vi.useFakeTimers();
+    getFilmsSeam.mockRejectedValueOnce(null);
+
+    render(<FilmsApp />);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+    });
+
+    expect(
+      screen.getByText("Error: An unexpected error occurred."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
   it("issues one search per committed term rather than one per keystroke", async () => {
     getFilmsSeam.mockResolvedValue(SAMPLE_FILMS);
 

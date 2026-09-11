@@ -171,6 +171,21 @@ describe("App", () => {
     ).not.toBeInTheDocument();
   });
 
+  // Null rather than a string, unlike the case above. A string reaches the
+  // catalog lookup, which answers with the unexpected sentence for anything
+  // that is not a dataset error, so it cannot tell a rejection that took the
+  // synthesizing branch from one that skipped it.
+  it("renders a synthesized message when the search rejects with nothing at all", async () => {
+    getCitiesSeam.mockRejectedValueOnce(null);
+
+    render(<App />);
+
+    expect(
+      await screen.findByText("Error: An unexpected error occurred."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
   // The translation happens during render because the catch sits inside the
   // fetch effect. Reading the catalog there would put the locale in that
   // effect's dependency array, and a reader changing language while an error
