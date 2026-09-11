@@ -105,6 +105,8 @@ export default defineConfig([
       "junit/",
       "src/__screenshots__/",
       ".vitest-attachments/",
+      ".stryker-tmp/",
+      "reports/",
     ],
   },
   {
