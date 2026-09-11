@@ -289,4 +289,40 @@ describe("FilmTable and the debounced address write", () => {
     expect(onSearchChange).toHaveBeenCalledTimes(1);
     expect(onSearchChange).toHaveBeenCalledWith("Film 7");
   });
+
+  // A trailing space is what a reader types before a second word, and the
+  // debounce commits on the pause between the two. The term is trimmed at the
+  // commit, so that keystroke changes no row and has to change no view: the
+  // position stays put, the address keeps the key that would restore it, and
+  // nothing untrimmed is reported upward to be searched for a second time.
+  it("keeps the position and the page in the address when a trailing space follows the term", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const onSearchChange = vi.fn();
+
+    render(<FilmTable {...defaultProps} onSearchChange={onSearchChange} />);
+
+    await user.type(screen.getByRole("textbox", { name: "Search" }), "Film");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+    });
+    await user.click(screen.getByRole("button", { name: "Go to last page" }));
+
+    expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
+    expect(window.location.search).toBe("?q=Film&page=5");
+
+    await user.type(screen.getByRole("textbox", { name: "Search" }), " ");
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
+    });
+
+    // The box still paints what was typed, so the trim belongs at the commit
+    // and not in the box.
+    expect(screen.getByRole("textbox", { name: "Search" })).toHaveValue(
+      "Film ",
+    );
+    expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
+    expect(window.location.search).toBe("?q=Film&page=5");
+    expect(onSearchChange).toHaveBeenLastCalledWith("Film");
+    expect(onSearchChange).not.toHaveBeenCalledWith("Film ");
+  });
 });

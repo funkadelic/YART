@@ -101,6 +101,24 @@ describe("FilmsApp", () => {
     expect(screen.queryByText("Downloading the film data...")).toBeNull();
   });
 
+  it("clears the busy flag once the first search settles", async () => {
+    vi.useFakeTimers();
+    const FreshFilmsApp = await freshFilmsApp();
+
+    render(<FreshFilmsApp />);
+
+    // The resolve and the settle are two separate dispatches; the advance
+    // flushes both, so the flag is readable straight after it.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+    });
+
+    expect(screen.getByRole("table").closest("[aria-busy]")).toHaveAttribute(
+      "aria-busy",
+      "false",
+    );
+  });
+
   it("renders the film sentence the failure's code names, not the failure's own message", async () => {
     vi.useFakeTimers();
     getFilmsSeam.mockRejectedValueOnce(
@@ -143,6 +161,26 @@ describe("FilmsApp", () => {
     // The container synthesizes an error to carry the code. Its message is
     // developer-facing like every other one.
     expect(document.body).not.toHaveTextContent("was not an error");
+  });
+
+  // Null rather than a string, unlike the case above. A string reaches the
+  // catalog lookup, which answers with the unexpected sentence for anything
+  // that is not a dataset error, so it cannot tell a rejection that took the
+  // synthesizing branch from one that skipped it.
+  it("renders the unexpected sentence when the search rejects with nothing at all", async () => {
+    vi.useFakeTimers();
+    getFilmsSeam.mockRejectedValueOnce(null);
+
+    render(<FilmsApp />);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+    });
+
+    expect(
+      screen.getByText("Error: An unexpected error occurred."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
   it("issues one search per committed term rather than one per keystroke", async () => {
@@ -302,5 +340,25 @@ describe("FilmsApp", () => {
     expect(
       screen.getByText(`Error: ${en.films.datasetError.transport("en-US", 0)}`),
     ).toBeInTheDocument();
+  });
+
+  // A shared link costs one request, not one for the empty term followed by
+  // one for the term the link carries.
+  it("issues one request, for the term the link carries, on a cold start", () => {
+    window.history.replaceState(null, "", "?q=angry");
+    // Never settles, so the request is counted without a resolution landing
+    // outside the render. What went out is the claim, not what came back.
+    getFilmsSeam.mockReturnValue(new Promise<Film[]>(() => {}));
+
+    // Restored here, because this file's teardown does not and a leaked query
+    // would re-aim every case after it.
+    try {
+      render(<FilmsApp />);
+
+      expect(getFilmsSeam).toHaveBeenCalledTimes(1);
+      expect(getFilmsSeam).toHaveBeenCalledWith({ searchTerm: "angry" });
+    } finally {
+      window.history.replaceState(null, "", "/");
+    }
   });
 });
