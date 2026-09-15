@@ -114,6 +114,7 @@ The static head of the document stays in the base language too. Its title, its d
 - [Vitest](https://vitest.dev) 5 and [Testing Library](https://testing-library.com/)
 - [Playwright](https://playwright.dev) for the end-to-end suite
 - [Sass](https://sass-lang.com/) for the CSS Modules stylesheets
+- [Style Dictionary](https://styledictionary.com/) for the design tokens
 - [React Icons](https://react-icons.github.io/react-icons/)
 - [axe-core](https://github.com/dequelabs/axe-core) for the accessibility sweeps
 - [Chromatic](https://www.chromatic.com/) for the visual regression snapshots
@@ -443,6 +444,7 @@ A run takes about ten minutes and writes `reports/mutation/mutation.html`, which
 | `npm run format:check`    | Check formatting without rewriting anything                                |
 | `npm run generate:cities` | Regenerate the committed cities asset from the upstream CSV export         |
 | `npm run generate:films`  | Regenerate the committed films asset from the recorded SPARQL query        |
+| `npm run tokens:build`    | Regenerate the committed token stylesheet from `tokens/tokens.json`        |
 
 `npm run test:browser` and `npm run test:e2e` both drive a real Chromium. `npm ci` downloads neither that browser nor the system libraries it needs, so a clean clone fetches both once with `npx playwright install --with-deps --only-shell chromium`, whose `--with-deps` half needs `sudo` on Linux. CI runs that same command, so every path installs the same binary.
 
