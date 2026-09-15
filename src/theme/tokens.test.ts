@@ -1,20 +1,14 @@
 // @vitest-environment jsdom
 //
-// Token layering and contrast, the theme script's placement in each shell, and
-// the halves of the stylesheet rules stylelint has no way to express: an SCSS
+// Token tiers and contrast, the theme script's placement in each shell, and the
+// halves of the stylesheet rules stylelint has no way to express: an SCSS
 // variable declared in a component sheet, a reference to a retired token, the
-// global sheet's bounded px count, and the positive claim that the focus ring is
-// drawn. The negative rules live in .stylelintrc.json, where a violation is
-// named at the line it sits on rather than at the end of a walk.
+// global sheets' bounded px count, and the positive claim that the focus ring is
+// drawn. The negative rules live in .stylelintrc.json.
 //
-// The stylesheet is the single source of truth for every color in the app, so
-// this guard reads the shipped file, never a mounted page, for two measured
-// reasons: the runner replaces CSS imports with empty strings, so nothing is
-// loaded into a document to inspect; and jsdom does not substitute var() in
-// getComputedStyle, so even a mounted page would hand back the literal string
-// "var(--gray-50)" instead of a color. Resolving the indirection here is the
-// only way to assert on the values that actually reach a screen. The
-// environment is jsdom for the shell guard's DOM parser, which Node has none of.
+// Reads the generated src/styles/tokens.css and src/index.css as files, because
+// the runner blanks CSS imports and jsdom evaluates neither var() nor
+// light-dark(). The environment is jsdom for the shell guard's DOMParser.
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -30,6 +24,7 @@ import { required } from "../test/required";
 const here = import.meta as ImportMeta & { dirname: string };
 const projectRoot = join(here.dirname, "..", "..");
 const cssPath = join(projectRoot, "src", "index.css");
+const tokensPath = join(projectRoot, "src", "styles", "tokens.css");
 
 const LIGHT_SELECTOR = ":root";
 const DARK_SELECTOR = ':root[data-theme="dark"]';
@@ -43,8 +38,8 @@ const TEXT_CONTRAST_MINIMUM = 4.5;
 const NON_TEXT_CONTRAST_MINIMUM = 3;
 
 // The logo is the same two colors in both themes by design, so these two are
-// the complete exemption list for the partner assertion. Written out by hand, so
-// the list cannot grow without a visible edit.
+// the complete list of colors declared without a light-dark() pair. Written out
+// by hand, so the list cannot grow without a visible edit.
 const THEME_INVARIANT_TOKENS = ["--color-brand", "--color-brand-contrast"];
 
 // The tier that carries no theme at all: spacing, type and the radius. Their
@@ -52,10 +47,9 @@ const THEME_INVARIANT_TOKENS = ["--color-brand", "--color-brand-contrast"];
 // stays at the two logo colors no matter how far the scale grows.
 const INVARIANT_TOKEN_PREFIXES = ["--space-", "--font-size-", "--radius-"];
 
-// Only the exact bare form. A fallback argument such as var(--x, #abc) would let
-// a missing primitive ship a working color with the chain silently broken, so
-// the resolver never gets the chance to report it.
-const BARE_INDIRECTION = /^var\(\s*(--[\w-]+)\s*\)$/;
+const HEX = /^#[0-9a-f]{3,8}$/i;
+const LIGHT_DARK =
+  /^light-dark\(\s*(#[0-9a-f]{3,8})\s*,\s*(#[0-9a-f]{3,8})\s*\)$/i;
 
 const IS_COLOR_TOKEN = /^--color-/;
 
@@ -71,8 +65,7 @@ const RETIRED_TOKENS = [
   "--background-light-hover",
   "--accent-color",
   "--error-color",
-  // The flat gray ramp the --neutral- primitives replaced. Nothing declares one
-  // any more, so a reference resolves to nothing.
+  // The flat gray ramp the neutral primitives replaced.
   "--gray-50",
   "--gray-100",
   "--gray-400",
@@ -89,9 +82,8 @@ const RETIRED_TOKENS = [
 const SCSS_VARIABLE = /^[ \t]*\$[\w-]+[ \t]*:/gm;
 
 // The control radius and the container one, and nothing beside them. Counted, so
-// the exemption cannot grow to cover an unrelated px.
-// src/index.css declares the tokens the stylelint unit allowed-list holds the
-// component stylesheets to, and a bounded count is a claim that rule cannot make.
+// the exemption cannot grow to cover an unrelated px. A bounded count over the
+// global sheets is a claim the stylelint unit allowed-list cannot make.
 const GLOBAL_PX_ALLOWANCE = 2;
 
 // A hairline and the focus ring draw lines, and one authored in rem would
@@ -134,18 +126,18 @@ function findStylesheets(directory: string): string[] {
   return found;
 }
 
-// The global file is read on its own terms below, by the two guards written
-// against it, so the walk excludes it.
+// The two global files are read on their own terms below, so the walk excludes them.
+const globalStylesheets = [cssPath, tokensPath];
 const componentStylesheets = findStylesheets(join(projectRoot, "src")).filter(
-  (file) => file !== cssPath,
+  (file) => !globalStylesheets.includes(file),
 );
 
-/** Every declaration in the file, keyed by selector then by property. */
-function readBlocks(): Map<string, Map<string, string>> {
+/** Every declaration in a file, keyed by selector then by property. */
+function readBlocks(path: string): Map<string, Map<string, string>> {
   const blocks = new Map<string, Map<string, string>>();
 
   postcss
-    .parse(readFileSync(cssPath, "utf8"), { from: cssPath })
+    .parse(readFileSync(path, "utf8"), { from: path })
     .walkRules((rule) => {
       const declarations =
         blocks.get(rule.selector) ?? new Map<string, string>();
@@ -158,7 +150,7 @@ function readBlocks(): Map<string, Map<string, string>> {
   return blocks;
 }
 
-const blocks = readBlocks();
+const blocks = readBlocks(cssPath);
 
 function requireBlock(selector: string): Map<string, string> {
   const block = blocks.get(selector);
@@ -169,42 +161,25 @@ function requireBlock(selector: string): Map<string, string> {
 }
 
 const lightBlock = requireBlock(LIGHT_SELECTOR);
-const darkOverrides = requireBlock(DARK_SELECTOR);
+const darkBlock = requireBlock(DARK_SELECTOR);
 
-// The dark theme as a browser sees it, the overrides layered onto the base, so
-// a token the dark block leaves alone still resolves through its light value.
-const darkBlock = new Map([...lightBlock, ...darkOverrides]);
+const tokenBlock = required(
+  readBlocks(tokensPath).get(LIGHT_SELECTOR),
+  "the :root block of src/styles/tokens.css",
+);
 
-const THEMES: Array<[string, Map<string, string>]> = [
-  ["light", lightBlock],
-  ["dark", darkBlock],
-];
+const THEMES = ["light", "dark"] as const;
 
-/**
- * A token followed through the semantic tier to the primitive value it names.
- * An undeclared reference or a cycle throws, because either one means the
- * layering is broken and a guard that stayed silent would be reporting on a
- * stylesheet nobody ships.
- */
-function resolve(
-  property: string,
-  scope: Map<string, string>,
-  seen = new Set<string>(),
-): string {
-  if (seen.has(property)) {
-    throw new Error(`token cycle reached ${property}`);
-  }
-  seen.add(property);
-
-  const value = scope.get(property);
-  if (value === undefined) {
-    throw new Error(`${property} is not declared`);
-  }
-
-  const indirection = BARE_INDIRECTION.exec(value);
-  return indirection
-    ? resolve(required(indirection[1], "the var() target"), scope, seen)
-    : value;
+/** The hex a color token resolves to in a theme, from its pair or its plain value. */
+function side(token: string, theme: (typeof THEMES)[number]): string {
+  const value = tokenBlock.get(token);
+  if (value === undefined) throw new Error(`${token} is not declared`);
+  const pair = LIGHT_DARK.exec(value);
+  if (pair) return required(pair[theme === "light" ? 1 : 2], "the pair side");
+  if (HEX.test(value)) return value;
+  throw new Error(
+    `${token} is ${value}, neither a light-dark() pair nor a hex`,
+  );
 }
 
 // Relative luminance and contrast ratio, straight from the specification. Five
@@ -270,70 +245,58 @@ const PAIRS: Array<[string, string, number]> = [
   ["--color-brand-contrast", "--color-brand", NON_TEXT_CONTRAST_MINIMUM],
 ];
 
-function colorTokens(block: Map<string, string>): string[] {
-  return [...block.keys()].filter((property) => IS_COLOR_TOKEN.test(property));
-}
-
-describe("token layering", () => {
-  it("gives every colour token a partner in the other theme", () => {
-    const inLight = colorTokens(lightBlock);
-    const inDark = colorTokens(darkOverrides);
-
+describe("token tiers", () => {
+  it("pairs every color token but the two logo colors in light-dark()", () => {
+    const colors = [...tokenBlock.keys()].filter((property) =>
+      IS_COLOR_TOKEN.test(property),
+    );
     expect(
-      inLight.length,
-      "the light block declares no colour tokens",
+      colors.length,
+      "tokens.css declares no color tokens",
     ).toBeGreaterThan(0);
 
-    for (const token of inLight) {
-      if (THEME_INVARIANT_TOKENS.includes(token)) continue;
-      expect(
-        inDark,
-        `${token} is declared for light with no dark partner`,
-      ).toContain(token);
-    }
+    for (const [property, value] of tokenBlock) {
+      const tier = ["--color-", ...INVARIANT_TOKEN_PREFIXES].some((prefix) =>
+        property.startsWith(prefix),
+      );
+      expect(tier, `${property} belongs to no token tier`).toBe(true);
+      if (!IS_COLOR_TOKEN.test(property)) continue;
 
-    for (const token of inDark) {
-      expect(
-        inLight,
-        `${token} is declared for dark and never for light`,
-      ).toContain(token);
-    }
-
-    // The exemption is only defensible while it stays the two logo colors. A
-    // third entry means a token went theme-invariant without anyone deciding it.
-    for (const token of THEME_INVARIANT_TOKENS) {
-      expect(
-        inDark,
-        `${token} is exempt from the partner rule but the dark block overrides it anyway`,
-      ).not.toContain(token);
+      if (THEME_INVARIANT_TOKENS.includes(property)) {
+        expect(value, `${property} is not a plain hex`).toMatch(HEX);
+      } else {
+        expect(value, `${property} is not a light-dark() pair`).toMatch(
+          LIGHT_DARK,
+        );
+      }
     }
   });
 
-  it("holds that exemption at exactly the two logo colours", () => {
+  it("holds that exemption at exactly the two logo colors", () => {
     // Nothing else in the suite notices a third name arriving, and growing the
     // list has to be a deliberate, visible edit.
     expect(
       THEME_INVARIANT_TOKENS.length,
-      "the partner-rule exemption has grown past the two logo colours",
+      "the pair exemption has grown past the two logo colors",
     ).toBe(2);
   });
 
-  it("declares the theme-invariant tier once, in the light block alone", () => {
+  it("keeps light-dark() out of the theme-invariant tier", () => {
     for (const prefix of INVARIANT_TOKEN_PREFIXES) {
-      const declared = [...lightBlock.keys()].filter((property) =>
+      const declared = [...tokenBlock].filter(([property]) =>
         property.startsWith(prefix),
       );
 
       expect(
         declared.length,
-        `:root declares no ${prefix} token, so that half of the scale does not exist`,
+        `tokens.css declares no ${prefix} token, so that half of the scale does not exist`,
       ).toBeGreaterThan(0);
 
-      for (const token of declared) {
+      for (const [token, value] of declared) {
         expect(
-          darkOverrides.has(token),
-          `${token} carries no theme and must not be overridden per theme`,
-        ).toBe(false);
+          value,
+          `${token} is theme-invariant but wrapped in light-dark()`,
+        ).not.toContain("light-dark(");
       }
     }
   });
@@ -342,7 +305,7 @@ describe("token layering", () => {
     // A layout authored in rem follows the reader's browser font-size setting,
     // while a corner radius that grew with it would only distort. The unit is an
     // accessibility property here, not a style preference.
-    for (const [property, value] of lightBlock) {
+    for (const [property, value] of tokenBlock) {
       if (
         property.startsWith("--space-") ||
         property.startsWith("--font-size-")
@@ -357,7 +320,7 @@ describe("token layering", () => {
 
   it("keeps the theme-invariant tier out of the contrast pair set", () => {
     // A spacing token has no color to measure, so a pair naming one would
-    // throw on resolve at best and widen a color gate to a length at worst.
+    // throw at best and widen a color gate to a length at worst.
     for (const [foreground, background] of PAIRS) {
       for (const token of [foreground, background]) {
         for (const prefix of INVARIANT_TOKEN_PREFIXES) {
@@ -370,71 +333,27 @@ describe("token layering", () => {
     }
   });
 
-  it("declares every colour token as a bare indirection onto a primitive", () => {
-    for (const [theme, block] of [
-      ["light", lightBlock],
-      ["dark", darkOverrides],
-    ] as const) {
-      for (const token of colorTokens(block)) {
-        const value = block.get(token);
-        expect(
-          value,
-          `${token} in ${theme} is ${String(value)} rather than a bare var() onto a primitive`,
-        ).toMatch(BARE_INDIRECTION);
-      }
-    }
-  });
-
-  it("resolves every colour token to a concrete value in both themes", () => {
-    for (const [theme, block] of THEMES) {
-      for (const token of colorTokens(lightBlock)) {
-        expect(
-          resolve(token, block),
-          `${token} in ${theme} does not resolve to a colour`,
-        ).toMatch(/^#[0-9a-f]{3,8}$/i);
-      }
-    }
-  });
-
-  it("reports an undeclared reference and a cycle rather than passing over them", () => {
-    expect(() => resolve("--color-missing", lightBlock)).toThrow(
-      "--color-missing is not declared",
-    );
-
-    const cyclic = new Map([
-      ["--a", "var(--b)"],
-      ["--b", "var(--a)"],
-    ]);
-    expect(() => resolve("--a", cyclic)).toThrow("token cycle");
-  });
-
   it("declares a concrete color-scheme in each theme block", () => {
     expect(
       lightBlock.get("color-scheme"),
       "the light block does not declare color-scheme: light",
     ).toBe("light");
     expect(
-      darkOverrides.get("color-scheme"),
+      darkBlock.get("color-scheme"),
       "the dark block does not declare color-scheme: dark",
     ).toBe("dark");
-  });
-
-  it("qualifies the dark block by attribute so specificity is what makes it win", () => {
-    // Asserted on the selector, because a block that only wins by sitting later
-    // in the file starts losing the moment anything is appended after it.
-    expect([...blocks.keys()]).toContain(DARK_SELECTOR);
   });
 });
 
 describe("contrast", () => {
-  for (const [theme, block] of THEMES) {
+  for (const theme of THEMES) {
     for (const [foreground, background, minimum] of PAIRS) {
       it(`clears ${minimum}:1 for ${foreground} on ${background} in ${theme}`, () => {
         // Compared without rounding, because the specification is explicit that
         // 2.999:1 does not meet a 3:1 threshold. A ratio landing exactly on the
         // line passes.
         expect(
-          contrastRatio(resolve(foreground, block), resolve(background, block)),
+          contrastRatio(side(foreground, theme), side(background, theme)),
           `${foreground} on ${background} in ${theme}`,
         ).toBeGreaterThanOrEqual(minimum);
       });
@@ -521,7 +440,7 @@ describe("stray declarations in the component stylesheets", () => {
   it("finds the stylesheets by walking rather than by a list", () => {
     expect(
       componentStylesheets.length,
-      "no stylesheet was found under src/ beside the global one, so every assertion below is vacuous",
+      "no stylesheet was found under src/ beside the global ones, so every assertion below is vacuous",
     ).toBeGreaterThan(0);
   });
 
@@ -548,33 +467,35 @@ describe("stray declarations in the component stylesheets", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("leaves no retired token declared in the global stylesheet", () => {
-    const source = stripComments(readFileSync(cssPath, "utf8"));
+  it("leaves no retired token declared in the global stylesheets", () => {
+    for (const file of globalStylesheets) {
+      const source = stripComments(readFileSync(file, "utf8"));
 
-    for (const token of RETIRED_TOKENS) {
-      expect(
-        source,
-        `src/index.css still declares the retired token ${token}`,
-      ).not.toMatch(new RegExp(`(?<![\\w-])${token}(?![\\w-])`));
+      for (const token of RETIRED_TOKENS) {
+        expect(
+          source,
+          `${relative(projectRoot, file)} still declares the retired token ${token}`,
+        ).not.toMatch(new RegExp(`(?<![\\w-])${token}(?![\\w-])`));
+      }
     }
   });
 });
 
 // The half of the length rule stylelint's unit allowed-list has no way to say.
-// It counts instead of forbidding, and it reads src/index.css, where the two
-// corner radii are px on purpose, because growing with the reader's type would
-// only distort the shape.
-describe("length in the global stylesheet", () => {
-  it("allows the global stylesheet the corner radii and nothing beside them", () => {
-    const found = [
-      ...stripComments(readFileSync(cssPath, "utf8")).matchAll(PX_VALUE),
-    ]
+// It counts instead of forbidding, over the two global sheets, where the two
+// corner radii are px on purpose.
+describe("length in the global stylesheets", () => {
+  it("allows the global stylesheets the corner radii and nothing beside them", () => {
+    const found = globalStylesheets
+      .flatMap((file) => [
+        ...stripComments(readFileSync(file, "utf8")).matchAll(PX_VALUE),
+      ])
       .filter(([, magnitude]) => Number(magnitude) > HAIRLINE_PX)
       .map(([length]) => length);
 
     expect(
       found,
-      `src/index.css holds ${String(found.length)} off-scale lengths rather than the radii alone: ${found.join(", ")}`,
+      `src/index.css and src/styles/tokens.css hold ${String(found.length)} off-scale lengths rather than the radii alone: ${found.join(", ")}`,
     ).toHaveLength(GLOBAL_PX_ALLOWANCE);
   });
 });
