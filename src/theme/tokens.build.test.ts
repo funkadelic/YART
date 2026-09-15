@@ -16,7 +16,7 @@ const committed = readFileSync(
 );
 const generated = await buildCss();
 
-it("generating tokens.css from tokens/tokens.json produces no diff", () => {
+it("generating tokens.css from the token files produces no diff", () => {
   expect(generated).toBe(committed);
 });
 

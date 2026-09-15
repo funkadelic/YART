@@ -1,4 +1,4 @@
-/* Generated from tokens/tokens.json by scripts/build-tokens.mjs. Do not edit:
+/* Generated from the files in tokens/ by scripts/build-tokens.mjs. Do not edit:
    change the JSON and run `npm run tokens:build`. Each themed color is one
    light-dark pair whose side follows color-scheme, set per theme in index.css. */
 
