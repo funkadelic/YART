@@ -47,9 +47,13 @@ const THEME_INVARIANT_TOKENS = ["--color-brand", "--color-brand-contrast"];
 // stays at the two logo colors no matter how far the scale grows.
 const INVARIANT_TOKEN_PREFIXES = ["--space-", "--font-size-", "--radius-"];
 
-const HEX = /^#[0-9a-f]{3,8}$/i;
-const LIGHT_DARK =
-  /^light-dark\(\s*(#[0-9a-f]{3,8})\s*,\s*(#[0-9a-f]{3,8})\s*\)$/i;
+// Opaque three- or six-digit only, the two forms luminance() parses.
+const OPAQUE_HEX = /#(?:[0-9a-f]{3}|[0-9a-f]{6})/.source;
+const HEX = new RegExp(`^${OPAQUE_HEX}$`, "i");
+const LIGHT_DARK = new RegExp(
+  `^light-dark\\(\\s*(${OPAQUE_HEX})\\s*,\\s*(${OPAQUE_HEX})\\s*\\)$`,
+  "i",
+);
 
 const IS_COLOR_TOKEN = /^--color-/;
 
