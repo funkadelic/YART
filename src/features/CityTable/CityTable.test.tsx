@@ -325,7 +325,7 @@ describe("CityTable", () => {
 
     it("offers a retry control in the error region when a handler is given", async () => {
       const user = userEvent.setup();
-      const onRetry = vi.fn();
+      const onRetry = vi.fn(() => document.activeElement);
 
       render(
         <CityTable
@@ -338,7 +338,11 @@ describe("CityTable", () => {
 
       await user.click(screen.getByRole("button", { name: "Try again" }));
 
+      // Focus has already moved when the upstream handler runs.
+      const searchBox = screen.getByRole("textbox", { name: "Search" });
       expect(onRetry).toHaveBeenCalledTimes(1);
+      expect(onRetry).toHaveReturnedWith(searchBox);
+      expect(searchBox).toHaveFocus();
     });
 
     it("offers no retry control when no handler is given", () => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { City } from "../../api/getCities";
 import { DataTable } from "../../components/DataTable/DataTable";
@@ -200,6 +200,17 @@ export function CityTable({
     };
   }, [onSearchChange, cancelSearchCommit]);
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * a11y: the table replaces the retry control once the request succeeds, so
+   * focus moves to the search box first instead of dropping to the body.
+   */
+  const handleRetry = useCallback(() => {
+    searchInputRef.current?.focus();
+    onRetry?.();
+  }, [onRetry]);
+
   // The box repaints on every keystroke while the commit waits for the pause.
   const handleSearchChange = useCallback(
     (term: string) => {
@@ -215,6 +226,7 @@ export function CityTable({
         value={searchInput}
         onChange={handleSearchChange}
         labels={searchLabels}
+        ref={searchInputRef}
       />
       <DataTable
         rows={data}
@@ -227,7 +239,7 @@ export function CityTable({
         loading={loading}
         datasetReady={datasetReady}
         errorMessage={errorMessage}
-        onRetry={onRetry}
+        onRetry={onRetry && handleRetry}
         labels={labels}
       />
     </div>

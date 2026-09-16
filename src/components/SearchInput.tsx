@@ -1,3 +1,4 @@
+import type { Ref } from "react";
 import { FiSearch } from "react-icons/fi";
 
 import styles from "./SearchInput.module.scss";
@@ -14,6 +15,8 @@ interface SearchInputProps {
   readonly value: string;
   readonly onChange: (term: string) => void;
   readonly labels: SearchInputLabels;
+  /** Lets a container move focus into the box. */
+  readonly ref?: Ref<HTMLInputElement>;
 }
 
 /**
@@ -27,7 +30,12 @@ interface SearchInputProps {
  * it does vary by language. The placeholder sits beside it because that text
  * names the collection being searched, which only the caller knows.
  */
-export function SearchInput({ value, onChange, labels }: SearchInputProps) {
+export function SearchInput({
+  value,
+  onChange,
+  labels,
+  ref,
+}: SearchInputProps) {
   /** Reports every keystroke upward; debouncing belongs to the request owner. */
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
@@ -38,6 +46,7 @@ export function SearchInput({ value, onChange, labels }: SearchInputProps) {
       <div className={styles.searchInput}>
         <FiSearch className={styles.searchIcon} />
         <input
+          ref={ref}
           aria-label={labels.name}
           type="text"
           placeholder={labels.placeholder}

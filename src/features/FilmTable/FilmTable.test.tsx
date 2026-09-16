@@ -326,7 +326,7 @@ describe("FilmTable loading and failure", () => {
 
   it("renders the failure and a way back when a handler is given", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const onRetry = vi.fn();
+    const onRetry = vi.fn(() => document.activeElement);
 
     render(
       <FilmTable {...defaultProps} errorMessage="No films" onRetry={onRetry} />,
@@ -336,7 +336,11 @@ describe("FilmTable loading and failure", () => {
 
     await user.click(screen.getByRole("button", { name: "Try again" }));
 
+    // Focus has already moved when the upstream handler runs.
+    const searchBox = screen.getByRole("textbox", { name: "Search" });
     expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(onRetry).toHaveReturnedWith(searchBox);
+    expect(searchBox).toHaveFocus();
   });
 
   it("offers no way back when no handler is given", () => {

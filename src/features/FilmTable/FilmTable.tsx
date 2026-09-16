@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Film } from "../../api/getFilms";
 import { DataTable } from "../../components/DataTable/DataTable";
@@ -193,6 +193,17 @@ export function FilmTable({
     };
   }, [onSearchChange, cancelSearchCommit]);
 
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  /**
+   * a11y: the table replaces the retry control once the request succeeds, so
+   * focus moves to the search box first instead of dropping to the body.
+   */
+  const handleRetry = useCallback(() => {
+    searchInputRef.current?.focus();
+    onRetry?.();
+  }, [onRetry]);
+
   // The box repaints on every keystroke while the commit waits for the pause.
   const handleSearchChange = useCallback(
     (term: string) => {
@@ -208,6 +219,7 @@ export function FilmTable({
         value={searchInput}
         onChange={handleSearchChange}
         labels={searchLabels}
+        ref={searchInputRef}
       />
       <DataTable
         rows={data}
@@ -220,7 +232,7 @@ export function FilmTable({
         loading={loading}
         datasetReady={datasetReady}
         errorMessage={errorMessage}
-        onRetry={onRetry}
+        onRetry={onRetry && handleRetry}
         labels={labels}
       />
     </div>
