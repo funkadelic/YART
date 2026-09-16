@@ -32,6 +32,7 @@ A React and TypeScript single-page app for browsing large datasets in the browse
   - [Page size options](#page-size-options)
 - [Testing](#testing)
 - [Scripts](#scripts)
+- [Decisions](#decisions)
 - [Notes and next steps](#notes-and-next-steps)
 - [License](#license)
 
@@ -453,6 +454,12 @@ A run takes about ten minutes and writes `reports/mutation/mutation.html`, which
 Both are optional for ordinary development. `npm test` runs the same accessibility checks as `npm run test:browser` against a simulated DOM and needs nothing extra.
 
 The three suites CI runs each write a JUnit report into `junit/`, which is gitignored. Nothing local reads them; they exist for the upload.
+
+## Decisions
+
+The reasoning behind the structure is in [`docs/adr/`](docs/adr/README.md), one file per decision: why there are two HTML shells and no router, why the address holds the view state, why the table knows nothing about cities, and why the rows are not virtualized.
+
+[`docs/frontend-practices.md`](docs/frontend-practices.md) is the survey those sit under, including the practices this repo weighed and chose not to adopt, each with what would change the answer.
 
 ## Notes and next steps
 
