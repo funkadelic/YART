@@ -51,6 +51,16 @@ function declaredHexes(node, path = [], found = new Map()) {
   return found;
 }
 
+/** Every token a source file declares, as dotted paths. */
+function leafPaths(node, path = [], found = []) {
+  for (const [key, value] of Object.entries(node)) {
+    if (key.startsWith("$") || !value || typeof value !== "object") continue;
+    if ("$value" in value) found.push([...path, key].join("."));
+    else leafPaths(value, [...path, key], found);
+  }
+  return found;
+}
+
 /** One theme's tokens as CSS values, primitives dropped, themed ones marked. */
 async function themeTokens(theme) {
   const themeFile = join(TOKENS, `${theme}.tokens.json`);
@@ -67,6 +77,18 @@ async function themeTokens(theme) {
   const groups = groupDescriptions(base);
   groupDescriptions(themeSource, [], groups);
 
+  // Style Dictionary merges its sources with the last one winning, so a theme
+  // token that collides with a base token is dropped with only a warning.
+  const basePaths = new Set(leafPaths(base));
+  const collisions = leafPaths(themeSource).filter((path) =>
+    basePaths.has(path),
+  );
+  if (collisions.length > 0) {
+    throw new Error(
+      `${theme}.tokens.json redeclares base tokens: ${collisions.join(", ")}`,
+    );
+  }
+
   const { allTokens } = await sd.getPlatformTokens("css");
 
   // A hex fallback is read only when a color leaves the sRGB range, so one that
@@ -77,7 +99,11 @@ async function themeTokens(theme) {
   for (const source of [base, themeSource]) {
     for (const [path, hex] of declaredHexes(source)) {
       const value = built.get(path);
-      if (shortHex(String(value)) !== shortHex(hex)) {
+      // Compared without case, because the format allows either spelling and
+      // Style Dictionary always emits lowercase.
+      if (
+        shortHex(String(value)).toLowerCase() !== shortHex(hex).toLowerCase()
+      ) {
         throw new Error(
           `${path} declares ${hex} but its components make ${value}`,
         );
