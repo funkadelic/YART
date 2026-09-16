@@ -38,6 +38,19 @@ function groupDescriptions(node, path = [], found = new Map()) {
   return found;
 }
 
+/** Each color that declares a hex fallback, keyed by its dotted path. */
+function declaredHexes(node, path = [], found = new Map()) {
+  for (const [key, value] of Object.entries(node)) {
+    if (key.startsWith("$") || !value || typeof value !== "object") continue;
+    if (!("$value" in value)) {
+      declaredHexes(value, [...path, key], found);
+    } else if (value.$value?.hex) {
+      found.set([...path, key].join("."), value.$value.hex);
+    }
+  }
+  return found;
+}
+
 /** One theme's tokens as CSS values, primitives dropped, themed ones marked. */
 async function themeTokens(theme) {
   const themeFile = join(TOKENS, `${theme}.tokens.json`);
@@ -49,10 +62,26 @@ async function themeTokens(theme) {
     },
   });
   // Read from the source, because Style Dictionary drops group metadata.
-  const groups = groupDescriptions(JSON.parse(await readFile(BASE, "utf8")));
+  const base = JSON.parse(await readFile(BASE, "utf8"));
+  const groups = groupDescriptions(base);
   groupDescriptions(JSON.parse(await readFile(themeFile, "utf8")), [], groups);
 
   const { allTokens } = await sd.getPlatformTokens("css");
+
+  // A hex fallback is read only when a color leaves the sRGB range, so one that
+  // disagreed with its components would otherwise sit there unnoticed.
+  const built = new Map(
+    allTokens.map((token) => [token.path.join("."), token.$value]),
+  );
+  for (const [path, hex] of declaredHexes(base)) {
+    const value = built.get(path);
+    if (shortHex(String(value)) !== shortHex(hex)) {
+      throw new Error(
+        `${path} declares ${hex} but its components make ${value}`,
+      );
+    }
+  }
+
   return {
     groups,
     tokens: allTokens
