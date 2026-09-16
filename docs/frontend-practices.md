@@ -9,8 +9,6 @@ The per-decision records are in [decision records](adr/README.md).
 
 ## Already in place
 
-Worth listing, because the gaps below only make sense against them.
-
 - 100% coverage as a hard gate, plus mutation testing run by hand to check the
   tests assert something.
 - Accessibility checked twice: axe under jsdom and axe in a real browser, since
@@ -28,10 +26,10 @@ Worth listing, because the gaps below only make sense against them.
 - **Property-based tests.** The pure modules have laws: a state written into the
   address and read back is the state it started as, apart from the search term,
   which the address trims; a page slice never exceeds the page size; sorting is
-  a permutation of its input. An example test asserts the cases
-  someone thought of, while a property test states the law and lets the runner
-  hunt for a counterexample. The seed is pinned so a failure is reproducible and
-  CI does not flake.
+  a permutation of its input. An example test asserts the cases someone thought
+  of, while a property test states the law and lets the runner hunt for a
+  counterexample. The seed is pinned so a failure is reproducible and CI does
+  not flake.
 - **Forced-colors support.** Windows High Contrast replaces the app's colors,
   and the usual result is that borders and focus rings disappear, because both
   are painted with colors the user agent has thrown away. axe cannot test this,
@@ -57,7 +55,7 @@ for.
 It is deferred because the boundary is not free: rows have to be copied to the
 worker and back, which can cost more than the sort saves at this size. The
 version worth building is one where the worker owns the dataset and returns row
-ids, and the measurement is the part worth publishing.
+ids, and the measurement is what to publish.
 
 Revisit with the numbers: measure the current sort, then measure the worker.
 
