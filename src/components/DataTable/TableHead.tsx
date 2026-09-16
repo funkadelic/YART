@@ -29,7 +29,9 @@ export function TableHead<T, Id extends string>({
 }: TableHeadProps<T, Id>) {
   return (
     <thead>
-      <tr>
+      {/* a11y: ARIA counts the header row, so it is row one and every body row
+          is numbered after it. */}
+      <tr aria-rowindex={1}>
         {columns.map((column) => {
           const isActive = sortColumnId === column.id;
           const columnDirection = isActive ? sortDirection : null;

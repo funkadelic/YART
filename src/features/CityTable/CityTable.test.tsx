@@ -94,6 +94,23 @@ function pagedFixture(count: number): City[] {
   }));
 }
 
+/** Every rendered row's aria-rowindex, the header row's first. */
+function renderedRowIndexes(): (string | null)[] {
+  return screen
+    .getAllByRole("row")
+    .map((row) => row.getAttribute("aria-rowindex"));
+}
+
+/** The header row's index, then a run of body rows from firstBodyRow. */
+function expectedRowIndexes(firstBodyRow: number, rows: number): string[] {
+  return [
+    "1",
+    ...Array.from({ length: rows }, (_, offset) =>
+      String(firstBodyRow + offset),
+    ),
+  ];
+}
+
 /**
  * The glyph count of every header, in column order. Nothing else inside a
  * header carries an svg, so the count is the sort indicator.
@@ -879,6 +896,23 @@ describe("CityTable", () => {
       // is absent altogether.
       rerender(<CityTable {...defaultProps} />);
       expect(container.querySelectorAll("[aria-current]")).toHaveLength(0);
+    });
+
+    it("numbers the rows against the whole result set rather than the page", async () => {
+      const user = userEvent.setup();
+      render(<CityTable {...defaultProps} data={pagedFixture(45)} />);
+
+      // Forty-five rows and the header row, which ARIA counts alongside them.
+      expect(screen.getByRole("table")).toHaveAttribute("aria-rowcount", "46");
+      expect(renderedRowIndexes()).toEqual(expectedRowIndexes(2, 10));
+
+      await user.click(screen.getByRole("button", { name: "Go to next page" }));
+      await user.click(screen.getByRole("button", { name: "Go to next page" }));
+      expect(renderedRowIndexes()).toEqual(expectedRowIndexes(22, 10));
+
+      // The last page is short, so its five rows end at the count above.
+      await user.click(screen.getByRole("button", { name: "Go to last page" }));
+      expect(renderedRowIndexes()).toEqual(expectedRowIndexes(42, 5));
     });
 
     it("announces the sort change in the polite region", async () => {

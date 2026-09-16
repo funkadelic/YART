@@ -19,6 +19,34 @@
   color-scheme: dark;
 }
 
+/* a11y: forced colors throws away every author color, so the remap happens at
+   the token tier and every component follows. One selector is enough: the
+   generated stylesheet declares each color once and this block is imported
+   after it. */
+@media (forced-colors: active) {
+  :root {
+    --color-surface: Canvas;
+    --color-surface-raised: Canvas;
+    --color-surface-hover: Canvas;
+    --color-text: CanvasText;
+    --color-text-muted: CanvasText;
+
+    /* The palette offers one foreground for every edge and rule, and one color
+       for a chosen thing. */
+    --color-border: CanvasText;
+    --color-border-strong: CanvasText;
+    --color-rule: CanvasText;
+    --color-accent: Highlight;
+    --color-error: CanvasText;
+
+    /* The ring is offset onto the surface behind the control, where Highlight
+       would collide with a selected control's own fill. */
+    --color-focus-ring: CanvasText;
+    --color-brand: CanvasText;
+    --color-brand-contrast: Canvas;
+  }
+}
+
 /* a11y: one focus indicator for the whole app, unscoped and global rather than
    restated per component, so a control added later is covered by default rather
    than by whoever remembers. Declared here rather than in a module stylesheet
