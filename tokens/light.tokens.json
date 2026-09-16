@@ -1,0 +1,38 @@
+{
+  "color": {
+    "$type": "color",
+    "surface": {
+      "$value": "{primitive.neutral.25}"
+    },
+    "surface-raised": {
+      "$value": "{primitive.white}"
+    },
+    "surface-hover": {
+      "$value": "{primitive.neutral.50}"
+    },
+    "text": {
+      "$value": "{primitive.neutral.950}"
+    },
+    "text-muted": {
+      "$value": "{primitive.neutral.550}"
+    },
+    "border": {
+      "$value": "{primitive.neutral.200}"
+    },
+    "border-strong": {
+      "$value": "{primitive.neutral.450}"
+    },
+    "rule": {
+      "$value": "{primitive.neutral.100}"
+    },
+    "accent": {
+      "$value": "{primitive.teal.700}"
+    },
+    "error": {
+      "$value": "{primitive.red.700}"
+    },
+    "focus-ring": {
+      "$value": "{primitive.teal.700}"
+    }
+  }
+}

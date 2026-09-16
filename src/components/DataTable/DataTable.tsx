@@ -10,6 +10,12 @@ import styles from "./DataTable.module.scss";
 
 export type { PaginationLabels };
 
+/**
+ * The one header row this table renders. ARIA counts it in aria-rowcount and
+ * numbers it as row one, so every body row sits one place after it.
+ */
+const HEADER_ROW_COUNT = 1;
+
 /** Entries that weave a value take the value, never an assembled word. */
 export interface DataTableLabels {
   /** Shown in place of the whole view until the rows have arrived once. */
@@ -191,7 +197,10 @@ export function DataTable<T, Id extends string>({
           className={`${styles.tableContainer} ${loading ? styles.refreshing : ""}`}
           aria-busy={loading}
         >
-          <table className={styles.table}>
+          <table
+            className={styles.table}
+            aria-rowcount={sortedRows.length + HEADER_ROW_COUNT}
+          >
             <caption className={styles.srOnly}>
               {labels.caption(
                 sortedRows.length,
@@ -208,6 +217,9 @@ export function DataTable<T, Id extends string>({
               rows={paginatedData}
               columns={columns}
               getRowId={getRowId}
+              firstRowIndex={
+                (effectivePage - 1) * state.pageSize + 1 + HEADER_ROW_COUNT
+              }
             />
           </table>
         </div>

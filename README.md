@@ -32,6 +32,7 @@ A React and TypeScript single-page app for browsing large datasets in the browse
   - [Page size options](#page-size-options)
 - [Testing](#testing)
 - [Scripts](#scripts)
+- [Decisions](#decisions)
 - [Notes and next steps](#notes-and-next-steps)
 - [License](#license)
 
@@ -81,6 +82,8 @@ A React and TypeScript single-page app for browsing large datasets in the browse
 - Sorting is a real button inside each column header, so Enter and Space work without a mouse, and the button is named for its column alone so a press does not re-announce the whole control
 - Icons are hidden from assistive technology, since the header text already carries the meaning
 - Live regions announce sort changes and result counts
+- Each row reports its position in the whole result set rather than its position on the page
+- Under forced colors the borders, the focus ring and the chosen theme segment are repainted from the reader's own palette
 - The table scrolls horizontally on narrow viewports instead of overflowing
 - The theme control is three native radios, so the arrow keys move between them and the whole group is a single tab stop
 - Every foreground and background pair is checked against the WCAG contrast ratio in both themes, computed from the shipped stylesheet rather than from a copy of it
@@ -114,6 +117,7 @@ The static head of the document stays in the base language too. Its title, its d
 - [Vitest](https://vitest.dev) 5 and [Testing Library](https://testing-library.com/)
 - [Playwright](https://playwright.dev) for the end-to-end suite
 - [Sass](https://sass-lang.com/) for the CSS Modules stylesheets
+- [Style Dictionary](https://styledictionary.com/) for the design tokens, written in the [DTCG](https://www.designtokens.org/) format
 - [React Icons](https://react-icons.github.io/react-icons/)
 - [axe-core](https://github.com/dequelabs/axe-core) for the accessibility sweeps
 - [Chromatic](https://www.chromatic.com/) for the visual regression snapshots
@@ -443,6 +447,7 @@ A run takes about ten minutes and writes `reports/mutation/mutation.html`, which
 | `npm run format:check`    | Check formatting without rewriting anything                                |
 | `npm run generate:cities` | Regenerate the committed cities asset from the upstream CSV export         |
 | `npm run generate:films`  | Regenerate the committed films asset from the recorded SPARQL query        |
+| `npm run tokens:build`    | Regenerate the committed token stylesheet from the files in `tokens/`      |
 
 `npm run test:browser` and `npm run test:e2e` both drive a real Chromium. `npm ci` downloads neither that browser nor the system libraries it needs, so a clean clone fetches both once with `npx playwright install --with-deps --only-shell chromium`, whose `--with-deps` half needs `sudo` on Linux. CI runs that same command, so every path installs the same binary.
 
@@ -451,6 +456,12 @@ A run takes about ten minutes and writes `reports/mutation/mutation.html`, which
 Both are optional for ordinary development. `npm test` runs the same accessibility checks as `npm run test:browser` against a simulated DOM and needs nothing extra.
 
 The three suites CI runs each write a JUnit report into `junit/`, which is gitignored. Nothing local reads them; they exist for the upload.
+
+## Decisions
+
+The reasoning behind the structure is in [`docs/adr/`](docs/adr/README.md), one file per decision: why there are two HTML shells and no router, why the address holds the view state, why the table knows nothing about cities, and why the rows are not virtualized.
+
+[`docs/frontend-practices.md`](docs/frontend-practices.md) is the survey those sit under, including the practices this repo weighed and chose not to adopt, each with what would change the answer.
 
 ## Notes and next steps
 

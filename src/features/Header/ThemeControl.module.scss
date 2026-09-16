@@ -49,6 +49,14 @@
   background-color: var(--color-accent);
 }
 
+// a11y: the token remap paints this fill Highlight under forced colors. Only
+// the text has to follow, since --color-surface is the page everywhere else.
+@media (forced-colors: active) {
+  .input:checked + .label {
+    color: HighlightText;
+  }
+}
+
 // a11y: the input is off screen, so the ring the global rule draws on it is
 // invisible. Forwarded to the visible label, restating the same outline, so the
 // one control this adds is not the one control with no focus indicator.
