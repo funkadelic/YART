@@ -42,11 +42,11 @@
       align-items: center;
       gap: var(--space-1);
 
-      &:hover:not(:disabled) {
+      &:hover:not([aria-disabled="true"]) {
         background: var(--color-surface-hover);
       }
 
-      &:disabled {
+      &[aria-disabled="true"] {
         opacity: 0.5;
         cursor: not-allowed;
       }

@@ -127,3 +127,26 @@ test("a sort key naming no column is dropped on arrival", async ({ page }) => {
     `City data with ${GROUPED_MATCHES} entries, currently not sorted`,
   );
 });
+
+const FOCUS_PAGE_SIZE = 100;
+const LAST_PAGE = Math.ceil(MATCHING_ROWS / FOCUS_PAGE_SIZE);
+
+test("the next control keeps focus when the keyboard reaches the last page", async ({
+  page,
+}) => {
+  await page.goto(`/?q=san&page=${LAST_PAGE - 1}&size=${FOCUS_PAGE_SIZE}`);
+  await expect(page.getByRole("table")).toBeVisible({
+    timeout: DATASET_READY_TIMEOUT_MS,
+  });
+
+  const nextButton = page.getByRole("button", { name: "Go to next page" });
+  await nextButton.focus();
+  await page.keyboard.press("Enter");
+
+  await expect(page).toHaveURL(
+    `/?q=san&page=${LAST_PAGE}&size=${FOCUS_PAGE_SIZE}`,
+  );
+  // A natively disabled control used to drop focus to the body here.
+  await expect(nextButton).toBeFocused();
+  await expect(nextButton).toHaveAttribute("aria-disabled", "true");
+});

@@ -53,14 +53,29 @@ export function Pagination({
     onPageSizeChange(Number.parseInt(e.target.value, 10));
   };
 
+  // a11y: aria-disabled rather than disabled, so a control reaching either end
+  // keeps focus; the handlers ignore the press instead.
+  const atFirstPage = page === 1;
+  const atLastPage = page === totalPages;
+
   /** Jumps to the first page. */
   const handleFirstPage = () => {
-    onPageChange(1);
+    if (!atFirstPage) onPageChange(1);
+  };
+
+  /** Steps one page back. */
+  const handlePreviousPage = () => {
+    if (!atFirstPage) onPageChange(page - 1);
+  };
+
+  /** Steps one page on. */
+  const handleNextPage = () => {
+    if (!atLastPage) onPageChange(page + 1);
   };
 
   /** Jumps to the last page that exists for the current row count. */
   const handleLastPage = () => {
-    onPageChange(totalPages);
+    if (!atLastPage) onPageChange(totalPages);
   };
 
   return (
@@ -90,7 +105,7 @@ export function Pagination({
           <button
             type="button"
             onClick={handleFirstPage}
-            disabled={page === 1}
+            aria-disabled={atFirstPage}
             title={labels.firstPage}
             // a11y: named by the action alone, as the sort headers are. A name
             // carrying the position changes under focus, which re-announces the
@@ -104,8 +119,8 @@ export function Pagination({
 
           <button
             type="button"
-            onClick={() => onPageChange(page - 1)}
-            disabled={page === 1}
+            onClick={handlePreviousPage}
+            aria-disabled={atFirstPage}
             title={labels.previousPage}
             aria-label={labels.previousPage}
             className={styles.navButton}
@@ -127,8 +142,8 @@ export function Pagination({
 
           <button
             type="button"
-            onClick={() => onPageChange(page + 1)}
-            disabled={page === totalPages}
+            onClick={handleNextPage}
+            aria-disabled={atLastPage}
             title={labels.nextPage}
             aria-label={labels.nextPage}
             className={styles.navButton}
@@ -139,7 +154,7 @@ export function Pagination({
           <button
             type="button"
             onClick={handleLastPage}
-            disabled={page === totalPages}
+            aria-disabled={atLastPage}
             title={labels.lastPage}
             aria-label={labels.lastPage}
             className={styles.navButton}
