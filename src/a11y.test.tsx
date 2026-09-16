@@ -137,6 +137,17 @@ describe("accessibility", () => {
   it("reports no violation as the table is loaded, sorted, paged and emptied", async () => {
     const user = userEvent.setup();
 
+    // The response is held so the loading state is still on screen while it is
+    // swept.
+    let releaseDataset = () => {};
+    stubDatasetFetch(CITY_FIXTURE_ENVELOPE).mockImplementationOnce(
+      () =>
+        new Promise<Response>((resolve) => {
+          releaseDataset = () =>
+            resolve(new Response(JSON.stringify(CITY_FIXTURE_ENVELOPE)));
+        }),
+    );
+
     render(<App />);
 
     // Each state is proven to be on screen before it is swept, by a query that
@@ -144,6 +155,7 @@ describe("accessibility", () => {
     // would sweep the previous state twice and still report six.
     screen.getByText("Downloading the city data...");
     await sweep("loading");
+    releaseDataset();
 
     await screen.findByRole("table");
     await sweep("data");

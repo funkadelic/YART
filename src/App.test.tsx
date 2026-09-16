@@ -30,11 +30,6 @@ const getCitiesSeam = vi.mocked(getCities);
 const DEBOUNCE_MS = 150;
 
 /**
- * The latency the search seam simulates on every call, download or not.
- */
-const SEAM_LATENCY_MS = 200;
-
-/**
  * The container, re-imported from a module registry that has been reset first.
  * The loader caches its dataset request at module scope, so without the reset a
  * case that counts requests inherits an earlier case's populated cache and
@@ -221,8 +216,8 @@ describe("App", () => {
   });
 
   it("issues one search after the debounce window rather than one per keystroke", async () => {
-    // Resolve immediately so the only wait the clock has to cover is the
-    // debounce window, not the seam's simulated latency.
+    // The seam resolves immediately, so the clock covers only the debounce
+    // window.
     getCitiesSeam.mockResolvedValue(SAMPLE_CITIES);
 
     vi.useFakeTimers();
@@ -283,13 +278,13 @@ describe("App", () => {
     );
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS + SEAM_LATENCY_MS);
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
     });
 
     await user.type(screen.getByRole("textbox", { name: "Search" }), "par");
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS + SEAM_LATENCY_MS);
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
     });
 
     expect(screen.getByText("Paris")).toBeInTheDocument();
@@ -418,38 +413,31 @@ describe("App", () => {
     ).toBeInTheDocument();
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS + SEAM_LATENCY_MS);
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
     });
     expect(screen.getByText("Tokyo")).toBeInTheDocument();
 
     const searchInput = screen.getByRole("textbox", { name: "Search" });
     await user.type(searchInput, "zzzz");
 
-    // The debounce window and the seam's latency are advanced separately. The
-    // seam schedules its delay only once the awaited load has settled, so a
-    // single combined advance can pass the deadline before the timer exists.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
-    });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
     });
     expect(screen.getByText("No cities found")).toBeInTheDocument();
 
     // One more keystroke over an empty result set. A request is in flight with
-    // no rows behind it, so a row count reads it as a cold start.
+    // no rows behind it, so a row count reads it as a cold start. The search is
+    // held open so it is still in flight when the claim is read.
+    getCitiesSeam.mockImplementationOnce(() => new Promise<City[]>(() => {}));
     await user.type(searchInput, "z");
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
     });
 
+    expect(getCitiesSeam).toHaveBeenLastCalledWith({ searchTerm: "zzzzz" });
     expect(screen.queryByText("Downloading the city data...")).toBeNull();
     expect(screen.getByText("No cities found")).toBeInTheDocument();
-
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
-    });
   });
 
   it("recovers from a failed dataset load when the retry control is used", async () => {

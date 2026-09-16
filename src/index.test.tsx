@@ -27,14 +27,6 @@ let container: HTMLDivElement | null = null;
  */
 let previousActEnvironment: boolean | undefined;
 
-/**
- * The seam's simulated latency, written out here as src/App.test.tsx writes it
- * out, because the constant is private to src/api/getCities.ts and exporting it
- * would widen that module for a teardown. Teardown waits twice it, so the figure
- * only has to be an upper bound.
- */
-const SEAM_LATENCY_MS = 200;
-
 describe("bootstrap", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -48,14 +40,10 @@ describe("bootstrap", () => {
   });
 
   afterEach(async () => {
-    // The root is created inside the module under test, so there is no handle to
-    // unmount and the tree outlives the case that mounted it. Letting the seam's
-    // latency settle inside act keeps a resolved dataset from writing state into
-    // a detached tree after the case has ended. That write is where the stray
-    // "not wrapped in act" warning comes from, and why it lands on whatever case
-    // runs next instead of on this one.
+    // Let the dataset settle inside act, so a late state write into the
+    // detached tree cannot warn on the next case.
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, SEAM_LATENCY_MS * 2));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     container?.remove();
@@ -76,9 +64,8 @@ describe("bootstrap", () => {
     // the application inside #root and a document-wide query is satisfied by a
     // table rendered anywhere at all.
     //
-    // The query is awaited because the application paints its loading branch
-    // first and resolves the dataset only after the seam's simulated latency, so
-    // a synchronous lookup finds nothing.
+    // The query is awaited because the dataset loads asynchronously, so a
+    // synchronous lookup finds nothing.
     expect(await within(container).findByRole("table")).toBeInTheDocument();
   });
 

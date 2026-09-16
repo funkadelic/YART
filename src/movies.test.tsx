@@ -28,14 +28,6 @@ let container: HTMLDivElement | null = null;
  */
 let previousActEnvironment: boolean | undefined;
 
-/**
- * The seam's simulated latency, written out here because the constant is
- * private to src/api/getFilms.ts and exporting it would widen that module for a
- * teardown. Teardown waits twice it, so the figure only has to be an upper
- * bound.
- */
-const SEAM_LATENCY_MS = 200;
-
 describe("films bootstrap", () => {
   beforeEach(() => {
     // Installed over the city stub the setup file puts in place. Without it the
@@ -52,12 +44,10 @@ describe("films bootstrap", () => {
   });
 
   afterEach(async () => {
-    // The root is created inside the module under test, so there is no handle
-    // to unmount and the tree outlives the case that mounted it. Letting the
-    // seam's latency settle inside act is what keeps a resolved dataset from
-    // writing state into a detached tree after the case has ended.
+    // Let the dataset settle inside act, so a late state write into the
+    // detached tree cannot warn on the next case.
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, SEAM_LATENCY_MS * 2));
+      await new Promise((resolve) => setTimeout(resolve, 0));
     });
 
     container?.remove();
@@ -74,19 +64,10 @@ describe("films bootstrap", () => {
       await import("./movies");
     });
 
-    // The application paints its loading branch first and resolves the dataset
-    // only after the seam's simulated latency, so the wait is real. It is
-    // spelled out as an advance on the clock because that form survives this
-    // file ever being put on a controlled clock, and a polling helper would
-    // not.
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, SEAM_LATENCY_MS * 2));
-    });
-
     // Scoped to the container, because the claim is that the bootstrap mounted
     // the application inside #root, and a document-wide query is satisfied by a
     // table rendered anywhere at all.
-    expect(within(container).getByRole("table")).toBeInTheDocument();
+    expect(await within(container).findByRole("table")).toBeInTheDocument();
   });
 
   it("throws when the root container is absent, naming its own shell", async () => {

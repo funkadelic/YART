@@ -13,9 +13,9 @@ import { expect, test } from "@playwright/test";
  */
 
 // The engine fetches the real multi-megabyte dataset asset over the preview
-// server, parses and indexes it, and only then waits out the seam's deliberate
-// latency. The jsdom suite pays none of that, because it runs against a
-// fixture. Set high on purpose to cover that work, not as a flake allowance.
+// server, parses and indexes it. The jsdom suite pays none of that, because it
+// runs against a fixture. Set high on purpose to cover that work, not as a
+// flake allowance.
 const DATASET_READY_TIMEOUT_MS = 20_000;
 
 // Every value differs from its default, so the serializer keeps all four and
