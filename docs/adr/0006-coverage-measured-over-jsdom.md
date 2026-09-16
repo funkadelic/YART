@@ -11,7 +11,7 @@ coverage gate is a hard 100%, which fails the build rather than recording a
 number in a log nobody reads.
 
 Coverage from several runners can be merged, and merging only ever raises the
-number. That sounds harmless. It puts the floor on the slowest and most
+number. That sounds harmless. Merging puts the floor on the slowest and most
 engine-dependent suite in the tree, so a flaky browser run becomes a coverage
 failure and the way to close a gap becomes "add an end-to-end test."
 

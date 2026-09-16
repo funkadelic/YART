@@ -6,8 +6,8 @@ Date recorded: 2026-09-15
 ## Context
 
 The dataset is 50,250 rows and virtualization is the expected answer for a large
-table. It is also the feature that most often arrives before it is needed,
-bringing scroll restoration bugs, broken keyboard navigation, print output that
+table. It is also the feature that most often arrives before it is needed, and
+it brings scroll restoration bugs, broken keyboard navigation, print output that
 stops after a screenful, and a find-in-page that only searches what is rendered.
 
 Pagination already bounds the DOM here. The largest page size renders 100 rows,
@@ -30,6 +30,6 @@ rows in the DOM, so the offered page sizes are the ceiling.
 `Column.width` exists and nothing sets it. It is declared for the virtualizer
 this decision defers, which needs a width before it measures a row.
 
-Revisit when a reader needs an unbounded view, or when a page size
-past a few hundred is wanted. At that point the work is a virtualizer over the
-table body, and the accessibility cost above is the part to budget for.
+Revisit when a reader needs an unbounded view, or when a page size past a few
+hundred is wanted. At that point the work is a virtualizer over the table body,
+and the accessibility cost above is the part to budget for.

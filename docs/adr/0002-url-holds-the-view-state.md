@@ -9,10 +9,10 @@ A reader who sorts a table, pages through it and then sends someone the link
 expects the recipient to see what they saw. That requires the search term, the
 sort column and direction, the page and the page size to live in the address.
 
-Two things go wrong when several components write the address. They argue over
-the query string, and `pushState` fills the back stack with positions the reader
-never asked to record, so leaving the page costs one press of the
-back button per position recorded.
+Two things go wrong when several components write the address. Their writes
+overwrite each other, and `pushState` fills the back stack with positions the
+reader never asked to record, so leaving the page costs one press of the back
+button per position recorded.
 
 ## Decision
 

@@ -11,9 +11,9 @@ to one and forgotten in the other was caught by a test rather than by the file
 itself.
 
 The Design Tokens Community Group format reached a stable release in October
-2025, and Style Dictionary builds from it. The format exists for interchange, so its value
-shows up when tokens cross a boundary, between a design tool and code, or
-between platforms. This app has one platform and one consumer, so that part
+2025, and Style Dictionary builds from it. The format exists for interchange, so
+its value shows up when tokens cross a boundary, between a design tool and code,
+or between platforms. This app has one platform and one consumer, so that part
 does not apply here.
 
 ## Decision
