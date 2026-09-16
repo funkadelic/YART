@@ -325,7 +325,7 @@ describe("CityTable", () => {
 
     it("offers a retry control in the error region when a handler is given", async () => {
       const user = userEvent.setup();
-      const onRetry = vi.fn();
+      const onRetry = vi.fn(() => document.activeElement);
 
       render(
         <CityTable
@@ -338,7 +338,11 @@ describe("CityTable", () => {
 
       await user.click(screen.getByRole("button", { name: "Try again" }));
 
+      // Focus has already moved when the upstream handler runs.
+      const searchBox = screen.getByRole("textbox", { name: "Search" });
       expect(onRetry).toHaveBeenCalledTimes(1);
+      expect(onRetry).toHaveReturnedWith(searchBox);
+      expect(searchBox).toHaveFocus();
     });
 
     it("offers no retry control when no handler is given", () => {
@@ -572,42 +576,62 @@ describe("CityTable", () => {
       expect(screen.getByText("Page 3 of 3")).toBeInTheDocument();
     });
 
-    it("disables navigation buttons appropriately", async () => {
+    it("marks the controls at either end unavailable without disabling them", async () => {
       const user = userEvent.setup();
       render(<CityTable {...defaultProps} data={largeMockData} />);
 
-      // On first page, prev and first should be disabled
+      // On the first page, previous and first are unavailable
       expect(
         screen.getByRole("button", { name: /Go to previous page/ }),
-      ).toBeDisabled();
+      ).toHaveAttribute("aria-disabled", "true");
       expect(
         screen.getByRole("button", { name: /Go to first page/ }),
-      ).toBeDisabled();
-
-      // Next and last should be enabled
+      ).toHaveAttribute("aria-disabled", "true");
       expect(
         screen.getByRole("button", { name: /Go to next page/ }),
-      ).not.toBeDisabled();
+      ).toHaveAttribute("aria-disabled", "false");
       expect(
         screen.getByRole("button", { name: /Go to last page/ }),
-      ).not.toBeDisabled();
+      ).toHaveAttribute("aria-disabled", "false");
 
-      // And the far end, where the pair that was live goes dead and the pair
-      // that was dead comes back.
+      // And the far end, where the two pairs swap.
       await user.click(screen.getByRole("button", { name: /Go to last page/ }));
 
       expect(
         screen.getByRole("button", { name: /Go to next page/ }),
-      ).toBeDisabled();
+      ).toHaveAttribute("aria-disabled", "true");
       expect(
         screen.getByRole("button", { name: /Go to last page/ }),
-      ).toBeDisabled();
+      ).toHaveAttribute("aria-disabled", "true");
       expect(
         screen.getByRole("button", { name: /Go to previous page/ }),
-      ).not.toBeDisabled();
+      ).toHaveAttribute("aria-disabled", "false");
       expect(
         screen.getByRole("button", { name: /Go to first page/ }),
-      ).not.toBeDisabled();
+      ).toHaveAttribute("aria-disabled", "false");
+    });
+
+    it("keeps focus on next when the keyboard reaches the last page", async () => {
+      const user = userEvent.setup();
+      render(<CityTable {...defaultProps} data={largeMockData} />);
+
+      const nextButton = screen.getByRole("button", {
+        name: /Go to next page/,
+      });
+      nextButton.focus();
+      await user.keyboard("{Enter}{Enter}");
+
+      expect(screen.getByText("Page 3 of 3")).toBeInTheDocument();
+      // jsdom never moves focus off a disabled control, so the attribute is
+      // what tells a native disabled apart here.
+      expect(nextButton).toHaveFocus();
+      expect(nextButton).not.toBeDisabled();
+      expect(nextButton).toHaveAttribute("aria-disabled", "true");
+
+      await user.keyboard("{Enter}");
+
+      expect(screen.getByText("Page 3 of 3")).toBeInTheDocument();
+      expect(window.location.search).toBe("?page=3");
     });
 
     it("changes page size", async () => {
