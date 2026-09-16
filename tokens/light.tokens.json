@@ -1,48 +1,37 @@
 {
   "color": {
+    "$type": "color",
     "surface": {
-      "$type": "color",
       "$value": "{primitive.neutral.25}"
     },
     "surface-raised": {
-      "$type": "color",
       "$value": "{primitive.white}"
     },
     "surface-hover": {
-      "$type": "color",
       "$value": "{primitive.neutral.50}"
     },
     "text": {
-      "$type": "color",
       "$value": "{primitive.neutral.950}"
     },
     "text-muted": {
-      "$type": "color",
       "$value": "{primitive.neutral.550}"
     },
     "border": {
-      "$type": "color",
-      "$description": "border outlines a container, rule separates rows inside one, and strong bounds a control the reader can press.",
       "$value": "{primitive.neutral.200}"
     },
     "border-strong": {
-      "$type": "color",
       "$value": "{primitive.neutral.450}"
     },
     "rule": {
-      "$type": "color",
       "$value": "{primitive.neutral.100}"
     },
     "accent": {
-      "$type": "color",
       "$value": "{primitive.teal.700}"
     },
     "error": {
-      "$type": "color",
       "$value": "{primitive.red.700}"
     },
     "focus-ring": {
-      "$type": "color",
       "$value": "{primitive.teal.700}"
     }
   }

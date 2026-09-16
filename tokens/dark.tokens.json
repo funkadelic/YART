@@ -1,47 +1,37 @@
 {
   "color": {
+    "$type": "color",
     "surface": {
-      "$type": "color",
       "$value": "{primitive.neutral.975}"
     },
     "surface-raised": {
-      "$type": "color",
       "$value": "{primitive.neutral.925}"
     },
     "surface-hover": {
-      "$type": "color",
       "$value": "{primitive.neutral.900}"
     },
     "text": {
-      "$type": "color",
       "$value": "{primitive.neutral.150}"
     },
     "text-muted": {
-      "$type": "color",
       "$value": "{primitive.neutral.400}"
     },
     "border": {
-      "$type": "color",
       "$value": "{primitive.neutral.800}"
     },
     "border-strong": {
-      "$type": "color",
       "$value": "{primitive.neutral.500}"
     },
     "rule": {
-      "$type": "color",
       "$value": "{primitive.neutral.850}"
     },
     "accent": {
-      "$type": "color",
       "$value": "{primitive.teal.400}"
     },
     "error": {
-      "$type": "color",
       "$value": "{primitive.red.400}"
     },
     "focus-ring": {
-      "$type": "color",
       "$value": "{primitive.teal.300}"
     }
   }

@@ -3,7 +3,7 @@
  * Dictionary. Run it with `npm run tokens:build`; the output is committed.
  */
 
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import process from "node:process";
 import StyleDictionary from "style-dictionary";
@@ -26,6 +26,18 @@ function shortHex(value) {
   return value.replace(/^#([\da-f])\1([\da-f])\2([\da-f])\3$/i, "#$1$2$3");
 }
 
+/** Each group that carries a description, keyed by its dotted path. */
+function groupDescriptions(node, path = [], found = new Map()) {
+  for (const [key, value] of Object.entries(node)) {
+    if (key.startsWith("$") || !value || typeof value !== "object") continue;
+    if ("$value" in value) continue;
+    if (value.$description)
+      found.set([...path, key].join("."), value.$description);
+    groupDescriptions(value, [...path, key], found);
+  }
+  return found;
+}
+
 /** One theme's tokens as CSS values, primitives dropped, themed ones marked. */
 async function themeTokens(theme) {
   const themeFile = join(TOKENS, `${theme}.tokens.json`);
@@ -36,10 +48,17 @@ async function themeTokens(theme) {
       css: { transforms: ["name/kebab", "color/hex", "size/rem"] },
     },
   });
+  // Read from the source, because Style Dictionary drops group metadata.
+  const groups = groupDescriptions(JSON.parse(await readFile(BASE, "utf8")));
+  groupDescriptions(JSON.parse(await readFile(themeFile, "utf8")), [], groups);
+
   const { allTokens } = await sd.getPlatformTokens("css");
-  return allTokens
-    .filter((token) => token.path[0] !== "primitive")
-    .map((token) => ({ ...token, themed: token.filePath === themeFile }));
+  return {
+    groups,
+    tokens: allTokens
+      .filter((token) => token.path[0] !== "primitive")
+      .map((token) => ({ ...token, themed: token.filePath === themeFile })),
+  };
 }
 
 /** Names of the tokens a theme file declares, in a comparable form. */
@@ -55,23 +74,35 @@ function themedNames(tokens) {
 export async function buildCss() {
   const light = await themeTokens("light");
   const dark = await themeTokens("dark");
-  if (themedNames(light) !== themedNames(dark)) {
+  if (themedNames(light.tokens) !== themedNames(dark.tokens)) {
     throw new Error(
       "light.tokens.json and dark.tokens.json declare different colors",
     );
   }
-  const darkValues = new Map(dark.map((token) => [token.name, token.$value]));
+  const darkValues = new Map(
+    dark.tokens.map((token) => [token.name, token.$value]),
+  );
 
-  const lines = light.map((token, index) => {
+  const lines = [];
+  // stylelint wants a blank line before a comment, except the first in a block.
+  const comment = (text) =>
+    lines.push(`${lines.length ? "\n" : ""}  /* ${text} */`);
+  const described = new Set();
+
+  for (const token of light.tokens) {
+    const group = token.path.slice(0, -1).join(".");
+    if (!described.has(group)) {
+      described.add(group);
+      const description = light.groups.get(group);
+      if (description) comment(description);
+    }
+    if (token.$description) comment(token.$description);
+
     const value = token.themed
       ? `light-dark(${shortHex(token.$value)}, ${shortHex(darkValues.get(token.name))})`
       : shortHex(String(token.$value));
-    // stylelint wants a blank line before a comment, except the first in a block.
-    const comment = token.$description
-      ? `${index ? "\n" : ""}  /* ${token.$description} */\n`
-      : "";
-    return `${comment}  --${token.name}: ${value};`;
-  });
+    lines.push(`  --${token.name}: ${value};`);
+  }
   const css = `${HEADER}:root {\n${lines.join("\n")}\n}\n`;
 
   const config = await prettier.resolveConfig(DESTINATION);

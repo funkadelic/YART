@@ -3,13 +3,12 @@
    light-dark pair whose side follows color-scheme, set per theme in index.css. */
 
 :root {
+  /* Semantic colors. border outlines a container, rule separates rows inside one, and strong bounds a control the reader can press. */
   --color-surface: light-dark(#fbfbfc, #0e1013);
   --color-surface-raised: light-dark(#fff, #16191e);
   --color-surface-hover: light-dark(#f4f5f7, #1d2127);
   --color-text: light-dark(#16181d, #e8eaee);
   --color-text-muted: light-dark(#656a75, #9aa1ad);
-
-  /* border outlines a container, rule separates rows inside one, and strong bounds a control the reader can press. */
   --color-border: light-dark(#e3e5e9, #262a31);
   --color-border-strong: light-dark(#868c96, #6a707a);
   --color-rule: light-dark(#eceef1, #22262c);
