@@ -4,7 +4,12 @@ import { expect, test } from "@playwright/test";
  * The application under a forced colors palette, which the accessibility engine
  * cannot reach: it reads the colors an author declared, and this is the mode
  * where the user agent throws those away. Delete the remap in src/index.css and
- * the last assertion goes red, the theme segment falling back to plain Canvas.
+ * the theme segment assertion goes red, both segments falling back to Canvas.
+ *
+ * The HighlightText rule in ThemeControl.module.scss is not covered here, and
+ * cannot be: this engine's emulated palette resolves HighlightText and Canvas
+ * to the same white, so the selected label reads the same with the rule and
+ * without it. The rule is for a real palette where those two differ.
  */
 
 // The engine fetches the real multi-megabyte dataset over the preview server,
