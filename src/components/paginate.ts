@@ -15,7 +15,9 @@ export function paginate<T>(
   const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
   // Clamped for reading only. The position in state is left alone, so a result
   // set that widens again restores the reader where they were.
-  const effectivePage = Math.min(Math.max(page, 1), totalPages);
+  // Truncated before the clamp: a caller outside the app can hand over a
+  // fractional page, and aria-rowindex is computed from this.
+  const effectivePage = Math.min(Math.max(Math.trunc(page), 1), totalPages);
   const startIndex = (effectivePage - 1) * pageSize;
   return {
     paginatedData: rows.slice(startIndex, startIndex + pageSize),

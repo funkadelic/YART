@@ -45,6 +45,27 @@ describe("paginate", () => {
     );
   });
 
+  // Bounded on purpose. A double drawn from the whole line lands between the
+  // first and last page too rarely to reach the clamp with a fraction still on
+  // it, so the collection is long enough for several pages and the position is
+  // drawn from inside them. A fraction here would reach aria-rowindex as an
+  // invalid row position.
+  it("reads a fractional position as a whole page", () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.integer(), { minLength: 10, maxLength: 60 }),
+        fc.double({ min: 1, max: 10, noNaN: true }),
+        fc.integer({ min: 1, max: 5 }),
+        (data, page, size) => {
+          expect(
+            Number.isInteger(paginate(data, page, size).effectivePage),
+          ).toBe(true);
+        },
+      ),
+      RUNS,
+    );
+  });
+
   it("reads any requested position as a page that exists", () => {
     fc.assert(
       fc.property(rows, requestedPage, pageSize, (data, page, size) => {
