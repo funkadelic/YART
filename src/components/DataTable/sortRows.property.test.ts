@@ -27,6 +27,13 @@ const WEIGHT = columns<Part>(EN).key("weight", { label: "Weight" });
 
 const column = fc.constantFrom(REGION, WEIGHT);
 
+// The column paired with the field it sorts on, for the one law that has to
+// read the values rather than the row identities.
+const sortable = fc.constantFrom(
+  { column: REGION, keyOf: (part: Part): string | number => part.region },
+  { column: WEIGHT, keyOf: (part: Part): string | number => part.weight },
+);
+
 const direction = fc.constantFrom("asc" as const, "desc" as const);
 
 const partId = (part: Part) => part.sku;
@@ -82,6 +89,24 @@ describe("sortRows", () => {
           ).toEqual(sortRows(rows, sortBy, sortDirection, partId).map(partId));
         },
       ),
+      RUNS,
+    );
+  });
+
+  // The one law the direction flip implements. The three above hold whichever
+  // way the sort runs, so a comparator that ignored the direction passed all of
+  // them. Read as keys rather than rows, because tied keys are equal and so
+  // reverse exactly, while the identity tiebreak is never flipped.
+  it("reverses the present keys when the direction turns", () => {
+    fc.assert(
+      fc.property(parts, sortable, (rows, { column: sortBy, keyOf }) => {
+        const present = (direction: "asc" | "desc") =>
+          sortRows(rows, sortBy, direction, partId)
+            .map(keyOf)
+            .filter((key) => key !== "");
+
+        expect(present("desc")).toEqual([...present("asc")].reverse());
+      }),
       RUNS,
     );
   });
