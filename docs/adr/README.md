@@ -20,5 +20,6 @@ supersedes the old one.
 | [7](0007-tokens-in-dtcg-json.md)          | Design tokens are authored as DTCG JSON                    |
 | [8](0008-no-row-virtualization.md)        | Rows are not virtualized                                   |
 
-The practices this repo weighed and chose not to adopt are in
-[front-end practices](../frontend-practices.md).
+[Front-end practices](../frontend-practices.md) is the survey these sit under:
+what the repo already does, what it has just adopted, and what it weighed and
+skipped.

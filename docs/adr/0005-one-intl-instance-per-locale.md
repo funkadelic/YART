@@ -14,9 +14,10 @@ except a slow page.
 ## Decision
 
 `src/i18n/format.ts` is the only module that constructs a platform locale
-object. It caches one collator, one number formatter and one plural rules
-instance per resolved language tag, keyed by tags drawn from a four-entry frozen
-record, so the cache has a fixed ceiling rather than one that grows with input.
+object. Per resolved language tag it caches a collator, a plural rules instance,
+a list formatter and two number formatters, one for grouped counts and one
+configured for durations. The tags come from a four-entry frozen record, so the
+cache has a fixed ceiling rather than one that grows with input.
 
 The column builder fuses a collator into each comparator when the columns are
 built. The comparison helper takes a collator as a parameter and holds none.
@@ -31,7 +32,7 @@ constructs an `Intl` object or calls a locale-aware helper such as
 `toLocaleString` or `localeCompare`. Two claims sit outside what a lint rule can
 express and live in `src/toolchain.test.ts` instead: the inline script in the
 HTML shells, which ESLint does not lint, and the positive claim that the
-formatter module still builds all three cached instances.
+formatter module still builds all five cached instances.
 
 Columns are rebuilt when the language changes, in a memo keyed on the catalog
 and the tag. A rebuild on any other render re-sorts the whole dataset for

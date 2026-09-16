@@ -19,8 +19,8 @@ search, and holds one module-scope promise so a double mount issues one request.
 
 ## Consequences
 
-The app shell loads without waiting for the data, and the browser caches the
-dataset under its content hash across deploys that do not change it.
+The app shell loads without waiting for the data, and the dataset keeps the same
+content-hashed URL across deploys that do not change it.
 
 Failure becomes a state the UI has to handle, so the loader throws a typed error
 carrying a code and a numeric detail at each transport, status and parse
