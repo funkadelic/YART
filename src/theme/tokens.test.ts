@@ -504,6 +504,26 @@ describe("length in the global stylesheets", () => {
   });
 });
 
+// The remap in src/index.css is a second list of the color token names, so a
+// color added to the generated stylesheet and forgotten there loses its color
+// under forced colors with every other gate still green. Read as text, because
+// postcss keys the media block's :root exactly as it keys the plain one.
+describe("the forced-colors remap", () => {
+  it("covers every color token the stylesheet declares", () => {
+    const source = readFileSync(cssPath, "utf8");
+    const forced = source.slice(source.indexOf("@media (forced-colors"));
+    const remapped = new Set(
+      [...forced.matchAll(/(--color-[\w-]+)\s*:/g)].map(([, token]) => token),
+    );
+    const declared = [...tokenBlock.keys()].filter((property) =>
+      IS_COLOR_TOKEN.test(property),
+    );
+
+    expect(declared.length).toBeGreaterThan(0);
+    expect(declared.filter((token) => !remapped.has(token))).toEqual([]);
+  });
+});
+
 describe("the focus ring", () => {
   it("is drawn once, globally, from the ring token", () => {
     const rule = blocks.get(":focus-visible");

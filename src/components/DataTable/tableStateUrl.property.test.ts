@@ -57,15 +57,35 @@ const state: fc.Arbitrary<TableState<WidgetColumnId>> = fc
 
 // Both shapes an address arrives in: a well-formed query naming the owned keys
 // with whatever values, and a raw string that was never a query at all.
+// Values drawn per key, from both sides of that key's own parser boundary and
+// from free strings. Drawing them from one shared pool instead pairs the
+// interesting value with the wrong key: over this seed a fractional page
+// reached the page key in 0 of 200 runs, which left the parsers below asserted
+// over nothing.
+const PARAMETER_VALUES = {
+  q: ["", "tokyo", " tokyo "],
+  sort: ["name", "size", "-name", "-size", "-nope", "NAME"],
+  page: ["1", "2", "1000000", "0", "-1", "1.5", "1e3"],
+  size: ["10", "25", "50", "100", "7", "20"],
+  dir: ["asc", "desc"],
+  utm_source: ["news"],
+} as const satisfies Record<string, readonly string[]>;
+
+type ParameterKey = keyof typeof PARAMETER_VALUES;
+
+const parameter = fc
+  .constantFrom(...(Object.keys(PARAMETER_VALUES) as ParameterKey[]))
+  .chain((key) =>
+    fc.tuple(
+      fc.constant<string>(key),
+      fc.oneof(fc.constantFrom(...PARAMETER_VALUES[key]), fc.string()),
+    ),
+  );
+
 const address = fc.oneof(
   fc.string(),
   fc
-    .array(
-      fc.tuple(
-        fc.constantFrom("q", "sort", "page", "size", "dir", "utm_source"),
-        fc.string(),
-      ),
-    )
+    .array(parameter)
     .map((pairs) => `?${new URLSearchParams(pairs).toString()}`),
 );
 
