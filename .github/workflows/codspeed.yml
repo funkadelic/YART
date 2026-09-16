@@ -1,0 +1,54 @@
+name: Benchmarks
+
+# A workflow of its own rather than a job in CI, because the measurement runs
+# under an instrumented interpreter and takes minutes the gate should not wait
+# on. Nothing it produces is a dependency of the deploy.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  # Lets CodSpeed trigger a run of its own, which is how the first set of
+  # baseline measurements is collected for a branch that has none.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # The action authenticates to CodSpeed with an OIDC token minted here, so no
+  # upload secret is stored for this repository.
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmarks:
+    name: Run benchmarks
+    runs-on: ubuntu-latest
+    # The suites take about four minutes under CPU simulation, which is roughly
+    # twenty times what they cost unmeasured. Fifteen catches a hang without
+    # holding the machine for the six-hour platform default.
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # simulation rather than walltime: the measurement is a count of the work
+      # the code does rather than a stopwatch, so it does not move with whatever
+      # else the hosted runner is doing, and a change of a few percent is
+      # reported as a change rather than lost in the noise of a shared machine.
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@373d6868929f444bc08d901fd0eb0ad52a8875ea # v5.2.1
+        with:
+          mode: simulation
+          run: npm run bench
