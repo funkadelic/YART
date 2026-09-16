@@ -132,9 +132,9 @@ The browser target follows the Baseline Widely available rule, taken on 2026-08-
 - Firefox 111 and above
 - Safari 16.4 and above
 
-Two places carry these versions and they have to be edited together. The `browserslist` field in `package.json` names them explicitly instead of using a percentage or "not dead" query, so browser support data changes cannot move build output; it governs which vendor prefixes the stylesheet gets. The `build.target` array in `vite.config.ts` repeats them, because the bundler does not read `browserslist`, and it governs which syntax is lowered.
+The `build.target` array in `vite.config.ts` is the one place these versions live. It names them explicitly instead of taking the bundler default, so a Vite upgrade cannot move build output. Lightning CSS minifies the stylesheet against the same targets, so the array decides both which syntax is lowered and which vendor prefixes the stylesheet gets.
 
-Raising the baseline is a deliberate edit to both lists and to the date above. Nothing asserts that the two agree.
+Raising the baseline is a deliberate edit to that array and to the date above.
 
 ## Data attribution
 
