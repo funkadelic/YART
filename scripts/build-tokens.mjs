@@ -63,8 +63,9 @@ async function themeTokens(theme) {
   });
   // Read from the source, because Style Dictionary drops group metadata.
   const base = JSON.parse(await readFile(BASE, "utf8"));
+  const themeSource = JSON.parse(await readFile(themeFile, "utf8"));
   const groups = groupDescriptions(base);
-  groupDescriptions(JSON.parse(await readFile(themeFile, "utf8")), [], groups);
+  groupDescriptions(themeSource, [], groups);
 
   const { allTokens } = await sd.getPlatformTokens("css");
 
@@ -73,12 +74,14 @@ async function themeTokens(theme) {
   const built = new Map(
     allTokens.map((token) => [token.path.join("."), token.$value]),
   );
-  for (const [path, hex] of declaredHexes(base)) {
-    const value = built.get(path);
-    if (shortHex(String(value)) !== shortHex(hex)) {
-      throw new Error(
-        `${path} declares ${hex} but its components make ${value}`,
-      );
+  for (const source of [base, themeSource]) {
+    for (const [path, hex] of declaredHexes(source)) {
+      const value = built.get(path);
+      if (shortHex(String(value)) !== shortHex(hex)) {
+        throw new Error(
+          `${path} declares ${hex} but its components make ${value}`,
+        );
+      }
     }
   }
 
