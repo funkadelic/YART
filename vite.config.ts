@@ -202,14 +202,8 @@ export default defineConfig({
   // nothing in the tree assumes the root.
   base: "./",
   build: {
-    // Spelled out from the same four floors the browserslist declares, because
-    // the bundler does not read that field and the two are otherwise free to
-    // drift. They already have. The default is baseline-widely-available, which
-    // is Firefox 114 against the declared floor of 111, and the other three
-    // agree exactly. The divergence emits nothing today, since a build pinned
-    // to these targets and a build on the default produce the same chunk down
-    // to its content hash, so this pins a floor without changing output.
-    // Update it and the browserslist together; nothing asserts they agree.
+    // The one place the browser floors live. Lightning CSS minifies CSS against
+    // these too, so they decide vendor prefixes as well as syntax lowering.
     target: ["chrome111", "edge111", "firefox111", "safari16.4"],
     rollupOptions: {
       // Declaring an input replaces the implicit single-shell one, so the
