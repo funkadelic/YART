@@ -26,8 +26,9 @@ Worth listing, because the gaps below only make sense against them.
 ## Adopted
 
 - **Property-based tests.** The pure modules have laws: a state written into the
-  address and read back is the state it started as, a page slice never exceeds
-  the page size, sorting is a permutation of its input. An example test asserts the cases
+  address and read back is the state it started as, apart from the search term,
+  which the address trims; a page slice never exceeds the page size; sorting is
+  a permutation of its input. An example test asserts the cases
   someone thought of, while a property test states the law and lets the runner
   hunt for a counterexample. The seed is pinned so a failure is reproducible and
   CI does not flake.
