@@ -36,9 +36,9 @@ Worth listing, because the gaps below only make sense against them.
   are painted with colors the user agent has thrown away. axe cannot test this,
   so nothing here covered it before.
 - **Row semantics for the whole dataset.** The table renders one page, so
-  assistive technology was told how many rows one page holds, not how many the
-  50,250. `aria-rowcount` and `aria-rowindex` describe the full set and the
-  absolute position of each row.
+  assistive technology was told how many rows that page holds rather than how
+  many the search found. `aria-rowcount` and `aria-rowindex` describe the full
+  set and the absolute position of each row.
 - **Decision records.** The arguments behind the structure lived in planning
   files that are not committed, which left a reader with conclusions and no
   reasoning.
