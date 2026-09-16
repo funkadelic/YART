@@ -82,7 +82,8 @@ A React and TypeScript single-page app for browsing large datasets in the browse
 - Sorting is a real button inside each column header, so Enter and Space work without a mouse, and the button is named for its column alone so a press does not re-announce the whole control
 - Icons are hidden from assistive technology, since the header text already carries the meaning
 - Live regions announce sort changes and result counts
-- Each row reports its position in the whole result set rather than on the page, and under forced colors the borders, the focus ring and the chosen theme segment are repainted from the reader's own palette
+- Each row reports its position in the whole result set rather than its position on the page
+- Under forced colors the borders, the focus ring and the chosen theme segment are repainted from the reader's own palette
 - The table scrolls horizontally on narrow viewports instead of overflowing
 - The theme control is three native radios, so the arrow keys move between them and the whole group is a single tab stop
 - Every foreground and background pair is checked against the WCAG contrast ratio in both themes, computed from the shipped stylesheet rather than from a copy of it
