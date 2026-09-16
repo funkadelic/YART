@@ -1,13 +1,8 @@
 # Decision records
 
-One file per decision that shaped this codebase, written so a reader can see the
-argument behind the result. Each record says what the situation was, what was
-chosen, and what that choice costs.
+One file per decision that shaped this codebase, written so a reader can see the argument behind the result. Each record says what the situation was, what was chosen, and what that choice costs.
 
-Most of these were made during the build and written down on 2026-09-15, so the
-dates record when the reasoning was captured rather than when the code landed.
-A record is not revised when the code changes. A reversal gets a new record that
-supersedes the old one.
+Most of these were made during the build and written down on 2026-09-15, so the dates record when the reasoning was captured rather than when the code landed. A record is not revised when the code changes. A reversal gets a new record that supersedes the old one.
 
 | Record                                    | Decision                                                   |
 | ----------------------------------------- | ---------------------------------------------------------- |
@@ -20,6 +15,4 @@ supersedes the old one.
 | [7](0007-tokens-in-dtcg-json.md)          | Design tokens are authored as DTCG JSON                    |
 | [8](0008-no-row-virtualization.md)        | Rows are not virtualized                                   |
 
-[Front-end practices](../frontend-practices.md) is the survey these sit under:
-what the repo already does, what it has just adopted, and what it weighed and
-skipped.
+[Front-end practices](../frontend-practices.md) is the survey these sit under: what the repo already does, what it has just adopted, and what it weighed and skipped.
