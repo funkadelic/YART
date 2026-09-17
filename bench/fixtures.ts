@@ -1,24 +1,10 @@
-// Rows for the benchmarks to work over. Generated rather than read off the
-// shipped datasets, because those arrive through the bundler as URL assets and
-// a benchmark process has no bundler: importing either one here would pull the
-// whole several-megabyte file into the measurement instead of the code under
-// it.
-//
-// Generated rows have to be deterministic, or a measurement moves with the
-// input and a comparison between two commits says nothing. Every value below
-// comes from one seeded generator, so the same commit produces the same rows on
-// every machine and every run.
+// Seeded rows shaped like the shipped datasets, which import as URL assets a
+// benchmark process has no bundler to resolve.
 
 import type { City } from "../src/api/getCities";
 import type { Film } from "../src/api/getFilms";
 
-/**
- * A seeded generator, because Math.random would reshuffle the input between
- * two runs and report the difference as a change in the code.
- *
- * mulberry32, which is small enough to read and has a period far beyond
- * anything these fixtures ask of it.
- */
+/** mulberry32, so every run gets the same rows. */
 function seeded(seed: number): () => number {
   let state = seed >>> 0;
 
@@ -30,9 +16,7 @@ function seeded(seed: number): () => number {
   };
 }
 
-// Syllables rather than a name list, so the generated text collates like the
-// real thing: shared prefixes, mixed lengths, and the accented characters that
-// decide whether a comparison stays in the collator's fast path.
+// Syllables with accents, so generated names collate like real ones.
 const SYLLABLES = [
   "ba",
   "cé",
@@ -61,10 +45,10 @@ const SYLLABLES = [
   "zu",
 ];
 
-/** The three values the upstream city dataset records in its capital column. */
+/** The capital column's upstream values. */
 const CAPITAL_CLASSES = ["primary", "admin", "minor"];
 
-/** The film columns that carry lists, drawn from pools of the same shape. */
+/** The genre pool for the film list columns. */
 const GENRES = [
   "drama",
   "comedy",
@@ -75,7 +59,7 @@ const GENRES = [
   "western",
 ];
 
-/** A word built from the syllable pool, so no two draws agree by accident. */
+/** A word built from the syllable pool. */
 function word(next: () => number, syllables: number): string {
   let built = "";
   for (let at = 0; at < syllables; at += 1) {
@@ -84,7 +68,7 @@ function word(next: () => number, syllables: number): string {
   return built;
 }
 
-/** A word with its first character in upper case, the way a name reads. */
+/** A word with its first character in upper case. */
 function name(next: () => number, syllables: number): string {
   const built = word(next, syllables);
   return built.charAt(0).toUpperCase() + built.slice(1);
@@ -93,9 +77,7 @@ function name(next: () => number, syllables: number): string {
 /** One item drawn from a pool. */
 function pick<T>(next: () => number, pool: readonly T[], at?: number): T {
   const index = at ?? Math.floor(next() * pool.length);
-  // The pools above are non-empty and the index is inside them, so the
-  // fallback is unreachable. It exists because an index read is typed as
-  // possibly absent in this tree.
+  // Unreachable: the pools are non-empty. Indexed reads are typed as possibly absent.
   return pool[index] ?? (pool[0] as T);
 }
 
@@ -105,16 +87,7 @@ function list(next: () => number, pool: readonly string[]): readonly string[] {
   return Array.from({ length }, () => pick(next, pool));
 }
 
-/**
- * Cities shaped like the shipped dataset: a name and an ascii name that differ
- * for the accented rows, a country and its code, a capital class and a
- * population.
- *
- * A share of the rows carries a zero population and an empty ascii name,
- * because the real asset does and both are what the comparison calls blank.
- * Without them the sort benchmarks would never reach the branch that orders a
- * blank last.
- */
+/** Cities, about 1% with a zero population and empty ascii name so the blank-last branch runs. */
 export function cityRows(count: number): City[] {
   const next = seeded(0x59_41_52_54);
   const countries = Array.from({ length: 180 }, () => name(next, 2));
@@ -127,8 +100,7 @@ export function cityRows(count: number): City[] {
     return {
       id: 1004003059 + at,
       name: cityName,
-      // Stripped of the accents the syllable pool carries, which is the
-      // relationship the two columns have upstream.
+      // The accent-stripped name, as upstream.
       nameAscii: blank
         ? ""
         : cityName.normalize("NFD").replace(/[\u0300-\u036f]/g, ""),
@@ -140,13 +112,7 @@ export function cityRows(count: number): City[] {
   });
 }
 
-/**
- * Films shaped like the shipped dataset: a title, a year and a runtime that are
- * both null on part of the set, and three list columns.
- *
- * The nulls and the empty lists are the blanks of this dataset, and the list
- * columns are the ones the film table orders with a comparator of its own.
- */
+/** Films, with null years and runtimes and empty lists as the dataset's blanks. */
 export function filmRows(count: number): Film[] {
   const next = seeded(0x46_49_4c_4d);
   const people = Array.from({ length: 400 }, () => name(next, 2));

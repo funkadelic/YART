@@ -1,6 +1,4 @@
-// The column arrays and the cells they render. Both builders run again
-// whenever the reader changes language, and every cell of the visible page is
-// rendered again on every sort, every page press and every settled keystroke.
+// The column arrays, rebuilt on a language change, and the cells of one page.
 
 import { withCodSpeed } from "@codspeed/tinybench-plugin";
 import { Bench } from "tinybench";
@@ -16,7 +14,7 @@ import { CATALOG_IDS, resolveLocale } from "../src/i18n/resolveLocale";
 import { cityRows, filmRows } from "./fixtures";
 import { ROUNDS, report, rounds } from "./harness";
 
-/** The largest page the size control offers, which is the widest render. */
+/** The largest page size the control offers. */
 const PAGE_SIZE = 100;
 
 const { tag } = resolveLocale("en", []);
@@ -25,7 +23,7 @@ const filmPage = filmRows(PAGE_SIZE);
 const cityColumns = buildCityColumns(en, tag);
 const filmColumns = buildFilmColumns(en, tag);
 
-/** Every cell of a page, which is what the body renders between two states. */
+/** Renders every cell of a page. */
 function renderPage<T>(
   rows: readonly T[],
   built: readonly { renderCell: (row: T) => unknown }[],
@@ -40,15 +38,12 @@ function renderPage<T>(
 const bench = withCodSpeed(new Bench());
 
 bench
-  // One language change: both arrays are rebuilt, and with them the collator
-  // lookup and the formatter each cell renderer closes over.
   .add(`build both column arrays for one locale, ${ROUNDS} rounds`, () => {
     rounds(() => {
       buildCityColumns(en, tag);
       buildFilmColumns(en, tag);
     });
   })
-  // Every catalog that ships, which is the language picker walked end to end.
   .add(`build both column arrays for every catalog, ${ROUNDS} rounds`, () => {
     rounds(() => {
       for (const id of CATALOG_IDS) {
@@ -58,18 +53,12 @@ bench
       }
     });
   })
-  // The grouped population cell is the formatting in this page; the other four
-  // columns take the default renderer.
   .add(`render a ${PAGE_SIZE}-row page of city cells`, () => {
     renderPage(cityPage, cityColumns);
   })
-  // Three list columns and a runtime carrying its unit, so this page is four
-  // formatted cells a row against the city table's one.
   .add(`render a ${PAGE_SIZE}-row page of film cells`, () => {
     renderPage(filmPage, filmColumns);
   })
-  // The factory itself, away from either table's column list: one builder, the
-  // duplicate-id set it keeps, and the two ways a column is declared.
   .add(`build a column array through the factory, ${ROUNDS} rounds`, () => {
     rounds(() => {
       const col = columns<City>(collatorFor(tag));

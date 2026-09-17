@@ -1,7 +1,4 @@
-// The view state and the address it is written to. Every keystroke that
-// survives the debounce, every header press and every page press goes through
-// the reducer and then through the serializer, so both run on the interaction
-// path rather than on a load.
+// The view state reducer and the address it is written to.
 
 import { withCodSpeed } from "@codspeed/tinybench-plugin";
 import { Bench } from "tinybench";
@@ -23,20 +20,13 @@ import {
 } from "../src/features/CityTable/cityColumns";
 import { ROUNDS, report, rounds } from "./harness";
 
-/** The state a table starts from, typed over the city table's own ids. */
 const INITIAL: TableState<CityColumnId> = DEFAULT_TABLE_STATE;
 
-/**
- * One reader's session: a term typed a character at a time, a column sorted
- * through its whole cycle, a page size change and a run of page presses. The
- * reducer sees each of these as a separate action, so a session is what its
- * cost is paid over.
- */
+/** One session: a term typed per character, a full sort cycle, a size change and page presses. */
 const SESSION: readonly TableAction<CityColumnId>[] = [
   ...Array.from({ length: 12 }, (_, at): TableAction<CityColumnId> => {
     return { type: "query", query: "san francisco".slice(0, at + 1) };
   }),
-  // The cycle: ascending, descending, cleared, and a second column on top.
   { type: "sort", columnId: "name" },
   { type: "sort", columnId: "name" },
   { type: "sort", columnId: "name" },
@@ -45,17 +35,11 @@ const SESSION: readonly TableAction<CityColumnId>[] = [
   ...Array.from({ length: 25 }, (_, at): TableAction<CityColumnId> => {
     return { type: "page", page: at + 1 };
   }),
-  // A term retyped at its current value, which the debounce commits and the
-  // reducer answers with the state it was handed.
+  // Unchanged term, which the reducer returns as the same state.
   { type: "query", query: "san francisco" },
 ];
 
-/**
- * The addresses the parser is held against: the plain view, a full one, one
- * whose every value is invalid, and one carrying parameters this app does not
- * own. Each falls down a different arm, and a reader arrives on any of them
- * from a shared link.
- */
+/** The default view, a full one, an invalid one, and one with params the app does not own. */
 const ADDRESSES = [
   "",
   "?q=tokyo&sort=-population&page=4&size=25",
@@ -63,7 +47,6 @@ const ADDRESSES = [
   "?utm_source=newsletter&sort=name&gclid=abc123&page=2",
 ];
 
-/** A settled view, which is what the container writes back on every change. */
 const SETTLED: TableState<CityColumnId> = {
   sortColumnId: "population",
   sortDirection: "desc",
@@ -84,8 +67,6 @@ bench
       }
     });
   })
-  // The read a shared link performs before the first render, over every shape
-  // of address.
   .add(`parse four addresses into view state, ${ROUNDS} rounds`, () => {
     rounds(() => {
       for (const address of ADDRESSES) {
@@ -93,7 +74,6 @@ bench
       }
     });
   })
-  // The container's own narrower read, which takes the term and nothing else.
   .add(`parse the term out of four addresses, ${ROUNDS} rounds`, () => {
     rounds(() => {
       for (const address of ADDRESSES) {
@@ -101,8 +81,6 @@ bench
       }
     });
   })
-  // The write, which has to preserve every parameter the app does not own, so
-  // the incoming query is walked as well as the schema.
   .add(`serialize a settled view over four addresses, ${ROUNDS} rounds`, () => {
     rounds(() => {
       for (const address of ADDRESSES) {
@@ -110,8 +88,7 @@ bench
       }
     });
   })
-  // Reducer and address together, which is what one page press actually costs:
-  // the state moves and the new address is written from it.
+  // One page press: the state moves and its address is written.
   .add(`move a page and write its address, ${ROUNDS} rounds`, () => {
     rounds(() => {
       const next = applyTableAction(SETTLED, { type: "page", page: 5 });
