@@ -1811,6 +1811,23 @@ describe("the plugin rule sets the lint gate claims to run", () => {
       10,
       [],
     ],
+    [
+      "the typescript-eslint type-checked",
+      // An array of flat configs, merged in order so a later entry wins.
+      () =>
+        rulesOf("typescript-eslint", (plugin) =>
+          (
+            (path(plugin, "configs", "recommendedTypeChecked") ?? []) as {
+              rules?: Record<string, unknown>;
+            }[]
+          ).reduce<Record<string, unknown>>(
+            (merged, config) => ({ ...merged, ...config.rules }),
+            {},
+          ),
+        ),
+      20,
+      [],
+    ],
   ])(
     "has every rule of %s recommended set active",
     async (_name, load, floor, off) => {
