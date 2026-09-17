@@ -1,7 +1,11 @@
 name: CI
 
 on:
+  # Main only, since a branch push and its pull request fall in different
+  # concurrency groups and would each run the whole job.
   push:
+    branches:
+      - main
   pull_request:
 
 permissions:
@@ -15,9 +19,9 @@ jobs:
   verify:
     name: Verify
     runs-on: ubuntu-latest
-    # A green job runs about four minutes, most of it the Chromium install. Ten
-    # catches a hang in setup or in either install without holding the machine for
-    # the six-hour platform default, and five more are the Lighthouse step's own cap.
+    # A green job runs about four and a half minutes. Ten catches a hang without
+    # holding the machine for the six-hour platform default, and five more are the
+    # Lighthouse step's own cap.
     timeout-minutes: 15
     # A boolean rather than the token, because `secrets` is not an allowed
     # context in a step's `if`. The token itself stays on the one step that
@@ -163,6 +167,16 @@ jobs:
           --upload-token=${{ secrets.CODECOV_TOKEN }}
           --normalize-assets-pattern="[name]-[hash].js"
 
+      # The scanner's JRE and analyzer plugins, which it otherwise downloads on
+      # every run. ponytail: a fixed key never refreshes, so a plugin Sonar
+      # updates is fetched each run again; bump the key when that shows in the log.
+      - name: Cache SonarQube packages
+        if: github.actor != 'dependabot[bot]'
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+
       # After the sweeps, so a failing test reports as itself rather than as an
       # absent coverage report. Skipped for the updater, whose empty token would
       # fail the job; a version bump touches no source for the scan to read.
@@ -186,10 +200,6 @@ jobs:
       # the scan and the Pages artifact. It reads the archives the end-to-end
       # sweep already wrote, so it rebuilds and re-runs nothing.
       #
-      # Pull requests and main only. Both event types fire on a branch with an
-      # open pull request, in different concurrency groups, so without this every
-      # commit is captured and metered twice.
-      #
       # Exits once the build is uploaded rather than waiting out the capture, so
       # a slow queue cannot spend the job's budget. The accept gate is
       # Chromatic's own pull request check rather than this exit code. The token
@@ -202,9 +212,7 @@ jobs:
       # the event payload. It carries its own copy of the CLI, so keep this pin
       # and the one in package.json on the same version.
       - name: Chromatic
-        if: >-
-          env.HAS_CHROMATIC == 'true'
-          && (github.event_name == 'pull_request' || github.ref == 'refs/heads/main')
+        if: env.HAS_CHROMATIC == 'true'
         env:
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
         uses: chromaui/action@259eda5f0e44c0c1eab38b672f1c4c967cc969b7 # v18.8.1
