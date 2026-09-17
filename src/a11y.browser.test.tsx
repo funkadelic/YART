@@ -116,9 +116,9 @@ describe("accessibility in a real engine", () => {
     render(<App />);
 
     // The one generous wait in the file, and deliberate. The engine fetches
-    // the real multi-megabyte dataset asset across the dev
-    // server, parses and indexes it, and only then waits out the seam latency.
-    // The jsdom suite pays none of that, because it runs against a fixture.
+    // the real multi-megabyte dataset asset across the dev server, parses and
+    // indexes it. The jsdom suite pays none of that, because it runs against a
+    // fixture.
     await screen.findByRole("table", {}, { timeout: 20_000 });
 
     // The first state is chosen explicitly. Left on the default, the theme

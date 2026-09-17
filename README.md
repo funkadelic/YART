@@ -465,7 +465,7 @@ The reasoning behind the structure is in [`docs/adr/`](docs/adr/README.md), one 
 
 ## Notes and next steps
 
-There is no server. `getCities` and `getFilms` fake network latency over an array held in memory, so everything below is what a real backend would change. Worth doing before it ships:
+There is no server. `getCities` and `getFilms` search an array held in memory, so everything below is what a real backend would change. Worth doing before it ships:
 
 - The dataset arrives as a separate content-hashed JSON asset rather than being compiled into the bundle, but filtering and sorting still run over the whole result set on the main thread. That is fine at this size. Past it, the work belongs behind a paginated, sorted API rather than in the browser.
 - Every row renders, so a page size of 100 is 100 rows in the DOM and there is no way to ask for every row. Virtualization would fix both.

@@ -26,9 +26,6 @@ const getFilmsSeam = vi.mocked(getFilms);
 /** The debounce window the container applies to the search term. */
 const DEBOUNCE_MS = 150;
 
-/** The latency the search seam simulates on every call, download or not. */
-const SEAM_LATENCY_MS = 200;
-
 /**
  * The container, re-imported from a module registry that has been reset first.
  * The loader caches its dataset request at module scope, so without the reset a
@@ -93,7 +90,7 @@ describe("FilmsApp", () => {
     ).toBeInTheDocument();
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(screen.getByRole("table")).toBeInTheDocument();
@@ -110,7 +107,7 @@ describe("FilmsApp", () => {
     // The resolve and the settle are two separate dispatches; the advance
     // flushes both, so the flag is readable straight after it.
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(screen.getByRole("table").closest("[aria-busy]")).toHaveAttribute(
@@ -130,7 +127,7 @@ describe("FilmsApp", () => {
     render(<FilmsApp />);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(
@@ -151,7 +148,7 @@ describe("FilmsApp", () => {
     render(<FilmsApp />);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(
@@ -174,7 +171,7 @@ describe("FilmsApp", () => {
     render(<FilmsApp />);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(
@@ -300,7 +297,7 @@ describe("FilmsApp", () => {
     render(<FreshFilmsApp />);
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+      await vi.advanceTimersByTimeAsync(0);
     });
     expect(
       screen.getByText(
@@ -310,7 +307,7 @@ describe("FilmsApp", () => {
 
     await user.click(screen.getByRole("button", { name: "Try again" }));
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(screen.getByText("12 Angry Men")).toBeInTheDocument();
@@ -333,7 +330,7 @@ describe("FilmsApp", () => {
     ).toBeInTheDocument();
 
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(SEAM_LATENCY_MS);
+      await vi.advanceTimersByTimeAsync(0);
     });
 
     expect(screen.queryByText("Downloading the film data...")).toBeNull();

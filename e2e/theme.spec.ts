@@ -29,8 +29,8 @@ import { expect, test } from "@playwright/test";
  */
 
 // The engine fetches the real multi-megabyte dataset asset over the preview
-// server, parses and indexes it, and only then waits out the seam's deliberate
-// latency. Set high on purpose to cover that work, not as a flake allowance.
+// server, parses and indexes it. Set high on purpose to cover that work, not as
+// a flake allowance.
 const DATASET_READY_TIMEOUT_MS = 20_000;
 
 // The storage key the blocking script spells out by hand and the theme module
@@ -93,7 +93,7 @@ test("the stored theme and locale are stamped on the document element with the m
 
   // The aborted scripts are counted. Asserting the table is absent after the
   // reload holds either way, because the table does not render until the
-  // dataset fetch and the seam's latency resolve. Measured, that version stays
+  // dataset fetch resolves. Measured, that version stays
   // green with the abort pattern matching nothing, leaving the two assertions
   // below satisfied by the theme hook's post-hydration effect, a vacuous pass.
   let abortedScripts = 0;
