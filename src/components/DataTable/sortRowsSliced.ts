@@ -11,6 +11,33 @@ const MERGE_STEP = 512;
 const SLICE_MS = 8;
 
 /**
+ * Merges the sorted ranges [left, middle) and [middle, end) of source into
+ * target, yielding every MERGE_STEP merged elements.
+ */
+function* mergePair<T>(
+  source: readonly T[],
+  target: T[],
+  bounds: { left: number; middle: number; end: number },
+  compare: (a: T, b: T) => number,
+): Generator<void, void, void> {
+  const { middle, end } = bounds;
+  let i = bounds.left;
+  let j = middle;
+  let out = bounds.left;
+
+  // Index reads use `as T`: every index read is inside the loop bounds.
+  while (i < middle && j < end) {
+    target[out++] =
+      compare(source[i] as T, source[j] as T) <= 0
+        ? (source[i++] as T)
+        : (source[j++] as T);
+    if ((out - bounds.left) % MERGE_STEP === 0) yield;
+  }
+  while (i < middle) target[out++] = source[i++] as T;
+  while (j < end) target[out++] = source[j++] as T;
+}
+
+/**
  * Bottom-up merge sort over a copy, yielding after each run and every
  * MERGE_STEP merged elements. Returns the sorted buffer.
  */
@@ -29,25 +56,11 @@ function* mergeSort<T>(
     yield;
   }
 
-  // Index reads use `as T`: every index read is inside the loop bounds.
-  let merged = 0;
   for (let width = runLength; width < length; width *= 2) {
     for (let left = 0; left < length; left += 2 * width) {
       const middle = Math.min(left + width, length);
       const end = Math.min(left + 2 * width, length);
-      let i = left;
-      let j = middle;
-      let out = left;
-
-      while (i < middle && j < end) {
-        target[out++] =
-          compare(source[i] as T, source[j] as T) <= 0
-            ? (source[i++] as T)
-            : (source[j++] as T);
-        if (++merged % MERGE_STEP === 0) yield;
-      }
-      while (i < middle) target[out++] = source[i++] as T;
-      while (j < end) target[out++] = source[j++] as T;
+      yield* mergePair(source, target, { left, middle, end }, compare);
     }
     [source, target] = [target, source];
   }
