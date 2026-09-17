@@ -9,8 +9,8 @@ import {
 import { sortRowsSliced } from "../components/DataTable/sortRowsSliced";
 
 /**
- * The largest set sorted inside the render. The full 50,250-row pass measured
- * 324 ms at 4x slowdown, so n log n puts 5,000 rows near 30 ms, with no busy flash.
+ * The largest set sorted inside the render. At 4x slowdown, 5,000 rows sort in
+ * 41 ms by film genres, the costliest comparator; 6,000 cross the 50 ms line.
  */
 export const SYNC_SORT_ROWS = 5_000;
 
