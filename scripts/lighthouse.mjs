@@ -175,7 +175,7 @@ async function auditPage(page, url, port) {
   return medianRow(page, runs);
 }
 
-/** Prints the medians table, and appends it to the job summary under Actions. */
+/** Prints the medians table and saves copies for the job summary and PR comment. */
 function report(rows) {
   const header = ["Page", ...METRICS.map(([metric]) => metric)];
   const table = [
@@ -186,6 +186,7 @@ function report(rows) {
     ...rows,
   ].join("\n");
   console.log(table);
+  writeFileSync(join(OUTPUT, "summary.md"), `${table}\n`);
   if (process.env.GITHUB_STEP_SUMMARY) {
     appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${table}\n`);
   }

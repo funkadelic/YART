@@ -216,6 +216,40 @@ jobs:
           # accepted ancestor to compare against, so it re-reports every one.
           autoAcceptChanges: main
 
+  # Posts the Lighthouse table on the pull request, editing its own comment on
+  # later runs. A job of its own so the write token never meets `npm ci`. Skipped
+  # for forks and the updater, whose tokens are read-only.
+  report:
+    name: Report
+    needs: verify
+    if: >-
+      github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Comment Lighthouse scores
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name lighthouse-reports --dir lighthouse
+          marker="<!-- lighthouse -->"
+          body="$(printf '%s\n%s\n\n[Full reports](%s)\n' "$marker" "$(cat lighthouse/summary.md)" "$RUN_URL")"
+          id="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" | head -n 1)"
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$body" > /dev/null
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$body" > /dev/null
+          fi
+
   # A job rather than its own workflow, because `needs` is what makes the publish
   # wait on the gate. The write permissions sit here so the job running untrusted
   # pull request code keeps its read-only token.
