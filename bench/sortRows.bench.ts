@@ -5,6 +5,7 @@ import { Bench } from "tinybench";
 
 import { sortRows } from "../src/components/DataTable/sortRows";
 import { sortRowsCached } from "../src/components/DataTable/sortRowsCached";
+import { sortRowsSliced } from "../src/components/DataTable/sortRowsSliced";
 import {
   buildCityColumns,
   cityRowId,
@@ -38,6 +39,10 @@ function filmColumn(id: string) {
   return filmColumns.find((column) => column.id === id);
 }
 
+/** The name column, defined, as the sliced sort requires. */
+const cityName = cityColumn("name");
+if (!cityName) throw new Error("the city name column is missing");
+
 /** About the size a one-word search returns. */
 const citySubset = cities.filter((_, at) => at % 30 === 0);
 
@@ -52,6 +57,9 @@ bench
   })
   .add(`sort ${CITY_ROWS} cities by name, descending`, () => {
     sortRows(cities, cityColumn("name"), "desc", cityRowId);
+  })
+  .add(`sort ${CITY_ROWS} cities by name across frames`, async () => {
+    await sortRowsSliced(cities, cityName, "asc", cityRowId, () => false);
   })
   // Numeric, so the collator is never reached.
   .add(`sort ${CITY_ROWS} cities by population, descending`, () => {

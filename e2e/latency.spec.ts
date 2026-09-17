@@ -238,12 +238,16 @@ test("sorting the whole dataset by City", async ({ page }, testInfo) => {
       await measure(page, async () => {
         await cityButton.click();
         await expect(page).toHaveURL("/?sort=name");
+        // A cold sort settles across frames; the next click must not land mid-pass.
+        await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
       }),
     );
     samples.push(
       await measure(page, async () => {
         await cityButton.click();
         await expect(page).toHaveURL("/?sort=-name");
+        // A cold sort settles across frames; the next click must not land mid-pass.
+        await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
       }),
     );
     await cityButton.click();
