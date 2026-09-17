@@ -18,6 +18,7 @@ The per-decision records are in [decision records](adr/README.md).
 - **Forced-colors support.** Windows High Contrast replaces the app's colors, and the usual result is that borders and focus rings disappear, because both are painted with colors the user agent has thrown away. axe cannot test this, so nothing here covered it before.
 - **Row semantics for the whole dataset.** The table renders one page, so assistive technology was told how many rows that page holds rather than how many the search found. `aria-rowcount` and `aria-rowindex` describe the full set and the absolute position of each row.
 - **Decision records.** The arguments behind the structure lived in planning files that are not committed, which left a reader with conclusions and no reasoning.
+- **An interaction latency gate.** `e2e/latency.spec.ts` slows the processor fourfold and fails CI when the median time to sort, page, change the page size, type a search or show its results goes over a budget set from a measured baseline. Sorting the whole dataset is the known outlier, at 392 to 624 ms on hosted runners against a 1,000 ms budget, because the sort runs synchronously inside the click.
 
 ## Weighed and deferred
 
@@ -42,11 +43,3 @@ The suite runs in Chromium. Safari is where a client-only app breaks, and `light
 It is deferred on cost and on a constraint: CI installs one browser binary on purpose, and every spec pulls a multi-megabyte dataset with a single worker, so the wall clock grows with each engine added. Adding an engine means rewriting that constraint rather than quietly breaking it.
 
 Revisit when a bug reaches a reader through an engine the suite never runs.
-
-### A performance budget as a gate
-
-Bundle size is watched. Interaction cost is not. A benchmark over sort and filter at full dataset size, with a committed baseline, would fail the build when someone constructs a collator inside a comparator.
-
-That failure is the exact defect the architecture notes warn about, and it is currently guarded by a lint rule and by prose. A benchmark gate needs a stable machine to mean anything, which a shared CI runner is not, so the useful version compares against a baseline with a wide tolerance and reports the trend.
-
-Revisit when a regression gets past the lint rule.
