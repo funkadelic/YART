@@ -71,3 +71,6 @@ scripts/films-result.json
 # mutates, normally removed at the end of a run; reports/ holds the HTML report.
 /.stryker-tmp
 /reports
+
+# The median-run reports `npm run lighthouse` writes for the CI upload.
+/lighthouse

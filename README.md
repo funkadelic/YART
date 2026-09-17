@@ -426,6 +426,8 @@ A run takes about ten minutes and writes `reports/mutation/mutation.html`, which
 
 `npm run fallow` is the other check run by hand, a static analysis pass over the TypeScript tree. Both exit non-zero on a finding and neither runs in CI, so a finding is something to read and decide about rather than a broken build.
 
+After the end-to-end suite, CI runs Lighthouse three times on each page in mobile mode against the same build, writes the median of each metric to the job summary and attaches the reports. It is advisory, so a slow score or a failed audit never fails the build; `npm run lighthouse` runs it locally after `npm run build`, on the same headless Chromium the browser suites use.
+
 ## Scripts
 
 | Script                    | What it does                                                               |
@@ -438,6 +440,7 @@ A run takes about ten minutes and writes `reports/mutation/mutation.html`, which
 | `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%           |
 | `npm run test:browser`    | Run the accessibility checks in a real Chromium                            |
 | `npm run test:e2e`        | Run the end-to-end suite in a real Chromium against a built bundle         |
+| `npm run lighthouse`      | Audit both pages' performance on a built bundle and report the medians     |
 | `npm run test:mutation`   | Change the source a piece at a time and report what no test catches        |
 | `npm run chromatic`       | Upload the snapshots a full `npm run test:e2e` archived, for visual review |
 | `npm run typecheck`       | Check types without emitting output                                        |

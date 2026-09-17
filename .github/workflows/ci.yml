@@ -17,8 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     # A green job runs about four minutes, most of it the Chromium install. Ten
     # catches a hang in setup or in either install without holding the machine for
-    # the six-hour platform default.
-    timeout-minutes: 10
+    # the six-hour platform default, and five more are the Lighthouse step's own cap.
+    timeout-minutes: 15
     # A boolean rather than the token, because `secrets` is not an allowed
     # context in a step's `if`. The token itself stays on the one step that
     # needs it, out of the environment of the install and of every action here.
@@ -96,6 +96,22 @@ jobs:
           name: e2e-failure-artifacts
           path: test-results/
           retention-days: 7
+
+      # Advisory: a slow score or a failed audit never fails the job. Reuses the
+      # build and the headless shell the sweeps above already have in place.
+      - name: Lighthouse
+        run: npm run lighthouse
+        continue-on-error: true
+        timeout-minutes: 5
+
+      - name: Upload Lighthouse reports
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        continue-on-error: true
+        with:
+          name: lighthouse-reports
+          path: lighthouse/
+          retention-days: 7
+          if-no-files-found: ignore
 
       # Sends the report the test step wrote, from here so a failing gate
       # reports as itself. Skipped for the updater, which reads an empty token.

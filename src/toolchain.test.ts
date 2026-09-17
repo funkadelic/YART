@@ -408,13 +408,17 @@ const KNOWN_TEST_RUNNERS = [
   ...UNTAKEN_TEST_RUNNERS,
 ];
 
-// Both files that launch a browser, held below against the one browser install
+// Both runner configs that launch a browser, held below against the one browser install
 // line in the pipeline. There was one launch site for as long as there was one
 // runner, and there are two now, so the holding is evaluated per file. A check
 // taken across the pair passes on a file contributing nothing as long as the
 // other file still contributes a match, and this whole exercise is written
 // against that vacuous pass.
 const LAUNCH_CONFIG_FILES = [CONFIG_FILE, E2E_CONFIG_FILE];
+
+// The third launch site, which starts its browser through chrome-launcher rather
+// than a runner config.
+const LIGHTHOUSE_SCRIPT = "scripts/lighthouse.mjs";
 
 // The browser a config launches, matched under either key the two runners use
 // for it. One names it inside its instance list, the other on its shared use
@@ -1044,6 +1048,44 @@ describe("toolchain baseline", () => {
         `${WORKFLOW_FILE} installs the headless shell alone and ${name} launches a browser that is not it`,
       ).toBe(false);
     }
+  });
+
+  // The audit runs after the install and launches the shell it fetched, never a
+  // channel or a Chrome from the environment.
+  it("launches the Lighthouse audit on the headless shell the pipeline installs", () => {
+    const lines = readFileSync(join(projectRoot, WORKFLOW_FILE), "utf8")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#"));
+    const installAt = lines.findIndex((line) =>
+      line.includes("playwright install"),
+    );
+    const auditAt = lines.findIndex((line) =>
+      line.includes("npm run lighthouse"),
+    );
+
+    expect(installAt, `${WORKFLOW_FILE} installs no browser`).not.toBe(-1);
+    expect(auditAt, `${WORKFLOW_FILE} runs no Lighthouse audit`).not.toBe(-1);
+    expect(lines[installAt]).toContain("--only-shell");
+    expect(
+      installAt,
+      "the pipeline runs Lighthouse before installing the browser it launches",
+    ).toBeLessThan(auditAt);
+
+    const script = stripComments(
+      readFileSync(join(projectRoot, LIGHTHOUSE_SCRIPT), "utf8"),
+    );
+
+    expect(
+      script,
+      `${LIGHTHOUSE_SCRIPT} no longer resolves the headless shell the pipeline installs`,
+    ).toMatch(/chromium_headless_shell-/);
+    expect(script, `${LIGHTHOUSE_SCRIPT} reads CHROME_PATH`).not.toMatch(
+      /\bCHROME_PATH\b/,
+    );
+    expect(script, `${LIGHTHOUSE_SCRIPT} names a channel`).not.toMatch(
+      /\bchannel\s*:/,
+    );
   });
 
   // Nothing under src/ imports the icon or the manifest, so a rename breaks
