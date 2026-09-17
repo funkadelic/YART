@@ -312,7 +312,10 @@ describe("CityTable", () => {
         sortRows(rows, name, "asc", cityRowId)[0],
         "the first sorted city",
       );
-      render(<CityTable {...defaultProps} data={rows} />);
+      const { container } = render(<CityTable {...defaultProps} data={rows} />);
+      const sortRegion = container.querySelector(
+        '[aria-live="polite"][aria-atomic="true"]',
+      );
 
       const firstCity = () =>
         within(
@@ -325,11 +328,49 @@ describe("CityTable", () => {
 
       expect(busyContainer()).toHaveAttribute("aria-busy", "true");
       expect(firstCity()).toBe(required(rows[0], "the first city").name);
+      expect(sortRegion).toBeEmptyDOMElement();
 
       await waitFor(() =>
         expect(busyContainer()).toHaveAttribute("aria-busy", "false"),
       );
       expect(firstCity()).toBe(sortedFirst.name);
+      expect(sortRegion).toHaveTextContent(
+        "Table sorted by City in ascending order",
+      );
+    });
+
+    it("reads as loading while a linked sort has nothing settled to show", async () => {
+      let clock = 0;
+      vi.spyOn(performance, "now").mockImplementation(() => (clock += 10));
+      window.history.replaceState(null, "", "?sort=name");
+      const rows = pagedFixture(SYNC_SORT_ROWS + 1).reverse();
+      const name = required(
+        buildCityColumns(en, "en-US").find((column) => column.id === "name"),
+        "the name column",
+      );
+      const sortedFirst = required(
+        sortRows(rows, name, "asc", cityRowId)[0],
+        "the first sorted city",
+      );
+      const { container } = render(<CityTable {...defaultProps} data={rows} />);
+
+      expect(
+        screen.getByText("Downloading the city data..."),
+      ).toBeInTheDocument();
+      const announced = () =>
+        Array.from(container.querySelectorAll('[aria-live="polite"]')).map(
+          (region) => region.textContent,
+        );
+      expect(announced()).not.toContain("No cities found for that search");
+
+      await screen.findByRole("table");
+      const firstRow = required(
+        screen.getAllByRole("row")[1],
+        "the first body row",
+      );
+      expect(within(firstRow).getAllByRole("cell")[0]?.textContent).toBe(
+        sortedFirst.name,
+      );
     });
 
     it("shows error state", () => {
