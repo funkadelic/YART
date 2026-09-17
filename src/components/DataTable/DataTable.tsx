@@ -53,7 +53,10 @@ export interface DataTableLabels {
 export interface DataTableProps<T, Id extends string> {
   readonly rows: readonly T[];
   readonly columns: readonly Column<T, Id>[];
-  /** Must be injective: it keys the rows and breaks ties in the sort. */
+  /**
+   * Must be injective: it keys the rows and breaks ties in the sort. Keep its
+   * identity stable, since a new one restarts the sort.
+   */
   readonly getRowId: (row: T) => string;
   // The id is read off the column array above and only checked here. Without
   // the NoInfer wrapper the compiler would collect a candidate from this prop

@@ -75,7 +75,10 @@ function* mergeSort<T>(
  * scheduler.yield; a MessageChannel yield avoids it if that matters.
  */
 function yieldToMain(): Promise<void> {
-  if ("scheduler" in globalThis) return scheduler.yield();
+  // Chromium 94 to 128 has scheduler without yield, so test the method.
+  if (typeof globalThis.scheduler?.yield === "function") {
+    return scheduler.yield();
+  }
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 

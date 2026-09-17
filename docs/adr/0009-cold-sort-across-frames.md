@@ -25,7 +25,7 @@ At fourfold slowdown the median sort click is 16 ms with a stored order and 32 m
 
 A cold sort finishes later than the blocking pass it replaced, 387 to 528 ms against 352 to 400 ms in a separate local run, because each yield adds time. Until it finishes the reader sees the old order marked busy. A link that arrives already sorted shows the loading text until the first pass settles, since there is no earlier order to show.
 
-Each column and direction a reader sorts keeps one array of row references alive for as long as its column array exists. The first sort of each still compares every row. The 5,000-row threshold is scaled from the full-set measurement rather than measured at 5,000. Browsers without `scheduler.yield` pay the 4 ms minimum delay on nested timers at each yield.
+Each column and direction a reader sorts keeps two arrays of row references alive, the rows it was given and their order, for as long as its column array exists. The first sort of each still compares every row. The 5,000-row threshold is scaled from the full-set measurement rather than measured at 5,000. Browsers without `scheduler.yield` pay the 4 ms minimum delay on nested timers at each yield.
 
 A long-animation-frame entry of about 100 ms still appears during a cold sort. Its blocking duration is zero. The slices run back to back with nothing to render between them, and a click on the next page during the sort measured 16 ms.
 
