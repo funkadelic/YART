@@ -10,4 +10,8 @@
 // spacing either of them needs.
 .credit {
   margin-block: 0;
+
+  // An unspaced run, such as the pseudo-locale's padding, breaks rather than
+  // widening the page.
+  overflow-wrap: break-word;
 }
