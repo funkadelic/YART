@@ -62,15 +62,10 @@ describe("sortRowsCached", () => {
     const blank = part("d", "", 4);
     const tiedA = part("a", "north", 1);
     const tiedB = part("b", "north", 2);
-    const rows = [
-      part("e", "south", 5),
-      tiedB,
-      blank,
-      part("c", "east", 3),
-      tiedA,
-    ];
+    const south = part("e", "south", 5);
+    const rows = [south, tiedB, blank, part("c", "east", 3), tiedA];
     const region = col().key("region", { label: "Region" });
-    const subset = [tiedB, blank, rows[0], tiedA];
+    const subset = [tiedB, blank, south, tiedA];
 
     sortRowsCached(rows, region, "asc", partId);
     sortRowsCached(rows, region, "desc", partId);
@@ -86,13 +81,11 @@ describe("sortRowsCached", () => {
 
   it("serves a subset without calling a supplied comparator", () => {
     const { column, calls } = recordingColumn();
-    const rows = [
-      part("a", "north", 1),
-      part("b", "south", 2),
-      part("c", "east", 3),
-      part("d", "north", 4),
-    ];
-    const subset = [rows[3], rows[0], rows[2]];
+    const a = part("a", "north", 1);
+    const c = part("c", "east", 3);
+    const d = part("d", "north", 4);
+    const rows = [a, part("b", "south", 2), c, d];
+    const subset = [d, a, c];
 
     sortRowsCached(rows, column, "asc", partId);
     sortRowsCached(rows, column, "desc", partId);
@@ -114,12 +107,10 @@ describe("sortRowsCached", () => {
 
   it("sorts rows the stored order does not cover, then serves the subset", () => {
     const { column, calls } = recordingColumn();
-    const rows = [
-      part("a", "north", 1),
-      part("b", "south", 2),
-      part("c", "east", 3),
-    ];
-    const subset = [rows[2], rows[0]];
+    const a = part("a", "north", 1);
+    const c = part("c", "east", 3);
+    const rows = [a, part("b", "south", 2), c];
+    const subset = [c, a];
 
     sortRowsCached(subset, column, "asc", partId);
     expect(sortRowsCached(rows, column, "asc", partId).map(partId)).toEqual(

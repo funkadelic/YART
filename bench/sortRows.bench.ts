@@ -4,6 +4,7 @@ import { withCodSpeed } from "@codspeed/tinybench-plugin";
 import { Bench } from "tinybench";
 
 import { sortRows } from "../src/components/DataTable/sortRows";
+import { sortRowsCached } from "../src/components/DataTable/sortRowsCached";
 import {
   buildCityColumns,
   cityRowId,
@@ -15,7 +16,7 @@ import {
 import { en } from "../src/i18n/catalogs/en";
 import { resolveLocale } from "../src/i18n/resolveLocale";
 import { cityRows, filmRows } from "./fixtures";
-import { report } from "./harness";
+import { report, rounds } from "./harness";
 
 /** Each shipped dataset's full size, which a click on the unfiltered page sorts. */
 const CITY_ROWS = 50_250;
@@ -36,6 +37,12 @@ function cityColumn(id: string) {
 function filmColumn(id: string) {
   return filmColumns.find((column) => column.id === id);
 }
+
+/** About the size a one-word search returns. */
+const citySubset = cities.filter((_, at) => at % 30 === 0);
+
+// Warmed outside the tasks, so each cached case measures reuse.
+sortRowsCached(cities, cityColumn("name"), "asc", cityRowId);
 
 const bench = withCodSpeed(new Bench());
 
@@ -60,7 +67,19 @@ bench
   // The list comparator, which joins items before collating.
   .add(`sort ${FILM_ROWS} films by genres, ascending`, () => {
     sortRows(films, filmColumn("genres"), "asc", filmRowId);
-  });
+  })
+  // A hit is a lookup costing microseconds, so it runs in rounds.
+  .add(`repeat sort of ${CITY_ROWS} cities by name (cached)`, () => {
+    rounds(() => {
+      sortRowsCached(cities, cityColumn("name"), "asc", cityRowId);
+    });
+  })
+  .add(
+    `sort a ${citySubset.length}-row subset by name from the cached order`,
+    () => {
+      sortRowsCached(citySubset, cityColumn("name"), "asc", cityRowId);
+    },
+  );
 
 await bench.run();
 report(bench);
