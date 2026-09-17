@@ -46,15 +46,15 @@ function renderSorted(initialProps: Props) {
 
   const view = renderHook(
     ({ rows, columnId, direction }: Props) => {
-      const sorted = useSortedRows(
+      const { sortedRows } = useSortedRows(
         rows,
         WIDGET_COLUMNS,
         columnId,
         direction,
         widgetId,
       );
-      seen.push(sorted);
-      return sorted;
+      seen.push(sortedRows);
+      return sortedRows;
     },
     { initialProps },
   );

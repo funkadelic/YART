@@ -1,13 +1,16 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CityTable } from "./CityTable";
 import type { City } from "../../api/getCities";
+import { sortRows } from "../../components/DataTable/sortRows";
+import { SYNC_SORT_ROWS } from "../../hooks/useSortedRows";
+import { en } from "../../i18n/catalogs/en";
 import { fr } from "../../i18n/catalogs/fr";
 import { numberFormatFor } from "../../i18n/format";
 import { setLocaleChoice } from "../../i18n/localeStore";
 import { required } from "../../test/required";
-import { buildCityColumns } from "./cityColumns";
+import { buildCityColumns, cityRowId } from "./cityColumns";
 import { buildTableLabels } from "../tableLabels";
 
 // A spy that delegates to the real builder, so every case in this file goes on
@@ -293,6 +296,40 @@ describe("CityTable", () => {
         "aria-busy",
         "true",
       );
+    });
+
+    it("paints busy at once for a large cold sort, then settles on the sorted order", async () => {
+      const user = userEvent.setup();
+      // Past the slice deadline on every read, so the pass yields on any machine.
+      let clock = 0;
+      vi.spyOn(performance, "now").mockImplementation(() => (clock += 10));
+      const rows = pagedFixture(SYNC_SORT_ROWS + 1).reverse();
+      const name = required(
+        buildCityColumns(en, "en-US").find((column) => column.id === "name"),
+        "the name column",
+      );
+      const sortedFirst = required(
+        sortRows(rows, name, "asc", cityRowId)[0],
+        "the first sorted city",
+      );
+      render(<CityTable {...defaultProps} data={rows} />);
+
+      const firstCity = () =>
+        within(
+          required(screen.getAllByRole("row")[1], "the first body row"),
+        ).getAllByRole("cell")[0]?.textContent;
+      const busyContainer = () =>
+        screen.getByRole("table").closest("[aria-busy]");
+
+      await user.click(screen.getByRole("button", { name: "City" }));
+
+      expect(busyContainer()).toHaveAttribute("aria-busy", "true");
+      expect(firstCity()).toBe(required(rows[0], "the first city").name);
+
+      await waitFor(() =>
+        expect(busyContainer()).toHaveAttribute("aria-busy", "false"),
+      );
+      expect(firstCity()).toBe(sortedFirst.name);
     });
 
     it("shows error state", () => {

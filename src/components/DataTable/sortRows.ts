@@ -11,12 +11,21 @@ export function sortRows<T, Id extends string>(
 
   // The resolved collection is module-cached and shared, so it is treated as
   // immutable and the sort runs over a copy.
-  return [...rows].sort((a, b) => {
+  return [...rows].sort(rowComparator(column, direction, getRowId));
+}
+
+/** The column's comparison, then the identity tiebreak: a strict total order. */
+export function rowComparator<T, Id extends string>(
+  column: Column<T, Id>,
+  direction: "asc" | "desc",
+  getRowId: (row: T) => string,
+): (a: T, b: T) => number {
+  return (a, b) => {
     const comparison = column.compare(a, b, direction);
     if (comparison !== 0) return comparison;
 
     return compareIdentities(getRowId(a), getRowId(b));
-  });
+  };
 }
 
 /** An identity is not a visible value, so it is never flipped or collated. */
