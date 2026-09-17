@@ -16,6 +16,7 @@
   "devDependencies": {
     "@chromatic-com/playwright": "0.14.12",
     "@codecov/bundle-analyzer": "2.0.1",
+    "@codspeed/tinybench-plugin": "5.7.1",
     "@eslint/js": "9.39.5",
     "@playwright/test": "1.63.0",
     "@stryker-mutator/core": "10.0.0",
@@ -52,6 +53,8 @@
     "style-dictionary": "5.5.3",
     "stylelint": "17.15.0",
     "stylelint-config-standard-scss": "17.0.0",
+    "tinybench": "5.1.0",
+    "tsx": "4.23.13",
     "typescript": "6.0.3",
     "typescript-eslint": "8.70.0",
     "typescript-plugin-css-modules": "5.2.0",
@@ -78,6 +81,7 @@
     "test:e2e": "playwright test",
     "lighthouse": "node scripts/lighthouse.mjs",
     "test:mutation": "stryker run",
+    "bench": "node --import tsx bench/index.ts",
     "chromatic": "chromatic --playwright",
     "prepare": "husky"
   }

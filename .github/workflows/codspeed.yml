@@ -1,0 +1,45 @@
+name: Benchmarks
+
+# Separate from CI, so the instrumented run never holds up the gate or the deploy.
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  # Lets CodSpeed collect a baseline for a branch that has none.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  # OIDC authentication, so no upload secret is stored.
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmarks:
+    name: Run benchmarks
+    runs-on: ubuntu-latest
+    # Catches a hang without holding the runner for the six-hour default.
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # Simulation counts instructions instead of timing, so runner noise does not move the result.
+      - name: Run benchmarks
+        uses: CodSpeedHQ/action@373d6868929f444bc08d901fd0eb0ad52a8875ea # v5.2.1
+        with:
+          mode: simulation
+          run: npm run bench

@@ -1,6 +1,7 @@
 # Yet Another React Table (YART)
 
 [![codecov](https://codecov.io/gh/funkadelic/YART/branch/main/graph/badge.svg)](https://codecov.io/gh/funkadelic/YART)
+[![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/funkadelic/YART?utm_source=badge)
 
 A React and TypeScript single-page app for browsing large datasets in the browser: search, sort, and paginate world cities or films without a table library.
 
@@ -31,6 +32,7 @@ A React and TypeScript single-page app for browsing large datasets in the browse
   - [Sort comparison](#sort-comparison)
   - [Page size options](#page-size-options)
 - [Testing](#testing)
+- [Benchmarks](#benchmarks)
 - [Scripts](#scripts)
 - [Decisions](#decisions)
 - [Notes and next steps](#notes-and-next-steps)
@@ -428,6 +430,14 @@ A run takes about ten minutes and writes `reports/mutation/mutation.html`, which
 
 After the end-to-end suite, CI runs Lighthouse three times on each page in mobile mode against the same build, writes the median of each metric to the job summary and to a comment on the pull request, and attaches the reports. It is advisory, so a slow score or a failed audit never fails the build; `npm run lighthouse` runs it locally after `npm run build`, on the same headless Chromium the browser suites use.
 
+## Benchmarks
+
+The suites under `bench/` run the shipping sort, page slice, view state, column and locale code over seeded rows shaped like each dataset. Every pull request runs them under [CodSpeed](https://app.codspeed.io/funkadelic/YART), which counts instructions instead of timing them and reports changes against the base branch without failing the build.
+
+```bash
+npm run bench
+```
+
 ## Scripts
 
 | Script                    | What it does                                                               |
@@ -443,6 +453,7 @@ After the end-to-end suite, CI runs Lighthouse three times on each page in mobil
 | `npm run lighthouse`      | Audit both pages' performance on a built bundle and report the medians     |
 | `npm run test:mutation`   | Change the source a piece at a time and report what no test catches        |
 | `npm run chromatic`       | Upload the snapshots a full `npm run test:e2e` archived, for visual review |
+| `npm run bench`           | Run the benchmark suites and print a table per suite                       |
 | `npm run typecheck`       | Check types without emitting output                                        |
 | `npm run fallow`          | Report unreachable code, duplication and per-file maintainability          |
 | `npm run lint`            | Run ESLint then Stylelint; a warning fails it (`lint:fix` to autofix)      |
