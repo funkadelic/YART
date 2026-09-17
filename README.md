@@ -123,6 +123,8 @@ The static head of the document stays in the base language too. Its title, its d
 - [React Icons](https://react-icons.github.io/react-icons/)
 - [axe-core](https://github.com/dequelabs/axe-core) for the accessibility sweeps
 - [Chromatic](https://www.chromatic.com/) for the visual regression snapshots
+- [Lighthouse](https://developer.chrome.com/docs/lighthouse) for the advisory performance audit
+- [CodSpeed](https://codspeed.io/) and [tinybench](https://github.com/tinylibs/tinybench) for the benchmarks
 - [ESLint](https://eslint.org/), [Stylelint](https://stylelint.io/), and [Prettier](https://prettier.io/)
 
 ### Build target
