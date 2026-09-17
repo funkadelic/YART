@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 
 import type { Column } from "../components/DataTable/column";
-import { sortRows } from "../components/DataTable/sortRows";
+import { sortRowsCached } from "../components/DataTable/sortRowsCached";
 
 /** Memoizes the sorted rows. A column array rebuilt each render re-sorts. */
 export function useSortedRows<T, Id extends string>(
@@ -13,7 +13,7 @@ export function useSortedRows<T, Id extends string>(
 ): readonly T[] {
   return useMemo(
     () =>
-      sortRows(
+      sortRowsCached(
         rows,
         columns.find((column) => column.id === columnId),
         direction,
