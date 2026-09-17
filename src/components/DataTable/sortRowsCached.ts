@@ -12,8 +12,8 @@ interface Entry {
  * The last sort per column object and direction. Weak, so a rebuilt column
  * array releases its entries.
  *
- * ponytail: one sorted array retained per column and direction sorted; bound
- * the entries if that memory matters.
+ * ponytail: two arrays retained per column and direction sorted, the input and
+ * its order; bound the entries if that memory matters.
  */
 const CACHE = new WeakMap<object, { asc?: Entry; desc?: Entry }>();
 

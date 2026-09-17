@@ -244,6 +244,9 @@ import {
   type TableState,
 } from "./components/DataTable/tableState";
 
+// At module scope, so its identity never changes between renders.
+const cityRowId = (city: City) => String(city.id).padStart(10, "0");
+
 function CityTable({
   data,
   loading,
@@ -272,7 +275,7 @@ function CityTable({
     <DataTable
       rows={data}
       columns={cityColumns}
-      getRowId={(city) => String(city.id).padStart(10, "0")}
+      getRowId={cityRowId}
       state={state}
       onSortChange={handleSort}
       onPageChange={handlePageChange}
@@ -293,7 +296,7 @@ function CityTable({
 | ------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `rows`             | `readonly T[]`               | Rows to display. Already filtered by the caller.                                                                                                                                                                               |
 | `columns`          | `readonly Column<T, Id>[]`   | Built with `columns<T>()`. The id union is inferred from this array alone.                                                                                                                                                     |
-| `getRowId`         | `(row: T) => string`         | Must be injective. See below.                                                                                                                                                                                                  |
+| `getRowId`         | `(row: T) => string`         | Must be injective, and keep one identity across renders. See below.                                                                                                                                                            |
 | `state`            | `TableState<Id>`             | Sort column and direction, page, page size, committed query, and whether a sort has ever been applied.                                                                                                                         |
 | `onSortChange`     | `(columnId: Id) => void`     | A header was activated. Feed it to `applyTableAction` to get the next state.                                                                                                                                                   |
 | `onPageChange`     | `(page: number) => void`     | A pagination control was activated.                                                                                                                                                                                            |
@@ -313,6 +316,8 @@ Every column is sortable. There is no per-column opt out, because the previous o
 It does two jobs: it keys the rows for reconciliation, and it breaks ties between equal values in the sort. Two rows sharing an id lose their identity and their ordering in the same stroke.
 
 It returns a string, and the tiebreak compares that string as text, so an id that is really a number has to be padded to sort as one. Unpadded, `"2"` follows `"1934976309"` and the two lowest ids land at the end of every group of rows whose sorted values are equal. `cityRowId` pads to ten digits for that reason.
+
+The function itself has to keep one identity across renders, which is why `cityRowId` is declared at module scope. The sort cache and the background sort both key on it, so passing a new function on every render re-sorts the rows each time, and above 5,000 rows it restarts a sort that is still running.
 
 ### Why the container debounces
 

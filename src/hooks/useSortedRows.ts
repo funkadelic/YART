@@ -45,6 +45,9 @@ export function useSortedRows<T, Id extends string>(
     return cachedSortedRows(rows, column, direction, getRowId) ?? null;
   }, [rows, column, direction, getRowId]);
 
+  // A failed pass is rethrown during render, so the nearest error boundary catches it.
+  const [failure, setFailure] = useState<Error | null>(null);
+
   const [settled, setSettled] = useState<Settled<T, Id>>(() =>
     ready === null
       ? {
@@ -80,15 +83,23 @@ export function useSortedRows<T, Id extends string>(
       direction,
       getRowId,
       () => cancelled,
-    ).then((sorted) => {
-      if (!sorted) return;
-      storeSortedRows(rows, column, direction, getRowId, sorted);
-      setSettled({ rows, column, direction, getRowId, sorted });
-    });
+    ).then(
+      (sorted) => {
+        // A pass that never yielded can finish after its cleanup ran.
+        if (!sorted || cancelled) return;
+        storeSortedRows(rows, column, direction, getRowId, sorted);
+        setSettled({ rows, column, direction, getRowId, sorted });
+      },
+      (error: unknown) => {
+        setFailure(new Error("The sort failed.", { cause: error }));
+      },
+    );
     return () => {
       cancelled = true;
     };
   }, [ready, rows, column, direction, getRowId]);
+
+  if (failure) throw failure;
 
   return { sortedRows: current ?? settled.sorted, sorting: current === null };
 }

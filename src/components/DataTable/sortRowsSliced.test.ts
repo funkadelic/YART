@@ -126,4 +126,23 @@ describe("sortRowsSliced", () => {
     );
     expect(yieldToMain).toHaveBeenCalled();
   });
+
+  it("falls back to a timer when scheduler has no yield", async () => {
+    stubSlowClock();
+    vi.stubGlobal("scheduler", { postTask: vi.fn() });
+    const region = col().key("region", { label: "Region" });
+
+    const sliced = await sortRowsSliced(
+      MIXED,
+      region,
+      "asc",
+      partId,
+      running,
+      2,
+    );
+
+    expect(sliced?.map(partId)).toEqual(
+      sortRows(MIXED, region, "asc", partId).map(partId),
+    );
+  });
 });

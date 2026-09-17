@@ -1,4 +1,5 @@
 import { renderHook, waitFor } from "@testing-library/react";
+import { Component, createElement, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { columns, type Column } from "../components/DataTable/column";
@@ -104,6 +105,26 @@ function renderLarge(column: Column<Widget, "name">, initialProps: LargeProps) {
   );
 
   return { ...view, seen };
+}
+
+/** Reports what it catches and renders nothing in its place. */
+class Boundary extends Component<{
+  children?: ReactNode;
+  onError: (error: Error) => void;
+}> {
+  override state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  override componentDidCatch(error: Error) {
+    this.props.onError(error);
+  }
+
+  override render() {
+    return this.state.failed ? null : this.props.children;
+  }
 }
 
 const SORTED_ASC: Props = { rows: WIDGETS, columnId: "name", direction: "asc" };
@@ -220,6 +241,57 @@ describe("useSortedRows", () => {
         ),
       ).toBe(false);
       expect(cachedSortedRows(rows, name, "asc", widgetId)).toBeUndefined();
+    });
+
+    it("drops a pass that finished without yielding once its inputs changed", async () => {
+      // A clock that never passes the deadline, so each pass finishes before its cleanup.
+      vi.spyOn(performance, "now").mockReturnValue(0);
+      const name = nameColumn();
+      const rows = widgets(SYNC_SORT_ROWS + 1);
+      const { result, rerender } = renderLarge(name, {
+        rows,
+        direction: null,
+      });
+
+      rerender({ rows, direction: "asc" });
+      rerender({ rows, direction: "desc" });
+      await waitFor(() => expect(result.current.sorting).toBe(false));
+
+      expect(cachedSortedRows(rows, name, "asc", widgetId)).toBeUndefined();
+    });
+
+    it("throws a failed pass to the nearest error boundary", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+      const failure = new Error("comparator broke");
+      const broken = columns<Widget>(collatorFor("en-US")).key("name", {
+        label: "Name",
+        compare: () => {
+          throw failure;
+        },
+      });
+      const caught: Error[] = [];
+
+      renderHook(
+        () =>
+          useSortedRows(
+            widgets(SYNC_SORT_ROWS + 1),
+            [broken],
+            "name",
+            "asc",
+            widgetId,
+          ),
+        {
+          wrapper: ({ children }) =>
+            createElement(
+              Boundary,
+              { onError: (error) => caught.push(error) },
+              children,
+            ),
+        },
+      );
+
+      await waitFor(() => expect(caught).toHaveLength(1));
+      expect(caught[0]?.cause).toBe(failure);
     });
 
     it("serves a settled order from the cache on the next render", async () => {
