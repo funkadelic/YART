@@ -117,7 +117,10 @@ function sortAnnouncement(
   return labels.sortClearedAnnouncement;
 }
 
-/** Silent until settled, because a count mid-request names rows about to go. */
+/**
+ * Silent until settled, because a count mid-request or mid-sort names rows
+ * about to go.
+ */
 function resultsAnnouncement(
   labels: DataTableLabels,
   settled: boolean,
@@ -158,7 +161,7 @@ export function DataTable<T, Id extends string>({
   onRetry,
   labels,
 }: DataTableProps<T, Id>) {
-  const sortedRows = useSortedRows(
+  const { sortedRows, sorting } = useSortedRows(
     rows,
     columns,
     state.sortColumnId,
@@ -172,6 +175,9 @@ export function DataTable<T, Id extends string>({
     state.pageSize,
   );
 
+  // A running sort reads as busy the same way a refetch does.
+  const busy = loading || sorting;
+
   // The announcements name the column label, not the descriptor's id. It falls
   // back to the empty string, so the composers below always hand over a string.
   const activeLabel =
@@ -184,9 +190,10 @@ export function DataTable<T, Id extends string>({
     body = (
       <ErrorRegion message={errorMessage} labels={labels} onRetry={onRetry} />
     );
-  } else if (!datasetReady) {
+  } else if (!datasetReady || (sorting && sortedRows.length === 0)) {
     // Gated on datasetReady. Gating on loading would let the empty-result copy
-    // claim a search matched nothing before one was made.
+    // claim a search matched nothing before one was made. A cold sort with
+    // nothing settled to show reads as loading rather than as no results.
     body = <div className={styles.loading}>{labels.loading}</div>;
   } else if (paginatedData.length === 0) {
     body = <div className={styles.noResults}>{labels.empty}</div>;
@@ -194,8 +201,8 @@ export function DataTable<T, Id extends string>({
     body = (
       <>
         <div
-          className={`${styles.tableContainer} ${loading ? styles.refreshing : ""}`}
-          aria-busy={loading}
+          className={`${styles.tableContainer} ${busy ? styles.refreshing : ""}`}
+          aria-busy={busy}
         >
           <table
             className={styles.table}
@@ -240,12 +247,15 @@ export function DataTable<T, Id extends string>({
     <>
       {/* a11y: Live region for announcing sort changes */}
       <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
-        {sortAnnouncement(
-          labels,
-          state.sortDirection,
-          state.hasSorted,
-          activeLabel,
-        )}
+        {/* Announced once the new order is on screen. */}
+        {sorting
+          ? ""
+          : sortAnnouncement(
+              labels,
+              state.sortDirection,
+              state.hasSorted,
+              activeLabel,
+            )}
       </div>
       {/* a11y: mounted unconditionally, outside the branch that renders the
           table. A live region created with its message already in it announces
@@ -257,7 +267,7 @@ export function DataTable<T, Id extends string>({
       <div aria-live="polite" aria-atomic="true" className={styles.srOnly}>
         {resultsAnnouncement(
           labels,
-          errorMessage === null && !loading && datasetReady,
+          errorMessage === null && !busy && datasetReady,
           paginatedData.length,
           sortedRows.length,
         )}

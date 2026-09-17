@@ -1,9 +1,11 @@
-import { renderHook } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { renderHook, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
-import { columns } from "../components/DataTable/column";
+import { columns, type Column } from "../components/DataTable/column";
+import { sortRows } from "../components/DataTable/sortRows";
+import { cachedSortedRows } from "../components/DataTable/sortRowsCached";
 import { collatorFor } from "../i18n/format";
-import { useSortedRows } from "./useSortedRows";
+import { SYNC_SORT_ROWS, useSortedRows } from "./useSortedRows";
 import { required } from "../test/required";
 
 interface Widget {
@@ -46,15 +48,57 @@ function renderSorted(initialProps: Props) {
 
   const view = renderHook(
     ({ rows, columnId, direction }: Props) => {
-      const sorted = useSortedRows(
+      const { sortedRows } = useSortedRows(
         rows,
         WIDGET_COLUMNS,
         columnId,
         direction,
         widgetId,
       );
-      seen.push(sorted);
-      return sorted;
+      seen.push(sortedRows);
+      return sortedRows;
+    },
+    { initialProps },
+  );
+
+  return { ...view, seen };
+}
+
+/** A fresh column per case, because the order cache is keyed on the column. */
+function nameColumn() {
+  return columns<Widget>(collatorFor("en-US")).key("name", { label: "Name" });
+}
+
+/** Widgets in a fixed shuffle, so arrival order is not sorted order. */
+function widgets(count: number): Widget[] {
+  // 7919 is prime and shares no factor with the counts used, so this permutes.
+  return Array.from({ length: count }, (_, at) => {
+    const key = String((at * 7919) % count).padStart(5, "0");
+    return { id: key, name: `widget ${key}` };
+  });
+}
+
+/** A clock past the slice deadline on every read, so a pass always yields. */
+function stubSlowClock(): void {
+  let clock = 0;
+  vi.spyOn(performance, "now").mockImplementation(() => (clock += 10));
+}
+
+interface LargeProps {
+  rows: readonly Widget[];
+  direction: Direction;
+}
+
+/** Renders the hook over one column, recording every render's whole result. */
+function renderLarge(column: Column<Widget, "name">, initialProps: LargeProps) {
+  const seen: ReturnType<typeof useSortedRows<Widget, "name">>[] = [];
+  const all = [column];
+
+  const view = renderHook(
+    ({ rows, direction }: LargeProps) => {
+      const result = useSortedRows(rows, all, "name", direction, widgetId);
+      seen.push(result);
+      return result;
     },
     { initialProps },
   );
@@ -118,5 +162,97 @@ describe("useSortedRows", () => {
       "alpha",
       "beta",
     ]);
+  });
+
+  describe("above the in-render limit", () => {
+    it("sorts a set at the limit inside the first render", () => {
+      const name = nameColumn();
+      const rows = widgets(SYNC_SORT_ROWS);
+      const { seen } = renderLarge(name, { rows, direction: "asc" });
+
+      expect(seen[0]?.sorting).toBe(false);
+      expect(seen[0]?.sortedRows.map(widgetId)).toEqual(
+        sortRows(rows, name, "asc", widgetId).map(widgetId),
+      );
+    });
+
+    it("holds the previous order while a cold sort runs, then settles", async () => {
+      stubSlowClock();
+      const name = nameColumn();
+      const rows = widgets(SYNC_SORT_ROWS + 1);
+      const { result, rerender } = renderLarge(name, {
+        rows,
+        direction: null,
+      });
+
+      rerender({ rows, direction: "asc" });
+
+      expect(result.current.sorting).toBe(true);
+      expect(result.current.sortedRows).toBe(rows);
+
+      await waitFor(() => expect(result.current.sorting).toBe(false));
+      expect(result.current.sortedRows.map(widgetId)).toEqual(
+        sortRows(rows, name, "asc", widgetId).map(widgetId),
+      );
+    });
+
+    it("drops a pass whose inputs changed before it finished", async () => {
+      stubSlowClock();
+      const name = nameColumn();
+      const rows = widgets(SYNC_SORT_ROWS + 1);
+      const { result, rerender, seen } = renderLarge(name, {
+        rows,
+        direction: null,
+      });
+
+      rerender({ rows, direction: "asc" });
+      rerender({ rows, direction: "desc" });
+      await waitFor(() => expect(result.current.sorting).toBe(false));
+
+      const order = (direction: "asc" | "desc") =>
+        sortRows(rows, name, direction, widgetId).map(widgetId).join();
+      expect(result.current.sortedRows.map(widgetId).join()).toBe(
+        order("desc"),
+      );
+      expect(
+        seen.some(
+          ({ sortedRows }) => sortedRows.map(widgetId).join() === order("asc"),
+        ),
+      ).toBe(false);
+      expect(cachedSortedRows(rows, name, "asc", widgetId)).toBeUndefined();
+    });
+
+    it("serves a settled order from the cache on the next render", async () => {
+      stubSlowClock();
+      const name = nameColumn();
+      const rows = widgets(SYNC_SORT_ROWS + 1);
+      const { result, rerender, seen } = renderLarge(name, {
+        rows,
+        direction: "asc",
+      });
+      await waitFor(() => expect(result.current.sorting).toBe(false));
+      const settled = result.current.sortedRows;
+
+      rerender({ rows, direction: null });
+      const first = seen.length;
+      rerender({ rows, direction: "asc" });
+
+      expect(seen[first]?.sorting).toBe(false);
+      expect(seen[first]?.sortedRows).toBe(settled);
+    });
+
+    it("starts empty and sorting on a cold mount, then settles", async () => {
+      stubSlowClock();
+      const name = nameColumn();
+      const rows = widgets(SYNC_SORT_ROWS + 1);
+      const { result, seen } = renderLarge(name, { rows, direction: "desc" });
+
+      expect(seen[0]).toEqual({ sortedRows: [], sorting: true });
+
+      await waitFor(() => expect(result.current.sorting).toBe(false));
+      expect(result.current.sortedRows.map(widgetId)).toEqual(
+        sortRows(rows, name, "desc", widgetId).map(widgetId),
+      );
+    });
   });
 });
