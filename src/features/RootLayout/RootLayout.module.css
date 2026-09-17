@@ -1,10 +1,11 @@
 .layout {
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
 }
 
 .main {
+  /* Keeps the footer below the fold while rows load, so it never shifts. */
+  min-block-size: 100vh;
   flex: 1;
   width: 100%;
   max-width: 64rem;
