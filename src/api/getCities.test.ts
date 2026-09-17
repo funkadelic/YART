@@ -308,35 +308,6 @@ describe("getCities dataset requests", () => {
   });
 });
 
-describe("getCities latency", () => {
-  it("still takes the simulated latency when the dataset is already cached", async () => {
-    const coldGetCities = await freshGetCities();
-    await coldGetCities({ searchTerm: "tokyo" });
-
-    vi.useFakeTimers();
-
-    let settled = false;
-    const inFlight = coldGetCities({ searchTerm: "japan" }).then(() => {
-      settled = true;
-    });
-
-    // Let the already-resolved loader hand back its rows so the latency timer
-    // is registered before the clock moves. An implementation that resolved in
-    // a microtask would be settled here, at zero milliseconds, and the
-    // assertion below catches that.
-    await vi.advanceTimersByTimeAsync(0);
-    expect(settled).toBe(false);
-
-    await vi.advanceTimersByTimeAsync(199);
-    expect(settled).toBe(false);
-
-    await vi.advanceTimersByTimeAsync(1);
-    expect(settled).toBe(true);
-
-    await inFlight;
-  });
-});
-
 describe("getCities search parity", () => {
   it.each(PARITY_NEEDLES)(
     'returns exactly what the per-field matcher returned for "%s"',

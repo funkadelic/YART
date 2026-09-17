@@ -13,9 +13,6 @@ export interface GetFilmsParams {
   searchTerm?: string;
 }
 
-/** Simulated network latency, in milliseconds. */
-const LATENCY_MS = 200;
-
 /**
  * Matches a term against the title. Separate from getCities, which searches a
  * joined key and carries a separator guard this dataset has no need for.
@@ -28,16 +25,7 @@ export async function getFilms({
   const needle = searchTerm.trim().toLowerCase();
 
   // The empty term returns a copy, so the module-scope cache cannot escape.
-  const matched =
-    needle === ""
-      ? [...all]
-      : all.filter((film) => film.title.toLowerCase().includes(needle));
-
-  // Applied to the filter as well as the download, so a cache-warm call still
-  // behaves like a network call and the debounce timing keeps its meaning.
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, LATENCY_MS);
-  });
-
-  return matched;
+  return needle === ""
+    ? [...all]
+    : all.filter((film) => film.title.toLowerCase().includes(needle));
 }

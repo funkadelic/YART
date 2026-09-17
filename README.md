@@ -412,7 +412,7 @@ it("sorts by population descending on the second activation", async () => {
 
 The assertions read `aria-sort`, the same attribute a screen reader announces, so a passing test is evidence the announcement is right.
 
-A second suite under `e2e/` runs in a real browser against a production build, covering five things a simulated DOM cannot show: that reopening a link restores the search, sort and page it carries; that Back and Forward move through history the way the shareable-link design intends; that the theme and the language are stamped before the first paint rather than after the page loads; that the dataset arrives over the network as a separate content-hashed asset; and how the table actually renders, captured as snapshots for visual comparison.
+A second suite under `e2e/` runs in a real browser against a production build, covering six things a simulated DOM cannot show: that reopening a link restores the search, sort and page it carries; that Back and Forward move through history the way the shareable-link design intends; that the theme and the language are stamped before the first paint rather than after the page loads; that the dataset arrives over the network as a separate content-hashed asset; that sorting, paging, changing the page size and searching stay responsive with the processor slowed fourfold; and how the table actually renders, captured as snapshots for visual comparison.
 
 The pipeline sends three reports to [Codecov](https://codecov.io/gh/funkadelic/YART): the coverage the hundred percent gate is measured on, a JUnit report from each of the three suites, and the size of every emitted asset. A test that fails intermittently is flagged as a flake. The asset sizes come from Codecov's standalone analyzer, which reports assets and not individual modules.
 
@@ -427,6 +427,8 @@ npm ci
 A run takes about ten minutes and writes `reports/mutation/mutation.html`, which is gitignored.
 
 `npm run fallow` is the other check run by hand, a static analysis pass over the TypeScript tree. Both exit non-zero on a finding and neither runs in CI, so a finding is something to read and decide about rather than a broken build.
+
+After the end-to-end suite, CI runs Lighthouse three times on each page in mobile mode against the same build, writes the median of each metric to the job summary and to a comment on the pull request, and attaches the reports. It is advisory, so a slow score or a failed audit never fails the build; `npm run lighthouse` runs it locally after `npm run build`, on the same headless Chromium the browser suites use.
 
 ## Benchmarks
 
@@ -454,6 +456,7 @@ The benchmarks are not a gate: they run in a workflow of their own, and a regres
 | `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%           |
 | `npm run test:browser`    | Run the accessibility checks in a real Chromium                            |
 | `npm run test:e2e`        | Run the end-to-end suite in a real Chromium against a built bundle         |
+| `npm run lighthouse`      | Audit both pages' performance on a built bundle and report the medians     |
 | `npm run test:mutation`   | Change the source a piece at a time and report what no test catches        |
 | `npm run chromatic`       | Upload the snapshots a full `npm run test:e2e` archived, for visual review |
 | `npm run bench`           | Run the benchmark suites and print a table per suite                       |
@@ -482,7 +485,7 @@ The reasoning behind the structure is in [`docs/adr/`](docs/adr/README.md), one 
 
 ## Notes and next steps
 
-There is no server. `getCities` and `getFilms` fake network latency over an array held in memory, so everything below is what a real backend would change. Worth doing before it ships:
+There is no server. `getCities` and `getFilms` search an array held in memory, so everything below is what a real backend would change. Worth doing before it ships:
 
 - The dataset arrives as a separate content-hashed JSON asset rather than being compiled into the bundle, but filtering and sorting still run over the whole result set on the main thread. That is fine at this size. Past it, the work belongs behind a paginated, sorted API rather than in the browser.
 - Every row renders, so a page size of 100 is 100 rows in the DOM and there is no way to ask for every row. Virtualization would fix both.

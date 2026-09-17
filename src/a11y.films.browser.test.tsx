@@ -72,8 +72,8 @@ describe("films accessibility in a real engine", () => {
     render(<FilmsApp />);
 
     // The engine fetches the real dataset asset across the dev server, parses
-    // and indexes it, and only then waits out the seam latency. The jsdom suite
-    // pays none of that, because it runs against a fixture.
+    // and indexes it. The jsdom suite pays none of that, because it runs
+    // against a fixture.
     await screen.findByRole("table", {}, { timeout: 20_000 });
 
     // The first state is chosen, never inherited. Left on the default, the

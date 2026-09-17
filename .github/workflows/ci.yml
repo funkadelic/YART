@@ -17,8 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     # A green job runs about four minutes, most of it the Chromium install. Ten
     # catches a hang in setup or in either install without holding the machine for
-    # the six-hour platform default.
-    timeout-minutes: 10
+    # the six-hour platform default, and five more are the Lighthouse step's own cap.
+    timeout-minutes: 15
     # A boolean rather than the token, because `secrets` is not an allowed
     # context in a step's `if`. The token itself stays on the one step that
     # needs it, out of the environment of the install and of every action here.
@@ -96,6 +96,22 @@ jobs:
           name: e2e-failure-artifacts
           path: test-results/
           retention-days: 7
+
+      # Advisory: a slow score or a failed audit never fails the job. Reuses the
+      # build and the headless shell the sweeps above already have in place.
+      - name: Lighthouse
+        run: npm run lighthouse
+        continue-on-error: true
+        timeout-minutes: 5
+
+      - name: Upload Lighthouse reports
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        continue-on-error: true
+        with:
+          name: lighthouse-reports
+          path: lighthouse/
+          retention-days: 7
+          if-no-files-found: ignore
 
       # Sends the report the test step wrote, from here so a failing gate
       # reports as itself. Skipped for the updater, which reads an empty token.
@@ -199,6 +215,40 @@ jobs:
           # Without this they stay unreviewed, and a later pull request finds no
           # accepted ancestor to compare against, so it re-reports every one.
           autoAcceptChanges: main
+
+  # Posts the Lighthouse table on the pull request, editing its own comment on
+  # later runs. A job of its own so the write token never meets `npm ci`. Skipped
+  # for forks and the updater, whose tokens are read-only.
+  report:
+    name: Report
+    needs: verify
+    if: >-
+      github.event_name == 'pull_request'
+      && github.event.pull_request.head.repo.full_name == github.repository
+      && github.actor != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    continue-on-error: true
+    permissions:
+      actions: read
+      pull-requests: write
+    steps:
+      - name: Comment Lighthouse scores
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh run download "$GITHUB_RUN_ID" --repo "$GITHUB_REPOSITORY" --name lighthouse-reports --dir lighthouse
+          marker="<!-- lighthouse -->"
+          body="$(printf '%s\n%s\n\n[Full reports](%s)\n' "$marker" "$(cat lighthouse/summary.md)" "$RUN_URL")"
+          id="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" | head -n 1)"
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$body" > /dev/null
+          else
+            gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" -f body="$body" > /dev/null
+          fi
 
   # A job rather than its own workflow, because `needs` is what makes the publish
   # wait on the gate. The write permissions sit here so the job running untrusted

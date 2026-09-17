@@ -13,9 +13,6 @@ export interface GetCitiesParams {
   searchTerm?: string;
 }
 
-/** Simulated network latency, in milliseconds. */
-const LATENCY_MS = 200;
-
 /** Matches a term against name, ascii name, country and country code. */
 export async function getCities({
   searchTerm = "",
@@ -32,20 +29,11 @@ export async function getCities({
   // separator would answer every row.
   //
   // The empty term returns a copy, so the module-scope cache cannot escape.
-  let matched: City[];
   if (needle === "") {
-    matched = [...all];
-  } else if (needle.includes(SEARCH_KEY_SEPARATOR)) {
-    matched = [];
-  } else {
-    matched = all.filter((city) => city.searchKey.includes(needle));
+    return [...all];
   }
-
-  // Applied to the filter as well as the download, so a cache-warm call still
-  // behaves like a network call and the debounce timing keeps its meaning.
-  await new Promise<void>((resolve) => {
-    setTimeout(resolve, LATENCY_MS);
-  });
-
-  return matched;
+  if (needle.includes(SEARCH_KEY_SEPARATOR)) {
+    return [];
+  }
+  return all.filter((city) => city.searchKey.includes(needle));
 }

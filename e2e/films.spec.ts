@@ -17,8 +17,7 @@ import { expect, test } from "@playwright/test";
  */
 
 // The engine fetches the real dataset asset over the preview server, parses and
-// indexes it, and only then waits out the seam's deliberate latency. The
-// timeout is sized for that work, not as a flake allowance.
+// indexes it. The timeout is sized for that work, not as a flake allowance.
 const DATASET_READY_TIMEOUT_MS = 20_000;
 
 // The explicit shell file name, never the extensionless form. The preview
