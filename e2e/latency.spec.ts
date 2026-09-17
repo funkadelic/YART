@@ -1,4 +1,10 @@
-import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import {
+  expect,
+  test as base,
+  type CDPSession,
+  type Page,
+  type TestInfo,
+} from "@playwright/test";
 
 /**
  * Interaction latency on the cities page with the processor slowed, measured
@@ -23,6 +29,8 @@ const TOTAL_ROWS = 50250;
 const RESOLVED_TAG = "en-US";
 const GROUPED_TOTAL = new Intl.NumberFormat(RESOLVED_TAG).format(TOTAL_ROWS);
 const FULL_CAPTION = `City data with ${GROUPED_TOTAL} entries, currently not sorted`;
+/** The caption once City is sorted ascending. */
+const SORTED_CAPTION = `City data with ${GROUPED_TOTAL} entries, currently sorted by City ascending`;
 
 // Mirrors the container's search debounce.
 const SEARCH_DEBOUNCE_MS = 150;
@@ -34,12 +42,18 @@ const SEARCH_CAPTION = `City data with ${new Intl.NumberFormat(RESOLVED_TAG).for
 
 /**
  * Median budgets in ms. Event durations take 3x a local baseline rounded up to
- * 50, floored at the INP "good" boundary (200); sort is the exception.
+ * 50, floored at the INP "good" boundary (200); time to a settled result
+ * (searchResults, sortSettled) takes the 3x rule without the floor.
  */
 const BUDGET_MS = {
-  // Hosted runners measured 392 to 624 ms; the full-dataset sort runs
-  // synchronously inside the click.
-  sort: 1000,
+  // Samples measured 16 to 40 ms; the first asc and desc clicks are cold, painting
+  // the busy state inside the click while the pass continues across frames.
+  sort: 200,
+  // Baseline 32 to 40 ms; 3x is under the 200 ms floor.
+  coldSort: 200,
+  // 3x a 420 ms baseline (387 to 528 ms); the pass runs across frames, so this
+  // is time to result, not input delay.
+  sortSettled: 1300,
   // Baseline 16 ms; 3x is under the 200 ms floor.
   nextPage: 200,
   // Baseline 32 ms; 3x is under the 200 ms floor.
@@ -84,6 +98,7 @@ interface FrameTiming extends PerformanceEntry {
 interface Sample {
   eventMs: number;
   frameMs: number | null;
+  frameBlockingMs: number | null;
   frameInvoker: string | null;
 }
 
@@ -187,6 +202,7 @@ async function measure(page: Page, act: () => Promise<void>): Promise<Sample> {
   return {
     eventMs: Math.max(0, ...events.map((entry) => entry.duration)),
     frameMs: longest ? longest.duration : null,
+    frameBlockingMs: longest ? longest.blockingDuration : null,
     frameInvoker: longest ? longest.invoker : null,
   };
 }
@@ -204,8 +220,9 @@ function report(
     median: median(samples),
     budget,
     samples,
-    frames: frames.map(({ frameMs, frameInvoker }) => ({
+    frames: frames.map(({ frameMs, frameBlockingMs, frameInvoker }) => ({
       frameMs,
+      frameBlockingMs,
       frameInvoker,
     })),
   };
@@ -218,15 +235,26 @@ function report(
     .toBeLessThanOrEqual(budget);
 }
 
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(installProbe, EVENT_TIMING_FLOOR_MS);
+/** One DevTools session per test, shared by beforeEach and the body, so the rate set last is the only one in force. */
+const test = base.extend<{ session: CDPSession }>({
+  session: async ({ page }, provide) => {
+    await provide(await page.context().newCDPSession(page));
+  },
+});
+
+/** Loads the cities page at full speed and slows the processor only once the dataset is ready, so the parse does not eat the timeout. */
+async function openThrottled(page: Page, session: CDPSession): Promise<void> {
+  await session.send("Emulation.setCPUThrottlingRate", { rate: 1 });
   await page.goto("/");
   await expect(page.getByRole("table")).toHaveAccessibleName(FULL_CAPTION, {
     timeout: DATASET_READY_TIMEOUT_MS,
   });
-  // Throttled only once the dataset is ready, so the parse does not eat the timeout.
-  const session = await page.context().newCDPSession(page);
   await session.send("Emulation.setCPUThrottlingRate", { rate: CPU_SLOWDOWN });
+}
+
+test.beforeEach(async ({ page, session }) => {
+  await page.addInitScript(installProbe, EVENT_TIMING_FLOOR_MS);
+  await openThrottled(page, session);
 });
 
 test("sorting the whole dataset by City", async ({ page }, testInfo) => {
@@ -256,11 +284,68 @@ test("sorting the whole dataset by City", async ({ page }, testInfo) => {
 
   const eventMs = samples.map((sample) => sample.eventMs);
   report(testInfo, "sort", eventMs, samples);
-  // A full-dataset sort cannot finish under the floor, so a zero means a dead probe.
+});
+
+test("a cold sort of the whole dataset by City", async ({
+  page,
+  session,
+}, testInfo) => {
+  const cityButton = page.getByRole("button", { name: "City", exact: true });
+  const clicks: Sample[] = [];
+  const settled: number[] = [];
+
+  for (let run = 0; run < REPEATS; run++) {
+    // The order cache is module scope, so each cold click needs a new document.
+    if (run > 0) await openThrottled(page, session);
+    let elapsed = 0;
+    clicks.push(
+      await measure(page, async () => {
+        await page.evaluate(() =>
+          window.addEventListener(
+            "pointerdown",
+            (event) => Reflect.set(window, "sortClickAt", event.timeStamp),
+            { capture: true, once: true },
+          ),
+        );
+        await cityButton.click();
+        // Click to the sorted rows on screen, which Event Timing cannot see past the busy paint.
+        elapsed = await page.evaluate(
+          (caption) =>
+            new Promise<number>((resolve) => {
+              const poll = () => {
+                if (
+                  document.querySelector("caption")?.textContent === caption &&
+                  !document.querySelector('[aria-busy="true"]')
+                ) {
+                  resolve(
+                    Math.round(
+                      performance.now() -
+                        Number(Reflect.get(window, "sortClickAt")),
+                    ),
+                  );
+                } else {
+                  requestAnimationFrame(poll);
+                }
+              };
+              poll();
+            }),
+          SORTED_CAPTION,
+        );
+        await expect(page).toHaveURL("/?sort=name");
+      }),
+    );
+    settled.push(elapsed);
+  }
+
+  const eventMs = clicks.map((sample) => sample.eventMs);
+  report(testInfo, "coldSort", eventMs, clicks);
+  report(testInfo, "sortSettled", settled, clicks);
+  // A cold click renders a busy table over the whole dataset, measured 32 to 40 ms,
+  // so a zero means a dead probe.
   for (const ms of eventMs) {
     expect(
       ms,
-      "the observer recorded nothing for a full-dataset sort",
+      "the observer recorded nothing for a cold full-dataset sort",
     ).toBeGreaterThan(0);
   }
 });
