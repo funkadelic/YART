@@ -1,5 +1,8 @@
 .header {
   display: flex;
+
+  /* The controls drop to another row when they do not fit a phone-width screen. */
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-4) var(--space-6);
