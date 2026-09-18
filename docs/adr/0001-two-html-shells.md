@@ -19,4 +19,4 @@ Each page is a separate URL, so the two pages cannot collide over the four unpre
 
 The inline script is duplicated, and a copy that drifts would break theming on one page only. `src/toolchain.test.ts` parses both shells and the two modules that hold the same rules, and fails when they stop agreeing.
 
-Adding a third dataset means a third shell and a third copy of that script. That is the point at which a router earns its place.
+Adding a third dataset means a third shell and a third copy of that script. A router becomes worth adding at that point.
