@@ -21,7 +21,7 @@ The build merges the two theme files into one `light-dark()` value per color, so
 
 Style Dictionary reads a `hex` fallback only for colors outside the sRGB range, so one that disagreed with its components would sit there unnoticed. The build compares every declared hex against the value the components produce and fails when they differ.
 
-`src/theme/tokens.build.test.ts` regenerates the stylesheet and fails when the committed file drifts from the JSON, so the source cannot quietly stop describing what ships.
+`src/theme/tokens.build.test.ts` regenerates the stylesheet and fails when the committed file drifts from the JSON, so the JSON and the shipped CSS cannot diverge.
 
 The cost is indirection and verbosity. `#fbfbfc` became an object, reading a color now means reading JSON rather than CSS, and the pipeline is a dependency and a build script that a hand-written stylesheet did not need. For an app of this size that trade is not obviously worth it; what pays for it here is the single source for both themes and the drift guard.
 

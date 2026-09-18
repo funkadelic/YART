@@ -5,13 +5,13 @@ Date recorded: 2026-09-15
 
 ## Context
 
-The dataset is 50,250 rows and virtualization is the expected answer for a large table. It is also the feature that most often arrives before it is needed, and it brings scroll restoration bugs, broken keyboard navigation, print output that stops after a screenful, and a find-in-page that only searches what is rendered.
+The dataset is 50,250 rows and virtualization is the expected answer for a large table. It is also often added before it is needed, and it brings scroll restoration bugs, broken keyboard navigation, print output that stops after a screenful, and a find-in-page that only searches what is rendered.
 
 Pagination already bounds the DOM here. The largest page size renders 100 rows, which is a table any browser handles.
 
 ## Decision
 
-Render every row on the current page and offer no way to render them all. Sort and filter still run over the full dataset, so the reader is choosing how much to show, not how much the app looks at.
+Render every row on the current page and offer no way to render them all. Sort and filter still run over the full dataset, so page size limits only what renders.
 
 ## Consequences
 

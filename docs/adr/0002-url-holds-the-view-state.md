@@ -21,4 +21,4 @@ The resolved locale is deliberately not in the address. Two readers opening the 
 
 The write is wrapped in `try`, because a browser that rate limits history mutation throws, and a throw in a commit-phase effect would cost the reader the whole table.
 
-A second writer, or any `pushState`, breaks all of this. Route the change through the container's state instead.
+A second writer, or any `pushState`, brings back both problems above. Route the change through the container's state instead.
