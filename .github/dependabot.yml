@@ -12,6 +12,11 @@ updates:
     open-pull-requests-limit: 5
     versioning-strategy: increase
     # Generated subjects have to be Conventional Commits, same as hand written ones.
+    # Hold new releases a few days so a hijacked publish is pulled before it is
+    # proposed. Security updates bypass this.
+    cooldown:
+      default-days: 5
+      semver-major-days: 14
     commit-message:
       prefix: "chore(deps)"
       prefix-development: "chore(deps-dev)"
@@ -71,6 +76,8 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    cooldown:
+      default-days: 5
     commit-message:
       prefix: "chore(actions)"
     groups:
