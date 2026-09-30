@@ -1,0 +1,28 @@
+src/a11y.films.test.tsx
+  s_0b0479e05578ed::t_c4d14310195c2d 9-10,103,128-130,132
+src/movies.tsx
+  s_0b0479e05578ed::t_c4d14310195c2d 4-5,16
+src/features/DatasetPage/DatasetPage.request.test.tsx
+  s_0b0479e05578ed::t_32847f1798de3c 13,40-45,455-503
+  s_0b0479e05578ed::t_dceaa4eb5a21dc 504
+src/features/films/filmPage.ts
+  s_0b0479e05578ed::t_c4d14310195c2d 1-20
+src/a11y.films.browser.test.tsx
+  s_0b0479e05578ed::t_c4d14310195c2d 6-7,73
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1ac68958e6ac2bf27f7a3b0ee0f59d1b611b2a7e",
+  "prompts": {},
+  "sessions": {
+    "s_0b0479e05578ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "66de24ba-fc92-4ff7-bae4-2b097b1f4706",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
