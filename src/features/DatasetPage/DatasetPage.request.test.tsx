@@ -1,60 +1,40 @@
 import { StrictMode } from "react";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import App from "./App";
-import { DatasetError, getCities } from "./api/getCities";
-import { en } from "./i18n/catalogs/en";
-import { es } from "./i18n/catalogs/es";
-import { CITY_FIXTURE_ENVELOPE } from "./test/cityFixture";
-import { stubDatasetFetch } from "./test/fetchStub";
+import type { City } from "../../api/getCities";
+import { DatasetError } from "../../data/loadEnvelope";
+import { en } from "../../i18n/catalogs/en";
+import { es } from "../../i18n/catalogs/es";
+import { CITY_FIXTURE_ENVELOPE } from "../../test/cityFixture";
+import { stubDatasetFetch } from "../../test/fetchStub";
+import { CITY_PAGE } from "../cities/cityPage";
+import { DatasetPage } from "./DatasetPage";
 
-import type { City } from "./api/getCities";
-
-// The search seam is spied on, with the factory delegating to the real module,
-// so the integration case below keeps exercising real behavior and a case that
-// needs a specific outcome overrides it for itself. A rejection carrying
-// something other than an Error is only reachable this way, because the real
-// module never produces one.
-vi.mock("./api/getCities", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./api/getCities")>();
-  return { ...actual, getCities: vi.fn(actual.getCities) };
-});
-
-const getCitiesSeam = vi.mocked(getCities);
+/** The search seam's own type, so a stub is held to the page's contract. */
+type CitySearch = (typeof CITY_PAGE)["search"];
 
 /**
- * The debounce window the container applies to the search term.
+ * The debounce window the page applies to the search term.
  */
 const DEBOUNCE_MS = 150;
 
 /**
- * The container, re-imported from a module registry that has been reset first.
- * The loader caches its dataset request at module scope, so without the reset a
- * case that counts requests inherits an earlier case's populated cache and
- * counts none at all.
- *
- * The mock is re-declared here too, and not only to rebind the spy. Resetting
- * the registry does not re-evaluate a mock factory,
- * so the container would keep importing the seam belonging to the registry that
- * was thrown away, while the loader it now calls belongs to the new one. The two
- * would then hold two different dataset error classes, and the failure sentence
- * would be chosen by an identity check that can never succeed. Re-declaring the
- * factory puts the container and the loader back in one registry.
- *
- * The spy object itself is deliberately the same one, so a call count spans the
- * reset.
+ * The page and its city config, both re-imported from a registry reset first.
+ * The loader caches its dataset request at module scope, so a case counting
+ * requests needs a fresh one. Both come from the new registry, or the page and
+ * the loader would hold two dataset error classes.
  */
-async function freshApp() {
+async function freshPage() {
   vi.resetModules();
-  vi.doMock("./api/getCities", async (importOriginal) => {
-    const actual = await importOriginal<typeof import("./api/getCities")>();
-    getCitiesSeam.mockImplementation(actual.getCities);
-    return { ...actual, getCities: getCitiesSeam };
-  });
-  return (await import("./App")).default;
+  const { DatasetPage: FreshPage } = await import("./DatasetPage");
+  const { CITY_PAGE: FRESH_CITY_PAGE } = await import("../cities/cityPage");
+  return { FreshPage, FRESH_CITY_PAGE };
 }
+
+/** The city page over an injected search, so a case picks its own outcome. */
+const withSearch = (search: CitySearch) => ({ ...CITY_PAGE, search });
 
 const SAMPLE_CITIES: City[] = [
   {
@@ -68,22 +48,13 @@ const SAMPLE_CITIES: City[] = [
   },
 ];
 
-describe("App", () => {
-  beforeEach(async () => {
-    const actual =
-      await vi.importActual<typeof import("./api/getCities")>(
-        "./api/getCities",
-      );
-    getCitiesSeam.mockReset();
-    getCitiesSeam.mockImplementation(actual.getCities);
-  });
-
+describe("DatasetPage requests", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
   it("renders the city list once the initial search resolves", async () => {
-    render(<App />);
+    render(<DatasetPage config={CITY_PAGE} />);
 
     expect(
       screen.getByRole("heading", { name: "City List" }),
@@ -95,7 +66,7 @@ describe("App", () => {
   });
 
   it("clears the busy flag once the first search settles", async () => {
-    render(<App />);
+    render(<DatasetPage config={CITY_PAGE} />);
 
     // Asserted inside the poll, not after one that returned on the table
     // appearing: the resolve and the settle are two separate dispatches, so
@@ -115,9 +86,7 @@ describe("App", () => {
       "the developer-facing text",
       { cause: new Error("Unexpected token < in JSON at position 0") },
     );
-    getCitiesSeam.mockRejectedValueOnce(failure);
-
-    render(<App />);
+    render(<DatasetPage config={withSearch(() => Promise.reject(failure))} />);
 
     expect(
       await screen.findByText(
@@ -136,9 +105,7 @@ describe("App", () => {
 
   it("renders the unexpected sentence when the search rejects with an error carrying no code", async () => {
     const failure = new Error("The city service is unreachable");
-    getCitiesSeam.mockRejectedValueOnce(failure);
-
-    render(<App />);
+    render(<DatasetPage config={withSearch(() => Promise.reject(failure))} />);
 
     expect(
       await screen.findByText("Error: An unexpected error occurred."),
@@ -149,15 +116,19 @@ describe("App", () => {
 
   it("renders a synthesized message when the search rejects with a bare value", async () => {
     const bareRejection = "the service replied with a plain string";
-    getCitiesSeam.mockRejectedValueOnce(bareRejection);
-
-    render(<App />);
+    render(
+      <DatasetPage
+        config={withSearch(
+          vi.fn<CitySearch>().mockRejectedValue(bareRejection),
+        )}
+      />,
+    );
 
     expect(
       await screen.findByText("Error: An unexpected error occurred."),
     ).toBeInTheDocument();
     expect(screen.queryByText(bareRejection)).not.toBeInTheDocument();
-    // The container synthesizes an error to carry the code. Its message is
+    // The page synthesizes an error to carry the code. Its message is
     // developer-facing like every other one, and worded so it cannot be
     // mistaken for the sentence the catalog supplies.
     expect(document.body).not.toHaveTextContent("was not an error");
@@ -171,9 +142,11 @@ describe("App", () => {
   // that is not a dataset error, so it cannot tell a rejection that took the
   // synthesizing branch from one that skipped it.
   it("renders a synthesized message when the search rejects with nothing at all", async () => {
-    getCitiesSeam.mockRejectedValueOnce(null);
-
-    render(<App />);
+    render(
+      <DatasetPage
+        config={withSearch(vi.fn<CitySearch>().mockRejectedValue(null))}
+      />,
+    );
 
     expect(
       await screen.findByText("Error: An unexpected error occurred."),
@@ -188,11 +161,13 @@ describe("App", () => {
   // the same thing in another language.
   it("re-renders a displayed failure in the chosen language without issuing a request", async () => {
     const user = userEvent.setup({ delay: null });
-    getCitiesSeam.mockRejectedValue(
-      new DatasetError("transport", 0, "the developer-facing text"),
+    const search = vi.fn<CitySearch>(() =>
+      Promise.reject(
+        new DatasetError("transport", 0, "the developer-facing text"),
+      ),
     );
 
-    render(<App />);
+    render(<DatasetPage config={withSearch(search)} />);
 
     expect(
       await screen.findByText(
@@ -200,7 +175,7 @@ describe("App", () => {
       ),
     ).toBeInTheDocument();
 
-    const callsBefore = getCitiesSeam.mock.calls.length;
+    const callsBefore = search.mock.calls.length;
 
     await user.selectOptions(
       screen.getByRole("combobox", { name: /language/i }),
@@ -212,50 +187,50 @@ describe("App", () => {
         `Error: ${es.cities.datasetError.transport("es-ES", 0)}`,
       ),
     ).toBeInTheDocument();
-    expect(getCitiesSeam.mock.calls).toHaveLength(callsBefore);
+    expect(search.mock.calls).toHaveLength(callsBefore);
   });
 
   it("issues one search after the debounce window rather than one per keystroke", async () => {
     // The seam resolves immediately, so the clock covers only the debounce
     // window.
-    getCitiesSeam.mockResolvedValue(SAMPLE_CITIES);
+    const search = vi.fn<CitySearch>(() => Promise.resolve(SAMPLE_CITIES));
 
     vi.useFakeTimers();
     // Bind the input helper to the controlled clock. Without this it waits on a
     // clock the test has frozen and the run stalls instead of failing.
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
-    render(<App />);
+    render(<DatasetPage config={withSearch(search)} />);
 
-    // The container searches once on mount with an empty term, before anything
+    // The page searches once on mount with an empty term, before anything
     // is typed, so every count below is a delta from that settled baseline.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
     });
-    expect(getCitiesSeam).toHaveBeenCalledTimes(1);
-    const callsAfterMount = getCitiesSeam.mock.calls.length;
+    expect(search).toHaveBeenCalledTimes(1);
+    const callsAfterMount = search.mock.calls.length;
 
     await user.type(screen.getByRole("textbox", { name: "Search" }), "tok");
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DEBOUNCE_MS - 1);
     });
-    expect(getCitiesSeam.mock.calls.length - callsAfterMount).toBe(0);
+    expect(search.mock.calls.length - callsAfterMount).toBe(0);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1);
     });
-    expect(getCitiesSeam.mock.calls.length - callsAfterMount).toBe(1);
-    expect(getCitiesSeam).toHaveBeenLastCalledWith({ searchTerm: "tok" });
+    expect(search.mock.calls.length - callsAfterMount).toBe(1);
+    expect(search).toHaveBeenLastCalledWith({ searchTerm: "tok" });
   });
 
   it("issues one dataset request under a double mount", async () => {
     const fetchSpy = stubDatasetFetch(CITY_FIXTURE_ENVELOPE);
-    const FreshApp = await freshApp();
+    const { FreshPage, FRESH_CITY_PAGE } = await freshPage();
 
     render(
       <StrictMode>
-        <FreshApp />
+        <FreshPage config={FRESH_CITY_PAGE} />
       </StrictMode>,
     );
 
@@ -266,14 +241,14 @@ describe("App", () => {
   it("issues one dataset request across a typed search under a double mount", async () => {
     vi.useFakeTimers();
     const fetchSpy = stubDatasetFetch(CITY_FIXTURE_ENVELOPE);
-    const FreshApp = await freshApp();
+    const { FreshPage, FRESH_CITY_PAGE } = await freshPage();
     // Bind the input helper to the controlled clock. Without this it waits on a
     // clock the test has frozen and the run stalls instead of failing.
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
     render(
       <StrictMode>
-        <FreshApp />
+        <FreshPage config={FRESH_CITY_PAGE} />
       </StrictMode>,
     );
 
@@ -324,8 +299,10 @@ describe("App", () => {
       settleEarlier = resolve;
     });
 
-    getCitiesSeam.mockImplementationOnce(() => earlier);
-    getCitiesSeam.mockImplementationOnce(() => Promise.resolve(laterRows));
+    const search = vi
+      .fn<CitySearch>()
+      .mockImplementationOnce(() => earlier)
+      .mockImplementationOnce(() => Promise.resolve(laterRows));
 
     // This case runs on the real clock, so the inter-keystroke delay is dropped
     // and not bound to a fake one. A file that fakes the clock anywhere has to
@@ -333,7 +310,7 @@ describe("App", () => {
     // guard enforces.
     const user = userEvent.setup({ delay: null });
 
-    render(<App />);
+    render(<DatasetPage config={withSearch(search)} />);
 
     await user.type(screen.getByRole("textbox", { name: "Search" }), "p");
 
@@ -370,8 +347,10 @@ describe("App", () => {
       failEarlier = reject;
     });
 
-    getCitiesSeam.mockImplementationOnce(() => earlier);
-    getCitiesSeam.mockImplementationOnce(() => Promise.resolve(laterRows));
+    const search = vi
+      .fn<CitySearch>()
+      .mockImplementationOnce(() => earlier)
+      .mockImplementationOnce(() => Promise.resolve(laterRows));
 
     // This case runs on the real clock, so the inter-keystroke delay is dropped
     // and not bound to a fake one. A file that fakes the clock anywhere has to
@@ -379,7 +358,7 @@ describe("App", () => {
     // guard enforces.
     const user = userEvent.setup({ delay: null });
 
-    render(<App />);
+    render(<DatasetPage config={withSearch(search)} />);
 
     await user.type(screen.getByRole("textbox", { name: "Search" }), "p");
 
@@ -387,7 +366,7 @@ describe("App", () => {
 
     await act(async () => {
       failEarlier(new Error("The city service is unreachable"));
-      // The container's own catch arm settles this rejection. Awaiting it here
+      // The page's own catch arm settles this rejection. Awaiting it here
       // only orders the assertions after it, so the await is swallowed and
       // cannot fail the case it is sequencing.
       await earlier.catch(() => {});
@@ -399,13 +378,14 @@ describe("App", () => {
 
   it("stops claiming a download once the dataset has arrived, even when the search that follows is empty", async () => {
     stubDatasetFetch(CITY_FIXTURE_ENVELOPE);
-    const FreshApp = await freshApp();
+    const { FreshPage, FRESH_CITY_PAGE } = await freshPage();
+    const search = vi.fn<CitySearch>(FRESH_CITY_PAGE.search);
     vi.useFakeTimers();
     // Bind the input helper to the controlled clock. Without this it waits on a
     // clock the test has frozen and the run stalls instead of failing.
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 
-    render(<FreshApp />);
+    render(<FreshPage config={{ ...FRESH_CITY_PAGE, search }} />);
 
     // The cold pole. Nothing has arrived yet, so the claim is true here.
     expect(
@@ -428,14 +408,14 @@ describe("App", () => {
     // One more keystroke over an empty result set. A request is in flight with
     // no rows behind it, so a row count reads it as a cold start. The search is
     // held open so it is still in flight when the claim is read.
-    getCitiesSeam.mockImplementationOnce(() => new Promise<City[]>(() => {}));
+    search.mockImplementationOnce(() => new Promise<City[]>(() => {}));
     await user.type(searchInput, "z");
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
     });
 
-    expect(getCitiesSeam).toHaveBeenLastCalledWith({ searchTerm: "zzzzz" });
+    expect(search).toHaveBeenLastCalledWith({ searchTerm: "zzzzz" });
     expect(screen.queryByText("Downloading the city data...")).toBeNull();
     expect(screen.getByText("No cities found")).toBeInTheDocument();
   });
@@ -443,10 +423,10 @@ describe("App", () => {
   it("recovers from a failed dataset load when the retry control is used", async () => {
     const fetchSpy = stubDatasetFetch(CITY_FIXTURE_ENVELOPE);
     fetchSpy.mockResolvedValueOnce(new Response("not found", { status: 404 }));
-    const FreshApp = await freshApp();
+    const { FreshPage, FRESH_CITY_PAGE } = await freshPage();
     const user = userEvent.setup({ delay: null });
 
-    render(<FreshApp />);
+    render(<FreshPage config={FRESH_CITY_PAGE} />);
 
     expect(
       await screen.findByText(

@@ -4,7 +4,8 @@ import { page } from "vitest/browser";
 import axe from "axe-core";
 import { describe, expect, it } from "vitest";
 
-import App from "./App";
+import { CITY_PAGE } from "./features/cities/cityPage";
+import { DatasetPage } from "./features/DatasetPage";
 import { describeViolations, incompleteRuleIds } from "./test/axeSweep";
 import { required } from "./test/required";
 
@@ -113,7 +114,7 @@ describe("accessibility in a real engine", () => {
   it("reports no violation in either theme, on a page past the first, or reading right to left", async () => {
     const user = userEvent.setup();
 
-    render(<App />);
+    render(<DatasetPage config={CITY_PAGE} />);
 
     // The one generous wait in the file, and deliberate. The engine fetches
     // the real multi-megabyte dataset asset across the dev server, parses and

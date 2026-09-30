@@ -6,7 +6,8 @@ import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { describe, expect, it, vi } from "vitest";
 
-import App from "./App";
+import { CITY_PAGE } from "./features/cities/cityPage";
+import { DatasetPage } from "./features/DatasetPage";
 import { CITY_FIXTURE_ENVELOPE } from "./test/cityFixture";
 import { describeViolations, incompleteRuleIds } from "./test/axeSweep";
 import { stubDatasetFetch } from "./test/fetchStub";
@@ -148,7 +149,7 @@ describe("accessibility", () => {
         }),
     );
 
-    render(<App />);
+    render(<DatasetPage config={CITY_PAGE} />);
 
     // Each state is proven to be on screen before it is swept, by a query that
     // throws when it is not. Without that a transition which quietly failed
@@ -185,9 +186,11 @@ describe("accessibility", () => {
     );
 
     vi.resetModules();
-    const FreshApp = (await import("./App")).default;
+    const { DatasetPage: FreshPage } = await import("./features/DatasetPage");
+    const { CITY_PAGE: FRESH_CITY_PAGE } =
+      await import("./features/cities/cityPage");
 
-    render(<FreshApp />);
+    render(<FreshPage config={FRESH_CITY_PAGE} />);
 
     await screen.findByText(
       "Error: The city data could not be downloaded (status 404).",

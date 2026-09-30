@@ -2,21 +2,9 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 
-import { CityTable } from "./CityTable";
-import App from "../../App";
-import { RootLayout } from "../RootLayout";
-import { getCities } from "../../api/getCities";
 import type { City } from "../../api/getCities";
-
-// One case in this file renders the whole application, because the property it
-// asserts belongs to the address and not to either component. A link carrying a
-// term has to produce exactly one request, and that is only observable where
-// the request is issued. The factory delegates to the real module, so nothing
-// else in the file changes behavior.
-vi.mock("../../api/getCities", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../api/getCities")>();
-  return { ...actual, getCities: vi.fn(actual.getCities) };
-});
+import { CITY_PAGE } from "../cities/cityPage";
+import { DatasetPage } from "./DatasetPage";
 
 /**
  * How long typing has to pause before the term is committed. The same window
@@ -38,14 +26,13 @@ const PAGED_CITIES: City[] = Array.from({ length: 50 }, (_, index) => ({
   population: 1000000 + index * 100000,
 }));
 
-const defaultProps = {
-  data: PAGED_CITIES,
-  onSearchChange: vi.fn(),
-  loading: false,
-  // The honest default for a fixture that already carries rows.
-  datasetReady: true,
-  errorMessage: null,
-};
+/** The city page with a search that answers the fifty rows above for any term. */
+const pageOf = () => ({
+  ...CITY_PAGE,
+  search: vi.fn<(typeof CITY_PAGE)["search"]>(() =>
+    Promise.resolve(PAGED_CITIES),
+  ),
+});
 
 /** Puts a query in the address the way a shared link delivers one. */
 const openAt = (search: string) => {
@@ -59,21 +46,23 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("CityTable and the address", () => {
-  it("paints the page named in the address on the first render", () => {
+describe("DatasetPage and the address", () => {
+  it("paints the page named in the address on the first render", async () => {
     openAt("?page=2");
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     expect(screen.getByText("Page 2 of 5")).toBeInTheDocument();
     expect(screen.getByText("City 11")).toBeInTheDocument();
     expect(screen.queryByText("City 1")).not.toBeInTheDocument();
   });
 
-  it("leaves a link that is already canonical exactly as it arrived", () => {
+  it("leaves a link that is already canonical exactly as it arrived", async () => {
     openAt("?page=2");
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     expect(window.location.search).toBe("?page=2");
   });
@@ -86,7 +75,8 @@ describe("CityTable and the address", () => {
     // that survives that addition.
     const user = userEvent.setup({ delay: null });
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     await user.click(screen.getByRole("button", { name: "Go to next page" }));
 
@@ -94,8 +84,9 @@ describe("CityTable and the address", () => {
     expect(window.location.search).toBe("?page=2");
   });
 
-  it("re-hydrates the table when a back navigation lands on another position", () => {
-    render(<CityTable {...defaultProps} />);
+  it("re-hydrates the table when a back navigation lands on another position", async () => {
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     openAt("?page=3");
     act(() => {
@@ -115,10 +106,11 @@ describe("CityTable and the address", () => {
   // reader was handed stays where they can see it, so a set that widens again
   // puts them back, and a position arriving before its rows do is never
   // corrected against no rows at all.
-  it("shows the last page that exists for a position past the end, and leaves that position in the address", () => {
+  it("shows the last page that exists for a position past the end, and leaves that position in the address", async () => {
     openAt("?page=999");
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
     expect(screen.getByText("City 50")).toBeInTheDocument();
@@ -131,7 +123,8 @@ describe("CityTable and the address", () => {
   it("adds no history entry for any amount of paging", async () => {
     const user = userEvent.setup({ delay: null });
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     const entriesBefore = window.history.length;
 
@@ -151,7 +144,8 @@ describe("CityTable and the address", () => {
   it("clears the query completely when the reader returns to the first page", async () => {
     const user = userEvent.setup({ delay: null });
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     await user.click(screen.getByRole("button", { name: "Go to last page" }));
     expect(window.location.search).toBe("?page=5");
@@ -167,7 +161,8 @@ describe("CityTable and the address", () => {
     openAt("?page=5#credits");
     const pathBefore = window.location.pathname;
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     await user.click(screen.getByRole("button", { name: "Go to first page" }));
 
@@ -178,10 +173,11 @@ describe("CityTable and the address", () => {
     expect(window.location.hash).toBe("#credits");
   });
 
-  it("paints the sort named in the address on the first render", () => {
+  it("paints the sort named in the address on the first render", async () => {
     openAt("?sort=-population");
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     // The header cell's own attribute, because that is where the state lives
     // and what a screen reader reads. Matching row order would also pass for a
@@ -195,7 +191,8 @@ describe("CityTable and the address", () => {
   it("writes the sort token as the reader cycles a column, and removes the key when the sort clears", async () => {
     const user = userEvent.setup({ delay: null });
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     const header = screen.getByRole("button", { name: "Population" });
 
@@ -211,19 +208,21 @@ describe("CityTable and the address", () => {
     expect(window.location.search).toBe("");
   });
 
-  it("paints an offered page size named in the address, and shows it in the select", () => {
+  it("paints an offered page size named in the address, and shows it in the select", async () => {
     openAt("?size=25");
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     expect(screen.getByText("Page 1 of 2")).toBeInTheDocument();
     expect(screen.getByLabelText("Per page:")).toHaveValue("25");
   });
 
-  it("falls back to the default for a size the table does not offer, leaving the select on one of its own options", () => {
+  it("falls back to the default for a size the table does not offer, leaving the select on one of its own options", async () => {
     openAt("?size=7");
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     const select = screen.getByLabelText<HTMLSelectElement>("Per page:");
     const offered = Array.from(select.options).map((option) => option.value);
@@ -232,8 +231,9 @@ describe("CityTable and the address", () => {
     expect(offered).toContain(select.value);
   });
 
-  it("re-hydrates the sort, the position, and the page size together on one back navigation", () => {
-    render(<CityTable {...defaultProps} />);
+  it("re-hydrates the sort, the position, and the page size together on one back navigation", async () => {
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     openAt("?sort=-population&page=2&size=25");
     act(() => {
@@ -256,8 +256,9 @@ describe("CityTable and the address", () => {
   // that something happened when nothing did. A traversal after a real press is
   // the other side. That reader did sort, and the region is the only thing that
   // reports where the traversal put them.
-  it("stays silent when a back navigation restores a sort the reader never applied", () => {
-    const { container } = render(<CityTable {...defaultProps} />);
+  it("stays silent when a back navigation restores a sort the reader never applied", async () => {
+    const { container } = render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     const announcer = container.querySelector(
       '[aria-live="polite"][aria-atomic="true"]',
@@ -274,7 +275,8 @@ describe("CityTable and the address", () => {
 
   it("still announces when a back navigation follows a sort the reader did apply", async () => {
     const user = userEvent.setup({ delay: null });
-    const { container } = render(<CityTable {...defaultProps} />);
+    const { container } = render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     const announcer = container.querySelector(
       '[aria-live="polite"][aria-atomic="true"]',
@@ -310,11 +312,8 @@ describe("CityTable and the address", () => {
       );
     });
 
-    render(
-      <RootLayout domain="cities">
-        <CityTable {...defaultProps} />
-      </RootLayout>,
-    );
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     await user.click(screen.getByRole("button", { name: "Go to next page" }));
 
@@ -332,7 +331,8 @@ describe("CityTable and the address", () => {
     // working.
     openAt("?utm_source=x&dir=sideways");
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     await user.click(screen.getByRole("button", { name: "Go to next page" }));
 
@@ -340,11 +340,12 @@ describe("CityTable and the address", () => {
   });
 });
 
-describe("CityTable, the address, and the search term", () => {
-  it("paints all five values on the first render for a link that carries all four keys", () => {
+describe("DatasetPage, the address, and the search term", () => {
+  it("paints all five values on the first render for a link that carries all four keys", async () => {
     openAt("?q=City&sort=-population&page=2&size=25");
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     expect(screen.getByRole("textbox", { name: "Search" })).toHaveValue("City");
     expect(
@@ -361,31 +362,23 @@ describe("CityTable, the address, and the search term", () => {
   it("issues one request, for the term the link carries, on a cold start", () => {
     openAt("?q=tokyo&sort=-population&page=2&size=25");
 
-    const seam = vi.mocked(getCities);
-    // Never settles, so the request is counted without a resolution landing
-    // outside the render this case drives. What is asserted is which request
-    // went out, not what came back.
-    seam.mockReturnValue(new Promise<City[]>(() => {}));
+    // Never settles: what is asserted is which request went out, not what came
+    // back.
+    const search = vi.fn<(typeof CITY_PAGE)["search"]>(
+      () => new Promise<City[]>(() => {}),
+    );
 
-    // Restored here, because the shared teardown restores spies and this seam
-    // is not one. It is a plain mock function standing in for a module export,
-    // so nothing global reaches it. Without this, the next
-    // case in this file to render the application gets a request that never
-    // resolves and reads as a bug in the code under test.
-    try {
-      render(<App />);
+    render(<DatasetPage config={{ ...CITY_PAGE, search }} />);
 
-      expect(seam).toHaveBeenCalledTimes(1);
-      expect(seam).toHaveBeenCalledWith({ searchTerm: "tokyo" });
-    } finally {
-      seam.mockRestore();
-    }
+    expect(search).toHaveBeenCalledTimes(1);
+    expect(search).toHaveBeenCalledWith({ searchTerm: "tokyo" });
   });
 
-  it("restores the box, reports the term upward, and applies the other values in the same update", () => {
-    const onSearchChange = vi.fn();
+  it("restores the box, searches the restored term, and applies the other values in the same update", async () => {
+    const config = pageOf();
 
-    render(<CityTable {...defaultProps} onSearchChange={onSearchChange} />);
+    render(<DatasetPage config={config} />);
+    await screen.findByRole("table");
 
     openAt("?q=kyoto&sort=-population&page=2&size=25");
     act(() => {
@@ -395,8 +388,9 @@ describe("CityTable, the address, and the search term", () => {
     expect(screen.getByRole("textbox", { name: "Search" })).toHaveValue(
       "kyoto",
     );
-    expect(onSearchChange).toHaveBeenCalledTimes(1);
-    expect(onSearchChange).toHaveBeenCalledWith("kyoto");
+    // One search on mount, then one for the restored term.
+    expect(config.search).toHaveBeenCalledTimes(2);
+    expect(config.search).toHaveBeenLastCalledWith({ searchTerm: "kyoto" });
     expect(
       screen.getByRole("columnheader", { name: /Population/ }),
     ).toHaveAttribute("aria-sort", "descending");
@@ -407,10 +401,11 @@ describe("CityTable, the address, and the search term", () => {
   // A link stating the defaults out loud is the same view as a link stating
   // nothing, so the write that follows removes all four keys and leaves the
   // address a bare path.
-  it("leaves no query at all for a link whose every value is the default", () => {
+  it("leaves no query at all for a link whose every value is the default", async () => {
     openAt("?q=&sort=&page=1&size=10");
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await screen.findByRole("table");
 
     expect(screen.getByRole("textbox", { name: "Search" })).toHaveValue("");
     expect(screen.getByText("Page 1 of 5")).toBeInTheDocument();
@@ -421,17 +416,20 @@ describe("CityTable, the address, and the search term", () => {
 // The clock is installed here and nowhere else in this file. The cases above
 // run on a real one, and the ones below are about when a write happens, which
 // is not observable without owning the clock.
-describe("CityTable and the debounced address write", () => {
+describe("DatasetPage and the debounced address write", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
 
-  it("writes the address once and reports upward once, after typing pauses", async () => {
+  it("writes the address once and searches once, after typing pauses", async () => {
     const user = userEvent.setup({ delay: null });
-    const onSearchChange = vi.fn();
+    const config = pageOf();
     const replaceState = vi.spyOn(window.history, "replaceState");
 
-    render(<CityTable {...defaultProps} onSearchChange={onSearchChange} />);
+    render(<DatasetPage config={config} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
 
     await user.type(screen.getByRole("textbox", { name: "Search" }), "tokyo");
 
@@ -439,14 +437,14 @@ describe("CityTable and the debounced address write", () => {
       await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS - 1);
     });
     expect(replaceState).not.toHaveBeenCalled();
-    expect(onSearchChange).not.toHaveBeenCalled();
+    expect(config.search).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1);
     });
     expect(replaceState).toHaveBeenCalledTimes(1);
-    expect(onSearchChange).toHaveBeenCalledTimes(1);
-    expect(onSearchChange).toHaveBeenCalledWith("tokyo");
+    expect(config.search).toHaveBeenCalledTimes(2);
+    expect(config.search).toHaveBeenLastCalledWith({ searchTerm: "tokyo" });
     expect(window.location.search).toBe("?q=tokyo");
   });
 
@@ -457,9 +455,12 @@ describe("CityTable and the debounced address write", () => {
   // typed one.
   it("drops a commit still pending when a back navigation lands inside the window", async () => {
     const user = userEvent.setup({ delay: null });
-    const onSearchChange = vi.fn();
+    const config = pageOf();
 
-    render(<CityTable {...defaultProps} onSearchChange={onSearchChange} />);
+    render(<DatasetPage config={config} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
 
     await user.type(screen.getByRole("textbox", { name: "Search" }), "tokyo");
     await act(async () => {
@@ -481,15 +482,18 @@ describe("CityTable and the debounced address write", () => {
     );
     expect(screen.getByText("Page 2 of 5")).toBeInTheDocument();
     expect(window.location.search).toBe("?q=kyoto&page=2");
-    expect(onSearchChange).toHaveBeenCalledTimes(1);
-    expect(onSearchChange).toHaveBeenCalledWith("kyoto");
+    expect(config.search).toHaveBeenCalledTimes(2);
+    expect(config.search).toHaveBeenLastCalledWith({ searchTerm: "kyoto" });
   });
 
   it("writes nothing further when the reader pauses again without typing", async () => {
     const user = userEvent.setup({ delay: null });
     const replaceState = vi.spyOn(window.history, "replaceState");
 
-    render(<CityTable {...defaultProps} />);
+    render(<DatasetPage config={pageOf()} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
 
     await user.type(screen.getByRole("textbox", { name: "Search" }), "tokyo");
     await act(async () => {
@@ -511,13 +515,16 @@ describe("CityTable and the debounced address write", () => {
   // trimmed term and the address writes a trimmed term, so that keystroke
   // changes no row and has to change no view. The position stays where the
   // reader left it, the address keeps the key that would restore it on a
-  // reload or a share, and nothing untrimmed is ever reported upward to be
-  // scanned for a second time.
+  // reload or a share, and nothing untrimmed is ever searched a second
+  // time.
   it("keeps the position and the page in the address when a trailing space follows the term", async () => {
     const user = userEvent.setup({ delay: null });
-    const onSearchChange = vi.fn();
+    const config = pageOf();
 
-    render(<CityTable {...defaultProps} onSearchChange={onSearchChange} />);
+    render(<DatasetPage config={config} />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
 
     await user.type(screen.getByRole("textbox", { name: "Search" }), "City");
     await act(async () => {
@@ -540,7 +547,7 @@ describe("CityTable and the debounced address write", () => {
     );
     expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
     expect(window.location.search).toBe("?q=City&page=5");
-    expect(onSearchChange).toHaveBeenLastCalledWith("City");
-    expect(onSearchChange).not.toHaveBeenCalledWith("City ");
+    expect(config.search).toHaveBeenLastCalledWith({ searchTerm: "City" });
+    expect(config.search).not.toHaveBeenCalledWith({ searchTerm: "City " });
   });
 });
