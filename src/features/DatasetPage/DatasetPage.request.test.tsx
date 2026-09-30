@@ -10,6 +10,7 @@ import { es } from "../../i18n/catalogs/es";
 import { CITY_FIXTURE_ENVELOPE } from "../../test/cityFixture";
 import { stubDatasetFetch } from "../../test/fetchStub";
 import { CITY_PAGE } from "../cities/cityPage";
+import { FILM_PAGE } from "../films/filmPage";
 import { DatasetPage } from "./DatasetPage";
 
 /** The search seam's own type, so a stub is held to the page's contract. */
@@ -35,6 +36,12 @@ async function freshPage() {
 
 /** The city page over an injected search, so a case picks its own outcome. */
 const withSearch = (search: CitySearch) => ({ ...CITY_PAGE, search });
+
+/** The film seam's own type, for the same reason as the city one above. */
+type FilmSearch = (typeof FILM_PAGE)["search"];
+
+/** The film page over an injected search. */
+const withFilmSearch = (search: FilmSearch) => ({ ...FILM_PAGE, search });
 
 const SAMPLE_CITIES: City[] = [
   {
@@ -443,5 +450,55 @@ describe("DatasetPage requests", () => {
       ),
     ).not.toBeInTheDocument();
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+});
+
+// Only what the city cases above cannot say: that the films domain reaches the
+// error sentence, and the after-a-failure half of the download claim.
+describe("DatasetPage requests on the films page", () => {
+  it("renders the film sentence the failure's code names, not the failure's own message", async () => {
+    const failure = new DatasetError(
+      "notJson",
+      0,
+      "the developer-facing text",
+      { cause: new Error("Unexpected token < in JSON at position 0") },
+    );
+    render(
+      <DatasetPage config={withFilmSearch(() => Promise.reject(failure))} />,
+    );
+
+    expect(
+      await screen.findByText(
+        `Error: ${en.films.datasetError.notJson("en-US", 0)}`,
+      ),
+    ).toBeInTheDocument();
+    // The other page's wording for the same code stays off the screen too.
+    expect(document.body).not.toHaveTextContent("the developer-facing text");
+    expect(document.body).not.toHaveTextContent("city data");
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+  });
+
+  // The settled action runs from a finally, so a failure cannot leave a
+  // permanent spinner behind it.
+  it("stops claiming a download after a failure as well as after a result", async () => {
+    const failure = new DatasetError(
+      "transport",
+      0,
+      "the developer-facing text",
+    );
+    render(
+      <DatasetPage config={withFilmSearch(() => Promise.reject(failure))} />,
+    );
+
+    expect(
+      screen.getByText("Downloading the film data..."),
+    ).toBeInTheDocument();
+
+    expect(
+      await screen.findByText(
+        `Error: ${en.films.datasetError.transport("en-US", 0)}`,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Downloading the film data...")).toBeNull();
   });
 });

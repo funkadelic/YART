@@ -1,7 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import FilmsApp from "./FilmsApp";
+import { DatasetPage } from "./features/DatasetPage";
+import { FILM_PAGE } from "./features/films/filmPage";
 import "./index.css";
 
 const container = document.getElementById("root");
@@ -12,6 +13,6 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <FilmsApp />
+    <DatasetPage config={FILM_PAGE} />
   </StrictMode>,
 );
