@@ -144,8 +144,3 @@ export function serializeTableState<Id extends string>(
   const query = next.toString();
   return query === "" ? "" : `?${query}`;
 }
-
-/** Reads only the term, for the container that owns none of the columns. */
-export function parseSearchTerm(search: string): string {
-  return parseTableState(search, []).query ?? DEFAULT_TABLE_STATE.query;
-}

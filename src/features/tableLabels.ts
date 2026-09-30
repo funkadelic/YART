@@ -1,7 +1,3 @@
-// A module, where every other entry in this directory is a folder. One builder
-// serves both pages, and putting it inside either feature would make the other
-// import across a feature boundary.
-
 import type { DataTableLabels } from "../components/DataTable/DataTable";
 import type { SearchInputLabels } from "../components/SearchInput";
 import type { Catalog, DomainId } from "../i18n/catalogs/en";

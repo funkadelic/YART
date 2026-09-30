@@ -10,7 +10,6 @@ import {
   type TableState,
 } from "../src/components/DataTable/tableState";
 import {
-  parseSearchTerm,
   parseTableState,
   serializeTableState,
 } from "../src/components/DataTable/tableStateUrl";
@@ -71,13 +70,6 @@ bench
     rounds(() => {
       for (const address of ADDRESSES) {
         parseTableState(address, CITY_COLUMN_IDS);
-      }
-    });
-  })
-  .add(`parse the term out of four addresses, ${ROUNDS} rounds`, () => {
-    rounds(() => {
-      for (const address of ADDRESSES) {
-        parseSearchTerm(address);
       }
     });
   })
