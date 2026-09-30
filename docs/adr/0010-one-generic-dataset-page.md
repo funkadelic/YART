@@ -13,7 +13,7 @@ The committed search term lived in three places: the root's state, the container
 
 ## Decision
 
-One generic component, `DatasetPage`, owns the request reducer, the fetch effect, the view state, the search debounce, the address write and the back-navigation listener, and renders the layout. Each entry passes it a module-scope config with five fields, `search`, `buildColumns`, `getRowId`, `columnIds` and `domain`, declared in `src/features/cities/` or `src/features/films/`. The fetch is keyed on the committed term held in the view state, so that term has one owner.
+One generic component, `DatasetPage`, holds the request reducer and renders the layout around an inner view that owns the fetch effect, the view state, the search debounce, the address write and the back-navigation listener. Each entry passes it a module-scope config with five fields, `search`, `buildColumns`, `getRowId`, `columnIds` and `domain`, declared in `src/features/cities/` or `src/features/films/`. The fetch is keyed on the committed term held in the view state, so that term has one owner.
 
 Waiting for a third table was rejected: the carve-outs, the guard holding them together and the two parallel sets of test suites already cost more than the abstraction does. Lifting the shared logic into hooks was rejected too, because it would leave two components that still differ only in identifiers.
 
@@ -23,6 +23,6 @@ The tree has one address writer and one owner for the search term. The copy-dete
 
 A config has to stay reachable from exactly one entry. Imported from both, its dataset lands in the chunk the two entries share, and the build's preload step throws on an entry with no dataset of its own. The per-dataset folders carry no barrel for that reason.
 
-The page renders the layout, so its own hook bodies run outside the error boundary, while everything it renders stays inside. The city and film suites merged into one set that drives the page through an injected search.
+Everything built from the address sits under the error boundary, so a reset remounts the view from the last committed address. The fetched rows stay above it, so recovery repaints them at once and the remount re-issues the search over the dataset already in memory. The city and film suites merged into one set that drives the page through an injected search.
 
 Revisit this when a dataset needs behavior a config field cannot express. The closing paragraph of record 1, about a third shell, is left as written, and nothing is superseded.

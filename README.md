@@ -232,12 +232,14 @@ Five of the entries are shown. The rest, the retry and error copy, the sort anno
 
 An entry that weaves a value takes that value rather than an already-composed phrase. A caller handing over a finished word has made a grammatical decision one layer too early, which is what made the old sort summary untranslatable.
 
-Then hold the state and hand it down. Trimmed from `src/features/DatasetPage/DatasetPage.tsx`:
+Then hold the state and hand it down. Trimmed from `DatasetView`, the inner view `DatasetPage` renders under the layout's error boundary in `src/features/DatasetPage/DatasetPage.tsx`:
 
 ```tsx
-export function DatasetPage<T, Id extends string>({
+function DatasetView<T, Id extends string>({
   config,
-}: DatasetPageProps<T, Id>) {
+  request,
+  dispatch,
+}: DatasetViewProps<T, Id>) {
   const { domain, search, buildColumns, getRowId, columnIds } = config;
 
   const [tableState, setTableState] = useState<TableState<Id>>(() => ({
@@ -333,7 +335,7 @@ The function itself has to keep one identity across renders, which is why `cityR
 
 ### Why the container debounces
 
-`SearchInput` calls `onChange` on every keystroke and `DataTable` renders whatever `rows` it is given. Neither of them knows what a pause in typing means. The container between them does: `DatasetPage` holds what is in the box, and the one term that typing settles on drives the page reset, the address write, and the request behind it. Swapping the 150ms delay for 300ms, or replacing the simulated API with a real endpoint, touches no table code.
+`SearchInput` calls `onChange` on every keystroke and `DataTable` renders whatever `rows` it is given. Neither of them knows what a pause in typing means. The container between them does: `DatasetView` holds what is in the box, and the one term that typing settles on drives the page reset, the address write, and the request behind it. Swapping the 150ms delay for 300ms, or replacing the simulated API with a real endpoint, touches no table code.
 
 `useDebouncedCallback` debounces the call rather than a value, so it stays usable straight from an event handler. It hands back a scheduler and a cancel:
 
