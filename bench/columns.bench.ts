@@ -5,8 +5,8 @@ import { Bench } from "tinybench";
 
 import type { City } from "../src/api/getCities";
 import { columns } from "../src/components/DataTable/column";
-import { buildCityColumns } from "../src/features/CityTable/cityColumns";
-import { buildFilmColumns } from "../src/features/FilmTable/filmColumns";
+import { buildCityColumns } from "../src/features/cities/cityColumns";
+import { buildFilmColumns } from "../src/features/films/filmColumns";
 import { CATALOGS } from "../src/i18n/catalogs";
 import { en } from "../src/i18n/catalogs/en";
 import { collatorFor } from "../src/i18n/format";

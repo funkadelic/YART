@@ -17,7 +17,7 @@ import {
 import {
   CITY_COLUMN_IDS,
   type CityColumnId,
-} from "../src/features/CityTable/cityColumns";
+} from "../src/features/cities/cityColumns";
 import { ROUNDS, report, rounds } from "./harness";
 
 const INITIAL: TableState<CityColumnId> = DEFAULT_TABLE_STATE;

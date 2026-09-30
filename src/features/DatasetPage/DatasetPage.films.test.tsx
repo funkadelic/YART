@@ -8,7 +8,7 @@ import { durationFormatFor } from "../../i18n/format";
 import { setLocaleChoice } from "../../i18n/localeStore";
 import { FILM_FIXTURE } from "../../test/filmFixture";
 import { required } from "../../test/required";
-import { buildFilmColumns } from "../FilmTable/filmColumns";
+import { buildFilmColumns } from "../films/filmColumns";
 import { FILM_PAGE } from "../films/filmPage";
 import { buildTableLabels } from "../tableLabels";
 import { DatasetPage } from "./DatasetPage";

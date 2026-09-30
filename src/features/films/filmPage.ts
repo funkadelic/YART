@@ -5,7 +5,7 @@ import {
   buildFilmColumns,
   filmRowId,
   type FilmColumnId,
-} from "../FilmTable/filmColumns";
+} from "./filmColumns";
 
 /**
  * The films page config. Only the films entry imports this, which keeps the

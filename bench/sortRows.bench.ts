@@ -9,11 +9,8 @@ import { sortRowsSliced } from "../src/components/DataTable/sortRowsSliced";
 import {
   buildCityColumns,
   cityRowId,
-} from "../src/features/CityTable/cityColumns";
-import {
-  buildFilmColumns,
-  filmRowId,
-} from "../src/features/FilmTable/filmColumns";
+} from "../src/features/cities/cityColumns";
+import { buildFilmColumns, filmRowId } from "../src/features/films/filmColumns";
 import { en } from "../src/i18n/catalogs/en";
 import { resolveLocale } from "../src/i18n/resolveLocale";
 import { cityRows, filmRows } from "./fixtures";

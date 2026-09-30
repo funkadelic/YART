@@ -5,7 +5,7 @@ import {
   buildCityColumns,
   cityRowId,
   type CityColumnId,
-} from "../CityTable/cityColumns";
+} from "./cityColumns";
 
 /**
  * The cities page config. Only the cities entry imports this, which keeps the

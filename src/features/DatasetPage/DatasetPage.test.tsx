@@ -10,7 +10,7 @@ import { fr } from "../../i18n/catalogs/fr";
 import { numberFormatFor } from "../../i18n/format";
 import { setLocaleChoice } from "../../i18n/localeStore";
 import { required } from "../../test/required";
-import { buildCityColumns, cityRowId } from "../CityTable/cityColumns";
+import { buildCityColumns, cityRowId } from "../cities/cityColumns";
 import { CITY_PAGE } from "../cities/cityPage";
 import { buildTableLabels } from "../tableLabels";
 import { DatasetPage } from "./DatasetPage";
