@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { describe, expect, it } from "vitest";
 
-import FilmsApp from "./FilmsApp";
+import { DatasetPage } from "./features/DatasetPage";
+import { FILM_PAGE } from "./features/films/filmPage";
 import { describeViolations, incompleteRuleIds } from "./test/axeSweep";
 
 // The shipped stylesheet, which only an entry module pulls in. Every design
@@ -69,7 +70,7 @@ describe("films accessibility in a real engine", () => {
   it("reports no violation in either theme, on a page past the first, or reading right to left", async () => {
     const user = userEvent.setup();
 
-    render(<FilmsApp />);
+    render(<DatasetPage config={FILM_PAGE} />);
 
     // The engine fetches the real dataset asset across the dev server, parses
     // and indexes it. The jsdom suite pays none of that, because it runs

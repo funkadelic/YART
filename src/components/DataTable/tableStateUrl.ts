@@ -24,9 +24,10 @@ const PARAM_SCHEMA: readonly UrlParamEntry[] = [
   {
     key: "q",
     // A term reaches a controlled value and a substring match, never a lookup.
-    parse: (raw) => ({ query: raw }),
-    // Trimmed on the way out because the search trims, so one view cannot have
-    // two addresses. Not trimmed in the state, so the box shows what was typed.
+    // Trimmed as the commit trims, so a padded link seeds the settled term.
+    parse: (raw) => ({ query: raw.trim() }),
+    // Trimmed on the way out too, so one view cannot have two addresses
+    // whatever term the state was handed.
     serialize: (state) => {
       const term = state.query.trim();
       return term === DEFAULT_TABLE_STATE.query ? null : term;
@@ -143,9 +144,4 @@ export function serializeTableState<Id extends string>(
 
   const query = next.toString();
   return query === "" ? "" : `?${query}`;
-}
-
-/** Reads only the term, for the container that owns none of the columns. */
-export function parseSearchTerm(search: string): string {
-  return parseTableState(search, []).query ?? DEFAULT_TABLE_STATE.query;
 }

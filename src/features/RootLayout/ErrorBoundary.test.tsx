@@ -5,7 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/catalogs/en";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { RootLayout } from "./RootLayout";
-import { CityTable } from "../CityTable";
+import { DatasetError } from "../../data/loadEnvelope";
+import { CITY_PAGE } from "../cities/cityPage";
+import { DatasetPage } from "../DatasetPage";
 
 const THROWN_MESSAGE = "a render threw this";
 
@@ -177,20 +179,20 @@ describe("ErrorBoundary mounted in the layout", () => {
     expect(consoleError).toHaveBeenCalled();
   });
 
-  it("shows the inline asynchronous error region as the only alert region when a request rejects", () => {
+  it("shows the inline asynchronous error region as the only alert region when a request rejects", async () => {
     render(
-      <RootLayout domain="cities">
-        <CityTable
-          data={[]}
-          onSearchChange={() => {}}
-          loading={false}
-          datasetReady={false}
-          errorMessage="The city data could not be read."
-          onRetry={() => {}}
-        />
-      </RootLayout>,
+      <DatasetPage
+        config={{
+          ...CITY_PAGE,
+          search: () =>
+            Promise.reject(
+              new DatasetError("notAnObject", 0, "developer-facing text"),
+            ),
+        }}
+      />,
     );
 
+    await screen.findByRole("alert");
     const alerts = screen.getAllByRole("alert");
     expect(alerts).toHaveLength(1);
     expect(alerts[0]).toHaveTextContent("The city data could not be read.");

@@ -1,7 +1,7 @@
 /**
  * The ways loading can fail. Codes, because the messages below are English.
  * Six are thrown here, two by each dataset's own row check, and "unexpected" is
- * App's fallback for a rejection that carries no Error. A tuple, so the catalog
+ * the page's fallback for a rejection that carries no Error. A tuple, so the catalog
  * test can walk the set.
  */
 export const DATASET_ERROR_CODES = [

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { City } from "../api/getCities";
-import { cityRowId } from "../features/CityTable/cityColumns";
+import { cityRowId } from "../features/cities/cityColumns";
 import { CITY_FIXTURE } from "../test/cityFixture";
 import { required } from "../test/required";
 import { collatorFor } from "../i18n/format";

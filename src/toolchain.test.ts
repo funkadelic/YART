@@ -361,13 +361,6 @@ const CONFIG_FILE = "vite.config.ts";
 const E2E_CONFIG_FILE = "playwright.config.ts";
 const WORKFLOW_FILE = ".github/workflows/ci.yml";
 const SONAR_FILE = "sonar-project.properties";
-const FALLOW_FILE = ".fallowrc.json";
-
-// What fallow ignores beyond the Sonar list. The catalogs are parallel by
-// construction, and fallow reports that shape as clones at a granularity
-// Sonar's copy detector never reaches, so there is nothing to exclude on the
-// other side.
-const FALLOW_ONLY_DUPLICATE_IGNORES = ["src/i18n/catalogs/**"];
 
 // The two test runners this repository is written to hold, each paired with the
 // file that configures it. Named as pairs so neither half can be asserted
@@ -707,22 +700,17 @@ function moduleSource(path: string): ts.SourceFile {
 const THEME_MODULE = "src/theme/resolveTheme.ts";
 const LOCALE_MODULE = "src/i18n/resolveLocale.ts";
 
-// The city page's address writer, and the module that owns which keys the
-// address may carry. This constant stays the city container alone, because it
-// is also an element of the address-document list below, and widening it there
-// would demand a second verbatim copy of the invariant paragraph.
-const ADDRESS_WRITER = "src/features/CityTable/CityTable.tsx";
-const FILMS_ADDRESS_WRITER = "src/features/FilmTable/FilmTable.tsx";
+// The one address writer, and the module that owns which keys the address may
+// carry. The writer is also an address document.
+const ADDRESS_WRITER = "src/features/DatasetPage/DatasetPage.tsx";
 const SCHEMA_MODULE = "src/components/DataTable/tableStateUrl.ts";
 
 /**
- * Every module allowed to write the address, one per page, sorted.
- *
- * There are two because the site ships two pages, each a separate document with
- * its own query string, and neither writer can see the other's. A third writer
- * appearing without a third page planned for fails this list.
+ * Every module allowed to write the address. One module writes it, and each
+ * shell mounts that one component with its own config, so any second writer
+ * fails this list.
  */
-const ADDRESS_WRITERS = [ADDRESS_WRITER, FILMS_ADDRESS_WRITER].toSorted();
+const ADDRESS_WRITERS = [ADDRESS_WRITER];
 
 /**
  * The four keys the query string owns, sorted.
@@ -1422,42 +1410,6 @@ describe("toolchain baseline", () => {
     );
   });
 
-  // The near-copy containers are carved out of two copy detectors, and each
-  // states the carve in its own file. Drift shows up as a clone group one tool
-  // reports and the other does not, which reads as a finding rather than as a
-  // stale list. Derived from the Sonar side plus the written-out extras, so
-  // adding a path to either file, or dropping one, fails here.
-  it("keeps the fallow duplicate ignores agreeing with the Sonar copy-detector exclusions", () => {
-    const declared = /^sonar\.cpd\.exclusions=(.*)$/m.exec(
-      readFileSync(join(projectRoot, SONAR_FILE), "utf8"),
-    );
-
-    expect(
-      declared,
-      `${SONAR_FILE} declares no copy-detector exclusions`,
-    ).not.toBeNull();
-
-    const sonarPaths = (declared?.[1] ?? "")
-      .split(",")
-      .map((path) => path.trim())
-      .filter((path) => path !== "");
-
-    expect(sonarPaths.length).toBeGreaterThan(0);
-
-    const config = JSON.parse(
-      readFileSync(join(projectRoot, FALLOW_FILE), "utf8"),
-    ) as { duplicates?: { ignore?: string[] } };
-
-    expect(
-      config.duplicates?.ignore,
-      `${FALLOW_FILE} declares no duplicate ignore list`,
-    ).toBeDefined();
-
-    expect(config.duplicates?.ignore?.toSorted()).toEqual(
-      [...sonarPaths, ...FALLOW_ONLY_DUPLICATE_IGNORES].toSorted(),
-    );
-  });
-
   // There is another way to reach the number without writing the test: name the
   // provider whose suppression syntax the tree happens to carry, and suppress. Both halves
   // are asserted, and the config is scanned alongside the source because it is the
@@ -1649,11 +1601,11 @@ describe("toolchain baseline", () => {
     }
   });
   // Three questions, all asked of constructs: whether anything but the one
-  // component per page mutates history, whether the query string still owns
+  // page component mutates history, whether the query string still owns
   // exactly its four keys, and whether every document a reader consults still
   // says the same thing about what a link reproduces. A token search would pass
   // on all three from a mention inside a comment.
-  it("keeps one address writer per page, four query keys, and one account of what a link carries", () => {
+  it("keeps one address writer, four query keys, and one account of what a link carries", () => {
     const sources = sourceModules();
 
     const writers: string[] = [];
@@ -1672,7 +1624,7 @@ describe("toolchain baseline", () => {
 
     expect(
       writers.toSorted(),
-      "the address is written from somewhere other than exactly the two writers",
+      "the address is written from somewhere other than the one writer",
     ).toEqual(ADDRESS_WRITERS);
 
     // Separate from the count above so the failure says which rule broke. A push

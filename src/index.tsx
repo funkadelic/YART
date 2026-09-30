@@ -1,7 +1,8 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import App from "./App";
+import { DatasetPage } from "./features/DatasetPage";
+import { CITY_PAGE } from "./features/cities/cityPage";
 import "./index.css";
 
 const container = document.getElementById("root");
@@ -12,6 +13,6 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
-    <App />
+    <DatasetPage config={CITY_PAGE} />
   </StrictMode>,
 );

@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DEFAULT_TABLE_STATE, type TableState } from "./tableState";
-import {
-  parseSearchTerm,
-  parseTableState,
-  serializeTableState,
-} from "./tableStateUrl";
+import { parseTableState, serializeTableState } from "./tableStateUrl";
 
 // A made-up pair of ids, because the module takes the valid ids as an argument
 // precisely so it never learns what a row is. Borrowing a real column id here
@@ -91,6 +87,12 @@ describe("parseTableState", () => {
     });
     expect(parseTableState("?q=new+york", WIDGET_COLUMN_IDS)).toEqual({
       query: "new york",
+    });
+  });
+
+  it("reads a term with edge whitespace as the trimmed term", () => {
+    expect(parseTableState("?q=%20tokyo%20", WIDGET_COLUMN_IDS)).toEqual({
+      query: "tokyo",
     });
   });
 
@@ -314,9 +316,7 @@ describe("serializeTableState", () => {
     expect(serializeTableState(stateWith({ query: "   " }), "?q=old")).toBe("");
   });
 
-  // The trim belongs to the address and stops there: the box paints what the
-  // reader typed, so trimming the state would delete a space out from under a
-  // cursor mid-word.
+  // The serializer reads the state and never writes it.
   it("leaves the state's own term untouched", () => {
     const state = stateWith({ query: " tokyo " });
 
@@ -422,26 +422,5 @@ describe("the round trip for a column id that begins with the prefix", () => {
       sortColumnId: "-rank",
       sortDirection: "asc",
     });
-  });
-});
-
-describe("parseSearchTerm", () => {
-  it("reads the term out of a fully specified query and ignores the rest", () => {
-    expect(parseSearchTerm("?q=tokyo&sort=-population&page=3")).toBe("tokyo");
-  });
-
-  it("reads an empty query as the empty term", () => {
-    expect(parseSearchTerm("")).toBe("");
-  });
-
-  it("reads a query with no term as the empty term", () => {
-    expect(parseSearchTerm("?page=3")).toBe("");
-  });
-
-  // Same schema, so the term is decoded the same way whichever entry point
-  // reads it. A second decoding rule living here would drift from the first.
-  it("decodes a term exactly as the four-key reader does", () => {
-    expect(parseSearchTerm("?q=a%26b%3Dc%23d")).toBe("a&b=c#d");
-    expect(parseSearchTerm("?q=new+york")).toBe("new york");
   });
 });

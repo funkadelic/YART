@@ -1,36 +1,32 @@
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { CityTable } from "./CityTable";
 import type { City } from "../../api/getCities";
 import { sortRows } from "../../components/DataTable/sortRows";
+import { DatasetError } from "../../data/loadEnvelope";
 import { SYNC_SORT_ROWS } from "../../hooks/useSortedRows";
 import { en } from "../../i18n/catalogs/en";
 import { fr } from "../../i18n/catalogs/fr";
 import { numberFormatFor } from "../../i18n/format";
 import { setLocaleChoice } from "../../i18n/localeStore";
 import { required } from "../../test/required";
-import { buildCityColumns, cityRowId } from "./cityColumns";
+import { buildCityColumns, cityRowId } from "../cities/cityColumns";
+import { CITY_PAGE } from "../cities/cityPage";
 import { buildTableLabels } from "../tableLabels";
+import { DatasetPage } from "./DatasetPage";
 
 // A spy that delegates to the real builder, so every case in this file goes on
-// exercising the shipping columns. How many times the array was built is
-// invisible in the rendered output, so the count is asserted directly to pin
-// the array's identity to the locale.
-vi.mock("./cityColumns", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./cityColumns")>();
-
-  return { ...actual, buildCityColumns: vi.fn(actual.buildCityColumns) };
-});
-
-// The same spy over the labels builder, and for the same reason. The table
-// holds the object it returns across renders, so the build count is the
-// assertion that its identity follows the locale.
+// exercising the shipping labels. The table holds the object it returns across
+// renders, so the build count is the assertion that its identity follows the
+// locale.
 vi.mock("../tableLabels", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../tableLabels")>();
 
   return { ...actual, buildTableLabels: vi.fn(actual.buildTableLabels) };
 });
+
+/** The search seam's own type, so a stub is held to the page's contract. */
+type CitySearch = (typeof CITY_PAGE)["search"];
 
 // Mock data for testing
 const mockCities: City[] = [
@@ -124,23 +120,55 @@ function sortGlyphCounts(): number[] {
     .map((header) => header.querySelectorAll("svg").length);
 }
 
-const defaultProps = {
-  data: mockCities,
-  onSearchChange: vi.fn(),
-  loading: false,
-  // The honest default for a fixture that already carries rows.
-  datasetReady: true,
-  errorMessage: null,
-};
+/** The city page over a search that answers the given rows for any term. */
+const pageWith = (rows: readonly City[]) => ({
+  ...CITY_PAGE,
+  search: vi.fn<CitySearch>(() => Promise.resolve(rows)),
+});
 
-describe("CityTable", () => {
+/** The city page over a search that never settles, so it stays in flight. */
+const pendingPage = () => ({
+  ...CITY_PAGE,
+  search: vi.fn<CitySearch>(() => new Promise<never>(() => {})),
+});
+
+/** The city page over a search that fails with a transport error. */
+const failingPage = () => ({
+  ...CITY_PAGE,
+  search: vi.fn<CitySearch>(() =>
+    Promise.reject(new DatasetError("transport", 0, "developer-facing text")),
+  ),
+});
+
+/** The sentence a transport failure paints, in English. */
+const TRANSPORT_ERROR = `Error: ${en.cities.datasetError.transport("en-US", 0)}`;
+
+/**
+ * Renders the page over rows and waits until they are on screen and the
+ * request has settled, so a case starts from a quiet table.
+ */
+async function renderPage(rows: readonly City[] = mockCities) {
+  const config = pageWith(rows);
+  const view = render(<DatasetPage config={config} />);
+
+  await waitFor(() => {
+    expect(screen.getByRole("table").closest("[aria-busy]")).toHaveAttribute(
+      "aria-busy",
+      "false",
+    );
+  });
+
+  return { ...view, config };
+}
+
+describe("DatasetPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   describe("Basic Rendering", () => {
-    it("renders table with correct headers", () => {
-      render(<CityTable {...defaultProps} />);
+    it("renders table with correct headers", async () => {
+      await renderPage();
 
       expect(screen.getByText("City")).toBeInTheDocument();
       expect(screen.getByText("Country")).toBeInTheDocument();
@@ -149,8 +177,8 @@ describe("CityTable", () => {
       expect(screen.getByText("Population")).toBeInTheDocument();
     });
 
-    it("renders all city data", () => {
-      render(<CityTable {...defaultProps} />);
+    it("renders all city data", async () => {
+      await renderPage();
 
       expect(screen.getByText("Tokyo")).toBeInTheDocument();
       expect(screen.getByText("Jakarta")).toBeInTheDocument();
@@ -159,8 +187,8 @@ describe("CityTable", () => {
       expect(screen.getByText("New Delhi")).toBeInTheDocument();
     });
 
-    it("renders search input", () => {
-      render(<CityTable {...defaultProps} />);
+    it("renders search input", async () => {
+      await renderPage();
 
       const searchInput = screen.getByRole("textbox", { name: "Search" });
       expect(searchInput).toBeInTheDocument();
@@ -170,8 +198,8 @@ describe("CityTable", () => {
     // Matched as a substring, because the runner hands a CSS Module a proxy
     // that decorates the key, so the class on the element is not the key the
     // source writes.
-    it("marks the population sort control as numeric and no other", () => {
-      render(<CityTable {...defaultProps} />);
+    it("marks the population sort control as numeric and no other", async () => {
+      await renderPage();
 
       expect(
         screen.getByRole("button", { name: "Population" }).className,
@@ -183,28 +211,24 @@ describe("CityTable", () => {
   });
 
   describe("Search Functionality", () => {
-    it("reports the term upward once typing has paused, not once per keystroke", async () => {
+    it("searches the term once typing has paused, not once per keystroke", async () => {
       const user = userEvent.setup();
-      const mockOnSearchChange = vi.fn();
-
-      render(
-        <CityTable {...defaultProps} onSearchChange={mockOnSearchChange} />,
-      );
+      const { config } = await renderPage();
 
       const searchInput = screen.getByRole("textbox", { name: "Search" });
       await user.type(searchInput, "Tok");
 
       // The commit waits for the pause, so three keystrokes settle into one
-      // call carrying the whole word, with no calls for the prefixes.
+      // search carrying the whole word, after the one the mount issued.
       await waitFor(() => {
-        expect(mockOnSearchChange).toHaveBeenCalledWith("Tok");
+        expect(config.search).toHaveBeenLastCalledWith({ searchTerm: "Tok" });
       });
-      expect(mockOnSearchChange).toHaveBeenCalledTimes(1);
+      expect(config.search).toHaveBeenCalledTimes(2);
     });
 
     it("displays what has been typed into the search input", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       const searchInput = screen.getByRole("textbox", { name: "Search" });
       await user.type(searchInput, "Tokyo");
@@ -214,26 +238,19 @@ describe("CityTable", () => {
       expect(searchInput).toHaveValue("Tokyo");
     });
 
-    it("shows search input even when there's an error", () => {
-      render(<CityTable {...defaultProps} errorMessage="Test error" />);
+    it("shows search input even when there's an error", async () => {
+      render(<DatasetPage config={failingPage()} />);
 
+      expect(await screen.findByText(TRANSPORT_ERROR)).toBeInTheDocument();
       expect(
         screen.getByRole("textbox", { name: "Search" }),
       ).toBeInTheDocument();
-      expect(screen.getByText("Error: Test error")).toBeInTheDocument();
     });
   });
 
   describe("Loading and Error States", () => {
     it("renders the download copy while the dataset has never arrived", () => {
-      render(
-        <CityTable
-          {...defaultProps}
-          data={[]}
-          loading={true}
-          datasetReady={false}
-        />,
-      );
+      render(<DatasetPage config={pendingPage()} />);
 
       expect(
         screen.getByText("Downloading the city data..."),
@@ -241,50 +258,24 @@ describe("CityTable", () => {
       expect(screen.queryByRole("table")).not.toBeInTheDocument();
     });
 
-    it("renders no download copy while refetching over a dataset that has already arrived", () => {
+    it("renders no download copy while refetching over a dataset that has already arrived", async () => {
       // The user path this stands for is a search that returned nothing,
       // followed by one more keystroke. Nothing is downloading, and a row
       // count cannot tell that apart from a cold start.
-      render(
-        <CityTable
-          {...defaultProps}
-          data={[]}
-          loading={true}
-          datasetReady={true}
-        />,
-      );
+      const { rerender } = render(<DatasetPage config={pageWith([])} />);
+      expect(await screen.findByText("No cities found")).toBeInTheDocument();
+
+      rerender(<DatasetPage config={pendingPage()} />);
 
       expect(screen.queryByText("Downloading the city data...")).toBeNull();
       expect(screen.getByText("No cities found")).toBeInTheDocument();
     });
 
-    it("does not claim an empty search before the first request starts", () => {
-      // The container's first paint, before the effect raises the loading
-      // flag. Nothing has arrived and nothing has been searched for, so the
-      // empty-result copy would be a statement about a search that never ran.
-      const { container } = render(
-        <CityTable
-          {...defaultProps}
-          data={[]}
-          loading={false}
-          datasetReady={false}
-        />,
-      );
-
-      expect(screen.queryByText("No cities found")).toBeNull();
-      expect(
-        screen.getByText("Downloading the city data..."),
-      ).toBeInTheDocument();
-      expect(container.textContent).not.toContain(
-        "No cities found for that search",
-      );
-    });
-
-    it("keeps the table mounted while refetching with results on screen", () => {
-      const { rerender } = render(<CityTable {...defaultProps} />);
+    it("keeps the table mounted while refetching with results on screen", async () => {
+      const { rerender } = await renderPage();
       const tableBeforeRefetch = screen.getByRole("table");
 
-      rerender(<CityTable {...defaultProps} loading={true} />);
+      rerender(<DatasetPage config={pendingPage()} />);
 
       // Same DOM node, so the table is dimmed in place instead of unmounting
       // and flashing on every keystroke.
@@ -312,7 +303,7 @@ describe("CityTable", () => {
         sortRows(rows, name, "asc", cityRowId)[0],
         "the first sorted city",
       );
-      const { container } = render(<CityTable {...defaultProps} data={rows} />);
+      const { container } = await renderPage(rows);
       const sortRegion = container.querySelector(
         '[aria-live="polite"][aria-atomic="true"]',
       );
@@ -352,7 +343,7 @@ describe("CityTable", () => {
         sortRows(rows, name, "asc", cityRowId)[0],
         "the first sorted city",
       );
-      const { container } = render(<CityTable {...defaultProps} data={rows} />);
+      const { container } = render(<DatasetPage config={pageWith(rows)} />);
 
       expect(
         screen.getByText("Downloading the city data..."),
@@ -373,25 +364,22 @@ describe("CityTable", () => {
       );
     });
 
-    it("shows error state", () => {
-      render(
-        <CityTable {...defaultProps} errorMessage="Failed to fetch cities" />,
-      );
+    it("shows error state", async () => {
+      render(<DatasetPage config={failingPage()} />);
 
-      expect(
-        screen.getByText("Error: Failed to fetch cities"),
-      ).toBeInTheDocument();
+      expect(await screen.findByText(TRANSPORT_ERROR)).toBeInTheDocument();
       expect(screen.queryByRole("table")).not.toBeInTheDocument();
     });
 
-    it("shows empty state when no data", () => {
-      render(<CityTable {...defaultProps} data={[]} />);
+    it("shows empty state when no data", async () => {
+      render(<DatasetPage config={pageWith([])} />);
 
-      expect(screen.getByText("No cities found")).toBeInTheDocument();
+      expect(await screen.findByText("No cities found")).toBeInTheDocument();
     });
 
-    it("keeps the download copy off screen while refetching with rows on show", () => {
-      render(<CityTable {...defaultProps} loading={true} />);
+    it("keeps the download copy off screen while refetching with rows on show", async () => {
+      const { rerender } = await renderPage();
+      rerender(<DatasetPage config={pendingPage()} />);
 
       // The refetch path. Replacing the view here would unmount the table on
       // every keystroke.
@@ -401,50 +389,25 @@ describe("CityTable", () => {
       expect(screen.getByRole("table")).toBeInTheDocument();
     });
 
-    it("offers a retry control in the error region when a handler is given", async () => {
+    it("offers a retry control that refocuses the search box and searches again", async () => {
       const user = userEvent.setup();
-      const onRetry = vi.fn(() => document.activeElement);
+      const config = failingPage();
 
-      render(
-        <CityTable
-          {...defaultProps}
-          data={[]}
-          errorMessage="The city data could not be downloaded."
-          onRetry={onRetry}
-        />,
+      render(<DatasetPage config={config} />);
+
+      await user.click(
+        await screen.findByRole("button", { name: "Try again" }),
       );
 
-      await user.click(screen.getByRole("button", { name: "Try again" }));
-
-      // Focus has already moved when the upstream handler runs.
-      const searchBox = screen.getByRole("textbox", { name: "Search" });
-      expect(onRetry).toHaveBeenCalledTimes(1);
-      expect(onRetry).toHaveReturnedWith(searchBox);
-      expect(searchBox).toHaveFocus();
-    });
-
-    it("offers no retry control when no handler is given", () => {
-      render(
-        <CityTable
-          {...defaultProps}
-          data={[]}
-          errorMessage="The city data could not be downloaded."
-        />,
-      );
-
-      expect(
-        screen.getByText("Error: The city data could not be downloaded."),
-      ).toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: "Try again" }),
-      ).not.toBeInTheDocument();
+      expect(screen.getByRole("textbox", { name: "Search" })).toHaveFocus();
+      expect(config.search).toHaveBeenCalledTimes(2);
     });
   });
 
   describe("Sorting Functionality", () => {
     it("sorts by city name in ascending order", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       await user.click(screen.getByRole("button", { name: "City" }));
 
@@ -455,7 +418,7 @@ describe("CityTable", () => {
 
     it("sorts by population in ascending order", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       await user.click(screen.getByRole("button", { name: "Population" }));
 
@@ -466,7 +429,7 @@ describe("CityTable", () => {
 
     it("implements three-state sorting (asc -> desc -> none)", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       // The activation lives on the button, the state lives on the cell.
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
@@ -487,7 +450,7 @@ describe("CityTable", () => {
 
     it("shows sort icons only for active column", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
       await user.click(screen.getByRole("button", { name: "City" }));
@@ -504,7 +467,7 @@ describe("CityTable", () => {
 
     it("draws one glyph, on the sorted column and only while sorted", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       const citySortButton = screen.getByRole("button", { name: "City" });
 
@@ -523,7 +486,7 @@ describe("CityTable", () => {
 
     it("switches sort when clicking different column", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       // Sort by city first
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
@@ -569,8 +532,8 @@ describe("CityTable", () => {
       population: 1000000 + i * 100000,
     }));
 
-    it("shows pagination controls when data exceeds page size", () => {
-      render(<CityTable {...defaultProps} data={largeMockData} />);
+    it("shows pagination controls when data exceeds page size", async () => {
+      await renderPage(largeMockData);
 
       expect(screen.getByText(/Page \d+ of \d+/)).toBeInTheDocument();
       expect(
@@ -581,8 +544,8 @@ describe("CityTable", () => {
       ).toBeInTheDocument();
     });
 
-    it("doesn't show pagination for single page of data", () => {
-      render(<CityTable {...defaultProps} />);
+    it("doesn't show pagination for single page of data", async () => {
+      await renderPage();
 
       expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument();
       expect(
@@ -592,7 +555,7 @@ describe("CityTable", () => {
 
     it("navigates to next page", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} data={largeMockData} />);
+      await renderPage(largeMockData);
 
       expect(screen.getByText("Page 1 of 3")).toBeInTheDocument();
 
@@ -606,7 +569,7 @@ describe("CityTable", () => {
 
     it("navigates to previous page", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} data={largeMockData} />);
+      await renderPage(largeMockData);
 
       // Go to page 2 first
       const nextButton = screen.getByRole("button", {
@@ -625,7 +588,7 @@ describe("CityTable", () => {
 
     it("navigates to first page", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} data={largeMockData} />);
+      await renderPage(largeMockData);
 
       // Go to page 2
       const nextButton = screen.getByRole("button", {
@@ -644,7 +607,7 @@ describe("CityTable", () => {
 
     it("navigates to last page", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} data={largeMockData} />);
+      await renderPage(largeMockData);
 
       const lastButton = screen.getByRole("button", {
         name: /Go to last page/,
@@ -656,7 +619,7 @@ describe("CityTable", () => {
 
     it("marks the controls at either end unavailable without disabling them", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} data={largeMockData} />);
+      await renderPage(largeMockData);
 
       // On the first page, previous and first are unavailable
       expect(
@@ -691,7 +654,7 @@ describe("CityTable", () => {
 
     it("keeps focus on next when the keyboard reaches the last page", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} data={largeMockData} />);
+      await renderPage(largeMockData);
 
       const nextButton = screen.getByRole("button", {
         name: /Go to next page/,
@@ -714,7 +677,7 @@ describe("CityTable", () => {
 
     it("changes page size", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} data={largeMockData} />);
+      await renderPage(largeMockData);
 
       const pageSelect = screen.getByLabelText("Per page:");
       expect(pageSelect).toHaveValue("10"); // Default value
@@ -725,7 +688,7 @@ describe("CityTable", () => {
 
     it("resets to page 1 when page size changes", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} data={largeMockData} />);
+      await renderPage(largeMockData);
 
       // Go to page 2
       const nextButton = screen.getByRole("button", {
@@ -744,9 +707,7 @@ describe("CityTable", () => {
 
     it("keeps rendering rows when the result set narrows under the current page", async () => {
       const user = userEvent.setup();
-      const { rerender } = render(
-        <CityTable {...defaultProps} data={fiftyRowData} />,
-      );
+      const { rerender } = await renderPage(fiftyRowData);
 
       await user.click(screen.getByRole("button", { name: /Go to last page/ }));
       expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
@@ -754,14 +715,16 @@ describe("CityTable", () => {
       // Rerendering the mounted instance reproduces the trap. A fresh
       // render would start on page one and never reach the state where the
       // navigation has vanished and no control on screen offers a way back.
-      rerender(<CityTable {...defaultProps} data={fiftyRowData.slice(0, 3)} />);
+      rerender(<DatasetPage config={pageWith(fiftyRowData.slice(0, 3))} />);
 
+      await waitFor(() => {
+        expect(screen.getAllByRole("row")).toHaveLength(4);
+      });
       expect(screen.queryByText("No cities found")).not.toBeInTheDocument();
-      expect(screen.getAllByRole("row")).toHaveLength(4);
     });
 
-    it("shows no pagination navigation at exactly one page of rows", () => {
-      render(<CityTable {...defaultProps} data={fiftyRowData.slice(0, 10)} />);
+    it("shows no pagination navigation at exactly one page of rows", async () => {
+      await renderPage(fiftyRowData.slice(0, 10));
 
       // Header row plus all ten data rows.
       expect(screen.getAllByRole("row")).toHaveLength(11);
@@ -772,8 +735,8 @@ describe("CityTable", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("shows pagination navigation reporting two pages at one row past a page", () => {
-      render(<CityTable {...defaultProps} data={fiftyRowData.slice(0, 11)} />);
+    it("shows pagination navigation reporting two pages at one row past a page", async () => {
+      await renderPage(fiftyRowData.slice(0, 11));
 
       expect(
         screen.getByRole("navigation", {
@@ -792,15 +755,13 @@ describe("CityTable", () => {
     // reach the navigation at all.
     it("renders the empty state and no navigation when the result set narrows to nothing", async () => {
       const user = userEvent.setup();
-      const { rerender } = render(
-        <CityTable {...defaultProps} data={fiftyRowData} />,
-      );
+      const { rerender } = await renderPage(fiftyRowData);
 
       await user.click(screen.getByRole("button", { name: /Go to last page/ }));
 
-      rerender(<CityTable {...defaultProps} data={[]} />);
+      rerender(<DatasetPage config={pageWith([])} />);
 
-      expect(screen.getByText("No cities found")).toBeInTheDocument();
+      expect(await screen.findByText("No cities found")).toBeInTheDocument();
       expect(
         screen.queryByRole("navigation", {
           name: "Table pagination navigation",
@@ -813,20 +774,16 @@ describe("CityTable", () => {
       // recoverable. The user is shown a different page without being moved off
       // the one they chose.
       const user = userEvent.setup();
-      const { rerender } = render(
-        <CityTable {...defaultProps} data={fiftyRowData} />,
-      );
+      const { rerender } = await renderPage(fiftyRowData);
 
       await user.click(screen.getByRole("button", { name: /Go to last page/ }));
       expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
 
-      rerender(
-        <CityTable {...defaultProps} data={fiftyRowData.slice(0, 25)} />,
-      );
-      expect(screen.getByText("Page 3 of 3")).toBeInTheDocument();
+      rerender(<DatasetPage config={pageWith(fiftyRowData.slice(0, 25))} />);
+      expect(await screen.findByText("Page 3 of 3")).toBeInTheDocument();
 
-      rerender(<CityTable {...defaultProps} data={fiftyRowData} />);
-      expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
+      rerender(<DatasetPage config={pageWith(fiftyRowData)} />);
+      expect(await screen.findByText("Page 5 of 5")).toBeInTheDocument();
     });
 
     it("returns to the first page when the search term changes", async () => {
@@ -834,7 +791,7 @@ describe("CityTable", () => {
       // the old set carries no meaning into it. Driven by typing, because that
       // is the path a reader takes to a new term.
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} data={fiftyRowData} />);
+      await renderPage(fiftyRowData);
 
       await user.click(screen.getByRole("button", { name: "Go to last page" }));
       expect(screen.getByText("Page 5 of 5")).toBeInTheDocument();
@@ -860,7 +817,7 @@ describe("CityTable", () => {
 
     it("resets to page 1 when sorting changes", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} data={largeMockData} />);
+      await renderPage(largeMockData);
 
       // Go to page 2
       const nextButton = screen.getByRole("button", {
@@ -878,7 +835,7 @@ describe("CityTable", () => {
 
     it("maintains sort order across pages", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} data={largeMockData} />);
+      await renderPage(largeMockData);
 
       // Sort by city (ascending)
       await user.click(screen.getByRole("button", { name: "City" }));
@@ -909,8 +866,8 @@ describe("CityTable", () => {
   });
 
   describe("Accessibility", () => {
-    it("has proper ARIA labels on sort buttons", () => {
-      render(<CityTable {...defaultProps} />);
+    it("has proper ARIA labels on sort buttons", async () => {
+      await renderPage();
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
       expect(cityHeader).toHaveAttribute("aria-sort", "none");
@@ -918,7 +875,7 @@ describe("CityTable", () => {
 
     it("updates ARIA sort attributes when sorting", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
       const citySortButton = screen.getByRole("button", { name: "City" });
@@ -932,7 +889,7 @@ describe("CityTable", () => {
 
     it("advances one sort state per enter press on the sort button", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
       screen.getByRole("button", { name: "City" }).focus();
@@ -945,7 +902,7 @@ describe("CityTable", () => {
 
     it("advances one sort state per space press on the sort button", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
       screen.getByRole("button", { name: "City" }).focus();
@@ -962,7 +919,7 @@ describe("CityTable", () => {
 
     it("keeps the sort button named by its column label alone", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       const citySortButton = screen.getByRole("button", { name: "City" });
 
@@ -974,7 +931,7 @@ describe("CityTable", () => {
       expect(screen.getByRole("button", { name: "City" })).toBe(citySortButton);
     });
 
-    it("marks no rendered element as the current page", () => {
+    it("marks no rendered element as the current page", async () => {
       const pagedData = Array.from({ length: 25 }, (_, i) => ({
         id: i + 1,
         name: `City ${i + 1}`,
@@ -985,24 +942,28 @@ describe("CityTable", () => {
         population: 1000000 + i * 100000,
       }));
 
-      const { rerender, container } = render(
-        <CityTable {...defaultProps} data={pagedData} />,
-      );
+      const { rerender } = await renderPage(pagedData);
+      // Scoped to the main landmark, because the header's dataset nav marks its
+      // own link as the current page.
+      const main = () => screen.getByRole("main");
 
       // Matched on the exact attribute name, so a differently cased or partly
       // matching substring of the serialized markup cannot satisfy the
       // assertion.
-      expect(container.querySelectorAll("[aria-current]")).toHaveLength(0);
+      expect(main().querySelectorAll("[aria-current]")).toHaveLength(0);
 
       // And again in the single-page state, where the navigation carrying it
       // is absent altogether.
-      rerender(<CityTable {...defaultProps} />);
-      expect(container.querySelectorAll("[aria-current]")).toHaveLength(0);
+      rerender(<DatasetPage config={pageWith(mockCities)} />);
+      await waitFor(() => {
+        expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument();
+      });
+      expect(main().querySelectorAll("[aria-current]")).toHaveLength(0);
     });
 
     it("numbers the rows against the whole result set rather than the page", async () => {
       const user = userEvent.setup();
-      render(<CityTable {...defaultProps} data={pagedFixture(45)} />);
+      await renderPage(pagedFixture(45));
 
       // Forty-five rows and the header row, which ARIA counts alongside them.
       expect(screen.getByRole("table")).toHaveAttribute("aria-rowcount", "46");
@@ -1019,7 +980,7 @@ describe("CityTable", () => {
 
     it("announces the sort change in the polite region", async () => {
       const user = userEvent.setup();
-      const { container } = render(<CityTable {...defaultProps} />);
+      const { container } = await renderPage();
 
       const announcer = container.querySelector(
         '[aria-live="polite"][aria-atomic="true"]',
@@ -1044,7 +1005,7 @@ describe("CityTable", () => {
 
     it("announces the cleared sort, and stays silent until one is applied", async () => {
       const user = userEvent.setup();
-      const { container } = render(<CityTable {...defaultProps} />);
+      const { container } = await renderPage();
 
       const announcer = container.querySelector(
         '[aria-live="polite"][aria-atomic="true"]',
@@ -1061,18 +1022,19 @@ describe("CityTable", () => {
       expect(announcer).toHaveTextContent("Table sort cleared");
     });
 
-    it("announces a search that matches no rows", () => {
-      const { container, rerender } = render(<CityTable {...defaultProps} />);
+    it("announces a search that matches no rows", async () => {
+      const { container, rerender } = await renderPage();
 
-      rerender(<CityTable {...defaultProps} data={[]} />);
+      rerender(<DatasetPage config={pageWith([])} />);
+      await screen.findByText("No cities found");
 
       const regions = container.querySelectorAll('[aria-live="polite"]');
       const announced = Array.from(regions).map((region) => region.textContent);
       expect(announced).toContain("No cities found for that search");
     });
 
-    it("has table caption for screen readers", () => {
-      render(<CityTable {...defaultProps} />);
+    it("has table caption for screen readers", async () => {
+      await renderPage();
 
       const table = screen.getByRole("table");
       const caption = table.querySelector("caption");
@@ -1082,7 +1044,7 @@ describe("CityTable", () => {
       expect(caption?.textContent).toMatch(/City data with \d+ entries/);
     });
 
-    it("has proper ARIA labels on pagination buttons", () => {
+    it("has proper ARIA labels on pagination buttons", async () => {
       const largeMockData = Array.from({ length: 25 }, (_, i) => ({
         id: i + 1,
         name: `City ${i + 1}`,
@@ -1093,7 +1055,7 @@ describe("CityTable", () => {
         population: 1000000 + i * 100000,
       }));
 
-      render(<CityTable {...defaultProps} data={largeMockData} />);
+      await renderPage(largeMockData);
 
       // Named by the action alone. A name carrying the position would change
       // under focus on every press, which re-announces the whole control.
@@ -1120,7 +1082,7 @@ describe("CityTable", () => {
         capital: i % 2 === 0 ? "primary" : "admin",
         population: 1000000 + i * 100000,
       }));
-      render(<CityTable {...defaultProps} data={pagedData} />);
+      await renderPage(pagedData);
 
       const pageInfo = screen.getByText(/Page \d+ of \d+/);
       expect(pageInfo).toHaveAttribute("aria-live", "polite");
@@ -1132,18 +1094,13 @@ describe("CityTable", () => {
       );
     });
 
-    it("has the results region already mounted before the first rows arrive", () => {
+    it("has the results region already mounted before the first rows arrive", async () => {
       // A live region created with its message already inside it announces
       // nothing. Mounting it empty ahead of the data makes the first row count,
       // on a cold start and again after a retry, an addition to an existing
       // region instead of a new region arriving with content.
       const { container, rerender } = render(
-        <CityTable
-          {...defaultProps}
-          data={[]}
-          loading={true}
-          datasetReady={false}
-        />,
+        <DatasetPage config={pendingPage()} />,
       );
 
       // The sort region is declared first and the results region second; the
@@ -1154,23 +1111,21 @@ describe("CityTable", () => {
       const resultsRegion = regions[1];
       expect(resultsRegion).toBeEmptyDOMElement();
 
-      rerender(<CityTable {...defaultProps} />);
+      rerender(<DatasetPage config={pageWith(mockCities)} />);
+      await screen.findByRole("table");
 
       expect(resultsRegion?.textContent).toMatch(
         /^Showing \d+ cities out of \d+/,
       );
     });
 
-    it("stays silent while a refresh runs over a dataset already in hand", () => {
+    it("stays silent while a refresh runs over a dataset already in hand", async () => {
       // A count taken mid-request names rows that are about to go.
       const { container, rerender } = render(
-        <CityTable
-          {...defaultProps}
-          data={[]}
-          loading={true}
-          datasetReady={true}
-        />,
+        <DatasetPage config={pageWith([])} />,
       );
+      await screen.findByText("No cities found");
+      rerender(<DatasetPage config={pendingPage()} />);
 
       // Two regions here, told apart by position: the page-position region
       // renders only on the data branch.
@@ -1181,20 +1136,18 @@ describe("CityTable", () => {
 
       // The same state with the request settled does speak, so the silence
       // above is not vacuous.
-      rerender(<CityTable {...defaultProps} data={[]} loading={false} />);
-      expect(resultsRegion).toHaveTextContent(
-        "No cities found for that search",
-      );
+      rerender(<DatasetPage config={pageWith([])} />);
+      await waitFor(() => {
+        expect(resultsRegion).toHaveTextContent(
+          "No cities found for that search",
+        );
+      });
     });
 
-    it("stays silent while a failure shows over a dataset already in hand", () => {
-      const { container } = render(
-        <CityTable
-          {...defaultProps}
-          errorMessage="Dataset unavailable"
-          datasetReady={true}
-        />,
-      );
+    it("stays silent while a failure shows over a dataset already in hand", async () => {
+      const { container, rerender } = await renderPage();
+      rerender(<DatasetPage config={failingPage()} />);
+      await screen.findByRole("alert");
 
       // The failure branch is a role="alert" with no aria-live, so the count
       // is still two.
@@ -1203,8 +1156,8 @@ describe("CityTable", () => {
       expect(required(regions[1], "the results region")).toBeEmptyDOMElement();
     });
 
-    it("has live regions for dynamic updates", () => {
-      render(<CityTable {...defaultProps} />);
+    it("has live regions for dynamic updates", async () => {
+      await renderPage();
 
       const liveRegions = document.querySelectorAll('[aria-live="polite"]');
       expect(liveRegions.length).toBeGreaterThan(0);
@@ -1212,22 +1165,22 @@ describe("CityTable", () => {
   });
 
   describe("Data Display", () => {
-    it("formats population numbers with commas", () => {
-      render(<CityTable {...defaultProps} />);
+    it("formats population numbers with commas", async () => {
+      await renderPage();
 
       expect(screen.getByText("37,400,068")).toBeInTheDocument(); // Tokyo population
     });
 
-    it("displays capital status correctly", () => {
-      render(<CityTable {...defaultProps} />);
+    it("displays capital status correctly", async () => {
+      await renderPage();
 
       // Should show "primary" for capitals and "admin" for non-capitals
       expect(screen.getAllByText("primary")).toHaveLength(3); // Tokyo, Jakarta, New Delhi are primary capitals
       expect(screen.getAllByText("admin")).toHaveLength(2); // Osaka, Mumbai are admin cities
     });
 
-    it("displays all country codes", () => {
-      render(<CityTable {...defaultProps} />);
+    it("displays all country codes", async () => {
+      await renderPage();
 
       expect(screen.getAllByText("JPN")).toHaveLength(2); // Tokyo and Osaka both in Japan
       expect(screen.getByText("IDN")).toBeInTheDocument(); // Jakarta in Indonesia
@@ -1251,10 +1204,10 @@ describe("CityTable", () => {
     // Both expected strings are computed through the platform. The separator
     // above is invisible in every terminal a failure is read in, so a typed
     // literal holding an ordinary space fails on a difference nobody can see.
-    it("groups the population column on the resolved locale", () => {
+    it("groups the population column on the resolved locale", async () => {
       setLocaleChoice("fr");
 
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       const french = numberFormatFor("fr-FR").format(LARGEST);
       const english = numberFormatFor("en-US").format(LARGEST);
@@ -1264,10 +1217,10 @@ describe("CityTable", () => {
       expect(screen.queryByText(english, asWritten)).not.toBeInTheDocument();
     });
 
-    it("takes its column labels from the catalog", () => {
+    it("takes its column labels from the catalog", async () => {
       setLocaleChoice("fr");
 
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       expect(screen.getByText(fr.cities.columns.name)).toBeInTheDocument();
       expect(
@@ -1284,17 +1237,13 @@ describe("CityTable", () => {
       setLocaleChoice("fr");
 
       const { container, rerender } = render(
-        <CityTable
-          {...defaultProps}
-          data={[]}
-          loading={true}
-          datasetReady={false}
-        />,
+        <DatasetPage config={pendingPage()} />,
       );
 
       expect(screen.getByText(fr.cities.loading)).toBeInTheDocument();
 
-      rerender(<CityTable {...defaultProps} />);
+      rerender(<DatasetPage config={pageWith(mockCities)} />);
+      await screen.findByRole("table");
 
       // Re-read on each call, because the assertion is about what the caption
       // says now and the second read happens after a re-render.
@@ -1319,21 +1268,14 @@ describe("CityTable", () => {
       );
     });
 
-    it("takes the failure and the way back from the catalog", () => {
+    it("takes the failure and the way back from the catalog", async () => {
       setLocaleChoice("fr");
 
-      render(
-        <CityTable
-          {...defaultProps}
-          data={[]}
-          errorMessage="quelque chose a mal tourné"
-          onRetry={() => {}}
-        />,
-      );
+      render(<DatasetPage config={failingPage()} />);
 
       expect(
-        screen.getByText(
-          fr.common.error("quelque chose a mal tourné"),
+        await screen.findByText(
+          fr.common.error(fr.cities.datasetError.transport("fr-FR", 0)),
           asWritten,
         ),
       ).toBeInTheDocument();
@@ -1342,10 +1284,10 @@ describe("CityTable", () => {
       ).toBeInTheDocument();
     });
 
-    it("takes the search box's own two strings from the catalog", () => {
+    it("takes the search box's own two strings from the catalog", async () => {
       setLocaleChoice("fr");
 
-      render(<CityTable {...defaultProps} />);
+      await renderPage();
 
       const box = screen.getByRole("textbox", { name: fr.common.searchName });
       expect(box).toHaveAttribute("placeholder", fr.cities.searchPlaceholder);
@@ -1354,10 +1296,10 @@ describe("CityTable", () => {
     // One catalog entry per control, read twice. Two entries would let a
     // translation move the tooltip and leave the accessible name in the
     // previous language, which nothing on screen would show.
-    it("names each page control once, as both its tooltip and its accessible name", () => {
+    it("names each page control once, as both its tooltip and its accessible name", async () => {
       setLocaleChoice("fr");
 
-      render(<CityTable {...defaultProps} data={pagedFixture(25)} />);
+      await renderPage(pagedFixture(25));
 
       expect(
         screen.getByRole("navigation", {
@@ -1386,13 +1328,13 @@ describe("CityTable", () => {
     // on the resolved tag, because the French separator is a narrow no-break
     // space and a typed literal holding an ordinary one fails on a difference
     // no terminal renders.
-    it("groups the page label's numbers on the resolved locale", () => {
+    it("groups the page label's numbers on the resolved locale", async () => {
       setLocaleChoice("fr");
 
       const rows = pagedFixture(10010);
       const totalPages = rows.length / 10;
 
-      render(<CityTable {...defaultProps} data={rows} />);
+      await renderPage(rows);
 
       const expected = fr.common.pageStatus("fr-FR", 1, totalPages);
 
@@ -1404,17 +1346,17 @@ describe("CityTable", () => {
     // table holds this object across renders and several of its entries are
     // closures, so its identity has to move when the locale does and must not
     // move otherwise.
-    it("builds the labels object once per locale and not once per render", () => {
+    it("builds the labels object once per locale and not once per render", async () => {
       const built = vi.mocked(buildTableLabels);
 
       setLocaleChoice("en");
 
-      const { rerender } = render(<CityTable {...defaultProps} />);
+      const { rerender, config } = await renderPage();
 
       expect(built).toHaveBeenCalledTimes(1);
 
-      rerender(<CityTable {...defaultProps} />);
-      rerender(<CityTable {...defaultProps} loading={true} />);
+      rerender(<DatasetPage config={config} />);
+      rerender(<DatasetPage config={config} />);
 
       expect(built).toHaveBeenCalledTimes(1);
 
@@ -1430,19 +1372,21 @@ describe("CityTable", () => {
     // collection and re-slice the page for nothing. From here a changed
     // identity shows up as a second call to the builder, so the count is what
     // this case asserts.
-    it("builds the column array once per locale and not once per render", () => {
-      const built = vi.mocked(buildCityColumns);
+    it("builds the column array once per locale and not once per render", async () => {
+      const built = vi.fn(buildCityColumns);
+      const config = { ...pageWith(mockCities), buildColumns: built };
 
       // Pinned before the first render, so the store has nothing left to settle
       // on once the table is mounted.
       setLocaleChoice("en");
 
-      const { rerender } = render(<CityTable {...defaultProps} />);
+      const { rerender } = render(<DatasetPage config={config} />);
+      await screen.findByRole("table");
 
       expect(built).toHaveBeenCalledTimes(1);
 
-      rerender(<CityTable {...defaultProps} />);
-      rerender(<CityTable {...defaultProps} />);
+      rerender(<DatasetPage config={config} />);
+      rerender(<DatasetPage config={config} />);
 
       expect(built).toHaveBeenCalledTimes(1);
 

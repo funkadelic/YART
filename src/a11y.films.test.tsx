@@ -6,7 +6,8 @@ import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import FilmsApp from "./FilmsApp";
+import { DatasetPage } from "./features/DatasetPage";
+import { FILM_PAGE } from "./features/films/filmPage";
 import { describeViolations, incompleteRuleIds } from "./test/axeSweep";
 import { stubFilmDatasetFetch } from "./test/fetchStub";
 
@@ -99,7 +100,7 @@ describe("films accessibility", () => {
   it("reports no violation once the film table is loaded or emptied", async () => {
     const user = userEvent.setup();
 
-    render(<FilmsApp />);
+    render(<DatasetPage config={FILM_PAGE} />);
 
     // Each state is proven to be on screen before it is swept, by a query that
     // throws when it is not, or a transition that quietly failed would sweep
@@ -124,9 +125,11 @@ describe("films accessibility", () => {
     );
 
     vi.resetModules();
-    const FreshFilmsApp = (await import("./FilmsApp")).default;
+    const { DatasetPage: FreshPage } = await import("./features/DatasetPage");
+    const { FILM_PAGE: FRESH_FILM_PAGE } =
+      await import("./features/films/filmPage");
 
-    render(<FreshFilmsApp />);
+    render(<FreshPage config={FRESH_FILM_PAGE} />);
 
     await screen.findByText(
       "Error: The film data could not be downloaded (status 404).",

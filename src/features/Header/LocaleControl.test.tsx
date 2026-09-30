@@ -2,10 +2,11 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
-import { CityTable } from "../CityTable";
 import { en } from "../../i18n/catalogs/en";
 import { fr } from "../../i18n/catalogs/fr";
 import { LOCALE_STORAGE_KEY } from "../../i18n/resolveLocale";
+import { CITY_PAGE } from "../cities/cityPage";
+import { DatasetPage } from "../DatasetPage";
 import { LocaleControl } from "./LocaleControl";
 
 /**
@@ -136,17 +137,12 @@ describe("LocaleControl", () => {
   it("repaints the table below it in the chosen language", async () => {
     const user = userEvent.setup();
 
+    // The page's own header carries the picker, so a second one would make the
+    // lookup ambiguous.
     render(
-      <>
-        <LocaleControl />
-        <CityTable
-          data={[]}
-          onSearchChange={() => {}}
-          loading={false}
-          datasetReady={false}
-          errorMessage={null}
-        />
-      </>,
+      <DatasetPage
+        config={{ ...CITY_PAGE, search: () => new Promise<never>(() => {}) }}
+      />,
     );
 
     await user.selectOptions(picker(), "fr");

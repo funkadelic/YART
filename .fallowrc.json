@@ -3,12 +3,6 @@
   "entry": ["src/**/*.test-d.ts", "vitest.stryker.config.ts"],
   "ignoreExportsUsedInFile": { "type": true },
   "duplicates": {
-    "ignore": [
-      "src/App.tsx",
-      "src/FilmsApp.tsx",
-      "src/features/CityTable/CityTable.tsx",
-      "src/features/FilmTable/FilmTable.tsx",
-      "src/i18n/catalogs/**"
-    ]
+    "ignore": ["src/i18n/catalogs/**"]
   }
 }
