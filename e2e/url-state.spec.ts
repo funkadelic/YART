@@ -104,13 +104,8 @@ test("a whitespace-only term is canonicalized away on arrival", async ({
   // from the arrival side, which the jsdom suite cannot reach.
   await expect(page).toHaveURL("/?sort=name");
 
-  // The box still holds the spaces by design. The trim belongs to the
-  // serializer, so what the reader typed stays painted exactly as they typed it
-  // while the address stays canonical. Asserted here so a trim moved into the
-  // state, which would edit the box under the reader, is a red run.
-  await expect(page.getByRole("textbox", { name: "Search" })).toHaveValue(
-    "   ",
-  );
+  // A padded link seeds the trimmed term, so the box agrees with the address.
+  await expect(page.getByRole("textbox", { name: "Search" })).toHaveValue("");
 });
 
 test("a sort key naming no column is dropped on arrival", async ({ page }) => {
