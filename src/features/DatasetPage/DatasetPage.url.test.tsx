@@ -459,6 +459,29 @@ describe("DatasetPage, the address, and the search term", () => {
     expect(screen.getByLabelText("Per page:")).toHaveValue("25");
   });
 
+  it("issues no request for a sort, a page change, a size change, or a traversal that keeps the term", async () => {
+    openAt("?q=City");
+    const user = userEvent.setup({ delay: null });
+    const config = pageOf();
+
+    render(<DatasetPage config={config} />);
+    await screen.findByRole("table");
+
+    await user.click(screen.getByRole("button", { name: "City" }));
+    await user.click(screen.getByRole("button", { name: "Go to next page" }));
+    await user.selectOptions(screen.getByLabelText("Per page:"), "25");
+
+    openAt("?q=City&page=2");
+    act(() => {
+      window.dispatchEvent(new PopStateEvent("popstate"));
+    });
+
+    expect(screen.getByText("Page 2 of 5")).toBeInTheDocument();
+    // The term is the only thing the request is keyed on.
+    expect(config.search).toHaveBeenCalledTimes(1);
+    expect(config.search).toHaveBeenCalledWith({ searchTerm: "City" });
+  });
+
   // A link stating the defaults out loud is the same view as a link stating
   // nothing, so the write that follows removes all four keys and leaves the
   // address a bare path.
