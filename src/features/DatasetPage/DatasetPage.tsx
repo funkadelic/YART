@@ -91,6 +91,9 @@ export function DatasetPage<T, Id extends string>({
 /**
  * Owns the fetch, the view state and the address. Under the boundary, so a
  * reset remounts it and re-reads the last committed address.
+ *
+ * ponytail: a view that throws once the address already holds it throws again
+ * on reset; resetting to the default view would cover that if it matters.
  */
 function DatasetView<T, Id extends string>({
   config,
@@ -233,9 +236,8 @@ function DatasetView<T, Id extends string>({
   // The single point a pause in typing reaches. It moves the view state, which
   // returns the reader to the first page and re-runs the search.
   const commitSearch = useCallback((term: string) => {
-    // Canonicalized once here, because the search trims before it matches
-    // and the address trims before it writes. The box goes on painting what
-    // was typed, which is separate state from what typing settles on.
+    // Trimmed as the address parse trims, so the term in state is canonical
+    // whichever way it arrived. The box paints what was typed, separately.
     const settled = term.trim();
 
     setTableState((state) =>

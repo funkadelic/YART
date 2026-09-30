@@ -316,9 +316,7 @@ describe("serializeTableState", () => {
     expect(serializeTableState(stateWith({ query: "   " }), "?q=old")).toBe("");
   });
 
-  // The trim belongs to the address and stops there: the box paints what the
-  // reader typed, so trimming the state would delete a space out from under a
-  // cursor mid-word.
+  // The serializer reads the state and never writes it.
   it("leaves the state's own term untouched", () => {
     const state = stateWith({ query: " tokyo " });
 
