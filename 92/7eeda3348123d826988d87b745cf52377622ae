@@ -1,0 +1,34 @@
+bench/columns.bench.ts
+  s_0b0479e05578ed::t_d70b289a6f6c86 8-9
+src/features/DatasetPage/DatasetPage.films.test.tsx
+  s_0b0479e05578ed::t_d70b289a6f6c86 11
+src/features/DatasetPage/DatasetPage.test.tsx
+  s_0b0479e05578ed::t_d70b289a6f6c86 13
+src/features/cities/cityPage.ts
+  s_0b0479e05578ed::t_d70b289a6f6c86 8
+bench/sortRows.bench.ts
+  s_0b0479e05578ed::t_d70b289a6f6c86 12
+  s_0b0479e05578ed::t_7fb49f8f739b21 13
+src/components/compareRows.test.ts
+  s_0b0479e05578ed::t_d70b289a6f6c86 4
+bench/tableState.bench.ts
+  s_0b0479e05578ed::t_d70b289a6f6c86 20
+src/features/films/filmPage.ts
+  s_0b0479e05578ed::t_d70b289a6f6c86 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "927eeda3348123d826988d87b745cf52377622ae",
+  "prompts": {},
+  "sessions": {
+    "s_0b0479e05578ed": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "66de24ba-fc92-4ff7-bae4-2b097b1f4706",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
