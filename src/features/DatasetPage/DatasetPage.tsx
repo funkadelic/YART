@@ -5,9 +5,15 @@ import {
   useReducer,
   useRef,
   useState,
+  type Dispatch,
 } from "react";
 
-import { INITIAL_APP_STATE, applyAppAction } from "../../appState";
+import {
+  INITIAL_APP_STATE,
+  applyAppAction,
+  type AppAction,
+  type AppState,
+} from "../../appState";
 import type { Column } from "../../components/DataTable/column";
 import { DataTable } from "../../components/DataTable/DataTable";
 import {
@@ -55,13 +61,42 @@ interface DatasetPageProps<T, Id extends string> {
   readonly config: DatasetConfig<T, Id>;
 }
 
+/** The page's props plus the request state the shell keeps above it. */
+interface DatasetViewProps<T, Id extends string> extends DatasetPageProps<
+  T,
+  Id
+> {
+  readonly request: AppState<T>;
+  readonly dispatch: Dispatch<AppAction<T>>;
+}
+
 /**
- * One generic page owning the request, the view state and the address for one
- * dataset. The search box and the shared table are fed from the config.
+ * One generic page per dataset. It keeps the fetched rows above the layout's
+ * error boundary and renders everything built from the address below it.
  */
 export function DatasetPage<T, Id extends string>({
   config,
 }: DatasetPageProps<T, Id>) {
+  // The row type is supplied here because the initial state is typed over no
+  // row, and inference would pin the reducer to that.
+  const [request, dispatch] = useReducer(applyAppAction<T>, INITIAL_APP_STATE);
+
+  return (
+    <RootLayout domain={config.domain}>
+      <DatasetView config={config} request={request} dispatch={dispatch} />
+    </RootLayout>
+  );
+}
+
+/**
+ * Owns the fetch, the view state and the address. Under the boundary, so a
+ * reset remounts it and re-reads the last committed address.
+ */
+function DatasetView<T, Id extends string>({
+  config,
+  request,
+  dispatch,
+}: DatasetViewProps<T, Id>) {
   // Destructured so every dependency array names a function or a string.
   const { domain, search, buildColumns, getRowId, columnIds } = config;
 
@@ -102,10 +137,7 @@ export function DatasetPage<T, Id extends string>({
   // from the committed term, so a link carrying one paints it on first render.
   const [searchInput, setSearchInput] = useState(tableState.query);
 
-  // The row type is supplied here because the initial state is typed over no
-  // row, and inference would pin the reducer to that.
-  const [{ rows, error, loading, datasetReady, retryAttempt }, dispatch] =
-    useReducer(applyAppAction<T>, INITIAL_APP_STATE);
+  const { rows, error, loading, datasetReady, retryAttempt } = request;
 
   // The committed term has one owner, the view state, so a sort or a page
   // change never re-runs the search.
@@ -150,7 +182,7 @@ export function DatasetPage<T, Id extends string>({
     return () => {
       ignore = true;
     };
-  }, [search, query, retryAttempt]);
+  }, [dispatch, search, query, retryAttempt]);
 
   // One address is one view, per resolved locale: the query string carries the search
   // term, the sort column and direction, the page and the page size, and the resolved
@@ -254,7 +286,7 @@ export function DatasetPage<T, Id extends string>({
   const handleRetry = useCallback(() => {
     searchInputRef.current?.focus();
     dispatch({ type: "retry" });
-  }, []);
+  }, [dispatch]);
 
   // The box repaints on every keystroke while the commit waits for the pause.
   const handleSearchChange = useCallback(
@@ -271,7 +303,7 @@ export function DatasetPage<T, Id extends string>({
     error === null ? null : datasetErrorText(error, catalog[domain], tag);
 
   return (
-    <RootLayout domain={domain}>
+    <>
       <h1>{catalog[domain].appTitle}</h1>
       <div className={styles.container}>
         <SearchInput
@@ -295,6 +327,6 @@ export function DatasetPage<T, Id extends string>({
           labels={labels}
         />
       </div>
-    </RootLayout>
+    </>
   );
 }

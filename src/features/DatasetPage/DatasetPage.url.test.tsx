@@ -36,6 +36,22 @@ const pageOf = () => ({
   ),
 });
 
+/** City columns whose name comparator throws during a sort. */
+const throwingNameColumns: (typeof CITY_PAGE)["buildColumns"] = (
+  catalog,
+  tag,
+) =>
+  CITY_PAGE.buildColumns(catalog, tag).map((column) =>
+    column.id === "name"
+      ? {
+          ...column,
+          compare: () => {
+            throw new Error("comparator broke");
+          },
+        }
+      : column,
+  );
+
 /** Puts a query in the address the way a shared link delivers one. */
 const openAt = (search: string) => {
   window.history.replaceState(null, "", search);
@@ -322,6 +338,49 @@ describe("DatasetPage and the address", () => {
     expect(screen.getByText("Page 2 of 5")).toBeInTheDocument();
     expect(screen.getByText("City 11")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("brings the table back from the address when the recovery control follows a render throw", async () => {
+    const consoleError = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
+    openAt("?page=2");
+    const user = userEvent.setup({ delay: null });
+
+    // Later searches never settle, so the table can only return from rows
+    // fetched before the throw.
+    const search = vi
+      .fn<(typeof CITY_PAGE)["search"]>(() => new Promise<City[]>(() => {}))
+      .mockResolvedValueOnce(PAGED_CITIES);
+    const config = {
+      ...CITY_PAGE,
+      buildColumns: throwingNameColumns,
+      search,
+    };
+
+    render(<DatasetPage config={config} />);
+    await screen.findByText("Page 2 of 5");
+
+    await user.click(screen.getByRole("button", { name: "City" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "could not be displayed",
+    );
+    expect(window.location.search).toBe("?page=2");
+
+    await user.click(screen.getByRole("button", { name: "Show it again" }));
+
+    await screen.findByText("Page 2 of 5");
+    expect(screen.getByText("City 11")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: /City/ })).toHaveAttribute(
+      "aria-sort",
+      "none",
+    );
+    expect(
+      screen.queryByText(/could not be displayed/),
+    ).not.toBeInTheDocument();
+    expect(window.location.search).toBe("?page=2");
+    expect(consoleError).toHaveBeenCalled();
   });
 
   it("carries a tracking parameter and an unrecognized key through a write, behind the keys it owns", async () => {
