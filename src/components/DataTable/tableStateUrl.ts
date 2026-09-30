@@ -24,7 +24,8 @@ const PARAM_SCHEMA: readonly UrlParamEntry[] = [
   {
     key: "q",
     // A term reaches a controlled value and a substring match, never a lookup.
-    parse: (raw) => ({ query: raw }),
+    // Trimmed as the commit trims, so a padded link seeds the settled term.
+    parse: (raw) => ({ query: raw.trim() }),
     // Trimmed on the way out because the search trims, so one view cannot have
     // two addresses. Not trimmed in the state, so the box shows what was typed.
     serialize: (state) => {

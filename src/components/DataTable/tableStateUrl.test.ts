@@ -90,6 +90,12 @@ describe("parseTableState", () => {
     });
   });
 
+  it("reads a term with edge whitespace as the trimmed term", () => {
+    expect(parseTableState("?q=%20tokyo%20", WIDGET_COLUMN_IDS)).toEqual({
+      query: "tokyo",
+    });
+  });
+
   it("reads a term carrying the query string's own punctuation back intact", () => {
     expect(parseTableState("?q=a%26b%3Dc%23d", WIDGET_COLUMN_IDS)).toEqual({
       query: "a&b=c#d",
