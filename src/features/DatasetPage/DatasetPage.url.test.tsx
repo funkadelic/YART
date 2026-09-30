@@ -3,7 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
 
 import type { City } from "../../api/getCities";
+import type { Film } from "../../api/getFilms";
 import { CITY_PAGE } from "../cities/cityPage";
+import { FILM_PAGE } from "../films/filmPage";
 import { DatasetPage } from "./DatasetPage";
 
 /**
@@ -549,5 +551,55 @@ describe("DatasetPage and the debounced address write", () => {
     expect(window.location.search).toBe("?q=City&page=5");
     expect(config.search).toHaveBeenLastCalledWith({ searchTerm: "City" });
     expect(config.search).not.toHaveBeenCalledWith({ searchTerm: "City " });
+  });
+});
+
+// Fifty film rows, five pages at the default size, like the city set above.
+const PAGED_FILMS: Film[] = Array.from({ length: 50 }, (_, index) => ({
+  id: `Q${index + 1}`,
+  title: `Film ${index + 1}`,
+  year: 1950 + index,
+  runtime: 90 + index,
+  directors: [`Director ${index + 1}`],
+  genres: ["drama film"],
+  countries: ["United States"],
+}));
+
+/** The film page with a search that answers the fifty rows above. */
+const filmPageOf = () => ({
+  ...FILM_PAGE,
+  search: vi.fn<(typeof FILM_PAGE)["search"]>(() =>
+    Promise.resolve(PAGED_FILMS),
+  ),
+});
+
+// The city cases above hold the address rules; these prove the film column ids
+// reach the parser, and that a fragment survives a write that keeps a query.
+describe("DatasetPage and the address on the films page", () => {
+  it("paints the sort and the page size a link carries, and leaves it as it arrived", async () => {
+    openAt("?sort=-runtime&page=2&size=25");
+
+    render(<DatasetPage config={filmPageOf()} />);
+    await screen.findByRole("table");
+
+    expect(
+      screen.getByRole("columnheader", { name: /Runtime/ }),
+    ).toHaveAttribute("aria-sort", "descending");
+    expect(screen.getByText("Page 2 of 2")).toBeInTheDocument();
+    expect(screen.getByLabelText("Per page:")).toHaveValue("25");
+    expect(window.location.search).toBe("?sort=-runtime&page=2&size=25");
+  });
+
+  it("carries the fragment through a write that keeps a query", async () => {
+    const user = userEvent.setup({ delay: null });
+    openAt("#credits");
+
+    render(<DatasetPage config={filmPageOf()} />);
+    await screen.findByRole("table");
+
+    await user.click(screen.getByRole("button", { name: "Go to next page" }));
+
+    expect(window.location.search).toBe("?page=2");
+    expect(window.location.hash).toBe("#credits");
   });
 });

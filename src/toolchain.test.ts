@@ -707,20 +707,17 @@ function moduleSource(path: string): ts.SourceFile {
 const THEME_MODULE = "src/theme/resolveTheme.ts";
 const LOCALE_MODULE = "src/i18n/resolveLocale.ts";
 
-// The dataset page's address writer, and the module that owns which keys the
-// address may carry. It stays one path because it is also an address document.
+// The one address writer, and the module that owns which keys the address may
+// carry. The writer is also an address document.
 const ADDRESS_WRITER = "src/features/DatasetPage/DatasetPage.tsx";
-const FILMS_ADDRESS_WRITER = "src/features/FilmTable/FilmTable.tsx";
 const SCHEMA_MODULE = "src/components/DataTable/tableStateUrl.ts";
 
 /**
- * Every module allowed to write the address, one per page, sorted.
- *
- * There are two because the site ships two pages, each a separate document with
- * its own query string, and neither writer can see the other's. A third writer
- * appearing without a third page planned for fails this list.
+ * Every module allowed to write the address. One module writes it, and each
+ * shell mounts that one component with its own config, so any second writer
+ * fails this list.
  */
-const ADDRESS_WRITERS = [ADDRESS_WRITER, FILMS_ADDRESS_WRITER].toSorted();
+const ADDRESS_WRITERS = [ADDRESS_WRITER];
 
 /**
  * The four keys the query string owns, sorted.
@@ -1647,11 +1644,11 @@ describe("toolchain baseline", () => {
     }
   });
   // Three questions, all asked of constructs: whether anything but the one
-  // component per page mutates history, whether the query string still owns
+  // page component mutates history, whether the query string still owns
   // exactly its four keys, and whether every document a reader consults still
   // says the same thing about what a link reproduces. A token search would pass
   // on all three from a mention inside a comment.
-  it("keeps one address writer per page, four query keys, and one account of what a link carries", () => {
+  it("keeps one address writer, four query keys, and one account of what a link carries", () => {
     const sources = sourceModules();
 
     const writers: string[] = [];
@@ -1670,7 +1667,7 @@ describe("toolchain baseline", () => {
 
     expect(
       writers.toSorted(),
-      "the address is written from somewhere other than exactly the two writers",
+      "the address is written from somewhere other than the one writer",
     ).toEqual(ADDRESS_WRITERS);
 
     // Separate from the count above so the failure says which rule broke. A push
