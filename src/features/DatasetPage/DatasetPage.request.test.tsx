@@ -274,10 +274,8 @@ describe("DatasetPage requests", () => {
   });
 
   it("keeps the newer result when an earlier search settles last", async () => {
-    // Today both searches read the same in-memory array, so a race between them
-    // would be invisible. The guard is established now because a later change
-    // seeds a non-empty term on first load, at which point the two searches
-    // carry different rows and the interleaving becomes real.
+    // Every search awaits one cached load and filters synchronously, so today
+    // results settle in issue order. The guard holds if one ever settles late.
     const earlierRows: City[] = [
       {
         id: 10,
