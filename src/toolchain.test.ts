@@ -707,11 +707,9 @@ function moduleSource(path: string): ts.SourceFile {
 const THEME_MODULE = "src/theme/resolveTheme.ts";
 const LOCALE_MODULE = "src/i18n/resolveLocale.ts";
 
-// The city page's address writer, and the module that owns which keys the
-// address may carry. This constant stays the city container alone, because it
-// is also an element of the address-document list below, and widening it there
-// would demand a second verbatim copy of the invariant paragraph.
-const ADDRESS_WRITER = "src/features/CityTable/CityTable.tsx";
+// The dataset page's address writer, and the module that owns which keys the
+// address may carry. It stays one path because it is also an address document.
+const ADDRESS_WRITER = "src/features/DatasetPage/DatasetPage.tsx";
 const FILMS_ADDRESS_WRITER = "src/features/FilmTable/FilmTable.tsx";
 const SCHEMA_MODULE = "src/components/DataTable/tableStateUrl.ts";
 
