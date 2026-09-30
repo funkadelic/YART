@@ -232,7 +232,7 @@ Five of the entries are shown. The rest, the retry and error copy, the sort anno
 
 An entry that weaves a value takes that value rather than an already-composed phrase. A caller handing over a finished word has made a grammatical decision one layer too early, which is what made the old sort summary untranslatable.
 
-Then hold the state and hand it down. Trimmed from `DatasetView`, the inner view `DatasetPage` renders under the layout's error boundary in `src/features/DatasetPage/DatasetPage.tsx`:
+Then hold the state and hand it down. Trimmed from `DatasetView` in `src/features/DatasetPage/DatasetPage.tsx`, which `DatasetPage` renders under the layout's error boundary:
 
 ```tsx
 function DatasetView<T, Id extends string>({
