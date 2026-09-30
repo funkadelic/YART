@@ -15,5 +15,6 @@ Most of these were made during the build and written down on 2026-09-15, so the 
 | [7](0007-tokens-in-dtcg-json.md)          | Design tokens are authored as DTCG JSON                    |
 | [8](0008-no-row-virtualization.md)        | Rows are not virtualized                                   |
 | [9](0009-cold-sort-across-frames.md)      | A cold sort runs across frames, a repeat reuses its order  |
+| [10](0010-one-generic-dataset-page.md)    | One generic page serves both datasets                      |
 
 [Front-end practices](../frontend-practices.md) is the survey these sit under: what the repo already does, what it has just adopted, and what it weighed and skipped.

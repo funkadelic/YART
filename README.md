@@ -171,7 +171,7 @@ The history contains a one-time commit that reformatted every file. Run `git con
 
 The table comes in two pieces. `DataTable<T, Id>` renders any collection and holds nothing: sort, page, page size and the committed query all arrive in one object and leave as callbacks describing what the user did. A container decides what the next object is and supplies the columns, the row identity and every string that names what the rows are.
 
-`CityTable` is that container for this app, and `FilmTable` is a second one over a different row type. Writing another is how the table renders something else.
+`DatasetPage` is that container for this app. Each page passes it a small module-scope config (the search, the column builder, the row identity, the column ids and the domain), and writing another config is how the table renders another collection.
 
 Start with the columns. `columns<T>()` is curried because TypeScript infers all of a call's type arguments or none of them: the row type is the one thing you know and the compiler cannot guess, so you supply it once and the column id and value type are inferred per call.
 
@@ -204,7 +204,7 @@ const BASE_COLUMNS = buildCityColumns(en, "en-US");
 export type CityColumnId = (typeof BASE_COLUMNS)[number]["id"];
 ```
 
-Three of the five columns are shown. `src/features/CityTable/cityColumns.ts` has the whole build.
+Three of the five columns are shown. `src/features/cities/cityColumns.ts` has the whole build.
 
 Call the builder from a component body, never bare during render, and key the memo on exactly the catalog and the tag. A new array identity re-sorts the whole collection and re-slices the page, which over fifty thousand rows is the most expensive thing the container can do by accident.
 
@@ -232,63 +232,75 @@ Five of the entries are shown. The rest, the retry and error copy, the sort anno
 
 An entry that weaves a value takes that value rather than an already-composed phrase. A caller handing over a finished word has made a grammatical decision one layer too early, which is what made the old sort summary untranslatable.
 
-Then hold the state and hand it down:
+Then hold the state and hand it down. Trimmed from `src/features/DatasetPage/DatasetPage.tsx`:
 
 ```tsx
-import { useCallback, useState } from "react";
+export function DatasetPage<T, Id extends string>({
+  config,
+}: DatasetPageProps<T, Id>) {
+  const { domain, search, buildColumns, getRowId, columnIds } = config;
 
-import { DataTable } from "./components/DataTable/DataTable";
-import {
-  DEFAULT_TABLE_STATE,
-  applyTableAction,
-  type TableState,
-} from "./components/DataTable/tableState";
-
-// At module scope, so its identity never changes between renders.
-const cityRowId = (city: City) => String(city.id).padStart(10, "0");
-
-function CityTable({
-  data,
-  loading,
-  datasetReady,
-  errorMessage,
-  onRetry,
-}: Props) {
-  const [state, setState] =
-    useState<TableState<CityColumnId>>(DEFAULT_TABLE_STATE);
+  const [tableState, setTableState] = useState<TableState<Id>>(() => ({
+    ...DEFAULT_TABLE_STATE,
+    ...parseTableState(window.location.search, columnIds),
+  }));
 
   // The functional updater keeps these dependency arrays empty, so the
   // callbacks hold one identity for the life of the table.
-  const handleSort = useCallback((columnId: CityColumnId) => {
-    setState((s) => applyTableAction(s, { type: "sort", columnId }));
+  const handleSort = useCallback((columnId: Id) => {
+    setTableState((state) =>
+      applyTableAction(state, { type: "sort", columnId }),
+    );
   }, []);
 
   const handlePageChange = useCallback((page: number) => {
-    setState((s) => applyTableAction(s, { type: "page", page }));
+    setTableState((state) => applyTableAction(state, { type: "page", page }));
   }, []);
 
   const handlePageSizeChange = useCallback((pageSize: number) => {
-    setState((s) => applyTableAction(s, { type: "pageSize", pageSize }));
+    setTableState((state) =>
+      applyTableAction(state, { type: "pageSize", pageSize }),
+    );
   }, []);
 
   return (
     <DataTable
-      rows={data}
-      columns={cityColumns}
-      getRowId={cityRowId}
-      state={state}
+      rows={rows}
+      columns={columns}
+      getRowId={getRowId}
+      state={tableState}
       onSortChange={handleSort}
       onPageChange={handlePageChange}
       onPageSizeChange={handlePageSizeChange}
       loading={loading}
       datasetReady={datasetReady}
       errorMessage={errorMessage}
-      onRetry={onRetry}
-      labels={cityTableLabels}
+      onRetry={handleRetry}
+      labels={labels}
     />
   );
 }
 ```
+
+Each entry hands it one config:
+
+```tsx
+export const CITY_PAGE: DatasetConfig<City, CityColumnId> = {
+  domain: "cities",
+  search: getCities,
+  buildColumns: buildCityColumns,
+  getRowId: cityRowId,
+  columnIds: CITY_COLUMN_IDS,
+};
+
+createRoot(container).render(
+  <StrictMode>
+    <DatasetPage config={CITY_PAGE} />
+  </StrictMode>,
+);
+```
+
+A config is declared at module scope because the identities of its functions key the page's memos and its fetch.
 
 ### Props
 
@@ -321,7 +333,7 @@ The function itself has to keep one identity across renders, which is why `cityR
 
 ### Why the container debounces
 
-`SearchInput` calls `onChange` on every keystroke and `DataTable` renders whatever `rows` it is given. Neither of them knows what a pause in typing means. The container between them does: `CityTable` holds what is in the box, and the one term that typing settles on drives the page reset, the address write, and the request behind it. Swapping the 150ms delay for 300ms, or replacing the simulated API with a real endpoint, touches no table code.
+`SearchInput` calls `onChange` on every keystroke and `DataTable` renders whatever `rows` it is given. Neither of them knows what a pause in typing means. The container between them does: `DatasetPage` holds what is in the box, and the one term that typing settles on drives the page reset, the address write, and the request behind it. Swapping the 150ms delay for 300ms, or replacing the simulated API with a real endpoint, touches no table code.
 
 `useDebouncedCallback` debounces the call rather than a value, so it stays usable straight from an event handler. It hands back a scheduler and a cancel:
 
@@ -404,7 +416,12 @@ import { it, expect } from "vitest";
 
 it("sorts by population descending on the second activation", async () => {
   const user = userEvent.setup();
-  render(<CityTable {...defaultProps} />);
+  render(
+    <DatasetPage
+      config={{ ...CITY_PAGE, search: () => Promise.resolve(rows) }}
+    />,
+  );
+  await screen.findByRole("table");
 
   // The activation lives on the button, the state lives on the cell.
   const header = screen.getByRole("columnheader", { name: /Population/ });
