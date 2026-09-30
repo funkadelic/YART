@@ -458,7 +458,7 @@ After the end-to-end suite, CI runs Lighthouse three times on each page in mobil
 
 ## Benchmarks
 
-The suites under `bench/` run the shipping sort, page slice, view state, column and locale code over seeded rows shaped like each dataset. Every pull request runs them under [CodSpeed](https://app.codspeed.io/funkadelic/YART), which counts instructions instead of timing them and reports changes against the base branch without failing the build.
+The suites under `bench/` run the shipping sort, page slice, view state, column and locale code over seeded rows shaped like each dataset. Every pull request runs them under [CodSpeed](https://app.codspeed.io/funkadelic/YART), which times them on a dedicated bare-metal runner and reports changes against the base branch without failing the build.
 
 ```bash
 npm run bench

@@ -21,7 +21,8 @@ concurrency:
 jobs:
   benchmarks:
     name: Run benchmarks
-    runs-on: ubuntu-latest
+    # CodSpeed's bare-metal Graviton runner, so wall-clock timings stay steady.
+    runs-on: codspeed-macro-arm64-graviton-ubuntu-22-04
     # Catches a hang without holding the runner for the six-hour default.
     timeout-minutes: 15
     steps:
@@ -37,9 +38,8 @@ jobs:
       - name: Install
         run: npm ci
 
-      # Simulation counts instructions instead of timing, so runner noise does not move the result.
       - name: Run benchmarks
         uses: CodSpeedHQ/action@373d6868929f444bc08d901fd0eb0ad52a8875ea # v5.2.1
         with:
-          mode: simulation
+          mode: walltime
           run: npm run bench
