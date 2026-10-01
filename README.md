@@ -441,7 +441,7 @@ After the end-to-end suite, CI runs Lighthouse three times on each page in mobil
 
 ### Code coverage
 
-The pipeline sends three reports to [Codecov](https://codecov.io/gh/funkadelic/YART): the coverage the hundred percent gate is measured on, a JUnit report from each of the three suites, and the size of every emitted asset. A test that fails intermittently is flagged as a flake. The asset sizes come from Codecov's standalone analyzer, which reports assets and not individual modules.
+The pipeline sends two reports to [Codecov](https://codecov.io/gh/funkadelic/YART): the coverage the hundred percent gate is measured on, and a JUnit report from each of the three suites. A test that fails intermittently is flagged as a flake.
 
 ### Mutation testing
 
@@ -472,6 +472,8 @@ The suites under `bench/` run the shipping sort, page slice, view state, column 
 ```bash
 npm run bench
 ```
+
+Codecov also tracks bundle size. After each build, its standalone analyzer uploads the size of every emitted asset, with no breakdown by module. Each pull request shows the change against `main` and flags one over 5%. Separately, `src/bundle.test.ts` fails the test suite if dataset rows show up in any JavaScript chunk, which is what importing a dataset as a value instead of a URL does.
 
 ## Scripts
 
