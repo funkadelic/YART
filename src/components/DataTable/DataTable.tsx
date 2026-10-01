@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useEffectEvent, type ReactNode } from "react";
 import type { Column } from "./column";
 import type { TableState } from "./tableState";
 import { TableHead } from "./TableHead";
@@ -73,6 +73,13 @@ export interface DataTableProps<T, Id extends string> {
   readonly errorMessage: string | null;
   // Optional so the table stays usable without a container behind it.
   readonly onRetry?: (() => void) | undefined;
+  /** Called whenever the sort in state becomes the order on screen. */
+  readonly onSortSettled?:
+    | ((
+        sortColumnId: NoInfer<Id> | null,
+        sortDirection: "asc" | "desc" | null,
+      ) => void)
+    | undefined;
   readonly labels: DataTableLabels;
 }
 
@@ -162,6 +169,7 @@ export function DataTable<T, Id extends string>({
   datasetReady,
   errorMessage,
   onRetry,
+  onSortSettled,
   labels,
 }: DataTableProps<T, Id>) {
   const { sortedRows, sorting } = useSortedRows(
@@ -177,6 +185,18 @@ export function DataTable<T, Id extends string>({
     state.page,
     state.pageSize,
   );
+
+  // An effect event, so an inline callback is called when the sort settles and
+  // not on every render.
+  const reportSortSettled = useEffectEvent(
+    (sortColumnId: Id | null, sortDirection: "asc" | "desc" | null) => {
+      onSortSettled?.(sortColumnId, sortDirection);
+    },
+  );
+  const { sortColumnId, sortDirection } = state;
+  useEffect(() => {
+    if (!sorting) reportSortSettled(sortColumnId, sortDirection);
+  }, [sorting, sortColumnId, sortDirection]);
 
   // A running sort reads as busy the same way a refetch does.
   const busy = loading || sorting;

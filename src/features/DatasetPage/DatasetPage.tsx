@@ -92,8 +92,10 @@ export function DatasetPage<T, Id extends string>({
  * Owns the fetch, the view state and the address. Under the boundary, so a
  * reset remounts it and re-reads the last committed address.
  *
- * ponytail: a view that throws once the address already holds it throws again
- * on reset; resetting to the default view would cover that if it matters.
+ * ponytail: only a sort the reader starts is held back. A throwing sort the
+ * address already names (a link, or a search or language change re-sorting
+ * under it) throws again on reset; resetting to an unsorted view would cover
+ * that if it matters.
  */
 function DatasetView<T, Id extends string>({
   config,
@@ -135,6 +137,28 @@ function DatasetView<T, Id extends string>({
     ...DEFAULT_TABLE_STATE,
     ...parseTableState(window.location.search, columnIds),
   }));
+
+  // The sort last on screen. The address waits for a requested sort to reach
+  // it, so a sort that fails across frames never lands in the address.
+  const [settledSort, setSettledSort] = useState(() => ({
+    sortColumnId: tableState.sortColumnId,
+    sortDirection: tableState.sortDirection,
+  }));
+  const sortPending =
+    tableState.sortColumnId !== settledSort.sortColumnId ||
+    tableState.sortDirection !== settledSort.sortDirection;
+
+  const handleSortSettled = useCallback(
+    (sortColumnId: Id | null, sortDirection: "asc" | "desc" | null) => {
+      setSettledSort((settled) =>
+        settled.sortColumnId === sortColumnId &&
+        settled.sortDirection === sortDirection
+          ? settled
+          : { sortColumnId, sortDirection },
+      );
+    },
+    [],
+  );
 
   // What is in the box, which is not yet what the table was asked for. Seeded
   // from the committed term, so a link carrying one paints it on first render.
@@ -195,7 +219,9 @@ function DatasetView<T, Id extends string>({
   // recipient and would make the locale part of the table's view state.
   useEffect(() => {
     // The only address write the page makes: replaceState, never a history
-    // push, and skipped when the serialized state already matches.
+    // push. Skipped while a sort is still on its way to the screen, and when
+    // the serialized state already matches.
+    if (sortPending) return;
     const next = serializeTableState(tableState, window.location.search);
     if (next === window.location.search) return;
 
@@ -214,7 +240,7 @@ function DatasetView<T, Id extends string>({
     } catch {
       // The view state is unchanged and correct; only the address fell behind.
     }
-  }, [tableState]);
+  }, [tableState, sortPending]);
 
   // The functional updater form keeps these dependency arrays empty.
   const handleSort = useCallback((columnId: Id) => {
@@ -326,6 +352,7 @@ function DatasetView<T, Id extends string>({
           datasetReady={datasetReady}
           errorMessage={errorMessage}
           onRetry={handleRetry}
+          onSortSettled={handleSortSettled}
           labels={labels}
         />
       </div>

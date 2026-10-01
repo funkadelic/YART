@@ -95,4 +95,45 @@ describe("DataTable", () => {
       screen.queryByRole("button", { name: "Try again" }),
     ).not.toBeInTheDocument();
   });
+
+  it("reports each settled sort once, even through an inline callback", () => {
+    const settled =
+      vi.fn<(columnId: string | null, direction: string | null) => void>();
+    const props = {
+      ...baseProps,
+      loading: false,
+      datasetReady: true,
+      errorMessage: null,
+    };
+    const { rerender } = render(
+      <DataTable {...props} onSortSettled={(...args) => settled(...args)} />,
+    );
+
+    expect(settled).toHaveBeenCalledTimes(1);
+    expect(settled).toHaveBeenLastCalledWith(null, null);
+
+    // A new callback identity and a page change are not a new sort.
+    rerender(
+      <DataTable
+        {...props}
+        state={{ ...DEFAULT_TABLE_STATE, page: 2 }}
+        onSortSettled={(...args) => settled(...args)}
+      />,
+    );
+    expect(settled).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <DataTable
+        {...props}
+        state={{
+          ...DEFAULT_TABLE_STATE,
+          sortColumnId: "qty",
+          sortDirection: "asc",
+        }}
+        onSortSettled={(...args) => settled(...args)}
+      />,
+    );
+    expect(settled).toHaveBeenCalledTimes(2);
+    expect(settled).toHaveBeenLastCalledWith("qty", "asc");
+  });
 });

@@ -1,6 +1,6 @@
 # 2. The address holds the view state, written by one component
 
-Status: accepted, superseded in part by [10](0010-one-generic-dataset-page.md)
+Status: accepted, superseded in part by [10](0010-one-generic-dataset-page.md), narrowed by [11](0011-address-waits-for-a-settled-sort.md)
 Date recorded: 2026-09-15
 
 ## Context
