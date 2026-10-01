@@ -20,7 +20,7 @@ A React and TypeScript single-page app for browsing large datasets in the browse
     - [What ships](#what-ships)
     - [What stays in the source language](#what-stays-in-the-source-language)
 - [Stack](#stack)
-  - [Build target](#build-target)
+- [Browser support](#browser-support)
 - [Getting started](#getting-started)
 - [Usage](#usage)
   - [Props](#props)
@@ -134,18 +134,18 @@ The static head of the document stays in the base language too. Its title, its d
 - [CodSpeed](https://codspeed.io/) and [tinybench](https://github.com/tinylibs/tinybench) for the benchmarks
 - [ESLint](https://eslint.org/), [Stylelint](https://stylelint.io/), and [Prettier](https://prettier.io/)
 
-### Build target
+## Browser support
 
-The browser target follows the Baseline Widely available rule, taken on 2026-08-20:
+The app supports the browsers that were Baseline Widely available on 2026-08-20:
 
 - Chrome 111 and above
 - Edge 111 and above
 - Firefox 111 and above
 - Safari 16.4 and above
 
-The `build.target` array in `vite.config.ts` is the one place these versions live. It names them explicitly instead of taking the bundler default, so a Vite upgrade cannot move build output. Lightning CSS minifies the stylesheet against the same targets, so the array decides both which syntax is lowered and which vendor prefixes the stylesheet gets.
+The `build.target` array in `vite.config.ts` is the one place these versions live. It names them explicitly instead of taking the bundler default, so a Vite upgrade cannot change which browsers the output targets. Lightning CSS minifies the stylesheet against the same targets, so the array decides both which syntax is lowered and which vendor prefixes the stylesheet gets.
 
-Raising the baseline is a deliberate edit to that array and to the date above.
+To raise the baseline, edit that array and the date above.
 
 ## Getting started
 
