@@ -36,6 +36,7 @@ A React and TypeScript single-page app for browsing large datasets in the browse
   - [Code coverage](#code-coverage)
   - [Mutation testing](#mutation-testing)
   - [Visual regression tests](#visual-regression-tests)
+  - [Static analysis](#static-analysis)
 - [Benchmarks](#benchmarks)
 - [Scripts](#scripts)
 - [Decisions](#decisions)
@@ -454,11 +455,13 @@ npm ci
 
 A run takes about ten minutes and writes `reports/mutation/mutation.html`, which is gitignored.
 
-`npm run fallow` is the other check run by hand, a static analysis pass over the TypeScript tree. Both exit non-zero on a finding and neither runs in CI, so a finding is something to read and decide about rather than a broken build.
-
 ### Visual regression tests
 
 `e2e/visual.spec.ts` captures how the table renders: the cities page in its default view, a searched, sorted and paged view, the dark theme, a right-to-left language, empty results and a hovered row, plus the films page in its default view and a right-to-left language. [Chromatic](https://www.chromatic.com/) compares each snapshot with the accepted baseline. CI uploads them on pull requests and on `main`, where changes are accepted automatically. Locally, `npm run chromatic` uploads the snapshots a full `npm run test:e2e` archived.
+
+### Static analysis
+
+[fallow](https://github.com/fallow-rs/fallow) reads the TypeScript tree without running it and reports unused files, exports and dependencies, duplicated code, and a maintainability score per file. Run it by hand with `npm run fallow`. It exits non-zero on a finding but does not run in CI, so a finding is something to read and decide about rather than a broken build.
 
 ## Benchmarks
 
