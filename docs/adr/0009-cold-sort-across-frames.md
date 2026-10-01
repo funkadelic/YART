@@ -1,6 +1,6 @@
 # 9. A cold sort runs across frames, a repeat reuses its order
 
-Status: accepted, amended 2026-09-30: an unfiltered search now returns the cached rows rather than a copy, so the stale-input cost in Consequences no longer applies
+Status: accepted
 Date recorded: 2026-09-16
 
 ## Context
@@ -32,3 +32,7 @@ The first sort of each column and direction still compares every row. Measured i
 A long-animation-frame entry of about 100 ms still appears during a cold sort. Its blocking duration is zero. The slices run back to back with nothing to render between them, and a click on the next page during the sort measured 16 ms.
 
 Revisit when a dataset grows until the slices add up to seconds. To serve a search result from a stored order, the cache walks the whole stored array. That is faster than sorting the result afresh today and slower at ten times the rows. Measured in Node, 1,700 rows out of 502,500 took 25 ms that way against 1.5 ms to sort them afresh. A worker that owns the dataset and returns row ids would avoid the copy, and it has not been measured.
+
+## Amended 2026-09-30
+
+An unfiltered search now returns the cached rows rather than a copy, so the stale-input cost above no longer applies.
