@@ -24,7 +24,7 @@ A React and TypeScript single-page app for browsing large datasets in the browse
 - [Getting started](#getting-started)
 - [Usage](#usage)
   - [Props](#props)
-  - [Why `getRowId` must be injective](#why-getrowid-must-be-injective)
+  - [What `getRowId` has to guarantee](#what-getrowid-has-to-guarantee)
   - [Why the container debounces](#why-the-container-debounces)
 - [Configuring](#configuring)
   - [Columns](#columns)
@@ -317,11 +317,11 @@ If both `loading` and `errorMessage` are set, `errorMessage` wins.
 
 Every column is sortable. There is no per-column opt out, because the previous one existed to keep a hand-written `<tbody>` in step with the header array, and neither is hand-written now.
 
-### Why `getRowId` must be injective
+### What `getRowId` has to guarantee
 
-It does two jobs: it keys the rows for reconciliation, and it breaks ties between equal values in the sort. Two rows sharing an id lose their identity and their ordering in the same stroke.
+It does two jobs: it keys the rows for reconciliation, and it breaks ties between equal values in the sort. So no two rows may share an id. If two do, React can reuse one row's DOM for the other, and the tiebreak cannot order the pair.
 
-It returns a string, and the tiebreak compares that string as text, so an id that is really a number has to be padded to sort as one. Unpadded, `"2"` follows `"1934976309"` and the two lowest ids land at the end of every group of rows whose sorted values are equal. `cityRowId` pads to ten digits for that reason.
+It returns a string, and the tiebreak compares that string as text, so an id that is really a number has to be padded to sort as one. Unpadded, `"2"` sorts after `"1934976309"`, so the city with id 2 comes after every city it ties with. `cityRowId` pads to ten digits for that reason.
 
 The function itself has to keep one identity across renders, which is why `cityRowId` is declared at module scope. The sort cache and the background sort both key on it, so passing a new function on every render re-sorts the rows each time, and above 5,000 rows it restarts a sort that is still running.
 
