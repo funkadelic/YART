@@ -77,7 +77,7 @@ export interface DataTableProps<T, Id extends string> {
   readonly onSortSettled?:
     | ((
         sortColumnId: NoInfer<Id> | null,
-        sortDirection: "asc" | "desc" | null,
+        sortDirection: TableState<Id>["sortDirection"],
       ) => void)
     | undefined;
   readonly labels: DataTableLabels;
@@ -189,7 +189,10 @@ export function DataTable<T, Id extends string>({
   // An effect event, so an inline callback is called when the sort settles and
   // not on every render.
   const reportSortSettled = useEffectEvent(
-    (sortColumnId: Id | null, sortDirection: "asc" | "desc" | null) => {
+    (
+      sortColumnId: Id | null,
+      sortDirection: TableState<Id>["sortDirection"],
+    ) => {
       onSortSettled?.(sortColumnId, sortDirection);
     },
   );

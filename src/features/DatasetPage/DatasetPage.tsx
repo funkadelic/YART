@@ -149,7 +149,10 @@ function DatasetView<T, Id extends string>({
     tableState.sortDirection !== settledSort.sortDirection;
 
   const handleSortSettled = useCallback(
-    (sortColumnId: Id | null, sortDirection: "asc" | "desc" | null) => {
+    (
+      sortColumnId: Id | null,
+      sortDirection: TableState<Id>["sortDirection"],
+    ) => {
       setSettledSort((settled) =>
         settled.sortColumnId === sortColumnId &&
         settled.sortDirection === sortDirection
