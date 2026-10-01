@@ -16,7 +16,7 @@ export interface GetCitiesParams {
 /** Matches a term against name, ascii name, country and country code. */
 export async function getCities({
   searchTerm = "",
-}: GetCitiesParams = {}): Promise<City[]> {
+}: GetCitiesParams = {}): Promise<readonly City[]> {
   const all = await loadCities();
 
   const needle = searchTerm.trim().toLowerCase();
@@ -28,10 +28,9 @@ export async function getCities({
   // it instead would answer a different search, and a term of nothing but a
   // separator would answer every row.
   //
-  // The empty term returns a copy, so the module-scope cache cannot escape.
-  if (needle === "") {
-    return [...all];
-  }
+  // The empty term hands out the cache itself, which the loader freezes, so the
+  // sort cache can key on its identity.
+  if (needle === "") return all;
   if (needle.includes(SEARCH_KEY_SEPARATOR)) {
     return [];
   }

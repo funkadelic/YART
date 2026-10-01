@@ -86,7 +86,7 @@ function stubFetch(payload: unknown) {
  * reported as one, so no later assertion has to trip over an undefined value.
  */
 async function rejectionOf<Row>(
-  load: () => Promise<Row[]>,
+  load: () => Promise<readonly Row[]>,
 ): Promise<DatasetError> {
   try {
     await load();

@@ -1,6 +1,6 @@
 # 9. A cold sort runs across frames, a repeat reuses its order
 
-Status: accepted
+Status: accepted, amended 2026-09-30: an unfiltered search now returns the cached rows rather than a copy, so the stale-input cost in Consequences no longer applies
 Date recorded: 2026-09-16
 
 ## Context

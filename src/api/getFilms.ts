@@ -19,13 +19,13 @@ export interface GetFilmsParams {
  */
 export async function getFilms({
   searchTerm = "",
-}: GetFilmsParams = {}): Promise<Film[]> {
+}: GetFilmsParams = {}): Promise<readonly Film[]> {
   const all = await loadFilms();
 
   const needle = searchTerm.trim().toLowerCase();
 
-  // The empty term returns a copy, so the module-scope cache cannot escape.
+  // The empty term hands out the cache itself, which the loader freezes.
   return needle === ""
-    ? [...all]
+    ? all
     : all.filter((film) => film.title.toLowerCase().includes(needle));
 }
