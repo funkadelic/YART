@@ -1,0 +1,31 @@
+src/api/getCities.test.ts
+  s_32077e4baa4ba3::t_b926e1379c6d77 396
+  s_32077e4baa4ba3::t_4130de637e81b6 116,123,381-383,391,393,395
+  s_32077e4baa4ba3::t_a6175c68122d64 1-9
+src/data/loadEnvelope.test.ts
+  s_32077e4baa4ba3::t_4130de637e81b6 89
+src/api/getCities.ts
+  s_32077e4baa4ba3::t_c867a77472781a 19,31-33
+src/api/getFilms.ts
+  s_32077e4baa4ba3::t_c867a77472781a 22,27,29
+src/data/loadEnvelope.ts
+  s_32077e4baa4ba3::t_c867a77472781a 77-78,119
+src/api/getFilms.test.ts
+  s_32077e4baa4ba3::t_4130de637e81b6 49-50,57
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8c1119f46691a260aff4cef0493dfc369579a48d",
+  "prompts": {},
+  "sessions": {
+    "s_32077e4baa4ba3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c57d184-c613-4cec-a16d-17f95fa75401",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
