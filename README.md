@@ -32,6 +32,11 @@ A React and TypeScript single-page app for browsing large datasets in the browse
   - [Sort comparison](#sort-comparison)
   - [Page size options](#page-size-options)
 - [Testing](#testing)
+  - [Unit tests](#unit-tests)
+  - [Integration tests](#integration-tests)
+  - [Code coverage](#code-coverage)
+  - [Mutation testing](#mutation-testing)
+  - [Visual regression tests](#visual-regression-tests)
 - [Benchmarks](#benchmarks)
 - [Scripts](#scripts)
 - [Decisions](#decisions)
@@ -410,6 +415,8 @@ The page position is clamped where it is read, not where it is stored. A result 
 
 ## Testing
 
+### Unit tests
+
 The suite drives the component the way a user does, through roles and labels rather than internals:
 
 ```tsx
@@ -439,9 +446,17 @@ it("sorts by population descending on the second activation", async () => {
 
 The assertions read `aria-sort`, the same attribute a screen reader announces, so a passing test is evidence the announcement is right.
 
-A second suite under `e2e/` runs in a real browser against a production build, covering what a simulated DOM cannot show: that reopening a link restores the search, sort and page it carries; that Back and Forward move through history the way the shareable-link design intends; that the theme and the language are stamped before the first paint rather than after the page loads; that the dataset arrives over the network as a separate content-hashed asset; that sorting, paging, changing the page size and searching stay responsive with the processor slowed fourfold; that the films page keeps an address of its own, independent of the cities page; that the page stays legible when the operating system forces its own color palette; that neither page scrolls sideways on a phone-width screen, in any language; and how the table actually renders, captured as snapshots for visual comparison.
+### Integration tests
+
+A second suite under `e2e/` runs in a real browser against a production build, covering what a simulated DOM cannot show: that reopening a link restores the search, sort and page it carries; that Back and Forward move through history the way the shareable-link design intends; that the theme and the language are stamped before the first paint rather than after the page loads; that the dataset arrives over the network as a separate content-hashed asset; that sorting, paging, changing the page size and searching stay responsive with the processor slowed fourfold; that the films page keeps an address of its own, independent of the cities page; that the page stays legible when the operating system forces its own color palette; and that neither page scrolls sideways on a phone-width screen, in any language.
+
+After the end-to-end suite, CI runs Lighthouse three times on each page in mobile mode against the same build, writes the median of each metric to the job summary and to a comment on the pull request, and attaches the reports. It is advisory, so a slow score or a failed audit never fails the build; `npm run lighthouse` runs it locally after `npm run build`, on the same headless Chromium the browser suites use.
+
+### Code coverage
 
 The pipeline sends three reports to [Codecov](https://codecov.io/gh/funkadelic/YART): the coverage the hundred percent gate is measured on, a JUnit report from each of the three suites, and the size of every emitted asset. A test that fails intermittently is flagged as a flake. The asset sizes come from Codecov's standalone analyzer, which reports assets and not individual modules.
+
+### Mutation testing
 
 [StrykerJS](https://stryker-mutator.io) is configured for mutation testing, run by hand as `npm run test:mutation`. Its runner support stops at Vitest 4.1, so install the older runner first and put the tree back afterward. Run all three:
 
@@ -455,7 +470,9 @@ A run takes about ten minutes and writes `reports/mutation/mutation.html`, which
 
 `npm run fallow` is the other check run by hand, a static analysis pass over the TypeScript tree. Both exit non-zero on a finding and neither runs in CI, so a finding is something to read and decide about rather than a broken build.
 
-After the end-to-end suite, CI runs Lighthouse three times on each page in mobile mode against the same build, writes the median of each metric to the job summary and to a comment on the pull request, and attaches the reports. It is advisory, so a slow score or a failed audit never fails the build; `npm run lighthouse` runs it locally after `npm run build`, on the same headless Chromium the browser suites use.
+### Visual regression tests
+
+`e2e/visual.spec.ts` captures how the table renders: the cities page in its default view, a searched, sorted and paged view, the dark theme, a right-to-left language, empty results and a hovered row, plus the films page in its default view and a right-to-left language. [Chromatic](https://www.chromatic.com/) compares each snapshot with the accepted baseline. CI uploads them on pull requests and on `main`, where changes are accepted automatically. Locally, `npm run chromatic` uploads the snapshots a full `npm run test:e2e` archived.
 
 ## Benchmarks
 
