@@ -6,6 +6,7 @@ import {
   applyTableAction,
   type TableAction,
   type TableState,
+  type SortDirection,
 } from "./tableState";
 
 type WidgetColumnId = "name" | "size";
@@ -17,7 +18,7 @@ const BASE: TableState<WidgetColumnId> = {
 
 const sorted = (
   columnId: WidgetColumnId | null,
-  direction: "asc" | "desc" | null,
+  direction: SortDirection | null,
 ): TableState<WidgetColumnId> => ({
   ...BASE,
   sortColumnId: columnId,
@@ -33,7 +34,7 @@ const SORT_CYCLE: Array<
     string,
     TableState<WidgetColumnId>,
     WidgetColumnId | null,
-    "asc" | "desc" | null,
+    SortDirection | null,
   ]
 > = [
   ["a column that is not the active one", sorted("size", "asc"), "name", "asc"],

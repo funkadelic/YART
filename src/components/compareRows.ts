@@ -1,3 +1,5 @@
+import type { SortDirection } from "./DataTable/tableState";
+
 /** Nothing to order by. Zero is not blank, it sorts small; NaN is blank. */
 function isBlank(value: unknown): boolean {
   return (
@@ -49,7 +51,7 @@ function compareRanked(
 export function compareValues(
   aValue: unknown,
   bValue: unknown,
-  direction: "asc" | "desc",
+  direction: SortDirection,
   collator: Intl.Collator,
 ): number {
   const aBlank = isBlank(aValue);

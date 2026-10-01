@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { collatorFor } from "../../i18n/format";
 import { columns } from "./column";
 import { sortRows } from "./sortRows";
+import type { SortDirection } from "./tableState";
 
 // Fixed seed, so a failure names an input that can be run again and the gate
 // cannot flake. Change it to search elsewhere.
@@ -100,7 +101,7 @@ describe("sortRows", () => {
   it("reverses the present keys when the direction turns", () => {
     fc.assert(
       fc.property(parts, sortable, (rows, { column: sortBy, keyOf }) => {
-        const present = (direction: "asc" | "desc") =>
+        const present = (direction: SortDirection) =>
           sortRows(rows, sortBy, direction, partId)
             .map(keyOf)
             .filter((key) => key !== "");

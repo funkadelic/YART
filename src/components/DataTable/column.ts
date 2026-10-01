@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { compareValues } from "../compareRows";
+import type { SortDirection } from "./tableState";
 
 /** Its value type is fused into the two functions below, then erased. */
 export interface Column<T, Id extends string = string> {
@@ -12,7 +13,7 @@ export interface Column<T, Id extends string = string> {
   /** The column carries a number. The table decides what that looks like. */
   readonly numeric?: boolean | undefined;
   readonly renderCell: (row: T) => ReactNode;
-  readonly compare: (a: T, b: T, direction: "asc" | "desc") => number;
+  readonly compare: (a: T, b: T, direction: SortDirection) => number;
 }
 
 /**
@@ -31,7 +32,7 @@ export interface ColumnOptions<T, V> {
   readonly numeric?: boolean | undefined;
   readonly renderCell?: ((value: V, row: T) => ReactNode) | undefined;
   readonly compare?:
-    ((a: V, b: V, direction: "asc" | "desc") => number) | undefined;
+    ((a: V, b: V, direction: SortDirection) => number) | undefined;
 }
 
 /**

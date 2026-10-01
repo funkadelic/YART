@@ -7,6 +7,7 @@ import { required } from "../test/required";
 import { collatorFor } from "../i18n/format";
 import { compareIdentities } from "./DataTable/sortRows";
 import { compareValues } from "./compareRows";
+import type { SortDirection } from "./DataTable/tableState";
 
 /**
  * The collator every case below that does not name a locale orders text with.
@@ -67,7 +68,7 @@ function rowWithCapital(id: number, capital: unknown): City {
  * local restatement of them would pass while the product ordered rows
  * differently. Every expected order below is the order the application produces.
  */
-function byColumn(column: keyof City, direction: "asc" | "desc") {
+function byColumn(column: keyof City, direction: SortDirection) {
   return (a: City, b: City): number => {
     const comparison = compareValues(a[column], b[column], direction, EN);
     return comparison !== 0
@@ -79,7 +80,7 @@ function byColumn(column: keyof City, direction: "asc" | "desc") {
 function sortedIds(
   rows: City[],
   column: keyof City,
-  direction: "asc" | "desc",
+  direction: SortDirection,
 ): number[] {
   return [...rows].sort(byColumn(column, direction)).map((row) => row.id);
 }

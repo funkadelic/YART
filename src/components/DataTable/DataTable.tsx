@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
+import { useEffect, useEffectEvent, type ReactNode } from "react";
 import type { Column } from "./column";
-import type { TableState } from "./tableState";
+import type { TableState, SortDirection } from "./tableState";
 import { TableHead } from "./TableHead";
 import { TableBody } from "./TableBody";
 import { Pagination, type PaginationLabels } from "./Pagination";
@@ -35,7 +35,7 @@ export interface DataTableLabels {
   /** What the sort region announces once a column is sorted. */
   readonly sortedAnnouncement: (
     columnLabel: string,
-    direction: "asc" | "desc",
+    direction: SortDirection,
   ) => string;
   /** What it announces when a sort is taken off again. */
   readonly sortClearedAnnouncement: string;
@@ -44,7 +44,7 @@ export interface DataTableLabels {
   /** The caption's phrase for a table sorted by a column. */
   readonly sortSummary: (
     columnLabel: string,
-    direction: "asc" | "desc",
+    direction: SortDirection,
   ) => string;
   /** Handed on whole to the page controls below the table. */
   readonly pagination: PaginationLabels;
@@ -73,6 +73,13 @@ export interface DataTableProps<T, Id extends string> {
   readonly errorMessage: string | null;
   // Optional so the table stays usable without a container behind it.
   readonly onRetry?: (() => void) | undefined;
+  /** Called whenever the sort in state becomes the order on screen. */
+  readonly onSortSettled?:
+    | ((
+        sortColumnId: NoInfer<Id> | null,
+        sortDirection: SortDirection | null,
+      ) => void)
+    | undefined;
   readonly labels: DataTableLabels;
 }
 
@@ -107,7 +114,7 @@ function ErrorRegion({
 /** A link can carry a sort nobody pressed, so hasSorted gates the first. */
 function sortAnnouncement(
   labels: DataTableLabels,
-  sortDirection: "asc" | "desc" | null,
+  sortDirection: SortDirection | null,
   hasSorted: boolean,
   activeLabel: string,
 ): string {
@@ -138,7 +145,7 @@ function resultsAnnouncement(
 /** Describes the sort for the caption, whose words differ from the region's. */
 function sortSummary(
   labels: DataTableLabels,
-  sortDirection: "asc" | "desc" | null,
+  sortDirection: SortDirection | null,
   activeLabel: string,
 ): string {
   if (!sortDirection) return labels.unsorted;
@@ -162,6 +169,7 @@ export function DataTable<T, Id extends string>({
   datasetReady,
   errorMessage,
   onRetry,
+  onSortSettled,
   labels,
 }: DataTableProps<T, Id>) {
   const { sortedRows, sorting } = useSortedRows(
@@ -177,6 +185,18 @@ export function DataTable<T, Id extends string>({
     state.page,
     state.pageSize,
   );
+
+  // An effect event, so an inline callback is called when the sort settles and
+  // not on every render.
+  const reportSortSettled = useEffectEvent(
+    (sortColumnId: Id | null, sortDirection: SortDirection | null) => {
+      onSortSettled?.(sortColumnId, sortDirection);
+    },
+  );
+  const { sortColumnId, sortDirection } = state;
+  useEffect(() => {
+    if (!sorting) reportSortSettled(sortColumnId, sortDirection);
+  }, [sorting, sortColumnId, sortDirection]);
 
   // A running sort reads as busy the same way a refetch does.
   const busy = loading || sorting;

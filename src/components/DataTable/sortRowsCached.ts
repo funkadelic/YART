@@ -1,5 +1,6 @@
 import type { Column } from "./column";
 import { sortRows } from "./sortRows";
+import type { SortDirection } from "./tableState";
 
 /** One stored sort: its input, the order it produced, and its row identity. */
 interface Entry {
@@ -25,7 +26,7 @@ const CACHE = new WeakMap<object, { asc?: Entry; desc?: Entry }>();
 export function sortRowsCached<T, Id extends string>(
   rows: readonly T[],
   column: Column<T, Id> | undefined,
-  direction: "asc" | "desc" | null,
+  direction: SortDirection | null,
   getRowId: (row: T) => string,
 ): readonly T[] {
   if (!column || !direction) return rows;
@@ -42,7 +43,7 @@ export function sortRowsCached<T, Id extends string>(
 export function cachedSortedRows<T, Id extends string>(
   rows: readonly T[],
   column: Column<T, Id>,
-  direction: "asc" | "desc",
+  direction: SortDirection,
   getRowId: (row: T) => string,
 ): readonly T[] | undefined {
   const entry = CACHE.get(column)?.[direction];
@@ -62,7 +63,7 @@ export function cachedSortedRows<T, Id extends string>(
 export function storeSortedRows<T, Id extends string>(
   rows: readonly T[],
   column: Column<T, Id>,
-  direction: "asc" | "desc",
+  direction: SortDirection,
   getRowId: (row: T) => string,
   sorted: readonly T[],
 ): void {

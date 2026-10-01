@@ -1,10 +1,11 @@
 import type { Column } from "./column";
+import type { SortDirection } from "./tableState";
 
 /** Row identity is a table-level prop, so the tiebreak lives here. */
 export function sortRows<T, Id extends string>(
   rows: readonly T[],
   column: Column<T, Id> | undefined,
-  direction: "asc" | "desc" | null,
+  direction: SortDirection | null,
   getRowId: (row: T) => string,
 ): readonly T[] {
   if (!column || !direction) return rows;
@@ -17,7 +18,7 @@ export function sortRows<T, Id extends string>(
 /** The column's comparison, then the identity tiebreak: a strict total order. */
 export function rowComparator<T, Id extends string>(
   column: Column<T, Id>,
-  direction: "asc" | "desc",
+  direction: SortDirection,
   getRowId: (row: T) => string,
 ): (a: T, b: T) => number {
   return (a, b) => {

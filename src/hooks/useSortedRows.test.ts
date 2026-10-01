@@ -8,6 +8,7 @@ import { cachedSortedRows } from "../components/DataTable/sortRowsCached";
 import { collatorFor } from "../i18n/format";
 import { SYNC_SORT_ROWS, useSortedRows } from "./useSortedRows";
 import { required } from "../test/required";
+import type { SortDirection } from "../components/DataTable/tableState";
 
 interface Widget {
   id: string;
@@ -30,12 +31,10 @@ const WIDGETS: Widget[] = [
 
 const widgetId = (widget: Widget) => widget.id;
 
-type Direction = "asc" | "desc" | null;
-
 interface Props {
   rows: readonly Widget[];
   columnId: "name" | null;
-  direction: Direction;
+  direction: SortDirection | null;
 }
 
 /**
@@ -87,7 +86,7 @@ function stubSlowClock(): void {
 
 interface LargeProps {
   rows: readonly Widget[];
-  direction: Direction;
+  direction: SortDirection | null;
 }
 
 /** Renders the hook over one column, recording every render's whole result. */
@@ -230,7 +229,7 @@ describe("useSortedRows", () => {
       rerender({ rows, direction: "desc" });
       await waitFor(() => expect(result.current.sorting).toBe(false));
 
-      const order = (direction: "asc" | "desc") =>
+      const order = (direction: SortDirection) =>
         sortRows(rows, name, direction, widgetId).map(widgetId).join();
       expect(result.current.sortedRows.map(widgetId).join()).toBe(
         order("desc"),

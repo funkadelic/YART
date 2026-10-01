@@ -7,6 +7,7 @@ import { resolveLocale } from "../../i18n/resolveLocale";
 import { FILM_FIXTURE } from "../../test/filmFixture";
 import { required } from "../../test/required";
 import { buildFilmColumns, filmRowId } from "./filmColumns";
+import type { SortDirection } from "../../components/DataTable/tableState";
 
 /** The tag the base build uses, so the collator here is the one the columns hold. */
 const TAG = resolveLocale("en", []).tag;
@@ -36,7 +37,7 @@ function film(overrides: Partial<Film>): Film {
 }
 
 /** Only the sign is asserted: a comparison's magnitude is unspecified. */
-function order(id: string, a: Film, b: Film, direction: "asc" | "desc") {
+function order(id: string, a: Film, b: Film, direction: SortDirection) {
   return Math.sign(column(id).compare(a, b, direction));
 }
 

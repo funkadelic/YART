@@ -320,11 +320,14 @@ describe("DatasetPage", () => {
       expect(busyContainer()).toHaveAttribute("aria-busy", "true");
       expect(firstCity()).toBe(required(rows[0], "the first city").name);
       expect(sortRegion).toBeEmptyDOMElement();
+      // The address waits for the order to reach the screen.
+      expect(window.location.search).toBe("");
 
       await waitFor(() =>
         expect(busyContainer()).toHaveAttribute("aria-busy", "false"),
       );
       expect(firstCity()).toBe(sortedFirst.name);
+      await waitFor(() => expect(window.location.search).toBe("?sort=name"));
       expect(sortRegion).toHaveTextContent(
         "Table sorted by City in ascending order",
       );

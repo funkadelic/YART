@@ -1,5 +1,6 @@
 import type { Column } from "./column";
 import { rowComparator } from "./sortRows";
+import type { SortDirection } from "./tableState";
 
 /** Rows per run sorted natively before the merge passes begin. */
 const RUN_LENGTH = 1024;
@@ -90,7 +91,7 @@ function yieldToMain(): Promise<void> {
 export async function sortRowsSliced<T, Id extends string>(
   rows: readonly T[],
   column: Column<T, Id>,
-  direction: "asc" | "desc",
+  direction: SortDirection,
   getRowId: (row: T) => string,
   isCancelled: () => boolean,
   runLength = RUN_LENGTH,
