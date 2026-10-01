@@ -105,14 +105,14 @@ const PARITY_NEEDLES = [
  */
 const SEARCH_KEY_SENTINEL = "qqderivedkeysentinelqq";
 
-let everyRow: City[] | undefined;
+let everyRow: readonly City[] | undefined;
 
 /**
  * The whole row set, loaded once through this file's warm module instance.
  * Every parity case filters this same array, so a difference can only come from
  * the matching and never from the input.
  */
-async function allRows(): Promise<City[]> {
+async function allRows(): Promise<readonly City[]> {
   everyRow ??= await getCities({ searchTerm: "" });
   return everyRow;
 }
@@ -370,10 +370,9 @@ describe("getCities search parity", () => {
   });
 });
 describe("getCities result ownership", () => {
-  it("hands back an array the caller owns rather than the cached one", async () => {
-    // The copy on the empty-term branch has no other observable consequence,
-    // so without an identity assertion a later refactor can hand the
-    // module-scope cache straight to callers again and nothing goes red.
+  it("hands back the frozen cached array for the empty term", async () => {
+    // Identity is what lets the sort cache skip its subset walk on a cleared
+    // search; the freeze is what keeps callers from mutating it.
     vi.resetModules();
     const [{ getCities: coldGetCities }, { loadCities }] = await Promise.all([
       import("./getCities"),
@@ -381,13 +380,11 @@ describe("getCities result ownership", () => {
     ]);
 
     // Both imports come from the one registry reset above, so the array the
-    // loader caches is the array the seam would otherwise return.
+    // loader caches is the array the seam returns.
     const cached = await loadCities();
-    const first = await coldGetCities({ searchTerm: "" });
-    const second = await coldGetCities({ searchTerm: "" });
+    const rows = await coldGetCities({ searchTerm: "" });
 
-    expect(first).not.toBe(cached);
-    expect(second).not.toBe(cached);
-    expect(first).not.toBe(second);
+    expect(rows).toBe(cached);
+    expect(Object.isFrozen(rows)).toBe(true);
   });
 });

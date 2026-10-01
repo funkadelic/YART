@@ -46,16 +46,20 @@ describe("getFilms", () => {
     expect(rows).toEqual([]);
   });
 
-  // The cached array is shared by every caller, so handing it out would let one
-  // caller's sort reorder another's rows.
-  it("hands back a copy rather than the cached array", async () => {
+  // Identity is what lets the sort cache skip its subset walk on a cleared
+  // search; the freeze is what keeps callers from mutating it.
+  it("hands back the frozen cached array for the empty term", async () => {
     stubDatasetFetch(FILM_FIXTURE_ENVELOPE);
-    const getFilms = await freshGetFilms();
+    vi.resetModules();
+    const [{ getFilms }, { loadFilms }] = await Promise.all([
+      import("./getFilms"),
+      import("../data/films/films"),
+    ]);
 
-    const first = await getFilms();
-    const second = await getFilms();
+    const cached = await loadFilms();
+    const rows = await getFilms();
 
-    expect(first).not.toBe(second);
-    expect(first).toEqual(second);
+    expect(rows).toBe(cached);
+    expect(Object.isFrozen(rows)).toBe(true);
   });
 });

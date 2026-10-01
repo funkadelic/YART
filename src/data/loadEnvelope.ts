@@ -74,8 +74,8 @@ export function createEnvelopeLoader<Row>({
   dataset,
   columns,
   parseRows,
-}: EnvelopeLoaderOptions<Row>): () => Promise<Row[]> {
-  let cached: Promise<Row[]> | undefined;
+}: EnvelopeLoaderOptions<Row>): () => Promise<readonly Row[]> {
+  let cached: Promise<readonly Row[]> | undefined;
 
   /** The only place the untyped result of response.json() is narrowed. */
   function parseEnvelope(payload: unknown): Row[] {
@@ -116,7 +116,7 @@ export function createEnvelopeLoader<Row>({
   }
 
   /** The cache is why a double mount issues one request. */
-  return function load(): Promise<Row[]> {
+  return function load(): Promise<readonly Row[]> {
     if (cached) return cached;
 
     const pending = fetch(url, {
@@ -152,7 +152,9 @@ export function createEnvelopeLoader<Row>({
           );
         });
       })
-      .then(parseEnvelope);
+      // Frozen, because callers share this one array and a mutation would
+      // reorder every later caller's rows.
+      .then((payload) => Object.freeze(parseEnvelope(payload)));
 
     // Attached at store time, because any delay leaves a window in which a
     // retry re-awaits the already-rejected promise. Unconditional is safe, as a
