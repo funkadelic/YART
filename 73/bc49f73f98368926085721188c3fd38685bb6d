@@ -1,0 +1,51 @@
+src/components/DataTable/tableState.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 1-3,7
+src/components/DataTable/tableStateUrl.test.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 3-7,398
+src/components/DataTable/tableState.test.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 9,21,37
+src/components/DataTable/sortRows.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 2,8,21
+src/components/DataTable/sortRowsSliced.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 3,94
+src/components/compareRows.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 1-2,54
+src/hooks/useSortedRows.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 10,22,35
+src/components/DataTable/sortRowsCached.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 3,29,46,66
+src/features/DatasetPage/DatasetPage.tsx
+  s_32077e4baa4ba3::t_fe555032f26cad 23,153
+src/components/DataTable/DataTable.tsx
+  s_32077e4baa4ba3::t_fe555032f26cad 3,38,47,80,117,148,192
+src/components/DataTable/TableHead.tsx
+  s_32077e4baa4ba3::t_fe555032f26cad 6,11,17
+src/components/DataTable/sortRows.property.test.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 7,104
+src/components/compareRows.test.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 10,71,83
+src/hooks/useSortedRows.test.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 11,37,89,232
+src/features/films/filmColumns.test.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 10,40
+src/features/films/filmColumns.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 7,32
+src/components/DataTable/column.ts
+  s_32077e4baa4ba3::t_fe555032f26cad 4,16,35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "73bc49f73f98368926085721188c3fd38685bb6d",
+  "prompts": {},
+  "sessions": {
+    "s_32077e4baa4ba3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c57d184-c613-4cec-a16d-17f95fa75401",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
