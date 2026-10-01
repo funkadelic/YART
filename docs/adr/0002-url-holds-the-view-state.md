@@ -1,6 +1,6 @@
 # 2. The address holds the view state, written by one component
 
-Status: accepted
+Status: accepted, superseded in part by [10](0010-one-generic-dataset-page.md)
 Date recorded: 2026-09-15
 
 ## Context
