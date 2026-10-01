@@ -1,0 +1,19 @@
+src/features/DatasetPage/DatasetPage.url.test.tsx
+  s_32077e4baa4ba3::t_6ce8326fe9b335 345-400
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a248cdb767a7a2ecad4809d55a1c26138ef7ed10",
+  "prompts": {},
+  "sessions": {
+    "s_32077e4baa4ba3": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4c57d184-c613-4cec-a16d-17f95fa75401",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
