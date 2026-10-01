@@ -342,94 +342,62 @@ describe("DatasetPage and the address", () => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("brings the table back from the address when the recovery control follows a render throw", async () => {
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-    openAt("?page=2");
-    const user = userEvent.setup({ delay: null });
+  // Over the in-render limit, the sort runs after the busy render commits, so
+  // the address has to wait for it rather than for the render.
+  it.each([
+    ["inside the render", PAGED_CITIES],
+    [
+      "across frames",
+      Array.from({ length: SYNC_SORT_ROWS + 1 }, (_, index) => ({
+        ...required(PAGED_CITIES[0], "a city"),
+        id: index + 1,
+        name: `City ${index + 1}`,
+      })),
+    ],
+  ])(
+    "keeps a sort that fails %s out of the address, so the recovery control brings the table back",
+    async (_, rows) => {
+      const consoleError = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => {});
+      openAt("?page=2");
+      const user = userEvent.setup({ delay: null });
 
-    // Later searches never settle, so the table can only return from rows
-    // fetched before the throw.
-    const search = vi
-      .fn<(typeof CITY_PAGE)["search"]>(() => new Promise<City[]>(() => {}))
-      .mockResolvedValueOnce(PAGED_CITIES);
-    const config = {
-      ...CITY_PAGE,
-      buildColumns: throwingNameColumns,
-      search,
-    };
+      // Later searches never settle, so the table can only return from rows
+      // fetched before the throw.
+      const search = vi
+        .fn<(typeof CITY_PAGE)["search"]>(() => new Promise<City[]>(() => {}))
+        .mockResolvedValueOnce(rows);
+      const config = {
+        ...CITY_PAGE,
+        buildColumns: throwingNameColumns,
+        search,
+      };
 
-    render(<DatasetPage config={config} />);
-    await screen.findByText("Page 2 of 5");
+      render(<DatasetPage config={config} />);
+      await screen.findByText(/^Page 2 of/);
 
-    await user.click(screen.getByRole("button", { name: "City" }));
+      await user.click(screen.getByRole("button", { name: "City" }));
 
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "could not be displayed",
-    );
-    expect(window.location.search).toBe("?page=2");
+      expect(
+        await screen.findByText(/could not be displayed/),
+      ).toBeInTheDocument();
+      expect(window.location.search).toBe("?page=2");
 
-    await user.click(screen.getByRole("button", { name: "Show it again" }));
+      await user.click(screen.getByRole("button", { name: "Show it again" }));
 
-    await screen.findByText("Page 2 of 5");
-    expect(screen.getByText("City 11")).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: /City/ })).toHaveAttribute(
-      "aria-sort",
-      "none",
-    );
-    expect(
-      screen.queryByText(/could not be displayed/),
-    ).not.toBeInTheDocument();
-    expect(window.location.search).toBe("?page=2");
-    expect(consoleError).toHaveBeenCalled();
-  });
-
-  it("keeps a sort that failed across frames out of the address, so the recovery control brings the table back", async () => {
-    const consoleError = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
-    openAt("?page=2");
-    const user = userEvent.setup({ delay: null });
-
-    // Over the in-render limit, so the sort runs after the busy render commits.
-    const rows = Array.from({ length: SYNC_SORT_ROWS + 1 }, (_, index) => ({
-      ...required(PAGED_CITIES[0], "a city"),
-      id: index + 1,
-      name: `City ${index + 1}`,
-    }));
-    const search = vi
-      .fn<(typeof CITY_PAGE)["search"]>(() => new Promise<City[]>(() => {}))
-      .mockResolvedValueOnce(rows);
-    const config = {
-      ...CITY_PAGE,
-      buildColumns: throwingNameColumns,
-      search,
-    };
-
-    render(<DatasetPage config={config} />);
-    await screen.findByText(/^Page 2 of/);
-
-    await user.click(screen.getByRole("button", { name: "City" }));
-
-    expect(
-      await screen.findByText(/could not be displayed/),
-    ).toBeInTheDocument();
-    expect(window.location.search).toBe("?page=2");
-
-    await user.click(screen.getByRole("button", { name: "Show it again" }));
-
-    await screen.findByText(/^Page 2 of/);
-    expect(screen.getByRole("columnheader", { name: /City/ })).toHaveAttribute(
-      "aria-sort",
-      "none",
-    );
-    expect(
-      screen.queryByText(/could not be displayed/),
-    ).not.toBeInTheDocument();
-    expect(window.location.search).toBe("?page=2");
-    expect(consoleError).toHaveBeenCalled();
-  });
+      await screen.findByText(/^Page 2 of/);
+      expect(screen.getByText("City 11")).toBeInTheDocument();
+      expect(
+        screen.getByRole("columnheader", { name: /City/ }),
+      ).toHaveAttribute("aria-sort", "none");
+      expect(
+        screen.queryByText(/could not be displayed/),
+      ).not.toBeInTheDocument();
+      expect(window.location.search).toBe("?page=2");
+      expect(consoleError).toHaveBeenCalled();
+    },
+  );
 
   it("carries a tracking parameter and an unrecognized key through a write, behind the keys it owns", async () => {
     const user = userEvent.setup({ delay: null });
