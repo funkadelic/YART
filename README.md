@@ -16,9 +16,9 @@ A React and TypeScript single-page app for browsing large datasets in the browse
   - [Shareable links](#shareable-links)
   - [Theming](#theming)
   - [Accessibility](#accessibility)
-- [Internationalization](#internationalization)
-  - [What ships](#what-ships)
-  - [What stays in the source language](#what-stays-in-the-source-language)
+  - [Internationalization](#internationalization)
+    - [What ships](#what-ships)
+    - [What stays in the source language](#what-stays-in-the-source-language)
 - [Stack](#stack)
   - [Build target](#build-target)
 - [Getting started](#getting-started)
@@ -99,9 +99,9 @@ A React and TypeScript single-page app for browsing large datasets in the browse
 
 Every push sweeps the running app for violations of a set of automated rules and fails on any of them, once against a simulated DOM and once in a real browser across both themes, a paged table and a right-to-left reading direction. Contrast is the reason the second run exists: measuring it needs a layout engine, which the simulated DOM does not have. Automated rules cannot establish conformance, so the sweeps catch regressions rather than prove the list above.
 
-## Internationalization
+### Internationalization
 
-### What ships
+#### What ships
 
 - Four catalogs: English, Spanish, French, and a right-to-left pseudo-locale. The pseudo-locale is readable English, padded and wrapped in direction marks. It ships so the direction and the truncation can be tested, because the other three all read left to right
 - A language picker in the header, offering the machine's own preference first and then each catalog named in its own language, so a reader who cannot read the interface in front of them can still find their own
@@ -110,7 +110,7 @@ Every push sweeps the running app for violations of a set of automated rules and
 - Collation and number formatting follow it too: the city name column sorts by the reader's own language rules and the population column is grouped the way that language groups digits
 - Direction-dependent geometry is written on the inline axis, so one stylesheet serves both directions
 
-### What stays in the source language
+#### What stays in the source language
 
 City and country names stay in their source form in every locale. The dataset carries a name and an ascii name and nothing else, so a reader of the French interface still reads the English country name. Translating them would need a translated column and a regenerated asset, which is a data pipeline rather than an internationalization change.
 
