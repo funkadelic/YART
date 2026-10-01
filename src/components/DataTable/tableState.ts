@@ -1,7 +1,10 @@
+/** Which way a sorted column runs. */
+export type SortDirection = "asc" | "desc";
+
 /** Everything the table remembers. Five separate writes would be five tears. */
 export interface TableState<Id extends string> {
   readonly sortColumnId: Id | null;
-  readonly sortDirection: "asc" | "desc" | null;
+  readonly sortDirection: SortDirection | null;
   readonly page: number;
   readonly pageSize: number;
   readonly query: string;

@@ -3,17 +3,18 @@ import { FiChevronUp, FiChevronDown } from "react-icons/fi";
 import type { Column } from "./column";
 import tableStyles from "./DataTable.module.scss";
 import styles from "./TableHead.module.scss";
+import type { SortDirection } from "./tableState";
 
 interface TableHeadProps<T, Id extends string> {
   readonly columns: readonly Column<T, Id>[];
   readonly sortColumnId: Id | null;
-  readonly sortDirection: "asc" | "desc" | null;
+  readonly sortDirection: SortDirection | null;
   readonly onSortChange: (columnId: Id) => void;
 }
 
 /** An inactive column reports "none", so the attribute is always present. */
 function ariaSort(
-  direction: "asc" | "desc" | null,
+  direction: SortDirection | null,
 ): "ascending" | "descending" | "none" {
   if (direction === "asc") return "ascending";
   if (direction === "desc") return "descending";

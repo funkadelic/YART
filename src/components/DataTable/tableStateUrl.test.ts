@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { DEFAULT_TABLE_STATE, type TableState } from "./tableState";
+import {
+  DEFAULT_TABLE_STATE,
+  type TableState,
+  type SortDirection,
+} from "./tableState";
 import { parseTableState, serializeTableState } from "./tableStateUrl";
 
 // A made-up pair of ids, because the module takes the valid ids as an argument
@@ -391,7 +395,7 @@ describe("the round trip for a column id that begins with the prefix", () => {
 
   const PREFIXED_COLUMN_IDS: readonly PrefixedColumnId[] = ["-rank", "name"];
 
-  const DIRECTIONS: ReadonlyArray<readonly ["asc" | "desc", string]> = [
+  const DIRECTIONS: ReadonlyArray<readonly [SortDirection, string]> = [
     ["asc", "?sort=-rank"],
     ["desc", "?sort=--rank"],
   ];

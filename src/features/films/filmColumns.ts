@@ -4,6 +4,7 @@ import type { Catalog } from "../../i18n/catalogs/en";
 import { en } from "../../i18n/catalogs/en";
 import { collatorFor, durationFormatFor } from "../../i18n/format";
 import { resolveLocale } from "../../i18n/resolveLocale";
+import type { SortDirection } from "../../components/DataTable/tableState";
 
 /**
  * The columns the film table shows, built for one resolved locale. Memoize on
@@ -28,7 +29,7 @@ export function buildFilmColumns(catalog: Catalog, tag: string) {
   const compareList = (
     a: readonly string[],
     b: readonly string[],
-    direction: "asc" | "desc",
+    direction: SortDirection,
   ) => {
     // Ahead of the direction, because an empty list sorts last in both and a
     // flip applied first would reverse it.

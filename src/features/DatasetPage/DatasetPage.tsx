@@ -20,6 +20,7 @@ import {
   DEFAULT_TABLE_STATE,
   applyTableAction,
   type TableState,
+  type SortDirection,
 } from "../../components/DataTable/tableState";
 import {
   parseTableState,
@@ -149,10 +150,7 @@ function DatasetView<T, Id extends string>({
     tableState.sortDirection !== settledSort.sortDirection;
 
   const handleSortSettled = useCallback(
-    (
-      sortColumnId: Id | null,
-      sortDirection: TableState<Id>["sortDirection"],
-    ) => {
+    (sortColumnId: Id | null, sortDirection: SortDirection | null) => {
       setSettledSort((settled) =>
         settled.sortColumnId === sortColumnId &&
         settled.sortDirection === sortDirection

@@ -7,6 +7,7 @@ import {
   storeSortedRows,
 } from "../components/DataTable/sortRowsCached";
 import { sortRowsSliced } from "../components/DataTable/sortRowsSliced";
+import type { SortDirection } from "../components/DataTable/tableState";
 
 /**
  * The largest set sorted inside the render. At 4x slowdown, 5,000 rows sort in
@@ -18,7 +19,7 @@ export const SYNC_SORT_ROWS = 5_000;
 interface Settled<T, Id extends string> {
   readonly rows: readonly T[] | undefined;
   readonly column: Column<T, Id> | undefined;
-  readonly direction: "asc" | "desc" | null;
+  readonly direction: SortDirection | null;
   readonly getRowId: ((row: T) => string) | undefined;
   readonly sorted: readonly T[];
 }
@@ -31,7 +32,7 @@ export function useSortedRows<T, Id extends string>(
   rows: readonly T[],
   columns: readonly Column<T, Id>[],
   columnId: Id | null,
-  direction: "asc" | "desc" | null,
+  direction: SortDirection | null,
   getRowId: (row: T) => string,
 ): { sortedRows: readonly T[]; sorting: boolean } {
   const column = columns.find((candidate) => candidate.id === columnId);
