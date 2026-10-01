@@ -25,4 +25,4 @@ A config has to stay reachable from exactly one entry. Imported from both, its d
 
 Everything built from the address sits under the error boundary, so a reset remounts the view from the last committed address. The fetched rows stay above it, so recovery repaints them at once and the remount re-issues the search over the dataset already in memory. The suites drive the page through an injected search. The request and address suites cover both configs, and each dataset keeps a suite for its own columns and copy.
 
-Revisit this when a dataset needs behavior a config field cannot express. The closing paragraph of record 1, about a third shell, is left as written, and nothing is superseded.
+Revisit this when a dataset needs behavior a config field cannot express. The closing paragraph of record 1, about a third shell, is left as written. This supersedes two sentences of record 2. The inner view, not a container, now writes the address, and the address is read once on mount and again on back navigation.
