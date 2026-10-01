@@ -463,6 +463,8 @@ A run takes about ten minutes and writes `reports/mutation/mutation.html`, which
 
 [fallow](https://github.com/fallow-rs/fallow) reads the TypeScript tree without running it and reports unused files, exports and dependencies, duplicated code, and a maintainability score per file. Run it by hand with `npm run fallow`. It exits non-zero on a finding but does not run in CI, so a finding is something to read and decide about rather than a broken build.
 
+Two other analyzers run in CI. [SonarQube Cloud](https://sonarcloud.io/project/overview?id=funkadelic_yart) scans every push and pull request except Dependabot's, and reads the coverage report alongside the code. [CodeQL](https://codeql.github.com/), through GitHub's default setup, checks the JavaScript, TypeScript and workflow files on pushes to `main`, on pull requests, and once a week.
+
 ## Benchmarks
 
 The suites under `bench/` run the shipping sort, page slice, view state, column and locale code over seeded rows shaped like each dataset. Every pull request runs them under [CodSpeed](https://app.codspeed.io/funkadelic/YART), which counts instructions instead of timing them and reports changes against the base branch without failing the build.
