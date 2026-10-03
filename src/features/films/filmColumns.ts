@@ -1,10 +1,9 @@
 import type { Film } from "../../api/getFilms";
-import { columns } from "../../components/DataTable/column";
+import { columns, type SortDirection } from "yet-another-react-table";
 import type { Catalog } from "../../i18n/catalogs/en";
 import { en } from "../../i18n/catalogs/en";
 import { collatorFor, durationFormatFor } from "../../i18n/format";
 import { resolveLocale } from "../../i18n/resolveLocale";
-import type { SortDirection } from "../../components/DataTable/tableState";
 
 /**
  * The columns the film table shows, built for one resolved locale. Memoize on

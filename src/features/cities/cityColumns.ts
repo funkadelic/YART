@@ -1,5 +1,5 @@
 import type { City } from "../../api/getCities";
-import { columns } from "../../components/DataTable/column";
+import { columns } from "yet-another-react-table";
 import type { Catalog } from "../../i18n/catalogs/en";
 import { en } from "../../i18n/catalogs/en";
 import { collatorFor, numberFormatFor } from "../../i18n/format";

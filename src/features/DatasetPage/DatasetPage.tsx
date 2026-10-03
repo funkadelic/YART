@@ -105,7 +105,7 @@ function DatasetView<T, Id extends string>({
   const { domain, search, buildColumns, getRowId, columnIds } = config;
 
   // The one place below the header that subscribes to the locale. Everything
-  // under src/components/ takes its strings as props.
+  // the table package renders takes its strings as props.
   const { catalog, tag } = useLocale();
 
   // The documented exception to module-scope label objects. The table holds

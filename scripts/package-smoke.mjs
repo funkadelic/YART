@@ -29,7 +29,7 @@ const SCRATCH_TSCONFIG = {
     lib: ["es2022", "dom"],
     outDir: "out",
   },
-  include: ["app.tsx", "styles.ts", "css.d.ts"],
+  include: ["app.tsx", "styles.ts", "css.d.ts", "types.ts"],
 };
 
 const APP = `import { renderToString } from "react-dom/server";
@@ -89,6 +89,38 @@ if (!html.includes(englishTableLabels.caption(2, englishTableLabels.unsorted))) 
 console.log(\`rendered \${html.length} chars\`);
 `;
 
+// Typechecked, never run: a public type missing from the declarations fails tsc.
+const TYPES = `import type {
+  Column,
+  ColumnOptions,
+  DataTableLabels,
+  DataTableProps,
+  DebouncedCallback,
+  PaginationLabels,
+  SearchInputLabels,
+  SortDirection,
+  TableAction,
+  TableState,
+} from "yet-another-react-table";
+
+interface Row {
+  id: string;
+}
+
+export type PublicTypes = [
+  Column<Row>,
+  ColumnOptions<Row, string>,
+  DataTableLabels,
+  DataTableProps<Row, string>,
+  DebouncedCallback<[string]>,
+  PaginationLabels,
+  SearchInputLabels,
+  SortDirection,
+  TableAction<string>,
+  TableState<string>,
+];
+`;
+
 // npm run re-exports a configured allow-scripts as an env var, which a
 // project-scoped install rejects; the scratch install reads it from .npmrc.
 const childEnv = Object.fromEntries(
@@ -139,6 +171,7 @@ function writeScratchApp(dir) {
     "css.d.ts": 'declare module "*.css";\n',
     "styles.ts": 'import "yet-another-react-table/styles.css";\n',
     "app.tsx": APP,
+    "types.ts": TYPES,
   };
   for (const [name, content] of Object.entries(files)) {
     writeFileSync(join(dir, name), content);
