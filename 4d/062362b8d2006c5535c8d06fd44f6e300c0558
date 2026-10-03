@@ -1,0 +1,23 @@
+docs/adr/0014-prefixed-layered-tokens.md
+  s_e873d553e004e0::t_5ef347b8af0e57 1-30
+docs/adr/README.md
+  s_e873d553e004e0::t_a6a2cd0e548c2b 7-22
+docs/adr/0013-floor-at-native-light-dark.md
+  s_e873d553e004e0::t_a89416823fb29f 1-26
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4d062362b8d2006c5535c8d06fd44f6e300c0558",
+  "prompts": {},
+  "sessions": {
+    "s_e873d553e004e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689b3c0b-c77e-4a00-be17-3257ad02764c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
