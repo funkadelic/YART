@@ -567,6 +567,23 @@ describe("the forced-colors remap", () => {
     expect(declared.length).toBeGreaterThan(0);
     expect(declared.filter((token) => !remapped.has(token))).toEqual([]);
   });
+
+  // Inside @layer yart, any unlayered host :root override would beat it.
+  it("sits outside the layer on a doubled :root", () => {
+    const remaps: { parent: string | undefined; selectors: string[] }[] = [];
+    postcss
+      .parse(readFileSync(packagePath, "utf8"), { from: packagePath })
+      .walkAtRules("media", (media) => {
+        if (!media.params.includes("forced-colors")) return;
+        const selectors: string[] = [];
+        media.walkRules((rule) => {
+          selectors.push(rule.selector);
+        });
+        remaps.push({ parent: media.parent?.type, selectors });
+      });
+
+    expect(remaps).toEqual([{ parent: "root", selectors: [":root:root"] }]);
+  });
 });
 
 describe("the focus ring", () => {

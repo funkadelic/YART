@@ -1,6 +1,6 @@
 # 14. The shipped tokens are prefixed and layered
 
-Status: accepted
+Status: accepted, superseded in part by [15](0015-forced-colors-remap-outside-the-layer.md)
 Date recorded: 2026-10-02
 
 ## Context

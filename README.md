@@ -216,7 +216,9 @@ The defaults live in `@layer yart`, so any unlayered rule overrides one without 
 }
 ```
 
-Light and dark follow the page's `color-scheme`, set on the root or on any ancestor of the table. There is no attribute to set. Forced colors mode is handled by the package.
+Light and dark follow the page's `color-scheme`, set on the root or on any ancestor of the table. There is no attribute to set.
+
+Forced colors mode is handled by the package. Its remap sits outside the layer on `:root:root`, so it beats a `:root` override like the one above whatever order the stylesheets load in. A host rule more specific than that, or an override set on an element below the root, still wins under forced colors, so a host that writes one should remap it too.
 
 The table draws no focus ring of its own and cancels none, so the browser's or the host's focus style applies. `--yart-color-focus-ring` is there for a host that wants the ring in the table's palette.
 

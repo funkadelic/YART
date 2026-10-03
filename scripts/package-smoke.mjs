@@ -14,6 +14,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
+import postcss from "postcss";
 
 // Resolved from this file, so the run does not depend on the caller's cwd.
 const root = join(import.meta.dirname, "..");
@@ -190,6 +191,21 @@ function assertArtifacts() {
   }
   if (css.includes("--lightningcss-")) {
     throw new Error("lib/styles.css carries a lowered light-dark()");
+  }
+  // Inside the layer, a host's unlayered :root override would beat the remap.
+  const remaps = [];
+  postcss.parse(css).walkAtRules("media", (media) => {
+    if (media.params.includes("forced-colors")) remaps.push(media);
+  });
+  const [remap] = remaps;
+  if (
+    remaps.length !== 1 ||
+    remap.parent.type !== "root" ||
+    remap.first?.selector !== ":root:root"
+  ) {
+    throw new Error(
+      "lib/styles.css lacks one unlayered :root:root forced-colors remap",
+    );
   }
   const types = join(lib, "types");
   for (const name of readdirSync(types, { recursive: true })) {
