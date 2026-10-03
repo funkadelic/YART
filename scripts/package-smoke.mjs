@@ -210,7 +210,7 @@ function assertArtifacts() {
   const types = join(lib, "types");
   for (const name of readdirSync(types, { recursive: true })) {
     if (!name.endsWith(".d.ts")) continue;
-    if (/\.css["']/.test(readFileSync(join(types, name), "utf8"))) {
+    if (/\.(?:s?css|sass)["']/.test(readFileSync(join(types, name), "utf8"))) {
       throw new Error(`lib/types/${name} imports a stylesheet`);
     }
   }
