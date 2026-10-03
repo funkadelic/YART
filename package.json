@@ -31,7 +31,8 @@
     "./styles.css": {
       "@yart/source": "./src/yart.css",
       "default": "./lib/styles.css"
-    }
+    },
+    "./package.json": "./package.json"
   },
   "peerDependencies": {
     "react": "^19.2.0"
