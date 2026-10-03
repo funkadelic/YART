@@ -1,0 +1,29 @@
+package.json
+  s_e873d553e004e0::t_6f568f2a7f7221 41
+docs/adr/0012-published-as-an-npm-package.md
+  s_e873d553e004e0::t_98003c0865dbda 3
+docs/adr/README.md
+  s_e873d553e004e0::t_98003c0865dbda 24
+.github/dependabot.yml
+  s_e873d553e004e0::t_98003c0865dbda 4,6-8
+docs/adr/0016-react-icons-as-a-range.md
+  s_e873d553e004e0::t_98003c0865dbda 1-22
+package-lock.json
+  s_e873d553e004e0::t_03d10f1eb4dd02 12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "048c773cadc00785b88923824b9dbee3b82df043",
+  "prompts": {},
+  "sessions": {
+    "s_e873d553e004e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689b3c0b-c77e-4a00-be17-3257ad02764c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
