@@ -1,0 +1,48 @@
+src/toolchain.test.ts
+  s_e873d553e004e0::t_7c36fdd4051f59 278
+tsconfig.build.json
+  s_e873d553e004e0::t_ed9deabf08c883 1-11
+tsconfig.json
+  s_e873d553e004e0::t_7c36fdd4051f59 43
+.gitignore
+  s_e873d553e004e0::t_7c36fdd4051f59 27
+src/yart.lib.ts
+  s_e873d553e004e0::t_ed9deabf08c883 1-3
+.prettierignore
+  s_e873d553e004e0::t_7c36fdd4051f59 12-14
+eslint.config.js
+  s_e873d553e004e0::t_7c36fdd4051f59 102
+src/yart.css
+  s_e873d553e004e0::t_ed9deabf08c883 1-2
+scripts/package-smoke.mjs
+  s_e873d553e004e0::t_4b75343704ccf2 1-9,11-106,115-116,118-217
+  s_e873d553e004e0::t_715b55899fa57b 10,107-114,117
+vite.config.ts
+  s_e873d553e004e0::t_24816f8fc6d528 152-153
+  s_e873d553e004e0::t_e938f2d1bb156a 155-160
+  s_e873d553e004e0::t_8211040142e07e 151,154,161,216
+package.json
+  s_e873d553e004e0::t_7c36fdd4051f59 7-37,78-79,95,111,116-117
+src/yart.ts
+  s_e873d553e004e0::t_ed9deabf08c883 1-27
+vite.lib.config.ts
+  s_e873d553e004e0::t_ed9deabf08c883 1-36
+package-lock.json
+  s_e873d553e004e0::t_12b05a63095689 50-51,64-65,12193,12600,23154,23417-23418
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a819aafaa52b8fbdfefeb3e08ae4c78b57a30518",
+  "prompts": {},
+  "sessions": {
+    "s_e873d553e004e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689b3c0b-c77e-4a00-be17-3257ad02764c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
