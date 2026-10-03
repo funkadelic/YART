@@ -1,17 +1,16 @@
 version: 2
 
 updates:
-  # Package manifest at the repository root. Every dev dependency is an exact pin, so
-  # the versioning strategy is set explicitly: "increase" rewrites the pinned version in
-  # place, while the default would be free to widen a pin into a range. The two ranges
-  # are floors for consumers: the React peer, and react-icons, a caret so a host shares
-  # its own copy. "increase" raises the react-icons floor whenever it bumps it.
+  # Package manifest at the repository root. Every dev dependency is an exact pin, which
+  # "increase-if-necessary" rewrites in place. The two ranges are floors for consumers:
+  # the React peer, and react-icons, a caret so a host shares its own copy. A bump inside
+  # the caret moves only the lockfile, so the floor stays where it is.
   - package-ecosystem: npm
     directory: "/"
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    versioning-strategy: increase
+    versioning-strategy: increase-if-necessary
     # Hold new releases a few days so a hijacked publish is pulled before it is
     # proposed. Security updates bypass this.
     cooldown:

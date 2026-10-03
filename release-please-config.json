@@ -24,7 +24,7 @@
         { "type": "ci", "section": "Changed", "hidden": true },
         { "type": "chore", "section": "Changed", "hidden": true },
         { "type": "deps", "section": "Dependencies" },
-        { "type": "deps-dev", "section": "Dependencies" }
+        { "type": "deps-dev", "section": "Dependencies", "hidden": true }
       ]
     }
   }
