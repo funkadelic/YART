@@ -19,10 +19,10 @@
         { "type": "refactor", "section": "Changed" },
         { "type": "style", "section": "Changed" },
         { "type": "docs", "section": "Documentation" },
-        { "type": "test", "section": "Testing" },
-        { "type": "build", "section": "Changed" },
-        { "type": "ci", "section": "Changed" },
-        { "type": "chore", "section": "Changed" },
+        { "type": "test", "section": "Testing", "hidden": true },
+        { "type": "build", "section": "Changed", "hidden": true },
+        { "type": "ci", "section": "Changed", "hidden": true },
+        { "type": "chore", "section": "Changed", "hidden": true },
         { "type": "deps", "section": "Dependencies" },
         { "type": "deps-dev", "section": "Dependencies" }
       ]
