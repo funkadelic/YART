@@ -1,11 +1,11 @@
 version: 2
 
 updates:
-  # Package manifest at the repository root. Every dependency entry is an exact pin, so
+  # Package manifest at the repository root. Every dev dependency is an exact pin, so
   # the versioning strategy is set explicitly: "increase" rewrites the pinned version in
-  # place, while the default would be free to widen a pin into a range. The React peer
-  # range is the one range in the manifest, a floor for consumers rather than something
-  # installed here.
+  # place, while the default would be free to widen a pin into a range. The two ranges
+  # are floors for consumers: the React peer, and react-icons, a caret so a host shares
+  # its own copy. "increase" raises the react-icons floor whenever it bumps it.
   - package-ecosystem: npm
     directory: "/"
     schedule:

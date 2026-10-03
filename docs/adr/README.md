@@ -21,5 +21,6 @@ Most of these were made during the build and written down on 2026-09-15, so the 
 | [13](0013-floor-at-native-light-dark.md)            | The browser floor is native light-dark(), so the table follows the page's color scheme |
 | [14](0014-prefixed-layered-tokens.md)               | The shipped tokens are prefixed with yart and their defaults are layered               |
 | [15](0015-forced-colors-remap-outside-the-layer.md) | The forced-colors remap sits outside the layer, ahead of a host's :root override       |
+| [16](0016-react-icons-as-a-range.md)                | react-icons is a caret range, so a host shares one copy                                |
 
 [Front-end practices](../frontend-practices.md) is the survey these sit under: what the repo already does, what it has just adopted, and what it weighed and skipped.
