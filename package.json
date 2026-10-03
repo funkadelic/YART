@@ -114,7 +114,7 @@
     "test:package": "node scripts/package-smoke.mjs",
     "lighthouse": "node scripts/lighthouse.mjs",
     "test:mutation": "stryker run",
-    "bench": "node --import tsx bench/index.ts",
+    "bench": "node --conditions=@yart/source --import tsx --import ./bench/styles.ts bench/index.ts",
     "chromatic": "chromatic --playwright",
     "prepare": "husky",
     "prepack": "npm run build:lib"
