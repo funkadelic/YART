@@ -1,0 +1,46 @@
+# Publishes each published release to npm through OIDC trusted publishing. Inert until the
+# first version is published by hand and the trusted publisher is set on the package's access page.
+name: npm-publish
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+# Two publishes of one tag would race the registry; the second waits and then fails cleanly.
+concurrency:
+  group: npm-publish-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    # release-please cuts full releases only; a hand-cut prerelease is not published.
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The OIDC token npm exchanges for publish rights, granted to this job alone.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # No dependency cache: a poisoned one would reach the job holding the OIDC permission.
+      # registry-url writes the .npmrc the OIDC exchange depends on.
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          registry-url: https://registry.npmjs.org
+
+      - name: Install
+        run: npm ci
+
+      # prepack builds lib/ before the tarball is made.
+      - name: Publish
+        run: npm publish --provenance --access public

@@ -23,3 +23,6 @@ package-lock.json
 # every source file twice, and the report beside it is machine written.
 .stryker-tmp
 reports
+
+# Written by release-please, whose formatting drifts on every release.
+CHANGELOG.md
