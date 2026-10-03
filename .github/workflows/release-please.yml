@@ -20,6 +20,7 @@ jobs:
     # Keeps a manual dispatch from running release-please against another ref.
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Generate App token
         id: app-token

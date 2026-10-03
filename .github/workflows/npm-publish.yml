@@ -75,5 +75,14 @@ jobs:
           node-version: ${{ needs.pack.outputs.node-version }}
           registry-url: https://registry.npmjs.org
 
+      # Trusted publishing needs npm 11.5.1 or later.
+      - name: Check npm version
+        run: |
+          v="$(npm --version)"
+          if [ "$(printf '%s\n' 11.5.1 "$v" | sort -V | head -n 1)" != 11.5.1 ]; then
+            echo "::error::npm $v is older than 11.5.1, which trusted publishing needs."
+            exit 1
+          fi
+
       - name: Publish
         run: npm publish ./*.tgz --provenance --access public
