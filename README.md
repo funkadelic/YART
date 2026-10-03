@@ -165,7 +165,7 @@ To raise the floor, edit that array and the list above.
 
 ## Getting started
 
-Node 24 is required through `devEngines` in `package.json`, so `npm ci` fails on an older runtime instead of warning. `.nvmrc` names the version for a version manager to pick up.
+Node 24 is required through `devEngines` in `package.json`. npm 10.9 or later checks it and stops `npm ci`, `npm install` and `npm run` on an older runtime; an older npm ignores the field. `.nvmrc` names the version for a version manager to pick up.
 
 ```sh
 npm ci
