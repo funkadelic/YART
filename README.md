@@ -297,6 +297,8 @@ Hold the state with `useState` and turn each callback into the next state with `
 `DataTable` does not filter. Keep the committed term in `state.query`, filter the rows yourself, and pass the result as `rows`. A `query` action also returns the table to page 1.
 
 ```tsx
+import { SearchInput, englishSearchLabels } from "yet-another-react-table";
+
 const [term, setTerm] = useState("");
 
 const handleSearch = useCallback((next: string) => {
@@ -325,6 +327,11 @@ const searchBox = (
 The package exports English copy for both components, `englishTableLabels` and `englishSearchLabels`. It names no dataset, so spread it and override the entries that should:
 
 ```tsx
+import {
+  englishTableLabels,
+  type DataTableLabels,
+} from "yet-another-react-table";
+
 const PART_LABELS: DataTableLabels = {
   ...englishTableLabels,
   empty: "No parts match the search.",

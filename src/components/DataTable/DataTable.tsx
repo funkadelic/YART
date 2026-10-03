@@ -50,7 +50,7 @@ export interface DataTableLabels {
   readonly pagination: PaginationLabels;
 }
 
-/** The props the table takes; every string it renders arrives through `labels`. */
+/** The props the table takes; every string of its own UI arrives through `labels`, while headers and cells come from `columns`. */
 export interface DataTableProps<T, Id extends string> {
   readonly rows: readonly T[];
   readonly columns: readonly Column<T, Id>[];

@@ -15,7 +15,7 @@ Two one-time exceptions are recorded here. `src/yart.ts` is the one barrel outsi
 
 Releases go through release-please, authenticated as a GitHub App so its pull request runs the required Verify check, which a pull request opened with the workflow token never does. A separate workflow publishes each release through npm trusted publishing over OIDC, with provenance, so no registry token is stored.
 
-The repo's Node floor moves from `engines` to `devEngines`, since `engines` would ship to every consumer. React is a peer dependency. `react-icons` is a dependency on a caret range from 5.5.0, the first release whose typings work without the global JSX namespace React 19 removed, so a host on any 5.x shares one copy. Every dev dependency stays an exact pin.
+The repo's Node floor moves from `engines` to `devEngines`, since `engines` would ship to every consumer. React is a peer dependency. `react-icons` is a dependency on a caret range from 5.5.0, the first release whose typings work without the global JSX namespace React 19 removed, so a host on 5.5 or later shares one copy. Every dev dependency stays an exact pin.
 
 ## Consequences
 
