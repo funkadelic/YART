@@ -1,0 +1,31 @@
+vite.config.ts
+  s_e873d553e004e0::t_21a566d77f1ad8 158-161
+  s_e873d553e004e0::t_83697404d431c5 154-155
+src/yart.css
+  s_e873d553e004e0::t_21a566d77f1ad8 3-31
+src/theme/tokens.test.ts
+  s_e873d553e004e0::t_379f6f286d68cb 10-11,550-552
+  s_e873d553e004e0::t_487b7698fe9c11 9,28,144-145,532,545,556
+.stylelintrc.json
+  s_e873d553e004e0::t_2c200672bba366 51
+src/components/DataTable/Pagination.module.scss
+  s_e873d553e004e0::t_1b6938520b81e2 68-69
+src/index.css
+  s_e873d553e004e0::t_5bfa31ed3a681c 14-15
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "6ec41b6c9249a9f4e95f329a83e6bca55c0e92ce",
+  "prompts": {},
+  "sessions": {
+    "s_e873d553e004e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689b3c0b-c77e-4a00-be17-3257ad02764c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
