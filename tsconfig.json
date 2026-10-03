@@ -33,6 +33,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "plugins": [{ "name": "typescript-plugin-css-modules" }]
   },
@@ -43,6 +44,7 @@
     "vitest.setup.ts",
     "vite.config.ts",
     "vite.lib.config.ts",
+    "vite.shared.ts",
     "vitest.stryker.config.ts",
     "playwright.config.ts",
     "eslint.config.js",

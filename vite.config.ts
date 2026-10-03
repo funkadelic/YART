@@ -7,6 +7,12 @@ import { resolve } from "node:path";
 import { defaultClientConditions, defaultServerConditions } from "vite";
 import type { Plugin } from "vite";
 
+import {
+  BUILD_TARGET,
+  SOURCE_CONDITION,
+  scopedClassName,
+} from "./vite.shared.ts";
+
 /**
  * Adds a Content-Security-Policy to the built shell.
  *
@@ -149,18 +155,6 @@ function preloadDataset(): Plugin {
   };
 }
 
-/**
- * The one place the browser floors live, read by the app and library builds.
- * The first floor with native light-dark(), so it ships unlowered and follows
- * the color-scheme of whatever page hosts the table.
- */
-export const BUILD_TARGET = [
-  "chrome123",
-  "edge123",
-  "firefox120",
-  "safari17.5",
-];
-
 // https://vitejs.dev/config/
 export default defineConfig({
   // What a default import from a CommonJS module resolves to changed in this
@@ -214,12 +208,12 @@ export default defineConfig({
   // Safe here because the app writes its own address from window.location, so
   // nothing in the tree assumes the root.
   base: "./",
-  // Sends the package specifier to src/, so dev, test and build need no lib/.
-  // Never the built-in development condition: a consumer's dev server sets it too.
-  resolve: { conditions: ["@yart/source", ...defaultClientConditions] },
+  // Custom conditions replace Vite's defaults, so the defaults are spread back.
+  resolve: { conditions: [SOURCE_CONDITION, ...defaultClientConditions] },
   ssr: {
-    resolve: { conditions: ["@yart/source", ...defaultServerConditions] },
+    resolve: { conditions: [SOURCE_CONDITION, ...defaultServerConditions] },
   },
+  css: { modules: { generateScopedName: scopedClassName } },
   build: {
     target: BUILD_TARGET,
     rollupOptions: {
