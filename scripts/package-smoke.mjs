@@ -170,6 +170,10 @@ function assertFileList(files) {
   }
 }
 
+/** A stylesheet named by an import or re-export specifier, query string allowed. */
+const STYLESHEET_IMPORT =
+  /(?:\bfrom\s*|\bimport\s*\(?\s*)["'][^"']*\.(?:s?css|sass)(?:\?[^"']*)?["']/;
+
 /** Runs publint and attw over the packed tarball with the repo's own binaries. */
 function lintTarball(tarball) {
   const bin = join(root, "node_modules", ".bin");
@@ -210,7 +214,7 @@ function assertArtifacts() {
   const types = join(lib, "types");
   for (const name of readdirSync(types, { recursive: true })) {
     if (!name.endsWith(".d.ts")) continue;
-    if (/\.(?:s?css|sass)["']/.test(readFileSync(join(types, name), "utf8"))) {
+    if (STYLESHEET_IMPORT.test(readFileSync(join(types, name), "utf8"))) {
       throw new Error(`lib/types/${name} imports a stylesheet`);
     }
   }
