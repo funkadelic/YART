@@ -1,0 +1,21 @@
+docs/adr/0012-published-as-an-npm-package.md
+  s_e873d553e004e0::t_c891dbc4ad9735 1-28
+docs/adr/README.md
+  s_e873d553e004e0::t_97ed187ab8b0a6 7-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bdd4e821b47d67f6c27abb4314209b49aaea1357",
+  "prompts": {},
+  "sessions": {
+    "s_e873d553e004e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689b3c0b-c77e-4a00-be17-3257ad02764c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
