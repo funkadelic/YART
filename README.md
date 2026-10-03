@@ -193,7 +193,7 @@ import { DataTable, columns } from "yet-another-react-table";
 import "yet-another-react-table/styles.css";
 ```
 
-The package is ESM only. Its entry opens with a `"use client"` directive, so a server-component framework treats the table as a client component. A TypeScript project whose bundler does not declare CSS imports adds `declare module "*.css";` to a declaration file.
+The package is ESM only. Its entry opens with a `"use client"` directive, so a server-component framework treats the table as a client component. That marks every export as client code, the helpers included: in a React Server Components app, call `parseTableState`, `serializeTableState`, `applyTableAction`, `DEFAULT_TABLE_STATE` and the English labels from a client component, not a server one. A TypeScript project whose bundler does not declare CSS imports adds `declare module "*.css";` to a declaration file.
 
 `columns<T>()` takes an `Intl.Collator` that the app builds, so the sort follows whichever language the app picks.
 
