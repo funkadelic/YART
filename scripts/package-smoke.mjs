@@ -239,6 +239,17 @@ function pinned(name) {
   return `${name}@${manifest.devDependencies[name]}`;
 }
 
+/** The lowest React the peer range admits; dev and CI already run the newest. */
+function reactFloor() {
+  const floor = /^\^(\d+\.\d+\.\d+)$/.exec(
+    manifest.peerDependencies.react,
+  )?.[1];
+  if (floor === undefined) {
+    throw new Error("the React peer range is not a caret range");
+  }
+  return floor;
+}
+
 /** Builds, packs, lints, installs into a scratch app, typechecks and renders. */
 function main() {
   run("npm", ["run", "build:lib"], root);
@@ -252,6 +263,7 @@ function main() {
     lintTarball(tarball);
 
     writeScratchApp(appDir);
+    const floor = reactFloor();
     run(
       "npm",
       [
@@ -260,11 +272,11 @@ function main() {
         "--no-fund",
         "--ignore-scripts",
         tarball,
-        pinned("react"),
-        pinned("react-dom"),
+        `react@${floor}`,
+        `react-dom@${floor}`,
         pinned("typescript"),
-        pinned("@types/react"),
-        pinned("@types/react-dom"),
+        `@types/react@~${floor}`,
+        `@types/react-dom@~${floor}`,
       ],
       appDir,
     );
