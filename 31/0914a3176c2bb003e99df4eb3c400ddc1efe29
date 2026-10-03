@@ -1,0 +1,37 @@
+src/a11y.browser.test.tsx
+  s_e873d553e004e0::t_115cb388ddf212 12-13
+  s_e873d553e004e0::t_690529c09c8b66 15
+src/index.tsx
+  s_e873d553e004e0::t_690529c09c8b66 6
+src/features/DatasetPage/DatasetPage.tsx
+  s_e873d553e004e0::t_690529c09c8b66 10-21
+vite.config.ts
+  s_e873d553e004e0::t_690529c09c8b66 7,216-221
+tsconfig.json
+  s_e873d553e004e0::t_690529c09c8b66 31-32
+src/yart.test.ts
+  s_e873d553e004e0::t_115cb388ddf212 1-26
+vitest.stryker.config.ts
+  s_e873d553e004e0::t_690529c09c8b66 2,19-20
+src/movies.tsx
+  s_e873d553e004e0::t_690529c09c8b66 6
+src/a11y.films.browser.test.tsx
+  s_e873d553e004e0::t_690529c09c8b66 13
+  s_e873d553e004e0::t_115cb388ddf212 10-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "310914a3176c2bb003e99df4eb3c400ddc1efe29",
+  "prompts": {},
+  "sessions": {
+    "s_e873d553e004e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689b3c0b-c77e-4a00-be17-3257ad02764c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
