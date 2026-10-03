@@ -4,6 +4,7 @@ import { defaultExclude, defineConfig } from "vitest/config";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 
+import { defaultClientConditions, defaultServerConditions } from "vite";
 import type { Plugin } from "vite";
 
 /**
@@ -212,6 +213,12 @@ export default defineConfig({
   // Safe here because the app writes its own address from window.location, so
   // nothing in the tree assumes the root.
   base: "./",
+  // Sends the package specifier to src/, so dev, test and build need no lib/.
+  // Never the built-in development condition: a consumer's dev server sets it too.
+  resolve: { conditions: ["@yart/source", ...defaultClientConditions] },
+  ssr: {
+    resolve: { conditions: ["@yart/source", ...defaultServerConditions] },
+  },
   build: {
     target: BUILD_TARGET,
     rollupOptions: {

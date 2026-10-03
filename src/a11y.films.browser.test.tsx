@@ -7,9 +7,10 @@ import { DatasetPage } from "./features/DatasetPage";
 import { FILM_PAGE } from "./features/films/filmPage";
 import { describeViolations, incompleteRuleIds } from "./test/axeSweep";
 
-// The shipped stylesheet, which only an entry module pulls in. Every design
-// token lives here, so a sweep that skipped it would run the contrast rule over
+// The shipped stylesheets, which only an entry module pulls in. Every design
+// token lives in them, so a sweep that skipped it would run the contrast rule over
 // the engine's default black on white and report on a page no reader ever sees.
+import "yet-another-react-table/styles.css";
 import "./index.css";
 
 // The rules the engine could not decide, asserted by set equality as the jsdom

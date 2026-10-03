@@ -7,6 +7,18 @@ import {
   useState,
   type Dispatch,
 } from "react";
+import {
+  DEFAULT_TABLE_STATE,
+  DataTable,
+  SearchInput,
+  applyTableAction,
+  parseTableState,
+  serializeTableState,
+  useDebouncedCallback,
+  type Column,
+  type SortDirection,
+  type TableState,
+} from "yet-another-react-table";
 
 import {
   INITIAL_APP_STATE,
@@ -14,23 +26,9 @@ import {
   type AppAction,
   type AppState,
 } from "../../appState";
-import type { Column } from "../../components/DataTable/column";
-import { DataTable } from "../../components/DataTable/DataTable";
-import {
-  DEFAULT_TABLE_STATE,
-  applyTableAction,
-  type TableState,
-  type SortDirection,
-} from "../../components/DataTable/tableState";
-import {
-  parseTableState,
-  serializeTableState,
-} from "../../components/DataTable/tableStateUrl";
-import { SearchInput } from "../../components/SearchInput";
 // Taken from the shared loader, never from a dataset seam, which would pull
 // that dataset into the chunk both entries share.
 import { DatasetError } from "../../data/loadEnvelope";
-import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
 import { useLocale } from "../../hooks/useLocale";
 import type { Catalog, DomainId } from "../../i18n/catalogs/en";
 import { datasetErrorText } from "../../i18n/datasetErrorText";

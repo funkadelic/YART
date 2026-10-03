@@ -1,4 +1,5 @@
 import react from "@vitejs/plugin-react";
+import { defaultClientConditions } from "vite";
 import { defaultExclude, defineConfig } from "vitest/config";
 
 /**
@@ -15,6 +16,8 @@ import { defaultExclude, defineConfig } from "vitest/config";
  */
 export default defineConfig({
   plugins: [react()],
+  // The same source condition vite.config.ts sets for the package specifier.
+  resolve: { conditions: ["@yart/source", ...defaultClientConditions] },
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
