@@ -1,10 +1,11 @@
 version: 2
 
 updates:
-  # Package manifest at the repository root. Every entry in it is an exact pin, so the
-  # versioning strategy is set explicitly: "increase" rewrites the pinned version in
-  # place, while the default would be free to widen a pin into a range and quietly
-  # reverse the convention the whole manifest follows.
+  # Package manifest at the repository root. Every dependency entry is an exact pin, so
+  # the versioning strategy is set explicitly: "increase" rewrites the pinned version in
+  # place, while the default would be free to widen a pin into a range. The React peer
+  # range is the one range in the manifest, a floor for consumers rather than something
+  # installed here.
   - package-ecosystem: npm
     directory: "/"
     schedule:

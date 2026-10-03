@@ -1601,6 +1601,36 @@ describe("toolchain baseline", () => {
       ).toBe((version ?? "").split(".")[0]);
     }
   });
+  // The token names are a published contract, so the README list cannot drift from the generator.
+  it("lists exactly the generated tokens in the README styling table", () => {
+    const readme = readFileSync(join(projectRoot, "README.md"), "utf8");
+    const section = /\n### Styling\n([\s\S]*?)\n#{2,3} /.exec(readme)?.[1];
+
+    expect(section, "the README has no Styling section").toBeDefined();
+
+    const documented = (section ?? "")
+      .split("\n")
+      .filter((line) => line.startsWith("|"))
+      .flatMap((line) => line.match(/--yart-[a-z0-9-]+/g) ?? [])
+      .sort();
+    const generated = [
+      ...readFileSync(
+        join(projectRoot, "src/styles/tokens.css"),
+        "utf8",
+      ).matchAll(/^\s*(--yart-[a-z0-9-]+):/gm),
+    ]
+      .flatMap((match) => match[1] ?? [])
+      .sort();
+
+    expect(
+      {
+        onlyInReadme: documented.filter((name) => !generated.includes(name)),
+        onlyInTokens: generated.filter((name) => !documented.includes(name)),
+      },
+      "the README styling table and src/styles/tokens.css name different tokens",
+    ).toEqual({ onlyInReadme: [], onlyInTokens: [] });
+    expect(documented).toEqual(generated);
+  });
   // Three questions, all asked of constructs: whether anything but the one
   // page component mutates history, whether the query string still owns
   // exactly its four keys, and whether every document a reader consults still

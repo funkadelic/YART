@@ -7,6 +7,7 @@ YART is a client-only static bundle. It has no server, no database, no authentic
 That leaves a small surface, and reports about it are still welcome:
 
 - the published site at https://funkadelic.github.io/YART/
+- the npm package `yet-another-react-table`
 - the source in this repository, including the build and release pipeline
 - the committed dependency set
 
@@ -22,4 +23,6 @@ You should get an acknowledgement within a week. This is a portfolio project mai
 
 ## Supported versions
 
-The published site is built from `main`, and `main` is the only supported version. There are no releases and no backports.
+The published site is built from `main`, and `main` is the only supported version of it.
+
+For the npm package, only the latest published release is supported. A fix ships as a new release, with no backports to older ones.
