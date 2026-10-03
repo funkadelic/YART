@@ -1,0 +1,2 @@
+/* The shipped global sheet: token defaults sit in a layer any unlayered host rule beats. */
+@import "./styles/tokens.css" layer(yart);

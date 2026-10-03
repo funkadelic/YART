@@ -148,6 +148,17 @@ function preloadDataset(): Plugin {
   };
 }
 
+/**
+ * The one place the browser floors live, read by the app and library builds.
+ * Lightning CSS minifies against them too, so they decide prefixes and lowering.
+ */
+export const BUILD_TARGET = [
+  "chrome111",
+  "edge111",
+  "firefox111",
+  "safari16.4",
+];
+
 // https://vitejs.dev/config/
 export default defineConfig({
   // What a default import from a CommonJS module resolves to changed in this
@@ -202,9 +213,7 @@ export default defineConfig({
   // nothing in the tree assumes the root.
   base: "./",
   build: {
-    // The one place the browser floors live. Lightning CSS minifies CSS against
-    // these too, so they decide vendor prefixes as well as syntax lowering.
-    target: ["chrome111", "edge111", "firefox111", "safari16.4"],
+    target: BUILD_TARGET,
     rollupOptions: {
       // Declaring an input replaces the implicit single-shell one, so the
       // original shell has to be named here or it stops being built. Both stay

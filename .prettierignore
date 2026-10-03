@@ -9,6 +9,9 @@ src/data/films/films.json
 # Build output.
 dist
 
+# Library build output.
+lib
+
 # Coverage output.
 coverage
 

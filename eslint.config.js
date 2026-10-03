@@ -99,6 +99,7 @@ export default defineConfig([
   {
     ignores: [
       "dist/",
+      "lib/",
       "coverage/",
       "test-results/",
       "playwright-report/",

@@ -24,6 +24,7 @@ yarn-error.log*
 
 # build output
 /dist
+/lib
 
 # local editor and tooling directories, never committed
 /.claude/

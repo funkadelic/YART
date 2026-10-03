@@ -275,7 +275,7 @@ function projectFiles(pattern: string): string[] {
     withFileTypes: true,
     exclude: (entry) =>
       entry.isDirectory() &&
-      /^(?:node_modules|dist|coverage|\.git)$/.test(entry.name),
+      /^(?:node_modules|dist|lib|coverage|\.git)$/.test(entry.name),
   })
     .filter((entry) => entry.isFile())
     .map((entry) => join(entry.parentPath, entry.name));

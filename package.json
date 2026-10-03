@@ -2,15 +2,41 @@
   "name": "yet-another-react-table",
   "version": "0.1.0",
   "description": "Yet Another React Table (YART)",
-  "private": true,
   "license": "MIT",
   "type": "module",
-  "engines": {
-    "node": ">=24"
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/funkadelic/YART.git"
+  },
+  "homepage": "https://funkadelic.github.io/YART/",
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": ">=24",
+      "onFail": "error"
+    }
+  },
+  "files": [
+    "lib"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "exports": {
+    ".": {
+      "@yart/source": "./src/yart.ts",
+      "types": "./lib/types/yart.d.ts",
+      "import": "./lib/index.js"
+    },
+    "./styles.css": {
+      "@yart/source": "./src/yart.css",
+      "default": "./lib/styles.css"
+    }
+  },
+  "peerDependencies": {
+    "react": "^19.2.0"
   },
   "dependencies": {
-    "react": "19.3.0",
-    "react-dom": "19.3.0",
     "react-icons": "5.7.0"
   },
   "devDependencies": {
@@ -49,6 +75,8 @@
     "lighthouse": "13.5.0",
     "postcss": "8.5.28",
     "prettier": "3.9.9",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
     "sass": "1.105.0",
     "style-dictionary": "5.5.5",
     "stylelint": "17.15.0",
@@ -64,6 +92,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:lib": "vite build -c vite.lib.config.ts && tsc -p tsconfig.build.json",
     "generate:cities": "node scripts/generate-cities.mjs",
     "generate:films": "node scripts/generate-films.mjs",
     "tokens:build": "node scripts/build-tokens.mjs",
@@ -79,10 +108,12 @@
     "test:watch": "vitest --project=jsdom",
     "test:browser": "vitest run --project=browser --reporter=default --reporter=junit --outputFile.junit=junit/browser.junit.xml",
     "test:e2e": "playwright test",
+    "test:package": "node scripts/package-smoke.mjs",
     "lighthouse": "node scripts/lighthouse.mjs",
     "test:mutation": "stryker run",
     "bench": "node --import tsx bench/index.ts",
     "chromatic": "chromatic --playwright",
-    "prepare": "husky"
+    "prepare": "husky",
+    "prepack": "npm run build:lib"
   }
 }
