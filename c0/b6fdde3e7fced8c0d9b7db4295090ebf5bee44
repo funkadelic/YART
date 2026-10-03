@@ -1,0 +1,21 @@
+src/englishLabels.ts
+  s_e873d553e004e0::t_5f5955f95c84c9 1-34
+src/englishLabels.test.ts
+  s_e873d553e004e0::t_a43543354c0309 1-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c0b6fdde3e7fced8c0d9b7db4295090ebf5bee44",
+  "prompts": {},
+  "sessions": {
+    "s_e873d553e004e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689b3c0b-c77e-4a00-be17-3257ad02764c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
