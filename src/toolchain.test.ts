@@ -969,6 +969,7 @@ describe("toolchain baseline", () => {
       "npm run test:coverage",
       "npm run test:browser",
       "npm run test:e2e",
+      "npm run test:package",
     ]) {
       expect(
         live.some((line) => line.includes(script)),

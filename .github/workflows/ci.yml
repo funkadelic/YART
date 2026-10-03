@@ -78,6 +78,11 @@ jobs:
       - name: Build
         run: npm run build
 
+      # Packs the tarball a consumer installs and checks it: the only check of the
+      # published branch of exports, which dev, tests and the demo never resolve.
+      - name: Package checks
+        run: npm run test:package
+
       # The browser download is the most expensive thing here, so it sits behind
       # every cheap gate. The jsdom half of the accessibility gate ran in Test.
       - name: Install Chromium

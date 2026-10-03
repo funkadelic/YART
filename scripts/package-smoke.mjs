@@ -1,10 +1,16 @@
 /**
- * Packs the library once and installs the tarball into a scratch app, which
- * typechecks against it and renders the table. Run it with `npm run test:package`.
+ * Packs the library once, lints the tarball with publint and attw, and installs
+ * it into a scratch app that typechecks against it and renders the table.
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -163,6 +169,40 @@ function assertFileList(files) {
   }
 }
 
+/** Runs publint and attw over the packed tarball with the repo's own binaries. */
+function lintTarball(tarball) {
+  const bin = join(root, "node_modules", ".bin");
+  run(join(bin, "publint"), ["--strict", tarball], root);
+  // attw cannot resolve types for a stylesheet subpath in any mode.
+  run(
+    join(bin, "attw"),
+    [tarball, "--profile", "esm-only", "--exclude-entrypoints", "styles.css"],
+    root,
+  );
+}
+
+/** Throws unless the built artifacts keep the contract a consumer relies on. */
+function assertArtifacts() {
+  const lib = join(root, "lib");
+  const css = readFileSync(join(lib, "styles.css"), "utf8");
+  if (!/^\s*@layer yart\b/.test(css)) {
+    throw new Error("lib/styles.css does not open with @layer yart");
+  }
+  if (css.includes("--lightningcss-")) {
+    throw new Error("lib/styles.css carries a lowered light-dark()");
+  }
+  const types = join(lib, "types");
+  for (const name of readdirSync(types, { recursive: true })) {
+    if (!name.endsWith(".d.ts")) continue;
+    if (/\.css["']/.test(readFileSync(join(types, name), "utf8"))) {
+      throw new Error(`lib/types/${name} imports a stylesheet`);
+    }
+  }
+  if (!readFileSync(join(lib, "index.js"), "utf8").startsWith('"use client"')) {
+    throw new Error("lib/index.js does not open with the use client directive");
+  }
+}
+
 /** Writes the scratch app's manifest, config and sources into dir. */
 function writeScratchApp(dir) {
   const files = {
@@ -183,7 +223,7 @@ function pinned(name) {
   return `${name}@${manifest.devDependencies[name]}`;
 }
 
-/** Builds, packs, installs into a scratch app, typechecks and renders. */
+/** Builds, packs, lints, installs into a scratch app, typechecks and renders. */
 function main() {
   run("npm", ["run", "build:lib"], root);
 
@@ -192,6 +232,8 @@ function main() {
   try {
     const { tarball, files } = pack(packDir);
     assertFileList(files);
+    assertArtifacts();
+    lintTarball(tarball);
 
     writeScratchApp(appDir);
     run(
