@@ -55,11 +55,12 @@ jobs:
           TAG_NAME: ${{ steps.release.outputs.tag_name }}
           VERSION: ${{ steps.release.outputs.version }}
         run: |
-          # CHANGELOG.md is the one source of the release notes. index(), not a
-          # regex, because the version heading carries literal brackets.
+          # CHANGELOG.md is the one source of the release notes. The first release has
+          # no compare link, so its heading is "## 0.1.0 (" rather than "## [0.1.0]".
+          # index(), not a regex, because the version carries literal dots.
           awk -v ver="$VERSION" '
-            index($0, "## [" ver "]") == 1 { found = 1; next }
-            found && index($0, "## [") == 1 { exit }
+            index($0, "## [" ver "]") == 1 || index($0, "## " ver " ") == 1 { found = 1; next }
+            found && index($0, "## ") == 1 { exit }
             found { print }
           ' CHANGELOG.md > release-notes.md
 
