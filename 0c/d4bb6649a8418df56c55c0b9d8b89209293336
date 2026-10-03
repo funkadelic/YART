@@ -1,0 +1,32 @@
+docs/adr/0014-prefixed-layered-tokens.md
+  s_e873d553e004e0::t_79ed1bc9d80123 3
+docs/adr/0015-forced-colors-remap-outside-the-layer.md
+  s_e873d553e004e0::t_38cd00780cf203 1-22
+src/theme/tokens.test.ts
+  s_e873d553e004e0::t_0cd77f24bb1db5 570-586
+README.md
+  s_e873d553e004e0::t_5e7ee275f614e8 219-221
+src/yart.css
+  s_e873d553e004e0::t_7624eaec50a43a 5-13,15-21,23-27
+scripts/package-smoke.mjs
+  s_e873d553e004e0::t_9ff10e2a79433c 17,195-208
+  s_e873d553e004e0::t_8f0232762af24e 209
+docs/adr/README.md
+  s_e873d553e004e0::t_f5113b71b2c08a 7-23
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0cd4bb6649a8418df56c55c0b9d8b89209293336",
+  "prompts": {},
+  "sessions": {
+    "s_e873d553e004e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689b3c0b-c77e-4a00-be17-3257ad02764c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
