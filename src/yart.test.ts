@@ -18,6 +18,8 @@ describe("the package specifier", () => {
       "SearchInput",
       "applyTableAction",
       "columns",
+      "englishSearchLabels",
+      "englishTableLabels",
       "parseTableState",
       "serializeTableState",
       "useDebouncedCallback",

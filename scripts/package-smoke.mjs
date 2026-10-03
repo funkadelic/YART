@@ -37,7 +37,9 @@ import {
   columns,
   DataTable,
   DEFAULT_TABLE_STATE,
-  type DataTableLabels,
+  englishSearchLabels,
+  englishTableLabels,
+  SearchInput,
 } from "yet-another-react-table";
 
 interface Part {
@@ -57,49 +59,32 @@ const cols = [
   col.key("qty", { label: "Quantity", numeric: true }),
 ];
 
-const labels: DataTableLabels = {
-  loading: "Loading",
-  empty: "No rows",
-  emptyAnnouncement: "No rows match",
-  results: (shown, total) => \`\${shown} of \${total}\`,
-  caption: (total, sortSummary) => \`\${total} rows, \${sortSummary}\`,
-  error: (message) => \`Failed: \${message}\`,
-  retry: "Retry",
-  sortedAnnouncement: (label, direction) => \`Sorted by \${label}, \${direction}\`,
-  sortClearedAnnouncement: "Sort cleared",
-  unsorted: "unsorted",
-  sortSummary: (label, direction) => \`sorted by \${label}, \${direction}\`,
-  pagination: {
-    pageSize: "Rows per page",
-    navigation: "Pagination",
-    firstPage: "First page",
-    previousPage: "Previous page",
-    nextPage: "Next page",
-    lastPage: "Last page",
-    pageStatus: (page, totalPages) => \`Page \${page} of \${totalPages}\`,
-  },
-};
-
 const noop = () => {};
 
 const html = renderToString(
-  <DataTable
-    rows={rows}
-    columns={cols}
-    getRowId={(row) => row.sku}
-    state={DEFAULT_TABLE_STATE}
-    onSortChange={noop}
-    onPageChange={noop}
-    onPageSizeChange={noop}
-    loading={false}
-    datasetReady={true}
-    errorMessage={null}
-    labels={labels}
-  />,
+  <>
+    <SearchInput value="" onChange={noop} labels={englishSearchLabels} />
+    <DataTable
+      rows={rows}
+      columns={cols}
+      getRowId={(row) => row.sku}
+      state={DEFAULT_TABLE_STATE}
+      onSortChange={noop}
+      onPageChange={noop}
+      onPageSizeChange={noop}
+      loading={false}
+      datasetReady={true}
+      errorMessage={null}
+      labels={{ ...englishTableLabels, empty: "No parts" }}
+    />
+  </>,
 );
 
 if (!html.includes("Flux capacitor")) {
   throw new Error("rendered markup lacks the row text");
+}
+if (!html.includes(englishTableLabels.caption(2, englishTableLabels.unsorted))) {
+  throw new Error("rendered markup lacks the English caption");
 }
 console.log(\`rendered \${html.length} chars\`);
 `;

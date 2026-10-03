@@ -25,3 +25,4 @@ export {
 } from "./components/DataTable/tableStateUrl.js";
 export { useDebouncedCallback } from "./hooks/useDebouncedCallback.js";
 export type { DebouncedCallback } from "./hooks/useDebouncedCallback.js";
+export { englishSearchLabels, englishTableLabels } from "./englishLabels.js";
