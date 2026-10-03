@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 
-import type { Column } from "../components/DataTable/column";
+import type { Column } from "../components/DataTable/column.js";
 import {
   cachedSortedRows,
   sortRowsCached,
   storeSortedRows,
-} from "../components/DataTable/sortRowsCached";
-import { sortRowsSliced } from "../components/DataTable/sortRowsSliced";
-import type { SortDirection } from "../components/DataTable/tableState";
+} from "../components/DataTable/sortRowsCached.js";
+import { sortRowsSliced } from "../components/DataTable/sortRowsSliced.js";
+import type { SortDirection } from "../components/DataTable/tableState.js";
 
 /**
  * The largest set sorted inside the render. At 4x slowdown, 5,000 rows sort in

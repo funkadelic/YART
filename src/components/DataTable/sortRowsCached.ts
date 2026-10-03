@@ -1,6 +1,6 @@
-import type { Column } from "./column";
-import { sortRows } from "./sortRows";
-import type { SortDirection } from "./tableState";
+import type { Column } from "./column.js";
+import { sortRows } from "./sortRows.js";
+import type { SortDirection } from "./tableState.js";
 
 /** One stored sort: its input, the order it produced, and its row identity. */
 interface Entry {

@@ -1,4 +1,4 @@
-import type { Column } from "./column";
+import type { Column } from "./column.js";
 import styles from "./DataTable.module.scss";
 
 interface TableBodyProps<T, Id extends string> {

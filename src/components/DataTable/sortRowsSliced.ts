@@ -1,6 +1,6 @@
-import type { Column } from "./column";
-import { rowComparator } from "./sortRows";
-import type { SortDirection } from "./tableState";
+import type { Column } from "./column.js";
+import { rowComparator } from "./sortRows.js";
+import type { SortDirection } from "./tableState.js";
 
 /** Rows per run sorted natively before the merge passes begin. */
 const RUN_LENGTH = 1024;

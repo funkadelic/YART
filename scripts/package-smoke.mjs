@@ -19,8 +19,8 @@ const ALLOWED_TOP = ["package.json", "README.md", "LICENSE", "CHANGELOG.md"];
 const SCRATCH_TSCONFIG = {
   compilerOptions: {
     target: "es2022",
-    module: "esnext",
-    moduleResolution: "bundler",
+    module: "nodenext",
+    moduleResolution: "nodenext",
     jsx: "react-jsx",
     strict: true,
     exactOptionalPropertyTypes: true,

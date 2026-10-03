@@ -1,9 +1,9 @@
 import { FiChevronUp, FiChevronDown } from "react-icons/fi";
 
-import type { Column } from "./column";
+import type { Column } from "./column.js";
 import tableStyles from "./DataTable.module.scss";
 import styles from "./TableHead.module.scss";
-import type { SortDirection } from "./tableState";
+import type { SortDirection } from "./tableState.js";
 
 interface TableHeadProps<T, Id extends string> {
   readonly columns: readonly Column<T, Id>[];

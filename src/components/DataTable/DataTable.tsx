@@ -1,11 +1,11 @@
 import { useEffect, useEffectEvent, type ReactNode } from "react";
-import type { Column } from "./column";
-import type { TableState, SortDirection } from "./tableState";
-import { TableHead } from "./TableHead";
-import { TableBody } from "./TableBody";
-import { Pagination, type PaginationLabels } from "./Pagination";
-import { useSortedRows } from "../../hooks/useSortedRows";
-import { usePaginatedRows } from "../../hooks/usePaginatedRows";
+import type { Column } from "./column.js";
+import type { TableState, SortDirection } from "./tableState.js";
+import { TableHead } from "./TableHead.js";
+import { TableBody } from "./TableBody.js";
+import { Pagination, type PaginationLabels } from "./Pagination.js";
+import { useSortedRows } from "../../hooks/useSortedRows.js";
+import { usePaginatedRows } from "../../hooks/usePaginatedRows.js";
 import styles from "./DataTable.module.scss";
 
 export type { PaginationLabels };
@@ -50,6 +50,7 @@ export interface DataTableLabels {
   readonly pagination: PaginationLabels;
 }
 
+/** The props the table takes; every string it renders arrives through `labels`. */
 export interface DataTableProps<T, Id extends string> {
   readonly rows: readonly T[];
   readonly columns: readonly Column<T, Id>[];
