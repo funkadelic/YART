@@ -1,0 +1,25 @@
+docs/adr/README.md
+  s_e873d553e004e0::t_0ea0d42cea111d 7-22
+docs/adr/0014-prefixed-layered-tokens.md
+  s_e873d553e004e0::t_f41571200df8fd 16
+  s_e873d553e004e0::t_37e4287fe49088 3
+docs/adr/0012-published-as-an-npm-package.md
+  s_e873d553e004e0::t_f41571200df8fd 18
+  s_e873d553e004e0::t_37e4287fe49088 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "071419aceb341f473cc849095382b0e1ee0fd163",
+  "prompts": {},
+  "sessions": {
+    "s_e873d553e004e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689b3c0b-c77e-4a00-be17-3257ad02764c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
