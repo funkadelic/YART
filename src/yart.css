@@ -1,2 +1,31 @@
 /* The shipped global sheet: token defaults sit in a layer any unlayered host rule beats. */
 @import "./styles/tokens.css" layer(yart);
+
+/* a11y: forced colors throws away every author color, so the remap happens at
+   the token tier and every component follows. Inside the same layer it follows
+   the tokens, so it wins without specificity. */
+@layer yart {
+  @media (forced-colors: active) {
+    :root {
+      --yart-color-surface: Canvas;
+      --yart-color-surface-raised: Canvas;
+      --yart-color-surface-hover: Canvas;
+      --yart-color-text: CanvasText;
+      --yart-color-text-muted: CanvasText;
+
+      /* The palette offers one foreground for every edge and rule, and one color
+         for a chosen thing. */
+      --yart-color-border: CanvasText;
+      --yart-color-border-strong: CanvasText;
+      --yart-color-rule: CanvasText;
+      --yart-color-accent: Highlight;
+      --yart-color-error: CanvasText;
+
+      /* The ring is offset onto the surface behind the control, where Highlight
+         would collide with a selected control's own fill. */
+      --yart-color-focus-ring: CanvasText;
+      --yart-color-brand: CanvasText;
+      --yart-color-brand-contrast: Canvas;
+    }
+  }
+}

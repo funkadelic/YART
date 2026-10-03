@@ -6,9 +6,9 @@
 // global sheets' bounded px count, and the positive claim that the focus ring is
 // drawn. The negative rules live in .stylelintrc.json.
 //
-// Reads the generated src/styles/tokens.css and src/index.css as files, because
-// the runner blanks CSS imports and jsdom evaluates neither var() nor
-// light-dark(). The environment is jsdom for the shell guard's DOMParser.
+// Reads the generated src/styles/tokens.css, src/yart.css and src/index.css as
+// files, because the runner blanks CSS imports and jsdom evaluates neither var()
+// nor light-dark(). The environment is jsdom for the shell guard's DOMParser.
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -25,6 +25,7 @@ const here = import.meta as ImportMeta & { dirname: string };
 const projectRoot = join(here.dirname, "..", "..");
 const cssPath = join(projectRoot, "src", "index.css");
 const tokensPath = join(projectRoot, "src", "styles", "tokens.css");
+const packagePath = join(projectRoot, "src", "yart.css");
 
 const LIGHT_SELECTOR = ":root";
 const DARK_SELECTOR = ':root[data-theme="dark"]';
@@ -140,8 +141,8 @@ function findStylesheets(directory: string): string[] {
   return found;
 }
 
-// The two global files are read on their own terms below, so the walk excludes them.
-const globalStylesheets = [cssPath, tokensPath];
+// The global files are read on their own terms below, so the walk excludes them.
+const globalStylesheets = [cssPath, tokensPath, packagePath];
 const componentStylesheets = findStylesheets(join(projectRoot, "src")).filter(
   (file) => !globalStylesheets.includes(file),
 );
@@ -528,7 +529,7 @@ describe("stray declarations in the component stylesheets", () => {
 });
 
 // The half of the length rule stylelint's unit allowed-list has no way to say.
-// It counts instead of forbidding, over the two global sheets, where the two
+// It counts instead of forbidding, over the global sheets, where the two
 // corner radii are px on purpose.
 describe("length in the global stylesheets", () => {
   it("allows the global stylesheets the corner radii and nothing beside them", () => {
@@ -541,18 +542,18 @@ describe("length in the global stylesheets", () => {
 
     expect(
       found,
-      `src/index.css and src/styles/tokens.css hold ${String(found.length)} off-scale lengths rather than the radii alone: ${found.join(", ")}`,
+      `src/index.css, src/yart.css and src/styles/tokens.css hold ${String(found.length)} off-scale lengths rather than the radii alone: ${found.join(", ")}`,
     ).toHaveLength(GLOBAL_PX_ALLOWANCE);
   });
 });
 
-// The remap in src/index.css is a second list of the color token names, so a
-// color added to the generated stylesheet and forgotten there loses its color
-// under forced colors with every other gate still green. Read as text, because
+// The remap ships in src/yart.css and is a second list of the color token
+// names, so a color added to the generated stylesheet and forgotten there loses
+// its color under forced colors with every other gate still green. Read as text, because
 // postcss keys the media block's :root exactly as it keys the plain one.
 describe("the forced-colors remap", () => {
   it("covers every color token the stylesheet declares", () => {
-    const source = readFileSync(cssPath, "utf8");
+    const source = readFileSync(packagePath, "utf8");
     const forced = source.slice(source.indexOf("@media (forced-colors"));
     const remapped = new Set(
       [...forced.matchAll(/(--yart-color-[\w-]+)\s*:/g)].map(

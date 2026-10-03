@@ -11,37 +11,9 @@
 }
 
 :root[data-theme="dark"] {
-  /* The production build lowers light-dark() into a toggle that flips only on
-     this declaration, not on the theme script's inline style. */
+  /* Native light-dark() resolves against this declaration, which is why the
+     theme is set here and not only on the script's inline style. */
   color-scheme: dark;
-}
-
-/* a11y: forced colors throws away every author color, so the remap happens at
-   the token tier and every component follows. One selector is enough: the
-   generated stylesheet declares each color once and this block is imported
-   after it. */
-@media (forced-colors: active) {
-  :root {
-    --yart-color-surface: Canvas;
-    --yart-color-surface-raised: Canvas;
-    --yart-color-surface-hover: Canvas;
-    --yart-color-text: CanvasText;
-    --yart-color-text-muted: CanvasText;
-
-    /* The palette offers one foreground for every edge and rule, and one color
-       for a chosen thing. */
-    --yart-color-border: CanvasText;
-    --yart-color-border-strong: CanvasText;
-    --yart-color-rule: CanvasText;
-    --yart-color-accent: Highlight;
-    --yart-color-error: CanvasText;
-
-    /* The ring is offset onto the surface behind the control, where Highlight
-       would collide with a selected control's own fill. */
-    --yart-color-focus-ring: CanvasText;
-    --yart-color-brand: CanvasText;
-    --yart-color-brand-contrast: Canvas;
-  }
 }
 
 /* a11y: one focus indicator for the whole app, unscoped and global rather than

@@ -151,13 +151,14 @@ function preloadDataset(): Plugin {
 
 /**
  * The one place the browser floors live, read by the app and library builds.
- * Lightning CSS minifies against them too, so they decide prefixes and lowering.
+ * The first floor with native light-dark(), so it ships unlowered and follows
+ * the color-scheme of whatever page hosts the table.
  */
 export const BUILD_TARGET = [
-  "chrome111",
-  "edge111",
-  "firefox111",
-  "safari16.4",
+  "chrome123",
+  "edge123",
+  "firefox120",
+  "safari17.5",
 ];
 
 // https://vitejs.dev/config/
