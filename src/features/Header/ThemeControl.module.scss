@@ -4,8 +4,8 @@
   display: flex;
   align-items: center;
   margin-inline-start: auto;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-sm);
+  border: 1px solid var(--yart-color-border-strong);
+  border-radius: var(--yart-radius-sm);
 }
 
 // Off screen but still in the accessibility tree and still focusable: the input
@@ -16,11 +16,11 @@
 }
 
 .label {
-  padding: var(--space-1) var(--space-2-5);
-  border-inline-start: 1px solid var(--color-border-strong);
-  font-size: var(--font-size-sm);
-  color: var(--color-text);
-  background-color: var(--color-surface-raised);
+  padding: var(--yart-space-1) var(--yart-space-2-5);
+  border-inline-start: 1px solid var(--yart-color-border-strong);
+  font-size: var(--yart-font-size-sm);
+  color: var(--yart-color-text);
+  background-color: var(--yart-color-surface-raised);
   cursor: pointer;
 }
 
@@ -28,29 +28,29 @@
 // radius themselves. overflow: hidden here would clip the offset focus ring.
 .label:first-of-type {
   border-inline-start: 0;
-  border-start-start-radius: var(--radius-sm);
-  border-end-start-radius: var(--radius-sm);
+  border-start-start-radius: var(--yart-radius-sm);
+  border-end-start-radius: var(--yart-radius-sm);
 }
 
 .label:last-of-type {
-  border-start-end-radius: var(--radius-sm);
-  border-end-end-radius: var(--radius-sm);
+  border-start-end-radius: var(--yart-radius-sm);
+  border-end-end-radius: var(--yart-radius-sm);
 }
 
 .label:hover {
-  background-color: var(--color-surface-hover);
+  background-color: var(--yart-color-surface-hover);
 }
 
 // The surface colour rather than the brand contrast one, because the accent is
 // a dark teal in light and a light teal in dark, and only a foreground that
 // flips with the theme clears the text threshold in both.
 .input:checked + .label {
-  color: var(--color-surface);
-  background-color: var(--color-accent);
+  color: var(--yart-color-surface);
+  background-color: var(--yart-color-accent);
 }
 
 // a11y: the token remap paints this fill Highlight under forced colors. Only
-// the text has to follow, since --color-surface is the page everywhere else.
+// the text has to follow, since --yart-color-surface is the page everywhere else.
 @media (forced-colors: active) {
   .input:checked + .label {
     color: HighlightText;
@@ -61,6 +61,6 @@
 // invisible. Forwarded to the visible label, restating the same outline, so the
 // one control this adds is not the one control with no focus indicator.
 .input:focus-visible + .label {
-  outline: 2px solid var(--color-focus-ring);
+  outline: 2px solid var(--yart-color-focus-ring);
   outline-offset: 2px;
 }

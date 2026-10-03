@@ -6,7 +6,7 @@
 // nothing the moment the attribute it names is removed.
 .sortButton {
   font: inherit;
-  font-size: var(--font-size-base);
+  font-size: var(--yart-font-size-base);
   font-weight: 600;
   color: inherit;
   background: none;
@@ -14,11 +14,11 @@
   padding: 0;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--yart-space-2);
   cursor: pointer;
 
   &:hover {
-    color: var(--color-accent);
+    color: var(--yart-color-accent);
   }
 }
 
