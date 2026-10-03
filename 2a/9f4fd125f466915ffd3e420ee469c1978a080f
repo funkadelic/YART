@@ -1,0 +1,28 @@
+scripts/package-smoke.mjs
+  s_e873d553e004e0::t_648df26747d318 112,119-120
+  s_e873d553e004e0::t_3bdd9073ffeecd 32,92-111,113-118,121-123,174
+src/features/films/filmColumns.ts
+  s_e873d553e004e0::t_c337f7292e8e3b 2
+src/features/tableLabels.ts
+  s_e873d553e004e0::t_648df26747d318 1-4
+src/features/DatasetPage/DatasetPage.tsx
+  s_e873d553e004e0::t_c337f7292e8e3b 108
+src/features/cities/cityColumns.ts
+  s_e873d553e004e0::t_c337f7292e8e3b 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2a9f4fd125f466915ffd3e420ee469c1978a080f",
+  "prompts": {},
+  "sessions": {
+    "s_e873d553e004e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689b3c0b-c77e-4a00-be17-3257ad02764c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
