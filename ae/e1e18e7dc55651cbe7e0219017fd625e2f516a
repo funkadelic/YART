@@ -1,0 +1,28 @@
+.prettierignore
+  s_e873d553e004e0::t_0746fd6bc52a9f 26-28
+.github/workflows/release-please.yml
+  s_e873d553e004e0::t_4acba170837980 1-56,59-71
+  s_e873d553e004e0::t_eccfc1854d9fad 57-58
+.github/workflows/npm-publish.yml
+  s_e873d553e004e0::t_b398ee5c883289 1-46
+.release-please-manifest.json
+  s_e873d553e004e0::t_256cd68b84cc26 1
+release-please-config.json
+  s_e873d553e004e0::t_7eb135cd869303 1-31
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aee1e18e7dc55651cbe7e0219017fd625e2f516a",
+  "prompts": {},
+  "sessions": {
+    "s_e873d553e004e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689b3c0b-c77e-4a00-be17-3257ad02764c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
