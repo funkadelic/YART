@@ -1,0 +1,21 @@
+src/components/DataTable/TableHead.tsx
+  s_f3f7af8c4bf72b::t_685ebb3c6f635d 1,65,68
+src/components/DataTable/Pagination.tsx
+  s_f3f7af8c4bf72b::t_685ebb3c6f635d 3-8,117,128,151,162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "152514a8883042198264918ceba2887aad6055c1",
+  "prompts": {},
+  "sessions": {
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
