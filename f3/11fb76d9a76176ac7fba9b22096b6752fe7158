@@ -1,0 +1,23 @@
+vite.lib.config.ts
+  s_f3f7af8c4bf72b::t_d035b503f4d371 24
+.github/dependabot.yml
+  s_f3f7af8c4bf72b::t_d035b503f4d371 5-7
+package-lock.json
+  s_f3f7af8c4bf72b::t_fbfc0abeb87f76 12303,23193-23194
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "f311fb76d9a76176ac7fba9b22096b6752fe7158",
+  "prompts": {},
+  "sessions": {
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
