@@ -225,6 +225,26 @@ it(
           markup.indexOf("Content-Security-Policy"),
           `the policy in ${shell} is declared after the script it names`,
         ).toBeLessThan(markup.indexOf("<script"));
+
+        // A deferred boot script stamps after first paint and fails silently.
+        const tag = inline[0]?.[0] ?? "";
+        const at = markup.indexOf(tag);
+
+        expect(tag, `the boot script in ${shell} carries attributes`).toMatch(
+          /^<script>/,
+        );
+        expect(
+          at,
+          `the boot script in ${shell} moved out of the head`,
+        ).toBeLessThan(markup.indexOf("</head>"));
+        expect(
+          at,
+          `the boot script in ${shell} moved after the module script`,
+        ).toBeLessThan(markup.indexOf('type="module"'));
+        expect(
+          at,
+          `the boot script in ${shell} moved after the stylesheet`,
+        ).toBeLessThan(markup.indexOf('rel="stylesheet"'));
       }
 
       // The test half of the entry-aware preload. Each shell above resolves its

@@ -28,6 +28,9 @@ export default {
     // the translator's wording in a test file. Left in, they were most of the
     // survivors.
     "!src/i18n/catalogs/**",
+    // Instrumentation calls helpers outside bootDocument, which breaks its
+    // serialized form in the global-scope test.
+    "!src/bootDocument.ts",
   ],
   // Only the tests that reach a mutant run for it. Without it every mutant pays
   // for the whole suite.
