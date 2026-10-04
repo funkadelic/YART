@@ -141,7 +141,6 @@ The static head of the document stays in the base language too. Its title, its d
 - [Playwright](https://playwright.dev) for the end-to-end suite
 - [Sass](https://sass-lang.com/) for the CSS Modules stylesheets
 - [Style Dictionary](https://styledictionary.com/) for the design tokens, written in the [DTCG](https://www.designtokens.org/) format
-- [React Icons](https://react-icons.github.io/react-icons/)
 - [axe-core](https://github.com/dequelabs/axe-core) for the accessibility sweeps
 - [Chromatic](https://www.chromatic.com/) for the visual regression snapshots
 - [Lighthouse](https://developer.chrome.com/docs/lighthouse) for the advisory performance audit
