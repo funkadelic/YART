@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { BOOT_SETTINGS, bootDocument, bootScript } from "./bootDocument";
 import { resolveLocale } from "./i18n/resolveLocale";
+import { THEME_CHOICES, resolveTheme } from "./theme/resolveTheme";
 import { setPrefersDark } from "./test/matchMediaStub";
 
 // Restated as literals so a renamed key fails here instead of passing for
@@ -76,6 +77,22 @@ describe("bootDocument", () => {
       bootDocument(BOOT_SETTINGS);
 
       expect(stamped().theme, "missing matchMedia was not light").toBe("light");
+    });
+
+    it.each(
+      THEME_CHOICES.flatMap((choice) => [
+        [choice, false],
+        [choice, true],
+      ]),
+    )("agrees with resolveTheme for %s, prefers dark %s", (choice, dark) => {
+      localStorage.setItem(THEME_KEY, choice);
+      setPrefersDark(dark);
+
+      bootDocument(BOOT_SETTINGS);
+
+      expect(stamped().theme, "theme disagrees with the resolver").toBe(
+        resolveTheme(choice, dark),
+      );
     });
   });
 
