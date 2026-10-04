@@ -1,5 +1,4 @@
-import { FiChevronUp, FiChevronDown } from "react-icons/fi";
-
+import { ChevronDownIcon, ChevronUpIcon } from "../icons.js";
 import type { Column } from "./column.js";
 import tableStyles from "./DataTable.module.scss";
 import styles from "./TableHead.module.scss";
@@ -62,12 +61,8 @@ export function TableHead<T, Id extends string>({
                   onClick={() => onSortChange(column.id)}
                 >
                   {column.label}
-                  {columnDirection === "asc" && (
-                    <FiChevronUp aria-hidden="true" />
-                  )}
-                  {columnDirection === "desc" && (
-                    <FiChevronDown aria-hidden="true" />
-                  )}
+                  {columnDirection === "asc" && <ChevronUpIcon />}
+                  {columnDirection === "desc" && <ChevronDownIcon />}
                 </button>
               }
             </th>
