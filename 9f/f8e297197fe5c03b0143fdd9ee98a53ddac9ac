@@ -1,0 +1,37 @@
+.github/workflows/npm-publish.yml
+  s_e873d553e004e0::t_eb81dccaf84fb8 1
+README.md
+  s_e873d553e004e0::t_eb81dccaf84fb8 196,221,327,492
+.github/workflows/ci.yml
+  s_e873d553e004e0::t_eb81dccaf84fb8 81-82
+docs/adr/0012-published-as-an-npm-package.md
+  s_e873d553e004e0::t_eb81dccaf84fb8 14
+src/yart.css
+  s_e873d553e004e0::t_eb81dccaf84fb8 4-5
+docs/adr/0014-prefixed-layered-tokens.md
+  s_e873d553e004e0::t_eb81dccaf84fb8 16
+src/englishLabels.ts
+  s_e873d553e004e0::t_eb81dccaf84fb8 8
+vite.shared.ts
+  s_e873d553e004e0::t_eb81dccaf84fb8 19-20
+docs/adr/0013-floor-at-native-light-dark.md
+  s_e873d553e004e0::t_eb81dccaf84fb8 24,26
+vite.lib.config.ts
+  s_e873d553e004e0::t_eb81dccaf84fb8 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "9ff8e297197fe5c03b0143fdd9ee98a53ddac9ac",
+  "prompts": {},
+  "sessions": {
+    "s_e873d553e004e0": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "689b3c0b-c77e-4a00-be17-3257ad02764c",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
