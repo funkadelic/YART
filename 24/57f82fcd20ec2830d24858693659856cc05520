@@ -1,0 +1,24 @@
+src/bootDocument.test.ts
+  s_e61f8b120b6dea::t_75e24035045a9a 1-194
+vite.config.ts
+  s_e61f8b120b6dea::t_6f1c7a39c48f1d 15-33,44-45,215-220
+src/bootDocument.ts
+  s_e61f8b120b6dea::t_6502d7b5ab98e7 11,16
+  s_e61f8b120b6dea::t_0c91c83955b59e 1-10,12-15,17-103
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2457f82fcd20ec2830d24858693659856cc05520",
+  "prompts": {},
+  "sessions": {
+    "s_e61f8b120b6dea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa7b83db-0d99-46f9-b166-20ef0abca919",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
