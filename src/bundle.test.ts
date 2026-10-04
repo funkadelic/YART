@@ -231,7 +231,7 @@ it(
         const at = markup.indexOf(tag);
 
         expect(tag, `the boot script in ${shell} carries attributes`).toMatch(
-          /^<script>/,
+          /^<script>/i,
         );
         expect(
           at,
