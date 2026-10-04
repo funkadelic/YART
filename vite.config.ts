@@ -12,6 +12,25 @@ import {
   SOURCE_CONDITION,
   scopedClassName,
 } from "./vite.shared.ts";
+import { bootScript } from "./src/bootDocument.ts";
+
+/**
+ * Injects the theme and locale boot script into every shell, in dev and build.
+ * Blocking and classic on purpose: type module, defer or async would each run it
+ * after first paint and fail silently. "head" rather than "head-prepend" keeps
+ * the charset meta in the first 1024 bytes.
+ */
+function bootDocumentScript(): Plugin {
+  return {
+    name: "yart-boot-script",
+    transformIndexHtml: {
+      order: "pre",
+      handler() {
+        return [{ tag: "script", children: bootScript(), injectTo: "head" }];
+      },
+    },
+  };
+}
 
 /**
  * Adds a Content-Security-Policy to the built shell.
@@ -22,12 +41,8 @@ import {
  * in a policy delivered this way, so clickjacking stays outside what this can
  * express.
  *
- * The theme script in index.html is inline and blocking, which a policy has to
- * name by hash or drop. Dropping it brings back the wrong-theme flash it exists
- * to prevent, with nothing reporting that it happened, so the hash is computed
- * here from the script the shell actually carries. Writing it into index.html
- * by hand would leave two things to change together, and the failure of not
- * doing so is silent in exactly the same way.
+ * It hashes the script the boot plugin injects. A host setting its own policy
+ * must add that hash to script-src, or the script is dropped silently.
  *
  * Build only, so the dev server is unaffected. It serves styles as injected
  * style elements, which this policy does not allow and which the built page
@@ -197,7 +212,12 @@ export default defineConfig({
   // dependency edge and not through this one, and was here before this bump as
   // well. Adopting the compiler is a change of its own with
   // its own gate run, so the option stays unset and the peers stay uninstalled.
-  plugins: [react(), preloadDataset(), contentSecurityPolicy()],
+  plugins: [
+    react(),
+    bootDocumentScript(),
+    preloadDataset(),
+    contentSecurityPolicy(),
+  ],
   // Relative, because one build has to serve from two addresses: the root, which
   // is where `vite preview` serves it and therefore where both browser suites
   // drive it, and /YART/, the repository subpath GitHub Pages serves a project

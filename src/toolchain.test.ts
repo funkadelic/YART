@@ -398,12 +398,8 @@ const ATTRIBUTION_MODIFICATIONS =
   "Modified: unused columns removed, rows ordered by population.";
 
 /**
- * A literal expression's value, built from the tree rather than evaluated.
- *
- * The parity guard below compares two copies of one rule that cannot import each
- * other, so both sides are read as written. Anything that is not a string, an
- * array or an object of those throws, so a rule that grows a computed value
- * fails here rather than being skipped.
+ * A literal expression's value, read from the tree as written. Anything else
+ * throws, so a computed schema key fails here instead of being skipped.
  */
 function literalValue(node: ts.Node, file: ts.SourceFile): unknown {
   if (
@@ -443,62 +439,6 @@ function literalValue(node: ts.Node, file: ts.SourceFile): unknown {
   throw new Error(`${node.getText(file)} is not a literal`);
 }
 
-/**
- * The value a named variable is declared with, found anywhere in the file.
- *
- * Anywhere, not just at the top level, because one of the two files read below
- * wraps everything it declares in an immediately invoked function.
- */
-function declaredLiteral(
-  file: ts.SourceFile,
-  name: string,
-  where: string,
-): unknown {
-  // The last declaration wins, which is what the assignment this replaced did.
-  const initializer = collect(file, (node) =>
-    ts.isVariableDeclaration(node) &&
-    ts.isIdentifier(node.name) &&
-    node.name.text === name
-      ? node.initializer
-      : undefined,
-  ).at(-1);
-
-  return literalValue(required(initializer, `${name} in ${where}`), file);
-}
-
-/** The first argument of every call to the named callee, as written. */
-function firstArguments(file: ts.SourceFile, callee: string): string[] {
-  return findCalls(file, callee).map(
-    (call) =>
-      literalValue(
-        required(call.arguments[0], `an argument to ${callee}`),
-        file,
-      ) as string,
-  );
-}
-
-/**
- * The one inline script a shell carries, parsed.
- *
- * Matched with the expression the policy plugin in vite.config.ts uses to find
- * the script it hashes, so this guard reads the script that ships. That plugin
- * throws unless there is exactly one; asserting it here too names which of the
- * two failed.
- */
-function inlineScript(shell: string): ts.SourceFile {
-  const html = readFileSync(join(projectRoot, shell), "utf8");
-  const found = [
-    ...html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/gi),
-  ];
-
-  expect(
-    found.length,
-    `${shell} carries something other than exactly one inline script`,
-  ).toBe(1);
-
-  return parse(required(found[0]?.[1], "the inline script's body"));
-}
-
 /** Every shell the site ships, one per page. */
 const SHELLS = ["index.html", "movies.html"];
 
@@ -536,9 +476,6 @@ function shells(): string[] {
 function moduleSource(path: string): ts.SourceFile {
   return parse(readFileSync(join(projectRoot, path), "utf8"));
 }
-
-const THEME_MODULE = "src/theme/resolveTheme.ts";
-const LOCALE_MODULE = "src/i18n/resolveLocale.ts";
 
 // The one address writer, and the module that owns which keys the address may
 // carry.
@@ -812,130 +749,6 @@ describe("toolchain baseline", () => {
         `the manifest names the icon ${icon.src ?? ""}, which public/ does not carry`,
       ).toBe(true);
     }
-  });
-
-  // The theme rule and the locale rule are each written twice, once in a module
-  // and once as a literal in the blocking inline script, which runs before
-  // anything importable and cannot import the module. Both copies are held here.
-  //
-  // Compared as written and by set equality. A guard that searched index.html
-  // for the storage key would pass on the mention of it in the comment above the
-  // script.
-  describe("the inline script and the resolvers", () => {
-    it("agrees on both storage keys", () => {
-      for (const shell of shells()) {
-        expect(
-          new Set(firstArguments(inlineScript(shell), "localStorage.getItem")),
-          `${shell} reads a different set of storage keys`,
-        ).toEqual(
-          new Set([
-            declaredLiteral(
-              moduleSource(THEME_MODULE),
-              "THEME_STORAGE_KEY",
-              THEME_MODULE,
-            ),
-            declaredLiteral(
-              moduleSource(LOCALE_MODULE),
-              "LOCALE_STORAGE_KEY",
-              LOCALE_MODULE,
-            ),
-          ]),
-        );
-      }
-    });
-
-    it("agrees on the media query", () => {
-      for (const shell of shells()) {
-        expect(
-          firstArguments(inlineScript(shell), "window.matchMedia"),
-          `${shell} asks a different media query`,
-        ).toEqual([
-          declaredLiteral(
-            moduleSource(THEME_MODULE),
-            "PREFERS_DARK_QUERY",
-            THEME_MODULE,
-          ),
-        ]);
-      }
-    });
-
-    it("accepts exactly the explicit theme words the module declares", () => {
-      const declared = declaredLiteral(
-        moduleSource(THEME_MODULE),
-        "THEME_CHOICES",
-        THEME_MODULE,
-      ) as string[];
-
-      for (const shell of shells()) {
-        expect(
-          new Set(
-            declaredLiteral(
-              inlineScript(shell),
-              "THEME_WORDS",
-              shell,
-            ) as string[],
-          ),
-          // The default is the key not being there, so the script must not
-          // accept the word for it any more than the module's own reader does.
-          `${shell} accepts a different set of theme words`,
-        ).toEqual(new Set(declared.filter((word) => word !== "system")));
-      }
-    });
-
-    it("agrees on which catalogs a preference list may select", () => {
-      for (const shell of shells()) {
-        expect(
-          new Set(
-            declaredLiteral(
-              inlineScript(shell),
-              "NEGOTIABLE",
-              shell,
-            ) as string[],
-          ),
-          `${shell} negotiates a different set of catalogs`,
-        ).toEqual(
-          new Set(
-            declaredLiteral(
-              moduleSource(LOCALE_MODULE),
-              "NEGOTIABLE_CATALOG_IDS",
-              LOCALE_MODULE,
-            ) as string[],
-          ),
-        );
-      }
-    });
-
-    it("agrees on the tag and the direction of every catalog", () => {
-      const resolved = declaredLiteral(
-        moduleSource(LOCALE_MODULE),
-        "RESOLVED_LOCALES",
-        LOCALE_MODULE,
-      ) as Record<string, { catalog: string; tag: string; dir: string }>;
-
-      // The script stamps two attributes and has no use for the third field, so
-      // it carries two. Compared field by field, so the guard states which of
-      // the two rules drifted.
-      for (const shell of shells()) {
-        expect(
-          declaredLiteral(inlineScript(shell), "LOCALES", shell),
-          `${shell} maps a catalog to a different tag or direction`,
-        ).toEqual(
-          Object.fromEntries(
-            Object.entries(resolved).map(([id, locale]) => [
-              id,
-              { tag: locale.tag, dir: locale.dir },
-            ]),
-          ),
-        );
-      }
-
-      // The field the script does not carry, checked on the module side alone:
-      // an entry naming a catalog other than its own key would send a reader to
-      // a catalog the rest of the record says they did not ask for.
-      for (const [id, locale] of Object.entries(resolved)) {
-        expect(locale.catalog, `the ${id} entry`).toBe(id);
-      }
-    });
   });
 
   // A faked clock plus the user input library deadlocks unless the library is
@@ -1220,20 +1033,9 @@ describe("toolchain baseline", () => {
   // reintroduce the defect the locale layer closed, invisibly on a machine whose
   // own preference is the base tag.
   //
-  // eslint.config.js holds the modules under src/. Two halves are outside a lint
-  // rule's reach and are here instead: ESLint does not lint HTML, and a disallow
-  // rule cannot say the formatter module still builds anything.
-  it("asks the platform for a locale only where the lint rule cannot reach", () => {
-    // The inline script resolves a locale of its own before any module loads.
-    // It reaches its answer through a literal map, so it should contribute
-    // nothing.
-    for (const shell of shells()) {
-      expect(
-        localeCallSites(inlineScript(shell)),
-        `the inline script in ${shell} asks the platform for a locale`,
-      ).toEqual([]);
-    }
-
+  // eslint.config.js holds the modules under src/, the boot script included. A
+  // disallow rule cannot say the formatter still builds its five instances.
+  it("still builds the five cached formatters in the formatter module", () => {
     expect(
       localeCallSites(
         parse(readFileSync(join(projectRoot, FORMATTER_MODULE), "utf8")),

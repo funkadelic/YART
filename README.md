@@ -482,7 +482,7 @@ A third dataset takes these steps, with the films page as the model for each:
 3. **Columns.** `src/features/<name>/<name>Columns.ts`: a `build<Name>Columns(catalog, tag)` builder, the column id union taken from one base build, and a unique `getRowId`. See `src/features/films/filmColumns.ts`.
 4. **Config.** `src/features/<name>/<name>Page.ts`, with no barrel file. Import it from one entry only: imported from two, its dataset lands in their shared chunk and the build fails.
 5. **Copy.** A block for the new domain in each of the four catalogs in `src/i18n/catalogs/`. The English catalog's keys define `DomainId`, so the header nav fails to compile until it links the new page. Add the data source to the footer's credits as well.
-6. **Shell.** An HTML file at the repo root copied from `movies.html`, inline theme and locale script included, plus an entry module like `src/movies.tsx`. Add the shell to `build.rollupOptions.input` in `vite.config.ts` and to `SHELLS` in `src/toolchain.test.ts`, and raise `COMMITTED_SHELLS` beside it. [Decision record 1](docs/adr/0001-two-html-shells.md) names a third shell as the point where a router becomes worth adding.
+6. **Shell.** An HTML file at the repo root copied from `movies.html`, plus an entry module like `src/movies.tsx`. The boot plugin in `vite.config.ts` injects the theme and locale script from `src/bootDocument.ts` into every shell, so a new shell carries none. Add the shell to `build.rollupOptions.input` in `vite.config.ts` and to `SHELLS` in `src/toolchain.test.ts`, and raise `COMMITTED_SHELLS` beside it. [Decision record 1](docs/adr/0001-two-html-shells.md) names a third shell as the point where a router becomes worth adding.
 
 ## Configuring
 

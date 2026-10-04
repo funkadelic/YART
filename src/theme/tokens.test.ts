@@ -1,21 +1,18 @@
-// @vitest-environment jsdom
-//
-// Token tiers and contrast, the theme script's placement in each shell, and the
-// halves of the stylesheet rules stylelint has no way to express: an SCSS
-// variable declared in a component sheet, a reference to a retired token, the
-// global sheets' bounded px count, and the positive claim that the focus ring is
-// drawn. The negative rules live in .stylelintrc.json.
+// Token tiers and contrast, and the halves of the stylesheet rules stylelint
+// has no way to express: an SCSS variable declared in a component sheet, a
+// reference to a retired token, the global sheets' bounded px count, and the
+// positive claim that the focus ring is drawn. The negative rules live in
+// .stylelintrc.json.
 //
 // Reads the generated src/styles/tokens.css, src/yart.css and src/index.css as
 // files, because the runner blanks CSS imports and jsdom evaluates neither var()
-// nor light-dark(). The environment is jsdom for the shell guard's DOMParser.
+// nor light-dark().
 
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import postcss from "postcss";
 import { describe, expect, it } from "vitest";
 
-import { THEME_STORAGE_KEY } from "./resolveTheme";
 import { required } from "../test/required";
 
 // Resolved from this file's own location. The working directory is wherever the
@@ -397,77 +394,6 @@ describe("contrast", () => {
         ).toBeGreaterThanOrEqual(minimum);
       });
     }
-  }
-});
-
-// Every shell the site ships. Each carries its own copy of the theme script, so
-// a guard reading one of them leaves the other free to defer the script and
-// flash the wrong theme, and for a right-to-left reader the wrong direction, on
-// every load.
-const SHELLS = ["index.html", "movies.html"];
-
-describe.each(SHELLS)("the theme script in %s", (shell) => {
-  const html = readFileSync(join(projectRoot, shell), "utf8");
-  // Parsed rather than scraped: the markup this guard has to reject is exactly
-  // the markup a hand-written tag matcher gets wrong. querySelectorAll returns
-  // document order, so an index into this list says which script runs first.
-  const doc = new DOMParser().parseFromString(html, "text/html");
-  const scripts = [...doc.querySelectorAll("script")];
-
-  // Filtered on the three things that actually defer a script past first paint,
-  // so a script carrying an unrelated attribute still counts. Each of the three
-  // fails silently, which is why it is worth a guard, and a CSP nonce is the one
-  // this file will need first.
-  const blocking = [...doc.head.querySelectorAll("script")].filter(
-    (script) =>
-      script.type.toLowerCase() !== "module" &&
-      !script.hasAttribute("defer") &&
-      !script.hasAttribute("async"),
-  );
-
-  it("carries exactly one blocking classic script inside the head", () => {
-    expect(
-      blocking.length,
-      `${shell} has no attribute-free script in its head, so the theme lands after first paint`,
-    ).toBe(1);
-  });
-
-  it("places it before the module script", () => {
-    expect(blocking, "no blocking script to place").toHaveLength(1);
-
-    const moduleScript = scripts.findIndex(
-      (script) => script.type.toLowerCase() === "module",
-    );
-
-    expect(moduleScript, `${shell} loads no module script`).toBeGreaterThan(-1);
-    expect(
-      scripts.indexOf(required(blocking[0], "the blocking script")),
-      `the theme script in ${shell} does not precede the module script`,
-    ).toBeLessThan(moduleScript);
-  });
-
-  // A presence check on the shared literal. The two implementations of the
-  // resolve rule are a known, accepted duplication, so this only catches the
-  // storage key drifting.
-  it("reads the same storage key the resolver exports", () => {
-    expect(blocking, "no blocking script to read a key from").toHaveLength(1);
-    expect(
-      required(blocking[0], "the blocking script").textContent,
-      `the theme script in ${shell} does not mention the storage key ${THEME_STORAGE_KEY}`,
-    ).toContain(THEME_STORAGE_KEY);
-  });
-});
-
-// A renamed shell would otherwise empty the loop above into silence rather than
-// into a failure.
-it("checks the theme script in every shell the site ships", () => {
-  expect(SHELLS.length, "the shell list is empty").toBe(2);
-
-  for (const shell of SHELLS) {
-    expect(
-      existsSync(join(projectRoot, shell)),
-      `${shell} is named in the shell list but is not in the tree`,
-    ).toBe(true);
   }
 });
 

@@ -1,6 +1,6 @@
 // The locale's vocabulary and the rule that turns a stored choice plus the
-// reader's preferences into a resolved locale. Everything the inline script in
-// index.html duplicates by hand is declared here.
+// reader's preferences into a resolved locale. src/bootDocument.ts builds its
+// settings from these constants.
 
 /** Every catalog that ships. The last is a pseudo-locale, not a language. */
 export const CATALOG_IDS = ["en", "es", "fr", "ar-XB"] as const;
@@ -19,7 +19,7 @@ export const NEGOTIABLE_CATALOG_IDS = ["en", "es", "fr"] as const;
 /** The word rather than an id means follow the machine, the default. */
 export type LocaleChoice = CatalogId | "system";
 
-/** The storage key. The inline script in index.html spells this out by hand. */
+/** The storage key. The boot script reads it through src/bootDocument.ts. */
 export const LOCALE_STORAGE_KEY = "yart-locale";
 
 /** Three fields, because the pseudo-locale borrows a direction, not a tag. */
@@ -64,8 +64,8 @@ function primarySubtag(tag: string): string {
 
 /**
  * Turns a choice plus a preference list into a resolved locale, always one of
- * four module constants, so identity is stable. Written again as a literal in
- * the inline script of every shell; the parity guard holds all the copies.
+ * four module constants, so identity is stable. Written again in bootDocument,
+ * which cannot import it; src/bootDocument.test.ts holds the two together.
  */
 export function resolveLocale(
   choice: LocaleChoice,

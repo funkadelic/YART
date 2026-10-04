@@ -1,6 +1,6 @@
 # 1. Two HTML shells instead of a client-side router
 
-Status: accepted
+Status: accepted, superseded in part by [15](0015-one-boot-script-injected-at-build.md)
 Date recorded: 2026-09-15
 
 ## Context
