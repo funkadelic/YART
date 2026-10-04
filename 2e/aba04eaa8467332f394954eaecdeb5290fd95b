@@ -1,0 +1,30 @@
+src/data/worldcities/cities.test.ts
+  s_f3f7af8c4bf72b::t_203056ba7b4373 3-4,78-82,87,106-108,112
+src/i18n/catalogs/catalogs.test.ts
+  s_f3f7af8c4bf72b::t_203056ba7b4373 3
+src/api/getCities.test.ts
+  s_f3f7af8c4bf72b::t_5f72b95a47ecee 48
+  s_f3f7af8c4bf72b::t_203056ba7b4373 11,49-50,54-57,215,230
+src/data/films/films.test.ts
+  s_f3f7af8c4bf72b::t_203056ba7b4373 3,68-72,77,94-96,100
+src/i18n/datasetErrorText.test.ts
+  s_f3f7af8c4bf72b::t_203056ba7b4373 3
+src/data/worldcities/cities.ts
+  s_f3f7af8c4bf72b::t_af904ccbdd43bd 10-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2eaba04eaa8467332f394954eaecdeb5290fd95b",
+  "prompts": {},
+  "sessions": {
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
