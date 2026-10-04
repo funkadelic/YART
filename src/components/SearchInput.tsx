@@ -1,6 +1,6 @@
 import type { Ref } from "react";
-import { FiSearch } from "react-icons/fi";
 
+import { SearchIcon } from "./icons.js";
 import styles from "./SearchInput.module.scss";
 
 /** The two strings this control shows, as one object so they move together. */
@@ -44,7 +44,7 @@ export function SearchInput({
   return (
     <div className={styles.searchContainer}>
       <div className={styles.searchInput}>
-        <FiSearch className={styles.searchIcon} />
+        <SearchIcon className={styles.searchIcon} />
         <input
           ref={ref}
           aria-label={labels.name}
