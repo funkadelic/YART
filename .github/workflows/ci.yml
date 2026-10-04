@@ -26,12 +26,10 @@ jobs:
     # A boolean rather than the token, because `secrets` is not an allowed
     # context in a step's `if`. The token itself stays on the one step that
     # needs it, out of the environment of the install and of every action here.
-    # A release PR is main's tip plus the version and changelog, which main's own
-    # run already checked, so it skips the browser sweeps and the uploads.
     env:
       HAS_CHROMATIC: ${{ secrets.CHROMATIC_PROJECT_TOKEN != '' }}
-      # Same-repo only, so a fork cannot skip the gates by naming its branch.
-      IS_RELEASE_PR: ${{ github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.head_ref, 'release-please--') }}
+    outputs:
+      heavy-checks: ${{ steps.scope.outputs.heavy }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -39,6 +37,25 @@ jobs:
           # Sonar reads blame to decide what counts as new code. A shallow clone
           # leaves it none, so every line looks new.
           fetch-depth: 0
+
+      # Turns off the browser sweeps, Lighthouse, the uploads and Chromatic when
+      # nothing they check changed: a release PR, or a PR touching only Markdown
+      # and docs/. Verify itself still runs, so the required check reports.
+      - name: Decide which checks run
+        id: scope
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          # Same-repo only, so a fork cannot skip the gates by naming its branch.
+          RELEASE_PR: ${{ github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.head_ref, 'release-please--') }}
+        run: |
+          heavy=true
+          if [ "$RELEASE_PR" = true ]; then
+            heavy=false
+          elif [ -n "$BASE_SHA" ] && ! git diff --name-only "$BASE_SHA" HEAD | grep -qvE '(\.md$|^docs/)'; then
+            heavy=false
+          fi
+          echo "heavy=$heavy" >> "$GITHUB_OUTPUT"
+          echo "HEAVY_CHECKS=$heavy" >> "$GITHUB_ENV"
 
       # Pull requests only, since a push has no base to diff against. Before the
       # install, so a known advisory stops the job while the change is in review.
@@ -90,17 +107,17 @@ jobs:
       # The browser download is the most expensive thing here, so it sits behind
       # every cheap gate. The jsdom half of the accessibility gate ran in Test.
       - name: Install Chromium
-        if: env.IS_RELEASE_PR != 'true'
+        if: env.HEAVY_CHECKS == 'true'
         run: npx playwright install --with-deps --only-shell chromium
 
       - name: Accessibility sweep
-        if: env.IS_RELEASE_PR != 'true'
+        if: env.HEAVY_CHECKS == 'true'
         run: npm run test:browser
 
       # After the sweep, which leaves both things this needs in place: the browser
       # binary and the build. Before the scan, so a broken flow reports as itself.
       - name: End-to-end sweep
-        if: env.IS_RELEASE_PR != 'true'
+        if: env.HEAVY_CHECKS == 'true'
         run: npm run test:e2e
 
       # A runner's filesystem is gone when the job ends. Only a failure writes
@@ -116,13 +133,13 @@ jobs:
       # Advisory: a slow score or a failed audit never fails the job. Reuses the
       # build and the headless shell the sweeps above already have in place.
       - name: Lighthouse
-        if: env.IS_RELEASE_PR != 'true'
+        if: env.HEAVY_CHECKS == 'true'
         run: npm run lighthouse
         continue-on-error: true
         timeout-minutes: 5
 
       - name: Upload Lighthouse reports
-        if: env.IS_RELEASE_PR != 'true'
+        if: env.HEAVY_CHECKS == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         continue-on-error: true
         with:
@@ -134,7 +151,7 @@ jobs:
       # Sends the report the test step wrote, from here so a failing gate
       # reports as itself. Skipped for the updater, which reads an empty token.
       - name: Upload coverage to Codecov
-        if: github.actor != 'dependabot[bot]' && env.IS_RELEASE_PR != 'true'
+        if: github.actor != 'dependabot[bot]' && env.HEAVY_CHECKS == 'true'
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -156,7 +173,7 @@ jobs:
       # The same action as the step above; codecov/test-results-action would be a
       # second action to pin for an input this one already takes.
       - name: Upload test results to Codecov
-        if: ${{ !cancelled() && github.actor != 'dependabot[bot]' && env.IS_RELEASE_PR != 'true' && hashFiles('junit/*.xml') != '' }}
+        if: ${{ !cancelled() && github.actor != 'dependabot[bot]' && env.HEAVY_CHECKS == 'true' && hashFiles('junit/*.xml') != '' }}
         uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -174,7 +191,7 @@ jobs:
       # fallback matcher only recognizes a hex hash. Keep the pattern in step with
       # the bundler's asset file names.
       - name: Upload bundle stats to Codecov
-        if: github.actor != 'dependabot[bot]' && env.IS_RELEASE_PR != 'true'
+        if: github.actor != 'dependabot[bot]' && env.HEAVY_CHECKS == 'true'
         run: >-
           npx bundle-analyzer ./dist
           --bundle-name=yart
@@ -185,7 +202,7 @@ jobs:
       # every run. ponytail: a fixed key never refreshes, so a plugin Sonar
       # updates is fetched each run again; bump the key when that shows in the log.
       - name: Cache SonarQube packages
-        if: github.actor != 'dependabot[bot]' && env.IS_RELEASE_PR != 'true'
+        if: github.actor != 'dependabot[bot]' && env.HEAVY_CHECKS == 'true'
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.sonar/cache
@@ -195,7 +212,7 @@ jobs:
       # absent coverage report. Skipped for the updater, whose empty token would
       # fail the job; a version bump touches no source for the scan to read.
       - name: SonarQube scan
-        if: github.actor != 'dependabot[bot]' && env.IS_RELEASE_PR != 'true'
+        if: github.actor != 'dependabot[bot]' && env.HEAVY_CHECKS == 'true'
         uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -226,7 +243,7 @@ jobs:
       # the event payload. It carries its own copy of the CLI, so keep this pin
       # and the one in package.json on the same version.
       - name: Chromatic
-        if: env.HAS_CHROMATIC == 'true' && env.IS_RELEASE_PR != 'true'
+        if: env.HAS_CHROMATIC == 'true' && env.HEAVY_CHECKS == 'true'
         env:
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
         uses: chromaui/action@db3ceb5efb0cd7447d63c2d8cce7da732ce89322 # v18.10.1
@@ -248,7 +265,7 @@ jobs:
       github.event_name == 'pull_request'
       && github.event.pull_request.head.repo.full_name == github.repository
       && github.actor != 'dependabot[bot]'
-      && !startsWith(github.head_ref, 'release-please--')
+      && needs.verify.outputs.heavy-checks == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     continue-on-error: true

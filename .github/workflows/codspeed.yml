@@ -5,7 +5,11 @@ on:
   push:
     branches:
       - main
+  # Docs-only changes have nothing to measure.
   pull_request:
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
   # Lets CodSpeed collect a baseline for a branch that has none.
   workflow_dispatch:
 
