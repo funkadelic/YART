@@ -1,0 +1,21 @@
+docs/adr/README.md
+  s_f3f7af8c4bf72b::t_e8106090121a7f 24
+docs/adr/0016-icons-drawn-in-the-repo.md
+  s_f3f7af8c4bf72b::t_e8106090121a7f 1-22
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8dc6ab051a40f8f3b038ae25abd7c5ff8d6a76a1",
+  "prompts": {},
+  "sessions": {
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
