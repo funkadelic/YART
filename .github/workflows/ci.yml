@@ -40,8 +40,8 @@ jobs:
 
       # Turns off the browser sweeps, Lighthouse, the uploads and Chromatic when
       # nothing they check changed: a release PR, or a PR touching only Markdown
-      # and docs/. Lighthouse, the bundle stats and Chromatic also need a change
-      # that can reach the built page or the specs Chromatic captures from.
+      # and docs/. Lighthouse, the bundle stats and Chromatic also skip when every
+      # change is on a path known not to reach the built page or Chromatic's specs.
       # Verify itself still runs, so the required check reports.
       - name: Decide which checks run
         id: scope
@@ -60,8 +60,8 @@ jobs:
             if ! grep -qvE '(\.md$|^docs/)' <<< "$changed"; then
               heavy=false
               ui=false
-            elif ! grep -E '^(src/|e2e/|public/|tokens/|index\.html$|movies\.html$|vite\.|tsconfig|playwright\.config\.ts$|package(-lock)?\.json$|\.nvmrc$|scripts/lighthouse\.mjs$|\.github/workflows/)' <<< "$changed" \
-              | grep -vE '(\.test\.tsx?$|^src/test/)' > /dev/null; then
+            # Paths known not to reach the built page; anything else runs the checks.
+            elif ! grep -vE '(\.md$|^docs/|\.test\.tsx?$|^src/test/|^bench/|^\.husky/|^scripts/(films\.rq|generate-|package-smoke)|^\.github/(CODEOWNERS|dependabot\.yml)$|^(\.fallowrc\.json|\.git-blame-ignore-revs|\.gitattributes|\.gitignore|\.prettierignore|\.release-please-manifest\.json|\.stylelintrc\.json|LICENSE|eslint\.config\.js|release-please-config\.json|sonar-project\.properties|stryker\.conf\.js|vitest\.setup\.ts|vitest\.stryker\.config\.ts)$)' <<< "$changed" > /dev/null; then
               ui=false
             fi
           fi
