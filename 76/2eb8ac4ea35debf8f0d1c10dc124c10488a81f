@@ -1,0 +1,19 @@
+.github/workflows/npm-publish.yml
+  s_369291ba83c7bf::t_6b93f9a9520448 1
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "762eb8ac4ea35debf8f0d1c10dc124c10488a81f",
+  "prompts": {},
+  "sessions": {
+    "s_369291ba83c7bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d9edbb91-3dcd-4752-98a9-58e406846090",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
