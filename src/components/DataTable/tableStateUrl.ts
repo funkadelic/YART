@@ -2,7 +2,7 @@ import {
   DEFAULT_TABLE_STATE,
   PAGE_SIZE_OPTIONS,
   type TableState,
-} from "./tableState";
+} from "./tableState.js";
 
 /** One key carries column and direction, so the invalid pair cannot occur. */
 const SORT_DESCENDING_PREFIX = "-";

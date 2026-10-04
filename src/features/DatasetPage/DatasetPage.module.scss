@@ -4,12 +4,12 @@
   width: 100%;
   box-sizing: border-box;
   margin: 0 auto;
-  padding: var(--space-5);
+  padding: var(--yart-space-5);
 }
 
 // responsive styles
 @media (width <= 768px) {
   .container {
-    padding: var(--space-2-5);
+    padding: var(--yart-space-2-5);
   }
 }

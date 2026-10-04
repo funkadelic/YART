@@ -1,25 +1,26 @@
 version: 2
 
 updates:
-  # Package manifest at the repository root. Every entry in it is an exact pin, so the
-  # versioning strategy is set explicitly: "increase" rewrites the pinned version in
-  # place, while the default would be free to widen a pin into a range and quietly
-  # reverse the convention the whole manifest follows.
+  # Package manifest at the repository root. Every dev dependency is an exact pin, which
+  # "increase-if-necessary" rewrites in place. The two ranges are floors for consumers:
+  # the React peer, and react-icons, a caret so a host shares its own copy. A bump inside
+  # the caret moves only the lockfile, so the floor stays where it is.
   - package-ecosystem: npm
     directory: "/"
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
-    versioning-strategy: increase
-    # Generated subjects have to be Conventional Commits, same as hand written ones.
+    versioning-strategy: increase-if-necessary
     # Hold new releases a few days so a hijacked publish is pulled before it is
     # proposed. Security updates bypass this.
     cooldown:
       default-days: 5
       semver-major-days: 14
+    # Generated subjects have to be Conventional Commits, same as hand written ones.
+    # release-please files the deps and deps-dev types under Dependencies.
     commit-message:
-      prefix: "chore(deps)"
-      prefix-development: "chore(deps-dev)"
+      prefix: deps
+      prefix-development: deps-dev
     # Grouped so a routine week is two pull requests to review rather than a dozen.
     # Each group is held to minor and patch only. A grouped major is unreviewable: nine
     # of them arrived as one pull request that could not install, because a single held
@@ -78,8 +79,9 @@ updates:
     open-pull-requests-limit: 5
     cooldown:
       default-days: 5
+    # ci is a hidden changelog type, so an action bump proposes no release.
     commit-message:
-      prefix: "chore(actions)"
+      prefix: ci
     groups:
       github-actions:
         patterns:

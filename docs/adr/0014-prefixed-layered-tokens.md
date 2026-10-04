@@ -1,0 +1,30 @@
+# 14. The shipped tokens are prefixed and layered
+
+Status: accepted
+Date recorded: 2026-10-02
+
+## Context
+
+The stylesheets read about thirty custom properties named for their family alone, such as `--radius-sm` and `--space-4`. Inside a host those names collide. Tailwind v4 declares `--radius-sm` and `--radius-md` in its theme layer, so an unlayered `:root` block from the table would silently override the host's values.
+
+## Decision
+
+Style Dictionary's `prefix` option names every token `--yart-*`. The DTCG source in `tokens/` is unchanged.
+
+The defaults ship inside `@layer yart`, so any unlayered host rule wins without a specificity contest.
+
+The forced-colors remap ships with the table, which owns forced-colors support. It sits outside the layer, on `:root:root:root`, so it outranks a host's `:root` override, a themed one such as `:root.dark` included, whichever stylesheet loads last. `!important` was refused: it would also beat a host that restyles forced colors on purpose, which a more specific rule still can.
+
+Component rules stay unlayered. A layered rule would lose to a host's element reset, which is usually unlayered.
+
+The custom properties are the contract. The generated class names, `yart-<Component>__<class>`, are best-effort and may change.
+
+## Consequences
+
+Renaming a token after the first publish breaks every host override that sets it, so the names are one-way.
+
+Hosts set `color-scheme` to pick light or dark, and draw their own focus ring, since the table cancels no outline.
+
+The token guard fails on any stylesheet still reading a bare name.
+
+This extends record 7.

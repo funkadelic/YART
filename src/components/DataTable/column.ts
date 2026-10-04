@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 
-import { compareValues } from "../compareRows";
-import type { SortDirection } from "./tableState";
+import { compareValues } from "../compareRows.js";
+import type { SortDirection } from "./tableState.js";
 
 /** Its value type is fused into the two functions below, then erased. */
 export interface Column<T, Id extends string = string> {

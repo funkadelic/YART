@@ -27,6 +27,6 @@ it("light-dark() wraps only colors", () => {
 
   expect(lines.length).toBeGreaterThan(0);
   for (const line of lines) {
-    expect(line.trim()).toMatch(/^--color-/);
+    expect(line.trim()).toMatch(/^--yart-color-/);
   }
 });

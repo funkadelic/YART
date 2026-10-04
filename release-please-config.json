@@ -1,0 +1,31 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "52c64f143815a1b0f464eaf2d2d40127091ef699",
+  "packages": {
+    ".": {
+      "release-type": "node",
+      "package-name": "yet-another-react-table",
+      "initial-version": "0.1.0",
+      "bump-minor-pre-major": true,
+      "include-component-in-tag": false,
+      "include-v-in-tag": true,
+      "changelog-path": "CHANGELOG.md",
+      "pull-request-header": " ",
+      "pull-request-footer": " ",
+      "changelog-sections": [
+        { "type": "feat", "section": "Added" },
+        { "type": "fix", "section": "Fixed" },
+        { "type": "perf", "section": "Changed" },
+        { "type": "refactor", "section": "Changed" },
+        { "type": "style", "section": "Changed" },
+        { "type": "docs", "section": "Documentation" },
+        { "type": "test", "section": "Testing", "hidden": true },
+        { "type": "build", "section": "Changed", "hidden": true },
+        { "type": "ci", "section": "Changed", "hidden": true },
+        { "type": "chore", "section": "Changed", "hidden": true },
+        { "type": "deps", "section": "Dependencies" },
+        { "type": "deps-dev", "section": "Dependencies", "hidden": true }
+      ]
+    }
+  }
+}

@@ -1,5 +1,5 @@
-import type { Column } from "./column";
-import type { SortDirection } from "./tableState";
+import type { Column } from "./column.js";
+import type { SortDirection } from "./tableState.js";
 
 /** Row identity is a table-level prop, so the tiebreak lives here. */
 export function sortRows<T, Id extends string>(

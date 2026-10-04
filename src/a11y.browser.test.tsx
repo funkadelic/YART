@@ -9,9 +9,10 @@ import { DatasetPage } from "./features/DatasetPage";
 import { describeViolations, incompleteRuleIds } from "./test/axeSweep";
 import { required } from "./test/required";
 
-// The shipped stylesheet, which only the entry module pulls in. Every design
-// token lives here, so a sweep that skipped it would run the contrast rule over
+// The shipped stylesheets, which only the entry module pulls in. Every design
+// token lives in them, so a sweep that skipped it would run the contrast rule over
 // the engine's default black on white and report on a page no reader ever sees.
+import "yet-another-react-table/styles.css";
 import "./index.css";
 
 // The rules the engine could not decide, asserted by set equality as the jsdom
@@ -38,15 +39,15 @@ const RTL_CATALOG_ID = "ar-XB";
 
 /**
  * The inset the search icon sits at, and the inset the input reserves for it.
- * One token, var(--space-4), restated here as a resolved length, per the
+ * One token, var(--yart-space-4), restated here as a resolved length, per the
  * convention that a value the subject also defines is written out in the test so
  * the assertion cannot pass for whatever the subject holds.
  */
 const SEARCH_ICON_INSET = "16px";
 
 /**
- * The wide inset the input reserves for that icon, var(--space-11), and the
- * narrow one on its other side, var(--space-2-5). Written out for the same
+ * The wide inset the input reserves for that icon, var(--yart-space-11), and the
+ * narrow one on its other side, var(--yart-space-2-5). Written out for the same
  * reason the inset above is.
  */
 const SEARCH_RESERVED_INSET = "44px";

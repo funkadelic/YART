@@ -1,5 +1,8 @@
 import react from "@vitejs/plugin-react";
+import { defaultClientConditions } from "vite";
 import { defaultExclude, defineConfig } from "vitest/config";
+
+import { SOURCE_CONDITION } from "./vite.shared.ts";
 
 /**
  * The jsdom project from vite.config.ts, on its own, for the mutation pass.
@@ -15,6 +18,7 @@ import { defaultExclude, defineConfig } from "vitest/config";
  */
 export default defineConfig({
   plugins: [react()],
+  resolve: { conditions: [SOURCE_CONDITION, ...defaultClientConditions] },
   test: {
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],

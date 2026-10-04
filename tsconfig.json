@@ -28,9 +28,12 @@
     // declarations for the programmatic build entry point that the bundle guard
     // imports. This value is the resolution the bundler itself performs.
     "moduleResolution": "bundler",
+    // Resolves the package specifier to src/, so typechecking needs no lib/.
+    "customConditions": ["@yart/source"],
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "plugins": [{ "name": "typescript-plugin-css-modules" }]
   },
@@ -40,6 +43,8 @@
     "bench",
     "vitest.setup.ts",
     "vite.config.ts",
+    "vite.lib.config.ts",
+    "vite.shared.ts",
     "vitest.stryker.config.ts",
     "playwright.config.ts",
     "eslint.config.js",

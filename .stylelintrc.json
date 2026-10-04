@@ -48,7 +48,7 @@
     "selector-disallowed-list": [
       ["/:dir\\(/"],
       {
-        "message": "The :dir() pseudo-class landed in Chrome 120 against this application's floor of 111, so it ships inert in the very browsers the floor exists to name: select the direction on the attribute, as [dir=\"rtl\"] .navButton svg does"
+        "message": "Direction is selected on the attribute everywhere, so every direction rule reads one way: use [dir=\"rtl\"], as [dir=\"rtl\"] .navButton svg does"
       }
     ]
   },
@@ -59,13 +59,13 @@
         "color-no-hex": [
           true,
           {
-            "message": "Colour in a component stylesheet arrives through var(--color-*) and nowhere else, so a theme switch moves every value at once"
+            "message": "Color in a component stylesheet arrives through var(--yart-color-*) and nowhere else, so a theme switch moves every value at once"
           }
         ],
         "color-named": [
           "never",
           {
-            "message": "Colour in a component stylesheet arrives through var(--color-*) and nowhere else; a keyword is as fixed as a hex and flips with no theme"
+            "message": "Color in a component stylesheet arrives through var(--yart-color-*) and nowhere else; a keyword is as fixed as a hex and flips with no theme"
           }
         ],
         "declaration-property-unit-allowed-list": [
@@ -75,7 +75,7 @@
             "/^(gap|row-gap|column-gap|font-size)$/": ["rem"]
           },
           {
-            "message": "Spacing and type are authored in rem through a token, so the layout follows the reader's browser font-size setting: reach for var(--space-*) or var(--font-size-*)"
+            "message": "Spacing and type are authored in rem through a token, so the layout follows the reader's browser font-size setting: reach for var(--yart-space-*) or var(--yart-font-size-*)"
           }
         ],
         "function-disallowed-list": [
@@ -93,7 +93,7 @@
             "color"
           ],
           {
-            "message": "Colour in a component stylesheet arrives through var(--color-*) and nowhere else; a functional notation is as fixed as a hex and flips with no theme"
+            "message": "Color in a component stylesheet arrives through var(--yart-color-*) and nowhere else; a functional notation is as fixed as a hex and flips with no theme"
           }
         ]
       }

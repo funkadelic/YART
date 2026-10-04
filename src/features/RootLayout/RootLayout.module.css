@@ -10,25 +10,25 @@
   width: 100%;
   max-width: 64rem;
   margin: 0 auto;
-  padding: var(--space-6);
+  padding: var(--yart-space-6);
   box-sizing: border-box;
 }
 
 .fallback {
-  padding: var(--space-10) var(--space-5);
+  padding: var(--yart-space-10) var(--yart-space-5);
   text-align: center;
-  color: var(--color-error);
+  color: var(--yart-color-error);
 }
 
 /* Styled from the table's retry control so the one way back the fallback
    offers does not read as unstyled browser chrome. */
 .fallbackButton {
   display: block;
-  margin: var(--space-4) auto 0;
-  padding: var(--space-1-5) var(--space-3);
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-border-strong);
-  font-size: var(--font-size-sm);
-  color: var(--color-text);
+  margin: var(--yart-space-4) auto 0;
+  padding: var(--yart-space-1-5) var(--yart-space-3);
+  background: var(--yart-color-surface-raised);
+  border: 1px solid var(--yart-color-border-strong);
+  font-size: var(--yart-font-size-sm);
+  color: var(--yart-color-text);
   cursor: pointer;
 }

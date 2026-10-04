@@ -35,9 +35,6 @@ export {
  * interface still reads the English country name. Translating them would need a
  * translated column and a regenerated asset, which is a data pipeline rather
  * than an internationalization change.
- *
- * Stated here as well as in the README, and held together by a guard in
- * src/toolchain.test.ts so neither copy can be reworded on its own.
  */
 export interface City {
   id: number;

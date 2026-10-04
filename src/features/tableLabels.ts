@@ -1,5 +1,7 @@
-import type { DataTableLabels } from "../components/DataTable/DataTable";
-import type { SearchInputLabels } from "../components/SearchInput";
+import type {
+  DataTableLabels,
+  SearchInputLabels,
+} from "yet-another-react-table";
 import type { Catalog, DomainId } from "../i18n/catalogs/en";
 
 /**

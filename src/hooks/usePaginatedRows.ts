@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 
-import { paginate, type PaginateResult } from "../components/paginate";
+import { paginate, type PaginateResult } from "../components/paginate.js";
 
 /** Memoizes one page. The clamped position is to render, never to store. */
 export function usePaginatedRows<T>(

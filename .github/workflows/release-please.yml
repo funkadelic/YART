@@ -1,0 +1,73 @@
+name: release-please
+
+on:
+  push:
+    branches:
+      - main
+  # Reopens the release PR when a push to main never fired the webhook.
+  workflow_dispatch:
+
+# The App token does the writing, so the workflow token stays read-only.
+permissions:
+  contents: read
+
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-please:
+    # Keeps a manual dispatch from running release-please against another ref.
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Generate App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ secrets.RELEASE_PLEASE_APP_ID }}
+          private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-issues: write
+          permission-pull-requests: write
+
+      - name: Release please
+        id: release
+        uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
+        with:
+          # Branch protection requires Verify, which never runs on a PR the
+          # workflow token opens, so the App authors the release PR.
+          token: ${{ steps.app-token.outputs.token }}
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+      - name: Checkout
+        if: ${{ steps.release.outputs.release_created }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Sync the release body from the changelog
+        if: ${{ steps.release.outputs.release_created }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAG_NAME: ${{ steps.release.outputs.tag_name }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          # CHANGELOG.md is the one source of the release notes. The first release has
+          # no compare link, so its heading is "## 0.1.0 (" rather than "## [0.1.0]".
+          # index(), not a regex, because the version carries literal dots.
+          awk -v ver="$VERSION" '
+            index($0, "## [" ver "]") == 1 || index($0, "## " ver " ") == 1 { found = 1; next }
+            found && index($0, "## ") == 1 { exit }
+            found { print }
+          ' CHANGELOG.md > release-notes.md
+
+          # A missing section fails the run rather than blanking a correct body.
+          if ! grep -q '[^[:space:]]' release-notes.md; then
+            echo "::error::No CHANGELOG.md section found for ${VERSION}; release body left as generated."
+            exit 1
+          fi
+
+          gh release edit "$TAG_NAME" --notes-file release-notes.md

@@ -1,0 +1,88 @@
+# Publishes each release to npm through OIDC trusted publishing. Inert until the
+# first version is published by hand and the trusted publisher is set on the package's access page.
+name: npm-publish
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+# Two publishes of one tag would race the registry; the second waits and then fails cleanly.
+concurrency:
+  group: npm-publish-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  # Installs and builds without publish rights, so dependency code never meets the OIDC token.
+  pack:
+    # release-please cuts full releases only; a hand-cut prerelease is not published.
+    if: ${{ !github.event.release.prerelease }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      node-version: ${{ steps.node.outputs.node-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # No dependency cache: a poisoned one would end up in the published tarball.
+      - name: Set up Node
+        id: node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+
+      - name: Install
+        run: npm ci
+
+      # prepack builds lib/ before the tarball is made.
+      - name: Pack
+        run: npm pack
+
+      - name: Upload tarball
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: tarball
+          path: "*.tgz"
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    needs: pack
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # The OIDC token npm exchanges for publish rights, granted to this job alone. It runs no
+    # checkout and no install, only npm itself over the packed tarball.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Download tarball
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: tarball
+
+      # registry-url writes the .npmrc the OIDC exchange depends on.
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ needs.pack.outputs.node-version }}
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5.1 or later.
+      - name: Check npm version
+        run: |
+          v="$(npm --version)"
+          if [ "$(printf '%s\n' 11.5.1 "$v" | sort -V | head -n 1)" != 11.5.1 ]; then
+            echo "::error::npm $v is older than 11.5.1, which trusted publishing needs."
+            exit 1
+          fi
+
+      - name: Publish
+        run: npm publish ./*.tgz --provenance --access public

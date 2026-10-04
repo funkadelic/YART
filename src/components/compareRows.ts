@@ -1,4 +1,4 @@
-import type { SortDirection } from "./DataTable/tableState";
+import type { SortDirection } from "./DataTable/tableState.js";
 
 /** Nothing to order by. Zero is not blank, it sorts small; NaN is blank. */
 function isBlank(value: unknown): boolean {

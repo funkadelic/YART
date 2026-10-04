@@ -17,7 +17,8 @@ const DESTINATION = join(root, "src", "styles", "tokens.css");
 
 const HEADER = `/* Generated from the files in tokens/ by scripts/build-tokens.mjs. Do not edit:
    change the JSON and run \`npm run tokens:build\`. Each themed color is one
-   light-dark pair whose side follows color-scheme, set per theme in index.css. */
+   light-dark pair whose side follows the color-scheme in effect where it is
+   used. */
 
 `;
 
@@ -68,7 +69,10 @@ async function themeTokens(theme) {
     // Theme first, so the themed colors lead the stylesheet.
     source: [themeFile, BASE],
     platforms: {
-      css: { transforms: ["name/kebab", "color/hex", "size/rem"] },
+      css: {
+        prefix: "yart",
+        transforms: ["name/kebab", "color/hex", "size/rem"],
+      },
     },
   });
   // Read from the source, because Style Dictionary drops group metadata.

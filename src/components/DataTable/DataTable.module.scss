@@ -2,10 +2,10 @@
 
 // the table parent container
 .tableContainer {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--yart-color-border);
+  border-radius: var(--yart-radius-md);
   overflow: hidden; // the header cells paint opaque into the rounded corners
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--yart-space-5);
 }
 
 // Refetching with results already on screen: dim in place rather than
@@ -27,18 +27,18 @@
   table-layout: fixed; // don't let table auto layout otherwise columns will shift when paginating
 
   th {
-    background-color: var(--color-surface-raised);
-    border-bottom: 1px solid var(--color-border);
+    background-color: var(--yart-color-surface-raised);
+    border-bottom: 1px solid var(--yart-color-border);
   }
 
   td {
-    border-bottom: 1px solid var(--color-rule);
+    border-bottom: 1px solid var(--yart-color-rule);
   }
 
   th,
   td {
-    padding: var(--space-3) var(--space-4);
-    font-size: var(--font-size-base);
+    padding: var(--yart-space-3) var(--yart-space-4);
+    font-size: var(--yart-font-size-base);
   }
 
   // A number column reads at the end of the cell, with figures of one width so
@@ -49,7 +49,7 @@
   }
 
   tbody tr:hover {
-    background-color: var(--color-surface-hover);
+    background-color: var(--yart-color-surface-hover);
   }
 
   tbody tr:last-child td {
@@ -61,12 +61,12 @@
 .error,
 .noResults {
   text-align: center;
-  padding: var(--space-10) var(--space-5);
-  font-size: var(--font-size-base);
+  padding: var(--yart-space-10) var(--yart-space-5);
+  font-size: var(--yart-font-size-base);
 }
 
 .error {
-  color: var(--color-error);
+  color: var(--yart-color-error);
 }
 
 // The way back out of a failed load. Styled in the same idiom as the page
@@ -77,16 +77,16 @@
 // message happens to wrap.
 .retryButton {
   display: block;
-  margin: var(--space-4) auto 0;
-  background: var(--color-surface-raised);
-  border: 1px solid var(--color-border-strong);
-  padding: var(--space-1-5) var(--space-3);
+  margin: var(--yart-space-4) auto 0;
+  background: var(--yart-color-surface-raised);
+  border: 1px solid var(--yart-color-border-strong);
+  padding: var(--yart-space-1-5) var(--yart-space-3);
   cursor: pointer;
-  font-size: var(--font-size-sm);
-  color: var(--color-text);
+  font-size: var(--yart-font-size-sm);
+  color: var(--yart-color-text);
 
   &:hover {
-    background: var(--color-surface-hover);
+    background: var(--yart-color-surface-hover);
   }
 }
 

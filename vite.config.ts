@@ -4,7 +4,14 @@ import { defaultExclude, defineConfig } from "vitest/config";
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 
+import { defaultClientConditions, defaultServerConditions } from "vite";
 import type { Plugin } from "vite";
+
+import {
+  BUILD_TARGET,
+  SOURCE_CONDITION,
+  scopedClassName,
+} from "./vite.shared.ts";
 
 /**
  * Adds a Content-Security-Policy to the built shell.
@@ -201,10 +208,14 @@ export default defineConfig({
   // Safe here because the app writes its own address from window.location, so
   // nothing in the tree assumes the root.
   base: "./",
+  // Custom conditions replace Vite's defaults, so the defaults are spread back.
+  resolve: { conditions: [SOURCE_CONDITION, ...defaultClientConditions] },
+  ssr: {
+    resolve: { conditions: [SOURCE_CONDITION, ...defaultServerConditions] },
+  },
+  css: { modules: { generateScopedName: scopedClassName } },
   build: {
-    // The one place the browser floors live. Lightning CSS minifies CSS against
-    // these too, so they decide vendor prefixes as well as syntax lowering.
-    target: ["chrome111", "edge111", "firefox111", "safari16.4"],
+    target: BUILD_TARGET,
     rollupOptions: {
       // Declaring an input replaces the implicit single-shell one, so the
       // original shell has to be named here or it stops being built. Both stay

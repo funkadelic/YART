@@ -6,9 +6,9 @@
 // global sheets' bounded px count, and the positive claim that the focus ring is
 // drawn. The negative rules live in .stylelintrc.json.
 //
-// Reads the generated src/styles/tokens.css and src/index.css as files, because
-// the runner blanks CSS imports and jsdom evaluates neither var() nor
-// light-dark(). The environment is jsdom for the shell guard's DOMParser.
+// Reads the generated src/styles/tokens.css, src/yart.css and src/index.css as
+// files, because the runner blanks CSS imports and jsdom evaluates neither var()
+// nor light-dark(). The environment is jsdom for the shell guard's DOMParser.
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
@@ -25,6 +25,7 @@ const here = import.meta as ImportMeta & { dirname: string };
 const projectRoot = join(here.dirname, "..", "..");
 const cssPath = join(projectRoot, "src", "index.css");
 const tokensPath = join(projectRoot, "src", "styles", "tokens.css");
+const packagePath = join(projectRoot, "src", "yart.css");
 
 const LIGHT_SELECTOR = ":root";
 const DARK_SELECTOR = ':root[data-theme="dark"]';
@@ -40,12 +41,19 @@ const NON_TEXT_CONTRAST_MINIMUM = 3;
 // The logo is the same two colors in both themes by design, so these two are
 // the complete list of colors declared without a light-dark() pair. Written out
 // by hand, so the list cannot grow without a visible edit.
-const THEME_INVARIANT_TOKENS = ["--color-brand", "--color-brand-contrast"];
+const THEME_INVARIANT_TOKENS = [
+  "--yart-color-brand",
+  "--yart-color-brand-contrast",
+];
 
 // The tier that carries no theme at all: spacing, type and the radius. Their
 // prefix holds them out of the color assertions, so the exemption list above
 // stays at the two logo colors no matter how far the scale grows.
-const INVARIANT_TOKEN_PREFIXES = ["--space-", "--font-size-", "--radius-"];
+const INVARIANT_TOKEN_PREFIXES = [
+  "--yart-space-",
+  "--yart-font-size-",
+  "--yart-radius-",
+];
 
 // Opaque three- or six-digit only, the two forms luminance() parses.
 const OPAQUE_HEX = /#(?:[0-9a-f]{3}|[0-9a-f]{6})/.source;
@@ -55,7 +63,7 @@ const LIGHT_DARK = new RegExp(
   "i",
 );
 
-const IS_COLOR_TOKEN = /^--color-/;
+const IS_COLOR_TOKEN = /^--yart-color-/;
 
 // The flat tier the semantic tokens replaced. Named here so a stylesheet that
 // reaches for one goes red; the reference would otherwise resolve to nothing and
@@ -84,6 +92,9 @@ const RETIRED_TOKENS = [
 // interpolation or a reference mid-value is a use, and there is nothing to use
 // once no file declares one.
 const SCSS_VARIABLE = /^[ \t]*\$[\w-]+[ \t]*:/gm;
+
+// A bare name resolves to nothing and renders uncolored, unseen by stylelint.
+const UNPREFIXED_TOKEN = /(?<![\w-])--(?:color|space|font-size|radius)-[\w-]*/g;
 
 // The control radius and the container one, and nothing beside them. Counted, so
 // the exemption cannot grow to cover an unrelated px. A bounded count over the
@@ -130,8 +141,8 @@ function findStylesheets(directory: string): string[] {
   return found;
 }
 
-// The two global files are read on their own terms below, so the walk excludes them.
-const globalStylesheets = [cssPath, tokensPath];
+// The global files are read on their own terms below, so the walk excludes them.
+const globalStylesheets = [cssPath, tokensPath, packagePath];
 const componentStylesheets = findStylesheets(join(projectRoot, "src")).filter(
   (file) => !globalStylesheets.includes(file),
 );
@@ -230,23 +241,47 @@ function contrastRatio(a: string, b: string): number {
  * never to lower a threshold to keep it.
  */
 const PAIRS: Array<[string, string, number]> = [
-  ["--color-text", "--color-surface-hover", TEXT_CONTRAST_MINIMUM],
-  ["--color-text-muted", "--color-surface-raised", TEXT_CONTRAST_MINIMUM],
-  ["--color-accent", "--color-surface", TEXT_CONTRAST_MINIMUM],
-  ["--color-accent", "--color-surface-raised", TEXT_CONTRAST_MINIMUM],
-  ["--color-error", "--color-surface", TEXT_CONTRAST_MINIMUM],
-  ["--color-error", "--color-surface-raised", TEXT_CONTRAST_MINIMUM],
-  ["--color-border-strong", "--color-surface", NON_TEXT_CONTRAST_MINIMUM],
+  ["--yart-color-text", "--yart-color-surface-hover", TEXT_CONTRAST_MINIMUM],
   [
-    "--color-border-strong",
-    "--color-surface-raised",
+    "--yart-color-text-muted",
+    "--yart-color-surface-raised",
+    TEXT_CONTRAST_MINIMUM,
+  ],
+  ["--yart-color-accent", "--yart-color-surface", TEXT_CONTRAST_MINIMUM],
+  ["--yart-color-accent", "--yart-color-surface-raised", TEXT_CONTRAST_MINIMUM],
+  ["--yart-color-error", "--yart-color-surface", TEXT_CONTRAST_MINIMUM],
+  ["--yart-color-error", "--yart-color-surface-raised", TEXT_CONTRAST_MINIMUM],
+  [
+    "--yart-color-border-strong",
+    "--yart-color-surface",
     NON_TEXT_CONTRAST_MINIMUM,
   ],
-  ["--color-border-strong", "--color-surface-hover", NON_TEXT_CONTRAST_MINIMUM],
-  ["--color-focus-ring", "--color-surface", NON_TEXT_CONTRAST_MINIMUM],
-  ["--color-focus-ring", "--color-surface-raised", NON_TEXT_CONTRAST_MINIMUM],
-  ["--color-brand", "--color-surface", NON_TEXT_CONTRAST_MINIMUM],
-  ["--color-brand-contrast", "--color-brand", NON_TEXT_CONTRAST_MINIMUM],
+  [
+    "--yart-color-border-strong",
+    "--yart-color-surface-raised",
+    NON_TEXT_CONTRAST_MINIMUM,
+  ],
+  [
+    "--yart-color-border-strong",
+    "--yart-color-surface-hover",
+    NON_TEXT_CONTRAST_MINIMUM,
+  ],
+  [
+    "--yart-color-focus-ring",
+    "--yart-color-surface",
+    NON_TEXT_CONTRAST_MINIMUM,
+  ],
+  [
+    "--yart-color-focus-ring",
+    "--yart-color-surface-raised",
+    NON_TEXT_CONTRAST_MINIMUM,
+  ],
+  ["--yart-color-brand", "--yart-color-surface", NON_TEXT_CONTRAST_MINIMUM],
+  [
+    "--yart-color-brand-contrast",
+    "--yart-color-brand",
+    NON_TEXT_CONTRAST_MINIMUM,
+  ],
 ];
 
 describe("token tiers", () => {
@@ -260,8 +295,8 @@ describe("token tiers", () => {
     ).toBeGreaterThan(0);
 
     for (const [property, value] of tokenBlock) {
-      const tier = ["--color-", ...INVARIANT_TOKEN_PREFIXES].some((prefix) =>
-        property.startsWith(prefix),
+      const tier = ["--yart-color-", ...INVARIANT_TOKEN_PREFIXES].some(
+        (prefix) => property.startsWith(prefix),
       );
       expect(tier, `${property} belongs to no token tier`).toBe(true);
       if (!IS_COLOR_TOKEN.test(property)) continue;
@@ -311,13 +346,13 @@ describe("token tiers", () => {
     // accessibility property here, not a style preference.
     for (const [property, value] of tokenBlock) {
       if (
-        property.startsWith("--space-") ||
-        property.startsWith("--font-size-")
+        property.startsWith("--yart-space-") ||
+        property.startsWith("--yart-font-size-")
       )
         expect(value, `${property} is not a rem length`).toMatch(
           /^\d*\.?\d+rem$/,
         );
-      if (property.startsWith("--radius-"))
+      if (property.startsWith("--yart-radius-"))
         expect(value, `${property} is not a px length`).toMatch(/^\d+px$/);
     }
   });
@@ -466,6 +501,10 @@ describe("stray declarations in the component stylesheets", () => {
           offenders.push(`${name}: still names the retired token ${token}`);
         }
       }
+
+      for (const [token] of source.matchAll(UNPREFIXED_TOKEN)) {
+        offenders.push(`${name}: reads the unprefixed token ${token}`);
+      }
     }
 
     expect(offenders).toEqual([]);
@@ -481,12 +520,16 @@ describe("stray declarations in the component stylesheets", () => {
           `${relative(projectRoot, file)} still declares the retired token ${token}`,
         ).not.toMatch(new RegExp(`(?<![\\w-])${token}(?![\\w-])`));
       }
+      expect(
+        source.match(UNPREFIXED_TOKEN),
+        `${relative(projectRoot, file)} still names an unprefixed token`,
+      ).toBeNull();
     }
   });
 });
 
 // The half of the length rule stylelint's unit allowed-list has no way to say.
-// It counts instead of forbidding, over the two global sheets, where the two
+// It counts instead of forbidding, over the global sheets, where the two
 // corner radii are px on purpose.
 describe("length in the global stylesheets", () => {
   it("allows the global stylesheets the corner radii and nothing beside them", () => {
@@ -499,21 +542,23 @@ describe("length in the global stylesheets", () => {
 
     expect(
       found,
-      `src/index.css and src/styles/tokens.css hold ${String(found.length)} off-scale lengths rather than the radii alone: ${found.join(", ")}`,
+      `src/index.css, src/yart.css and src/styles/tokens.css hold ${String(found.length)} off-scale lengths rather than the radii alone: ${found.join(", ")}`,
     ).toHaveLength(GLOBAL_PX_ALLOWANCE);
   });
 });
 
-// The remap in src/index.css is a second list of the color token names, so a
-// color added to the generated stylesheet and forgotten there loses its color
-// under forced colors with every other gate still green. Read as text, because
+// The remap ships in src/yart.css and is a second list of the color token
+// names, so a color added to the generated stylesheet and forgotten there loses
+// its color under forced colors with every other gate still green. Read as text, because
 // postcss keys the media block's :root exactly as it keys the plain one.
 describe("the forced-colors remap", () => {
   it("covers every color token the stylesheet declares", () => {
-    const source = readFileSync(cssPath, "utf8");
+    const source = readFileSync(packagePath, "utf8");
     const forced = source.slice(source.indexOf("@media (forced-colors"));
     const remapped = new Set(
-      [...forced.matchAll(/(--color-[\w-]+)\s*:/g)].map(([, token]) => token),
+      [...forced.matchAll(/(--yart-color-[\w-]+)\s*:/g)].map(
+        ([, token]) => token,
+      ),
     );
     const declared = [...tokenBlock.keys()].filter((property) =>
       IS_COLOR_TOKEN.test(property),
@@ -521,6 +566,25 @@ describe("the forced-colors remap", () => {
 
     expect(declared.length).toBeGreaterThan(0);
     expect(declared.filter((token) => !remapped.has(token))).toEqual([]);
+  });
+
+  // Inside @layer yart, any unlayered host :root override would beat it.
+  it("sits outside the layer on a tripled :root", () => {
+    const remaps: { parent: string | undefined; selectors: string[] }[] = [];
+    postcss
+      .parse(readFileSync(packagePath, "utf8"), { from: packagePath })
+      .walkAtRules("media", (media) => {
+        if (!media.params.includes("forced-colors")) return;
+        const selectors: string[] = [];
+        media.walkRules((rule) => {
+          selectors.push(rule.selector);
+        });
+        remaps.push({ parent: media.parent?.type, selectors });
+      });
+
+    expect(remaps).toEqual([
+      { parent: "root", selectors: [":root:root:root"] },
+    ]);
   });
 });
 
@@ -535,6 +599,6 @@ describe("the focus ring", () => {
     expect(
       rule?.get("outline"),
       "the global focus rule does not draw its outline from the ring token",
-    ).toContain("--color-focus-ring");
+    ).toContain("--yart-color-focus-ring");
   });
 });

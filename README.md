@@ -3,7 +3,7 @@
 [![codecov](https://codecov.io/gh/funkadelic/YART/branch/main/graph/badge.svg)](https://codecov.io/gh/funkadelic/YART)
 [![CodSpeed](https://img.shields.io/endpoint?url=https://codspeed.io/badge.json)](https://app.codspeed.io/funkadelic/YART?utm_source=badge)
 
-A React and TypeScript single-page app for browsing large datasets in the browser: search, sort, and paginate world cities or films without a table library.
+A React and TypeScript single-page app for browsing large datasets in the browser: search, sort, and paginate world cities or films without a table library. The table is also published to npm as `yet-another-react-table`, and this demo consumes it through the same entry.
 
 **[Live demo](https://funkadelic.github.io/YART/)**, published from `main` by the pipeline once every gate passes. A second table over a films dataset is served beside it at **[`movies.html`](https://funkadelic.github.io/YART/movies.html)**, and everything described below holds for both pages. The header links each page to the other.
 
@@ -23,7 +23,8 @@ A React and TypeScript single-page app for browsing large datasets in the browse
 - [Browser support](#browser-support)
 - [Getting started](#getting-started)
 - [Usage](#usage)
-  - [Adopting the table](#adopting-the-table)
+  - [Installing](#installing)
+  - [Styling](#styling)
   - [A minimal table](#a-minimal-table)
   - [Adding search](#adding-search)
   - [Labels](#labels)
@@ -133,10 +134,10 @@ The static head of the document stays in the base language too. Its title, its d
 
 ## Stack
 
-- [TypeScript](https://www.typescriptlang.org) 6
-- [React](https://reactjs.org) 19
-- [Vite](https://vitejs.dev/) 8
-- [Vitest](https://vitest.dev) 5 and [Testing Library](https://testing-library.com/)
+- [TypeScript](https://www.typescriptlang.org)
+- [React](https://reactjs.org)
+- [Vite](https://vitejs.dev/)
+- [Vitest](https://vitest.dev) and [Testing Library](https://testing-library.com/)
 - [Playwright](https://playwright.dev) for the end-to-end suite
 - [Sass](https://sass-lang.com/) for the CSS Modules stylesheets
 - [Style Dictionary](https://styledictionary.com/) for the design tokens, written in the [DTCG](https://www.designtokens.org/) format
@@ -149,20 +150,22 @@ The static head of the document stays in the base language too. Its title, its d
 
 ## Browser support
 
-The app supports the browsers that were Baseline Widely available on 2026-08-20:
+The table and the demo support:
 
-- Chrome 111 and above
-- Edge 111 and above
-- Firefox 111 and above
-- Safari 16.4 and above
+- Chrome 123 and above
+- Edge 123 and above
+- Firefox 120 and above
+- Safari 17.5 and above
 
-The `build.target` array in `vite.config.ts` is the one place these versions live. It names them explicitly instead of taking the bundler default, so a Vite upgrade cannot change which browsers the output targets. Lightning CSS minifies the stylesheet against the same targets, so the array decides both which syntax is lowered and which vendor prefixes the stylesheet gets.
+These are the first versions with native `light-dark()`, which is what lets the table follow the page's color scheme. [Decision record 13](docs/adr/0013-floor-at-native-light-dark.md) has the reasoning.
 
-To raise the baseline, edit that array and the date above.
+`BUILD_TARGET` in `vite.shared.ts` is the one place these versions live, shared by the app build and the library build. It names them explicitly instead of taking the bundler default, so a Vite upgrade cannot change which browsers the output targets. Lightning CSS minifies the stylesheet against the same targets, so the array decides both which syntax is lowered and which vendor prefixes the stylesheet gets.
+
+To raise the floor, edit that array and the list above.
 
 ## Getting started
 
-Node 24 is required, and `.npmrc` sets `engine-strict=true`, so an older runtime fails the install instead of warning. `.nvmrc` names the version for a version manager to pick up.
+Node 24 is required through `devEngines` in `package.json`. npm 10.9 or later checks it and stops `npm ci`, `npm install` and `npm run` on an older runtime; an older npm ignores the field. `.nvmrc` names the version for a version manager to pick up.
 
 ```sh
 npm ci
@@ -177,17 +180,47 @@ The history contains a one-time commit that reformatted every file. Run `git con
 
 The table comes in two pieces. `DataTable<T, Id>` renders any collection and holds no state: the sort, the page, the page size and the search term arrive in one `state` object, and every user action comes back out as a callback. The component above it, the container, keeps that object and decides what comes next. In this app the container is `DatasetPage`.
 
-### Adopting the table
+### Installing
 
-The table is not published as a package. To use it in another React app, copy these files and keep their relative layout, since every import between them is relative:
+```sh
+npm install yet-another-react-table
+```
 
-- `src/components/DataTable/`, without the test files
-- `src/components/compareRows.ts` and `src/components/paginate.ts`
-- `src/components/SearchInput.tsx` and its stylesheet, for the search box
-- `src/hooks/useSortedRows.ts` and `src/hooks/usePaginatedRows.ts`, plus `src/hooks/useDebouncedCallback.ts` to debounce the search
-- `src/styles/_visually-hidden.scss`
+React is a peer dependency, at the range the package declares. Import the components and helpers from the package root, and the stylesheet once anywhere in the app:
 
-It needs React 19, `react-icons`, and Sass for the CSS Modules stylesheets. Those stylesheets take every color, spacing, font size and corner radius from CSS custom properties (`--color-*`, `--space-*`, `--font-size-*`, `--radius-*`). Import `src/styles/tokens.css` once in your app or define the same properties yourself. Without them the table renders unstyled.
+```tsx
+import { DataTable, columns } from "yet-another-react-table";
+import "yet-another-react-table/styles.css";
+```
+
+The package is ESM only. Its entry opens with a `"use client"` directive, so a server-component framework treats the table as a client component. That marks every export as client code, the helpers included. In a React Server Components app, call `parseTableState`, `serializeTableState`, `applyTableAction`, `DEFAULT_TABLE_STATE` and the English labels from a client component, not a server one. A TypeScript project whose bundler does not declare CSS imports adds `declare module "*.css";` to a declaration file.
+
+`columns<T>()` takes an `Intl.Collator` that the app builds, so the sort follows whichever language the app picks.
+
+### Styling
+
+The table takes every color, spacing, font size and corner radius from CSS custom properties, and those properties are the stable contract. The stylesheet's class names, `yart-<Component>__<class>`, are best-effort and may change in any release, so override through the properties rather than the classes.
+
+| Family    | Properties                                                                                                                                                                                                                                                                                                                                 |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Color     | `--yart-color-surface`, `--yart-color-surface-raised`, `--yart-color-surface-hover`, `--yart-color-text`, `--yart-color-text-muted`, `--yart-color-border`, `--yart-color-border-strong`, `--yart-color-rule`, `--yart-color-accent`, `--yart-color-error`, `--yart-color-focus-ring`, `--yart-color-brand`, `--yart-color-brand-contrast` |
+| Space     | `--yart-space-1`, `--yart-space-1-5`, `--yart-space-2`, `--yart-space-2-5`, `--yart-space-3`, `--yart-space-4`, `--yart-space-5`, `--yart-space-6`, `--yart-space-8`, `--yart-space-10`, `--yart-space-11`                                                                                                                                 |
+| Font size | `--yart-font-size-sm`, `--yart-font-size-base`, `--yart-font-size-lg`, `--yart-font-size-xl`, `--yart-font-size-2xl`                                                                                                                                                                                                                       |
+| Radius    | `--yart-radius-sm`, `--yart-radius-md`                                                                                                                                                                                                                                                                                                     |
+
+The defaults live in `@layer yart`, so any unlayered rule overrides one without a specificity contest:
+
+```css
+:root {
+  --yart-color-accent: #6d28d9;
+}
+```
+
+Light and dark follow the page's `color-scheme`, set on the root or on any ancestor of the table. There is no attribute to set.
+
+The package handles forced colors mode. Its remap sits outside the layer on `:root:root:root`, so it beats a `:root` override like the one above, or a themed one such as `:root[data-theme="dark"]`, whatever order the stylesheets load in. A host rule more specific than that, or an override set on an element below the root, still wins under forced colors, so a host that writes one should remap it too.
+
+The table draws no focus ring of its own and cancels none, so the browser's or the host's focus style applies. `--yart-color-focus-ring` is there for a host that wants the ring in the table's palette.
 
 ### A minimal table
 
@@ -195,14 +228,13 @@ It needs React 19, `react-icons`, and Sass for the CSS Modules stylesheets. Thos
 import { useCallback, useState } from "react";
 import {
   DataTable,
-  type DataTableLabels,
-} from "./components/DataTable/DataTable";
-import { columns } from "./components/DataTable/column";
-import {
   DEFAULT_TABLE_STATE,
   applyTableAction,
+  columns,
+  englishTableLabels,
   type TableState,
-} from "./components/DataTable/tableState";
+} from "yet-another-react-table";
+import "yet-another-react-table/styles.css";
 
 interface Part {
   sku: string;
@@ -225,32 +257,6 @@ type PartColumnId = (typeof PART_COLUMNS)[number]["id"];
 
 // Unique per row, and declared at module scope for a stable identity.
 const partId = (part: Part) => part.sku;
-
-const direction = (dir: "asc" | "desc") =>
-  dir === "asc" ? "ascending" : "descending";
-
-const LABELS: DataTableLabels = {
-  loading: "Loading parts",
-  empty: "No parts match the search.",
-  emptyAnnouncement: "No parts match the search.",
-  results: (shown, total) => `Showing ${shown} of ${total} parts`,
-  caption: (total, sortSummary) => `${total} parts, ${sortSummary}`,
-  error: (message) => `The parts could not be loaded: ${message}`,
-  retry: "Try again",
-  sortedAnnouncement: (label, dir) => `Sorted by ${label}, ${direction(dir)}`,
-  sortClearedAnnouncement: "Sort removed",
-  unsorted: "not sorted",
-  sortSummary: (label, dir) => `sorted by ${label}, ${direction(dir)}`,
-  pagination: {
-    pageSize: "Rows per page",
-    navigation: "Pages",
-    firstPage: "First page",
-    previousPage: "Previous page",
-    nextPage: "Next page",
-    lastPage: "Last page",
-    pageStatus: (page, totalPages) => `Page ${page} of ${totalPages}`,
-  },
-};
 
 export function PartsTable({ parts }: { parts: readonly Part[] }) {
   const [state, setState] =
@@ -278,7 +284,7 @@ export function PartsTable({ parts }: { parts: readonly Part[] }) {
       loading={false}
       datasetReady
       errorMessage={null}
-      labels={LABELS}
+      labels={englishTableLabels}
     />
   );
 }
@@ -291,30 +297,92 @@ Hold the state with `useState` and turn each callback into the next state with `
 `DataTable` does not filter. Keep the committed term in `state.query`, filter the rows yourself, and pass the result as `rows`. A `query` action also returns the table to page 1.
 
 ```tsx
-const [term, setTerm] = useState("");
+import { useCallback, useMemo, useState } from "react";
+import {
+  DataTable,
+  DEFAULT_TABLE_STATE,
+  SearchInput,
+  applyTableAction,
+  columns,
+  englishSearchLabels,
+  englishTableLabels,
+  type TableState,
+} from "yet-another-react-table";
 
-const handleSearch = useCallback((next: string) => {
-  setTerm(next);
-  setState((s) => applyTableAction(s, { type: "query", query: next.trim() }));
-}, []);
+interface Part {
+  sku: string;
+  name: string;
+}
 
-const matching = useMemo(() => {
-  const needle = state.query.toLowerCase();
-  return parts.filter((part) => part.name.toLowerCase().includes(needle));
-}, [parts, state.query]);
+const col = columns<Part>(new Intl.Collator("en-US"));
+const PART_COLUMNS = [col.key("name", { label: "Part" })];
+type PartColumnId = (typeof PART_COLUMNS)[number]["id"];
+const partId = (part: Part) => part.sku;
 
-const searchBox = (
-  <SearchInput
-    value={term}
-    onChange={handleSearch}
-    labels={{ name: "Search", placeholder: "Search parts" }}
-  />
-);
+export function SearchablePartsTable({ parts }: { parts: readonly Part[] }) {
+  const [state, setState] =
+    useState<TableState<PartColumnId>>(DEFAULT_TABLE_STATE);
+  const [term, setTerm] = useState("");
+
+  const handleSearch = useCallback((next: string) => {
+    setTerm(next);
+    setState((s) => applyTableAction(s, { type: "query", query: next.trim() }));
+  }, []);
+
+  const matching = useMemo(() => {
+    const needle = state.query.toLowerCase();
+    return parts.filter((part) => part.name.toLowerCase().includes(needle));
+  }, [parts, state.query]);
+
+  return (
+    <>
+      <SearchInput
+        value={term}
+        onChange={handleSearch}
+        labels={englishSearchLabels}
+      />
+      <DataTable
+        rows={matching}
+        columns={PART_COLUMNS}
+        getRowId={partId}
+        state={state}
+        onSortChange={(columnId) =>
+          setState((s) => applyTableAction(s, { type: "sort", columnId }))
+        }
+        onPageChange={(page) =>
+          setState((s) => applyTableAction(s, { type: "page", page }))
+        }
+        onPageSizeChange={(pageSize) =>
+          setState((s) => applyTableAction(s, { type: "pageSize", pageSize }))
+        }
+        loading={false}
+        datasetReady
+        errorMessage={null}
+        labels={englishTableLabels}
+      />
+    </>
+  );
+}
 ```
 
 `term` is what the box shows and `state.query` is the trimmed term the rows are filtered by. `SearchInput` is optional; any input that dispatches a `query` action works. Over a large collection, delay the `query` action with `useDebouncedCallback`, as `DatasetPage` does at 150 ms.
 
 ### Labels
+
+The package exports English copy for both components, `englishTableLabels` and `englishSearchLabels`. It names no dataset, so spread it and override the entries that need your wording:
+
+```tsx
+import {
+  englishTableLabels,
+  type DataTableLabels,
+} from "yet-another-react-table";
+
+const PART_LABELS: DataTableLabels = {
+  ...englishTableLabels,
+  empty: "No parts match the search.",
+  pagination: { ...englishTableLabels.pagination, pageSize: "Parts per page" },
+};
+```
 
 `DataTable` renders no text of its own. Every string comes from the `labels` prop. An entry that includes a number or a column name is a function, so each language can build the sentence its own way.
 
@@ -466,7 +534,7 @@ Construct the collator once and reuse it; building one inside each comparison is
 
 ### Page size options
 
-The page size select offers `PAGE_SIZE_OPTIONS` from `src/components/DataTable/tableState.ts`, currently 10, 25, 50 and 100. The default is `DEFAULT_TABLE_STATE.pageSize`, 10, and it has to be one of the options. The same list validates `size` in the address, so a link naming a size that was removed opens at the default.
+The page size select offers `PAGE_SIZE_OPTIONS`, a fixed package export: 10, 25, 50 and 100. The default is `DEFAULT_TABLE_STATE.pageSize`, 10, and it has to be one of the options. The same list validates `size` in the address, so a link naming a size that was removed opens at the default.
 
 The first, previous, next and last controls hide when there is only one page; the page size select stays. A page past the end of the results shows the last page without changing the stored page.
 
@@ -618,12 +686,14 @@ Codecov also tracks bundle size. After each build, its standalone analyzer uploa
 | ------------------------- | -------------------------------------------------------------------------- |
 | `npm run dev`             | Start the dev server with hot reload                                       |
 | `npm run build`           | Build the production bundle                                                |
+| `npm run build:lib`       | Build the npm package into `lib/`                                          |
 | `npm run preview`         | Serve the built bundle locally                                             |
 | `npm test`                | Run the test suite once                                                    |
 | `npm run test:watch`      | Run the test suite in watch mode                                           |
 | `npm run test:coverage`   | Run the test suite once with coverage, which CI enforces at 100%           |
 | `npm run test:browser`    | Run the accessibility checks in a real Chromium                            |
 | `npm run test:e2e`        | Run the end-to-end suite in a real Chromium against a built bundle         |
+| `npm run test:package`    | Pack the package and check the tarball a consumer installs                 |
 | `npm run lighthouse`      | Audit both pages' performance on a built bundle and report the medians     |
 | `npm run test:mutation`   | Change the source a piece at a time and report what no test catches        |
 | `npm run chromatic`       | Upload the snapshots a full `npm run test:e2e` archived, for visual review |
@@ -661,7 +731,7 @@ There is no server. `getCities` and `getFilms` search an array held in memory, s
 
 ## License
 
-The source in this repository is MIT licensed; see `LICENSE`.
+The source in this repository is MIT licensed; see `LICENSE`. The npm package carries only the table and its stylesheet, no dataset, so neither dataset license below reaches it.
 
 The city dataset is not covered by that license. It is redistributed from SimpleMaps under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) and keeps those terms, which the Data attribution section below states.
 

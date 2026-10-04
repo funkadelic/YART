@@ -6,7 +6,7 @@ import {
   MdChevronRight,
 } from "react-icons/md";
 
-import { PAGE_SIZE_OPTIONS } from "./tableState";
+import { PAGE_SIZE_OPTIONS } from "./tableState.js";
 import styles from "./Pagination.module.scss";
 
 /** Each action entry is read twice, as tooltip and as accessible name. */

@@ -1,6 +1,3 @@
-/* Design tokens, generated from the DTCG files in tokens/. */
-@import "./styles/tokens.css";
-
 :root {
   /* A concrete value, never "light dark", so native chrome does not follow the
      operating system after the reader chose a theme. */
@@ -9,42 +6,14 @@
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
   line-height: 1.5;
-  color: var(--color-text);
-  background-color: var(--color-surface);
+  color: var(--yart-color-text);
+  background-color: var(--yart-color-surface);
 }
 
 :root[data-theme="dark"] {
-  /* The production build lowers light-dark() into a toggle that flips only on
-     this declaration, not on the theme script's inline style. */
+  /* Native light-dark() resolves against this declaration, which is why the
+     theme is set here and not only on the script's inline style. */
   color-scheme: dark;
-}
-
-/* a11y: forced colors throws away every author color, so the remap happens at
-   the token tier and every component follows. One selector is enough: the
-   generated stylesheet declares each color once and this block is imported
-   after it. */
-@media (forced-colors: active) {
-  :root {
-    --color-surface: Canvas;
-    --color-surface-raised: Canvas;
-    --color-surface-hover: Canvas;
-    --color-text: CanvasText;
-    --color-text-muted: CanvasText;
-
-    /* The palette offers one foreground for every edge and rule, and one color
-       for a chosen thing. */
-    --color-border: CanvasText;
-    --color-border-strong: CanvasText;
-    --color-rule: CanvasText;
-    --color-accent: Highlight;
-    --color-error: CanvasText;
-
-    /* The ring is offset onto the surface behind the control, where Highlight
-       would collide with a selected control's own fill. */
-    --color-focus-ring: CanvasText;
-    --color-brand: CanvasText;
-    --color-brand-contrast: Canvas;
-  }
 }
 
 /* a11y: one focus indicator for the whole app, unscoped and global rather than
@@ -53,7 +22,7 @@
    because a selector with no local class has nothing for the module transform
    to scope, and its handling there is not a thing to depend on. */
 :focus-visible {
-  outline: 2px solid var(--color-focus-ring);
+  outline: 2px solid var(--yart-color-focus-ring);
   outline-offset: 2px;
 }
 
@@ -67,6 +36,6 @@ body {
 }
 
 h1 {
-  font-size: var(--font-size-2xl);
-  margin: 0 0 var(--space-4);
+  font-size: var(--yart-font-size-2xl);
+  margin: 0 0 var(--yart-space-4);
 }

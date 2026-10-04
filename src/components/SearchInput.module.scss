@@ -1,6 +1,6 @@
 // the search box
 .searchContainer {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--yart-space-5);
 
   .searchInput {
     width: 45%;
@@ -17,29 +17,29 @@
     // are left physical: they mean the same thing either way round.
     .searchIcon {
       position: absolute;
-      inset-inline-start: var(--space-4);
+      inset-inline-start: var(--yart-space-4);
       top: 50%;
       transform: translateY(-50%);
-      color: var(--color-text-muted);
-      font-size: var(--font-size-xl);
+      color: var(--yart-color-text-muted);
+      font-size: var(--yart-font-size-xl);
     }
 
     input {
       width: 100%;
       box-sizing: border-box; // ignore border & padding to determine width
-      padding-block: var(--space-2-5);
-      padding-inline: var(--space-11) var(--space-2-5);
-      border: 1px solid var(--color-border-strong);
-      border-radius: var(--radius-md);
-      font-size: var(--font-size-base);
+      padding-block: var(--yart-space-2-5);
+      padding-inline: var(--yart-space-11) var(--yart-space-2-5);
+      border: 1px solid var(--yart-color-border-strong);
+      border-radius: var(--yart-radius-md);
+      font-size: var(--yart-font-size-base);
 
       // Declared rather than left to the user agent: under color-scheme: dark
       // the browser fills the field with its own gray and the border fails 3:1.
-      background-color: var(--color-surface-raised);
-      color: var(--color-text);
+      background-color: var(--yart-color-surface-raised);
+      color: var(--yart-color-text);
 
       &::placeholder {
-        color: var(--color-text-muted);
+        color: var(--yart-color-text-muted);
       }
 
       // Paired with the global focus ring rather than replacing it: the border
@@ -47,13 +47,13 @@
       // state the ring is, so it answers the keyboard rather than firing on
       // every mouse click the way a plain focus selector would.
       &:focus-visible {
-        border-color: var(--color-accent);
+        border-color: var(--yart-color-accent);
       }
     }
 
     &:focus-within .searchIcon {
       // make the search icon match the input border color when focused
-      color: var(--color-accent);
+      color: var(--yart-color-accent);
     }
   }
 }
