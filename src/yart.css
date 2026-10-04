@@ -2,10 +2,11 @@
 @import "./styles/tokens.css" layer(yart);
 
 /* a11y: forced colors throws away every author color, so the remap happens at
-   the token tier and every component follows. Unlayered on a doubled :root, it
-   beats a host's :root override in any load order; a more specific rule still wins. */
+   the token tier and every component follows. Unlayered on a tripled :root, it
+   beats a host's :root override, themed ones like :root.dark included, in any
+   load order; a more specific rule still wins. */
 @media (forced-colors: active) {
-  :root:root {
+  :root:root:root {
     --yart-color-surface: Canvas;
     --yart-color-surface-raised: Canvas;
     --yart-color-surface-hover: Canvas;

@@ -13,7 +13,7 @@ Style Dictionary's `prefix` option names every token `--yart-*`. The DTCG source
 
 The defaults ship inside `@layer yart`, so any unlayered host rule wins without a specificity contest.
 
-The forced-colors remap is the table's accessibility guarantee, not the demo's, so it travels with the table. It sits outside the layer, on `:root:root`, so it outranks a host's plain `:root` override whichever stylesheet loads last. `!important` was refused: it would also beat a host that restyles forced colors on purpose, which a more specific rule still can.
+The forced-colors remap is the table's accessibility guarantee, not the demo's, so it travels with the table. It sits outside the layer, on `:root:root:root`, so it outranks a host's `:root` override, a themed one such as `:root.dark` included, whichever stylesheet loads last. `!important` was refused: it would also beat a host that restyles forced colors on purpose, which a more specific rule still can.
 
 Component rules stay unlayered. A layered rule would lose to a host's element reset, which is usually unlayered.
 

@@ -205,10 +205,10 @@ function assertArtifacts() {
   if (
     remaps.length !== 1 ||
     remap.parent.type !== "root" ||
-    remap.first?.selector !== ":root:root"
+    remap.first?.selector !== ":root:root:root"
   ) {
     throw new Error(
-      "lib/styles.css lacks one unlayered :root:root forced-colors remap",
+      "lib/styles.css lacks one unlayered :root:root:root forced-colors remap",
     );
   }
   const types = join(lib, "types");

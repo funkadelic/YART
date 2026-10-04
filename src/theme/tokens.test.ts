@@ -569,7 +569,7 @@ describe("the forced-colors remap", () => {
   });
 
   // Inside @layer yart, any unlayered host :root override would beat it.
-  it("sits outside the layer on a doubled :root", () => {
+  it("sits outside the layer on a tripled :root", () => {
     const remaps: { parent: string | undefined; selectors: string[] }[] = [];
     postcss
       .parse(readFileSync(packagePath, "utf8"), { from: packagePath })
@@ -582,7 +582,9 @@ describe("the forced-colors remap", () => {
         remaps.push({ parent: media.parent?.type, selectors });
       });
 
-    expect(remaps).toEqual([{ parent: "root", selectors: [":root:root"] }]);
+    expect(remaps).toEqual([
+      { parent: "root", selectors: [":root:root:root"] },
+    ]);
   });
 });
 
