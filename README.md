@@ -134,10 +134,10 @@ The static head of the document stays in the base language too. Its title, its d
 
 ## Stack
 
-- [TypeScript](https://www.typescriptlang.org) 6
-- [React](https://reactjs.org) 19
-- [Vite](https://vitejs.dev/) 8
-- [Vitest](https://vitest.dev) 5 and [Testing Library](https://testing-library.com/)
+- [TypeScript](https://www.typescriptlang.org)
+- [React](https://reactjs.org)
+- [Vite](https://vitejs.dev/)
+- [Vitest](https://vitest.dev) and [Testing Library](https://testing-library.com/)
 - [Playwright](https://playwright.dev) for the end-to-end suite
 - [Sass](https://sass-lang.com/) for the CSS Modules stylesheets
 - [Style Dictionary](https://styledictionary.com/) for the design tokens, written in the [DTCG](https://www.designtokens.org/) format
