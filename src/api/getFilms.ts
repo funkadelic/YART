@@ -4,11 +4,6 @@ import { loadFilms } from "../data/films/films";
 // Re-exported so a consumer needs one import path rather than two.
 export type { Film };
 
-// The failure vocabulary reaches the tree through this seam too, so the loader
-// keeps exactly one consumer.
-export type { DatasetErrorCode } from "../data/films/films";
-export { DATASET_ERROR_CODES, DatasetError } from "../data/films/films";
-
 export interface GetFilmsParams {
   searchTerm?: string;
 }

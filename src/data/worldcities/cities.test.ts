@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 
-import type { City, DatasetErrorCode } from "../../api/getCities";
+import type { City } from "../../api/getCities";
+import type { DatasetError, DatasetErrorCode } from "../loadEnvelope";
 import { CITY_FIXTURE_ENVELOPE } from "../../test/cityFixture";
 import { stubDatasetFetch } from "../../test/fetchStub";
 
@@ -74,15 +75,14 @@ async function rejection(
 ): Promise<{ message: string; code: DatasetErrorCode | undefined }> {
   stubDatasetFetch(payload);
   const cities = await freshCities();
+  // Imported after the fresh load because each case resets the module
+  // registry, and instanceof against a class imported at the top fails.
+  const loader = await import("../loadEnvelope");
 
   try {
     await cities.loadCities();
   } catch (error) {
-    // The class is read off the freshly loaded module, not imported at the top
-    // of this file. Every case here resets the module registry, which
-    // hands the loader a new class object each time, and a class imported once
-    // would stop recognizing its own instances after the first reset.
-    if (error instanceof cities.DatasetError) {
+    if (error instanceof loader.DatasetError) {
       return { message: error.message, code: error.code };
     }
     return {
@@ -101,11 +101,13 @@ async function rejection(
  */
 async function rejectionOf(
   cities: typeof import("./cities"),
-): Promise<InstanceType<typeof cities.DatasetError>> {
+): Promise<DatasetError> {
+  const loader = await import("../loadEnvelope");
+
   try {
     await cities.loadCities();
   } catch (error) {
-    if (error instanceof cities.DatasetError) return error;
+    if (error instanceof loader.DatasetError) return error;
     throw new Error(
       `The load rejected with something other than a dataset error: ${String(error)}`,
       { cause: error },

@@ -4,11 +4,6 @@ import { SEARCH_KEY_SEPARATOR, loadCities } from "../data/worldcities/cities";
 // Re-exported so no consumer's import path changed when the definition moved.
 export type { City };
 
-// The failure vocabulary reaches the tree through this seam too, so the loader
-// keeps exactly one consumer.
-export type { DatasetErrorCode } from "../data/worldcities/cities";
-export { DATASET_ERROR_CODES, DatasetError } from "../data/worldcities/cities";
-
 export interface GetCitiesParams {
   searchTerm?: string;
 }

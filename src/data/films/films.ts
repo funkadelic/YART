@@ -3,11 +3,6 @@
 import filmsUrl from "./films.json?url";
 import { DatasetError, createEnvelopeLoader } from "../loadEnvelope";
 
-// The failure vocabulary reaches the tree through this module, so a consumer
-// needs one import path rather than two. src/api/getFilms.ts does the same.
-export type { DatasetErrorCode } from "../loadEnvelope";
-export { DATASET_ERROR_CODES, DatasetError } from "../loadEnvelope";
-
 /**
  * Wikidata films, queried through the Query Service and released under CC0 1.0.
  * Provenance is in license.md. A missing year or runtime is null rather than

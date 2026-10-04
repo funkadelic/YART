@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DATASET_ERROR_CODES } from "../../api/getCities";
+import { DATASET_ERROR_CODES } from "../../data/loadEnvelope";
 import { required } from "../../test/required";
 import { listFormatFor, numberFormatFor, pluralRulesFor } from "../format";
 import { CATALOG_IDS, resolveLocale } from "../resolveLocale";

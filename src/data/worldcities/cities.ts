@@ -7,15 +7,8 @@ import {
   createEnvelopeLoader,
 } from "../loadEnvelope";
 
-// The failure vocabulary reaches the tree through this module, so no consumer's
-// import path moved when the shared boundaries were extracted. Same trick
-// src/api/getCities.ts uses on this module, for the same reason.
-export type { DatasetErrorCode } from "../loadEnvelope";
-export {
-  DATASET_ERROR_CODES,
-  DatasetError,
-  SEARCH_KEY_SEPARATOR,
-} from "../loadEnvelope";
+// Re-exported because src/api/getCities.ts and its test read the separator here.
+export { SEARCH_KEY_SEPARATOR } from "../loadEnvelope";
 
 /**
  * simplemaps.com "World Cities" basic database, v1.91.3, distributed under
