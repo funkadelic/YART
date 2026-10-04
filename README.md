@@ -159,7 +159,7 @@ The table and the demo support:
 
 These are the first versions with native `light-dark()`, which is what lets the table follow the page's color scheme. [Decision record 13](docs/adr/0013-floor-at-native-light-dark.md) has the reasoning.
 
-`BUILD_TARGET` in `vite.config.ts` is the one place these versions live, shared by the app build and the library build. It names them explicitly instead of taking the bundler default, so a Vite upgrade cannot change which browsers the output targets. Lightning CSS minifies the stylesheet against the same targets, so the array decides both which syntax is lowered and which vendor prefixes the stylesheet gets.
+`BUILD_TARGET` in `vite.shared.ts` is the one place these versions live, shared by the app build and the library build. It names them explicitly instead of taking the bundler default, so a Vite upgrade cannot change which browsers the output targets. Lightning CSS minifies the stylesheet against the same targets, so the array decides both which syntax is lowered and which vendor prefixes the stylesheet gets.
 
 To raise the floor, edit that array and the list above.
 

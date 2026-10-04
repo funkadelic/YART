@@ -11,7 +11,7 @@ Inside the demo that worked, because the demo sets those rules. Inside a host pa
 
 ## Decision
 
-Raise the one floor, `BUILD_TARGET` in `vite.config.ts`, which the app build and the library build share, to Chrome 123, Edge 123, Firefox 120 and Safari 17.5. These are the first versions with native `light-dark()`, so Lightning CSS stops lowering it.
+Raise the one floor, `BUILD_TARGET` in `vite.shared.ts`, which the app build and the library build share, to Chrome 123, Edge 123, Firefox 120 and Safari 17.5. These are the first versions with native `light-dark()`, so Lightning CSS stops lowering it.
 
 The table then follows whatever `color-scheme` the page sets on the root or on any ancestor, and ships no theme hook.
 
