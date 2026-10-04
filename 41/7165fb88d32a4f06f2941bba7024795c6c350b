@@ -1,0 +1,19 @@
+.github/workflows/ci.yml
+  s_369291ba83c7bf::t_965a9598ddef2f 29-30,33,92,96,102,118,124,136,158,176,187,197,228,250
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "417165fb88d32a4f06f2941bba7024795c6c350b",
+  "prompts": {},
+  "sessions": {
+    "s_369291ba83c7bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d9edbb91-3dcd-4752-98a9-58e406846090",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
