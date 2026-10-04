@@ -297,27 +297,72 @@ Hold the state with `useState` and turn each callback into the next state with `
 `DataTable` does not filter. Keep the committed term in `state.query`, filter the rows yourself, and pass the result as `rows`. A `query` action also returns the table to page 1.
 
 ```tsx
-import { SearchInput, englishSearchLabels } from "yet-another-react-table";
+import { useCallback, useMemo, useState } from "react";
+import {
+  DataTable,
+  DEFAULT_TABLE_STATE,
+  SearchInput,
+  applyTableAction,
+  columns,
+  englishSearchLabels,
+  englishTableLabels,
+  type TableState,
+} from "yet-another-react-table";
 
-const [term, setTerm] = useState("");
+interface Part {
+  sku: string;
+  name: string;
+}
 
-const handleSearch = useCallback((next: string) => {
-  setTerm(next);
-  setState((s) => applyTableAction(s, { type: "query", query: next.trim() }));
-}, []);
+const col = columns<Part>(new Intl.Collator("en-US"));
+const PART_COLUMNS = [col.key("name", { label: "Part" })];
+type PartColumnId = (typeof PART_COLUMNS)[number]["id"];
+const partId = (part: Part) => part.sku;
 
-const matching = useMemo(() => {
-  const needle = state.query.toLowerCase();
-  return parts.filter((part) => part.name.toLowerCase().includes(needle));
-}, [parts, state.query]);
+export function SearchablePartsTable({ parts }: { parts: readonly Part[] }) {
+  const [state, setState] =
+    useState<TableState<PartColumnId>>(DEFAULT_TABLE_STATE);
+  const [term, setTerm] = useState("");
 
-const searchBox = (
-  <SearchInput
-    value={term}
-    onChange={handleSearch}
-    labels={englishSearchLabels}
-  />
-);
+  const handleSearch = useCallback((next: string) => {
+    setTerm(next);
+    setState((s) => applyTableAction(s, { type: "query", query: next.trim() }));
+  }, []);
+
+  const matching = useMemo(() => {
+    const needle = state.query.toLowerCase();
+    return parts.filter((part) => part.name.toLowerCase().includes(needle));
+  }, [parts, state.query]);
+
+  return (
+    <>
+      <SearchInput
+        value={term}
+        onChange={handleSearch}
+        labels={englishSearchLabels}
+      />
+      <DataTable
+        rows={matching}
+        columns={PART_COLUMNS}
+        getRowId={partId}
+        state={state}
+        onSortChange={(columnId) =>
+          setState((s) => applyTableAction(s, { type: "sort", columnId }))
+        }
+        onPageChange={(page) =>
+          setState((s) => applyTableAction(s, { type: "page", page }))
+        }
+        onPageSizeChange={(pageSize) =>
+          setState((s) => applyTableAction(s, { type: "pageSize", pageSize }))
+        }
+        loading={false}
+        datasetReady
+        errorMessage={null}
+        labels={englishTableLabels}
+      />
+    </>
+  );
+}
 ```
 
 `term` is what the box shows and `state.query` is the trimmed term the rows are filtered by. `SearchInput` is optional; any input that dispatches a `query` action works. Over a large collection, delay the `query` action with `useDebouncedCallback`, as `DatasetPage` does at 150 ms.
