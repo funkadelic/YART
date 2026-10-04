@@ -29,7 +29,7 @@ jobs:
     env:
       HAS_CHROMATIC: ${{ secrets.CHROMATIC_PROJECT_TOKEN != '' }}
     outputs:
-      heavy-checks: ${{ steps.scope.outputs.heavy }}
+      ui-checks: ${{ steps.scope.outputs.ui }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -40,7 +40,9 @@ jobs:
 
       # Turns off the browser sweeps, Lighthouse, the uploads and Chromatic when
       # nothing they check changed: a release PR, or a PR touching only Markdown
-      # and docs/. Verify itself still runs, so the required check reports.
+      # and docs/. Lighthouse, the bundle stats and Chromatic also need a change
+      # that can reach the built page or the specs Chromatic captures from.
+      # Verify itself still runs, so the required check reports.
       - name: Decide which checks run
         id: scope
         env:
@@ -49,13 +51,23 @@ jobs:
           RELEASE_PR: ${{ github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.head_ref, 'release-please--') }}
         run: |
           heavy=true
+          ui=true
           if [ "$RELEASE_PR" = true ]; then
             heavy=false
-          elif [ -n "$BASE_SHA" ] && ! git diff --name-only "$BASE_SHA" HEAD | grep -qvE '(\.md$|^docs/)'; then
-            heavy=false
+            ui=false
+          elif [ -n "$BASE_SHA" ]; then
+            changed="$(git diff --name-only "$BASE_SHA" HEAD)"
+            if ! grep -qvE '(\.md$|^docs/)' <<< "$changed"; then
+              heavy=false
+              ui=false
+            elif ! grep -E '^(src/|e2e/|public/|tokens/|index\.html$|movies\.html$|vite\.|tsconfig|playwright\.config\.ts$|package(-lock)?\.json$|\.nvmrc$|scripts/lighthouse\.mjs$|\.github/workflows/)' <<< "$changed" \
+              | grep -vE '(\.test\.tsx?$|^src/test/)' > /dev/null; then
+              ui=false
+            fi
           fi
-          echo "heavy=$heavy" >> "$GITHUB_OUTPUT"
+          echo "ui=$ui" >> "$GITHUB_OUTPUT"
           echo "HEAVY_CHECKS=$heavy" >> "$GITHUB_ENV"
+          echo "UI_CHECKS=$ui" >> "$GITHUB_ENV"
 
       # Pull requests only, since a push has no base to diff against. Before the
       # install, so a known advisory stops the job while the change is in review.
@@ -133,13 +145,13 @@ jobs:
       # Advisory: a slow score or a failed audit never fails the job. Reuses the
       # build and the headless shell the sweeps above already have in place.
       - name: Lighthouse
-        if: env.HEAVY_CHECKS == 'true'
+        if: env.UI_CHECKS == 'true'
         run: npm run lighthouse
         continue-on-error: true
         timeout-minutes: 5
 
       - name: Upload Lighthouse reports
-        if: env.HEAVY_CHECKS == 'true'
+        if: env.UI_CHECKS == 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         continue-on-error: true
         with:
@@ -191,7 +203,7 @@ jobs:
       # fallback matcher only recognizes a hex hash. Keep the pattern in step with
       # the bundler's asset file names.
       - name: Upload bundle stats to Codecov
-        if: github.actor != 'dependabot[bot]' && env.HEAVY_CHECKS == 'true'
+        if: github.actor != 'dependabot[bot]' && env.UI_CHECKS == 'true'
         run: >-
           npx bundle-analyzer ./dist
           --bundle-name=yart
@@ -243,7 +255,7 @@ jobs:
       # the event payload. It carries its own copy of the CLI, so keep this pin
       # and the one in package.json on the same version.
       - name: Chromatic
-        if: env.HAS_CHROMATIC == 'true' && env.HEAVY_CHECKS == 'true'
+        if: env.HAS_CHROMATIC == 'true' && env.UI_CHECKS == 'true'
         env:
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
         uses: chromaui/action@db3ceb5efb0cd7447d63c2d8cce7da732ce89322 # v18.10.1
@@ -265,7 +277,7 @@ jobs:
       github.event_name == 'pull_request'
       && github.event.pull_request.head.repo.full_name == github.repository
       && github.actor != 'dependabot[bot]'
-      && needs.verify.outputs.heavy-checks == 'true'
+      && needs.verify.outputs.ui-checks == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
     continue-on-error: true
