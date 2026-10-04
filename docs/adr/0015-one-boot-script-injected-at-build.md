@@ -13,7 +13,7 @@ The script is one function in `src/bootDocument.ts`, serialized with `Function.p
 
 ## Consequences
 
-The constants have one source. The rule is still written twice, once in each resolver and once in the boot function, and the boot function's unit tests in the gated suite hold the two together.
+The constants have one source. Each rule is still written twice, once in its resolver and once in the boot function, and the boot function's unit tests in the gated suite compare the two.
 
 The function must reference nothing outside its own body. A test evaluates the serialized string in global scope to prove it, and the mutation run skips the module because instrumentation breaks the serialized form.
 

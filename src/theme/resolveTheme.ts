@@ -1,5 +1,5 @@
 // The theme's vocabulary and the one rule that turns it into something a
-// selector can match. src/bootDocument.ts builds the boot script from these.
+// selector can match. src/bootDocument.ts builds its settings from these constants.
 
 /** A tuple, so the accepted set has one definition the type is derived from. */
 export const THEME_CHOICES = ["light", "dark", "system"] as const;

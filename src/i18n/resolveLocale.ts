@@ -1,6 +1,6 @@
 // The locale's vocabulary and the rule that turns a stored choice plus the
-// reader's preferences into a resolved locale. src/bootDocument.ts builds the
-// boot script from these.
+// reader's preferences into a resolved locale. src/bootDocument.ts builds its
+// settings from these constants.
 
 /** Every catalog that ships. The last is a pseudo-locale, not a language. */
 export const CATALOG_IDS = ["en", "es", "fr", "ar-XB"] as const;
