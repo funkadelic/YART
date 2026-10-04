@@ -59,13 +59,13 @@
         "color-no-hex": [
           true,
           {
-            "message": "Colour in a component stylesheet arrives through var(--yart-color-*) and nowhere else, so a theme switch moves every value at once"
+            "message": "Color in a component stylesheet arrives through var(--yart-color-*) and nowhere else, so a theme switch moves every value at once"
           }
         ],
         "color-named": [
           "never",
           {
-            "message": "Colour in a component stylesheet arrives through var(--yart-color-*) and nowhere else; a keyword is as fixed as a hex and flips with no theme"
+            "message": "Color in a component stylesheet arrives through var(--yart-color-*) and nowhere else; a keyword is as fixed as a hex and flips with no theme"
           }
         ],
         "declaration-property-unit-allowed-list": [
@@ -93,7 +93,7 @@
             "color"
           ],
           {
-            "message": "Colour in a component stylesheet arrives through var(--yart-color-*) and nowhere else; a functional notation is as fixed as a hex and flips with no theme"
+            "message": "Color in a component stylesheet arrives through var(--yart-color-*) and nowhere else; a functional notation is as fixed as a hex and flips with no theme"
           }
         ]
       }
