@@ -1,0 +1,21 @@
+package-lock.json
+  s_f3f7af8c4bf72b::t_c171f25e4bf5f7 14092-14093,14096-14099,14101,14103-14106
+tsconfig.json
+  s_f3f7af8c4bf72b::t_56e0bb2d9778e0 37
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5660b0befec4527e07638fd35a51a7951d8635cb",
+  "prompts": {},
+  "sessions": {
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "unknown"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
