@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DATASET_ERROR_CODES, DatasetError } from "../api/getCities";
+import { DATASET_ERROR_CODES, DatasetError } from "../data/loadEnvelope";
 import { en } from "./catalogs/en";
 import { es } from "./catalogs/es";
 import { datasetErrorText } from "./datasetErrorText";

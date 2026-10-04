@@ -8,6 +8,7 @@ import {
   stubDatasetFetchFromDisk,
 } from "../test/fetchStub";
 import { required } from "../test/required";
+import type { DatasetError } from "../data/loadEnvelope";
 
 // The committed asset is read once and served verbatim through the stubbed
 // request, so the real data quirks stay in play. The country case below is one
@@ -44,17 +45,15 @@ async function freshGetCities() {
  * shown, and a code on the wrong throw produces a fluent sentence about the
  * wrong failure, which no message assertion can see.
  */
-async function datasetRejection(
-  api: typeof import("./getCities"),
-  call: Promise<unknown>,
-): Promise<InstanceType<typeof api.DatasetError>> {
+async function datasetRejection(call: Promise<unknown>): Promise<DatasetError> {
+  const loader = await import("../data/loadEnvelope");
+
   try {
     await call;
   } catch (error) {
-    // The class is read off the freshly loaded module. Every case here resets
-    // the module registry, so a class imported once at the top of this file
-    // stops recognizing its own instances.
-    if (error instanceof api.DatasetError) return error;
+    // The loader is imported after the fresh load because each case resets the
+    // module registry, and instanceof against a class imported at the top fails.
+    if (error instanceof loader.DatasetError) return error;
     throw new Error(
       `The call rejected with something other than a dataset error: ${String(error)}`,
       { cause: error },
@@ -212,7 +211,7 @@ describe("getCities", () => {
     // transport failure with copy a reader can act on and keeps the original as
     // the cause. That wrap is asserted where it lives. The same holds for every
     // load-failure assertion below.
-    const rejection = await datasetRejection(api, api.getCities());
+    const rejection = await datasetRejection(api.getCities());
 
     expect(rejection.message).toBe(
       "The city data could not be downloaded. Check your connection and try again.",
@@ -227,7 +226,7 @@ describe("getCities", () => {
 
     const api = await freshApi();
 
-    const rejection = await datasetRejection(api, api.getCities());
+    const rejection = await datasetRejection(api.getCities());
 
     expect(rejection.message).toBe(
       "The city data could not be downloaded (status 404).",
