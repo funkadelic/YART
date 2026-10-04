@@ -5,7 +5,7 @@ import { numberFormatFor, selectPlural } from "./i18n/format.js";
 
 const TAG = "en";
 
-/** Total over the two categories English reports. */
+/** The noun for each plural form English uses, one and other. */
 const ROW = { one: "row", other: "rows" };
 
 /** The word each sort direction reads as. */

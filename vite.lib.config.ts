@@ -22,7 +22,7 @@ export default defineConfig({
     },
     rolldownOptions: {
       external: [/^react($|\/)/, /^react-dom($|\/)/, /^react-icons($|\/)/],
-      // Bundling drops directives, so App Router consumers get it back here.
+      // Bundling drops directives, so this banner restores "use client" for App Router consumers.
       output: { banner: '"use client";' },
     },
   },

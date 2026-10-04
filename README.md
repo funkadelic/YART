@@ -193,7 +193,7 @@ import { DataTable, columns } from "yet-another-react-table";
 import "yet-another-react-table/styles.css";
 ```
 
-The package is ESM only. Its entry opens with a `"use client"` directive, so a server-component framework treats the table as a client component. That marks every export as client code, the helpers included: in a React Server Components app, call `parseTableState`, `serializeTableState`, `applyTableAction`, `DEFAULT_TABLE_STATE` and the English labels from a client component, not a server one. A TypeScript project whose bundler does not declare CSS imports adds `declare module "*.css";` to a declaration file.
+The package is ESM only. Its entry opens with a `"use client"` directive, so a server-component framework treats the table as a client component. That marks every export as client code, the helpers included. In a React Server Components app, call `parseTableState`, `serializeTableState`, `applyTableAction`, `DEFAULT_TABLE_STATE` and the English labels from a client component, not a server one. A TypeScript project whose bundler does not declare CSS imports adds `declare module "*.css";` to a declaration file.
 
 `columns<T>()` takes an `Intl.Collator` that the app builds, so the sort follows whichever language the app picks.
 
@@ -218,7 +218,7 @@ The defaults live in `@layer yart`, so any unlayered rule overrides one without 
 
 Light and dark follow the page's `color-scheme`, set on the root or on any ancestor of the table. There is no attribute to set.
 
-Forced colors mode is handled by the package. Its remap sits outside the layer on `:root:root:root`, so it beats a `:root` override like the one above, or a themed one such as `:root[data-theme="dark"]`, whatever order the stylesheets load in. A host rule more specific than that, or an override set on an element below the root, still wins under forced colors, so a host that writes one should remap it too.
+The package handles forced colors mode. Its remap sits outside the layer on `:root:root:root`, so it beats a `:root` override like the one above, or a themed one such as `:root[data-theme="dark"]`, whatever order the stylesheets load in. A host rule more specific than that, or an override set on an element below the root, still wins under forced colors, so a host that writes one should remap it too.
 
 The table draws no focus ring of its own and cancels none, so the browser's or the host's focus style applies. `--yart-color-focus-ring` is there for a host that wants the ring in the table's palette.
 
@@ -324,7 +324,7 @@ const searchBox = (
 
 ### Labels
 
-The package exports English copy for both components, `englishTableLabels` and `englishSearchLabels`. It names no dataset, so spread it and override the entries that should:
+The package exports English copy for both components, `englishTableLabels` and `englishSearchLabels`. It names no dataset, so spread it and override the entries that need your wording:
 
 ```tsx
 import {
@@ -489,7 +489,7 @@ Construct the collator once and reuse it; building one inside each comparison is
 
 ### Page size options
 
-The page size select offers `PAGE_SIZE_OPTIONS`, a package export whose list the package fixes: 10, 25, 50 and 100. The default is `DEFAULT_TABLE_STATE.pageSize`, 10, and it has to be one of the options. The same list validates `size` in the address, so a link naming a size that was removed opens at the default.
+The page size select offers `PAGE_SIZE_OPTIONS`, a fixed package export: 10, 25, 50 and 100. The default is `DEFAULT_TABLE_STATE.pageSize`, 10, and it has to be one of the options. The same list validates `size` in the address, so a link naming a size that was removed opens at the default.
 
 The first, previous, next and last controls hide when there is only one page; the page size select stays. A page past the end of the results shows the last page without changing the stored page.
 

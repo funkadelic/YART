@@ -16,10 +16,8 @@ export const BUILD_TARGET = [
 ];
 
 /**
- * The export condition that sends the package specifier to src/, so dev, test
- * and build need no lib/. A bespoke name on purpose: a consumer's dev server
- * sets the built-in development condition, and would then look for a src/ it
- * does not have.
+ * Sends the package specifier to src/, so dev, test and build need no lib/.
+ * Not `development`, which a consumer's dev server sets, sending it to a src/ it lacks.
  */
 export const SOURCE_CONDITION = "@yart/source";
 

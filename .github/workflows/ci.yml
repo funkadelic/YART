@@ -78,8 +78,8 @@ jobs:
       - name: Build
         run: npm run build
 
-      # Packs the tarball a consumer installs and checks it: the only check of the
-      # published branch of exports, which dev, tests and the demo never resolve.
+      # Packs the tarball a consumer installs and checks it. Nothing else resolves the
+      # published branch of exports; dev, tests and the demo all read src/.
       - name: Package checks
         run: npm run test:package
 

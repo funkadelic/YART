@@ -21,6 +21,6 @@ The demo's floor rises with the package's. Its rule that turns `data-theme` into
 
 The README's support list changes.
 
-The stated reason for preferring a `[dir="rtl"]` attribute selector over `:dir()` was the old floor, and that reason no longer holds. The rule stays for consistency until it is revisited.
+The stated reason for preferring a `[dir="rtl"]` attribute selector over `:dir()` was the old floor, and that reason no longer holds. The rule stays for consistency.
 
-Lowering the floor again would mean shipping a theme hook and documenting an attribute contract for hosts to set, which is the thing this record avoids.
+Lowering the floor again would mean shipping a theme hook and documenting an attribute contract for hosts to set.

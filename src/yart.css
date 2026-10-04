@@ -1,10 +1,8 @@
 /* The shipped global sheet: token defaults sit in a layer any unlayered host rule beats. */
 @import "./styles/tokens.css" layer(yart);
 
-/* a11y: forced colors throws away every author color, so the remap happens at
-   the token tier and every component follows. Unlayered on a tripled :root, it
-   beats a host's :root override, themed ones like :root.dark included, in any
-   load order; a more specific rule still wins. */
+/* a11y: forced colors discards author colors, so the tokens are remapped here.
+   Unlayered on a tripled :root, it beats any host :root override in any load order. */
 @media (forced-colors: active) {
   :root:root:root {
     --yart-color-surface: Canvas;

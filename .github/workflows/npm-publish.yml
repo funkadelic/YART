@@ -1,4 +1,4 @@
-# Publishes each published release to npm through OIDC trusted publishing. Inert until the
+# Publishes each release to npm through OIDC trusted publishing. Inert until the
 # first version is published by hand and the trusted publisher is set on the package's access page.
 name: npm-publish
 
