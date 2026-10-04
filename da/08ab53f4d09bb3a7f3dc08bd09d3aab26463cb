@@ -1,0 +1,23 @@
+src/i18n/resolveLocale.ts
+  s_e61f8b120b6dea::t_c1c968ecc180ca 2-3
+docs/adr/0015-one-boot-script-injected-at-build.md
+  s_e61f8b120b6dea::t_3e231fac985afd 16
+src/theme/resolveTheme.ts
+  s_e61f8b120b6dea::t_3e231fac985afd 2
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "da08ab53f4d09bb3a7f3dc08bd09d3aab26463cb",
+  "prompts": {},
+  "sessions": {
+    "s_e61f8b120b6dea": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "aa7b83db-0d99-46f9-b166-20ef0abca919",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
