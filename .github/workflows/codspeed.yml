@@ -21,6 +21,8 @@ concurrency:
 jobs:
   benchmarks:
     name: Run benchmarks
+    # A release PR changes only the version and the changelog, so there is nothing to measure.
+    if: ${{ !startsWith(github.head_ref, 'release-please--') }}
     runs-on: ubuntu-latest
     # Catches a hang without holding the runner for the six-hour default.
     timeout-minutes: 15

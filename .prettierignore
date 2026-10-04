@@ -26,3 +26,4 @@ reports
 
 # Written by release-please, whose formatting drifts on every release.
 CHANGELOG.md
+.release-please-manifest.json
