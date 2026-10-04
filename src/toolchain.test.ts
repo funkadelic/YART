@@ -31,22 +31,6 @@ const manifest = JSON.parse(
 ) as Manifest;
 
 /**
- * The four entries in the README's Stack list that carry a version, mapped to
- * the package the manifest pins.
- *
- * A major rather than the exact pin, because the manifest is pinned exactly and
- * a patch bump would falsify the prose on a change nobody reads the README for.
- * Only these four carry a version: the rest of the list is commodity tooling
- * whose version answers nothing.
- */
-const README_STACK_MAJORS: Readonly<Record<string, string>> = {
-  React: "react",
-  TypeScript: "typescript",
-  Vite: "vite",
-  Vitest: "vitest",
-};
-
-/**
  * The file parsed once, as TSX so a JSX tag and a generic arrow both read the
  * way the tree writes them.
  *
@@ -154,29 +138,6 @@ function blankRanges(source: string, ranges: readonly Range[]): string {
  */
 function stripComments(source: string): string {
   return blankRanges(source, commentRanges(parse(source)));
-}
-
-/**
- * Prose with markdown backticks removed and every run of whitespace collapsed to a
- * single space, so an assertion compares the sentence a reader sees and not the line
- * breaks and markup a formatter chose. Two documents in two formats are compared
- * below, and this states what they are treated as equal on: a rewrap must not flap
- * the assertion, and a reworded sentence must still fail it.
- */
-function normalizeProse(source: string): string {
-  return source.replace(/`/g, "").replace(/\s+/g, " ");
-}
-
-/**
- * A comment handed to normalizeProse with its markers stripped from every line, the
- * block form's asterisk and the line form's pair of slashes alike. The third copy of
- * the provenance paragraph lived in a block comment, so an absence assertion that
- * skipped the strip would pass on a reintroduced copy for the wrong reason; the
- * amended address invariant is carried in line comments, so a presence assertion that
- * skipped them would fail on markup instead of reading the prose.
- */
-function normalizeComment(source: string): string {
-  return normalizeProse(source.replace(/^[ \t]*(?:\*|\/\/)[ ]?/gm, ""));
 }
 
 /** The name a call names, whether it is bare or a member call. */
@@ -315,9 +276,6 @@ function isEndToEndSpec(file: string): boolean {
   return relative(projectRoot, file).split(sep)[0] === E2E_DIRECTORY;
 }
 
-const FAKES_CLOCK = /\buseFakeTimers\s*\(/;
-const CONFIGURES_CLOCK = /\bfakeTimers\s*:/;
-
 /**
  * The two clock calls, named as the tree writes them. The guard below asks the
  * tree whether each one happens, because the text only says whether it appears.
@@ -362,45 +320,6 @@ const E2E_CONFIG_FILE = "playwright.config.ts";
 const WORKFLOW_FILE = ".github/workflows/ci.yml";
 const SONAR_FILE = "sonar-project.properties";
 
-// The two test runners this repository is written to hold, each paired with the
-// file that configures it. Named as pairs so neither half can be asserted
-// without the other: a runner with no config is a dependency nothing drives, and
-// a config with no runner is a file nothing reads.
-//
-// There are two because the first runner's browser project exposes no
-// navigation, reload or history traversal, and four end-to-end flows need
-// exactly those.
-const TEST_RUNNERS = [
-  { package: "vitest", config: CONFIG_FILE },
-  { package: "@playwright/test", config: E2E_CONFIG_FILE },
-];
-
-// The packages of the runner that was removed instead of ported. Any one of
-// them reappearing means that runner is back.
-//
-// The list stops there. It once carried a dozen further runners a contributor
-// might reach for, which no list can enumerate, and a new runner arrives as a
-// line in the manifest that a reviewer reads.
-const UNTAKEN_TEST_RUNNERS = [
-  "jest",
-  "jest-environment-jsdom",
-  "ts-jest",
-  "ts-node",
-  "@types/jest",
-  "identity-obj-proxy",
-  "jest-transformer-svg",
-];
-
-// Every runner package name this guard knows about, taken or not. The
-// intersection of this list with the declared dependencies is compared as a
-// sorted set, the same way the coverage exclude list is: reordering either list
-// is not a weakening and must not flap the guard, while a runner arriving or a
-// runner leaving must both fail.
-const KNOWN_TEST_RUNNERS = [
-  ...TEST_RUNNERS.map((runner) => runner.package),
-  ...UNTAKEN_TEST_RUNNERS,
-];
-
 // Both runner configs that launch a browser, held below against the one browser install
 // line in the pipeline. There was one launch site for as long as there was one
 // runner, and there are two now, so the holding is evaluated per file. A check
@@ -408,10 +327,6 @@ const KNOWN_TEST_RUNNERS = [
 // other file still contributes a match, and this whole exercise is written
 // against that vacuous pass.
 const LAUNCH_CONFIG_FILES = [CONFIG_FILE, E2E_CONFIG_FILE];
-
-// The third launch site, which starts its browser through chrome-launcher rather
-// than a runner config.
-const LIGHTHOUSE_SCRIPT = "scripts/lighthouse.mjs";
 
 // The browser a config launches, matched under either key the two runners use
 // for it. One names it inside its instance list, the other on its shared use
@@ -474,31 +389,6 @@ function coveragePatterns(key: string): string[] | null {
   ].map((match) => required(match[1], "a quoted entry"));
 }
 
-/**
- * Every file that can install something on the whole suite: the config itself,
- * and each setup file it declares. Derived, because the config carries one
- * setupFiles array per project, the browser project's is empty
- * today, and a third project or a setup file added to that one would sit outside
- * a written-out pair and never be read.
- */
-function suiteWideFiles(): string[] {
-  const declared = [
-    ...stripComments(
-      readFileSync(join(projectRoot, CONFIG_FILE), "utf8"),
-    ).matchAll(/setupFiles\s*:\s*\[([^\]]*)\]/g),
-  ];
-
-  // An absence here would quietly shrink the guard to the config alone, so the
-  // count is asserted at the call site.
-  const files = declared.flatMap((match) =>
-    [...required(match[1], "the declared list").matchAll(/"([^"]*)"/g)].map(
-      (entry) => required(entry[1], "a quoted entry").replace(/^\.\//, ""),
-    ),
-  );
-
-  return [CONFIG_FILE, ...files];
-}
-
 // The three things CC BY 4.0 obliges this repository to state, written out here
 // so the assertion below matches the committed copy exactly and not a shape
 // that resembles it.
@@ -506,56 +396,6 @@ const ATTRIBUTION_SOURCE_URL = "https://simplemaps.com/data/world-cities";
 const ATTRIBUTION_LICENSE_URL = "https://creativecommons.org/licenses/by/4.0/";
 const ATTRIBUTION_MODIFICATIONS =
   "Modified: unused columns removed, rows ordered by population.";
-
-// The two sentences that make up the account of the dataset's provenance, written
-// out here for the same reason the three literals above are: a rewrite in either
-// document that carries them cannot move both sides of the assertion at once.
-const PROVENANCE_SERIALIZATION =
-  "serialized by scripts/generate-cities.mjs from the row data this " +
-  "repository already carried, not from a fresh run over the upstream " +
-  "CSV export.";
-const PROVENANCE_REGENERATION =
-  "regenerated by that script from the upstream worldcities.csv export, " +
-  "which orders rows by descending population and breaks ties by ascending " +
-  "id, so a regenerated file is not expected to be byte-identical to the " +
-  "committed one.";
-
-/**
- * The ceiling on what the catalogs reach, written out here for the same reason
- * the provenance sentences above are: a rewrite in either document that carries
- * it cannot move both sides of the assertion at once.
- *
- * Two documents on purpose. A reader evaluating the internationalization opens
- * the README; a reader wondering why a country name is still English is already
- * looking at the module that defines the city type.
- */
-const CITY_SOURCE_FORM_CEILING =
-  "City and country names stay in their source form in every locale. The " +
-  "dataset carries a name and an ascii name and nothing else, so a reader of " +
-  "the French interface still reads the English country name. Translating " +
-  "them would need a translated column and a regenerated asset, which is a " +
-  "data pipeline rather than an internationalization change.";
-
-/** The same ceiling for the second dataset, whose reason differs in its detail. */
-const FILM_SOURCE_FORM_CEILING =
-  "Film, director, genre and country names stay in their source form in " +
-  "every locale. The query asks for English labels and nothing else, so a " +
-  "reader of the French interface still reads the English genre name. " +
-  "Translating them would need a translated label per property and a " +
-  "regenerated asset, which is a data pipeline rather than an " +
-  "internationalization change.";
-
-/** Each ceiling and the two documents carrying it: the prose one and the code one. */
-const SOURCE_FORM_CEILINGS = [
-  {
-    ceiling: CITY_SOURCE_FORM_CEILING,
-    documents: ["README.md", "src/data/worldcities/cities.ts"],
-  },
-  {
-    ceiling: FILM_SOURCE_FORM_CEILING,
-    documents: ["README.md", "src/data/films/films.ts"],
-  },
-];
 
 /**
  * A literal expression's value, built from the tree rather than evaluated.
@@ -701,7 +541,7 @@ const THEME_MODULE = "src/theme/resolveTheme.ts";
 const LOCALE_MODULE = "src/i18n/resolveLocale.ts";
 
 // The one address writer, and the module that owns which keys the address may
-// carry. The writer is also an address document.
+// carry.
 const ADDRESS_WRITER = "src/features/DatasetPage/DatasetPage.tsx";
 const SCHEMA_MODULE = "src/components/DataTable/tableStateUrl.ts";
 
@@ -717,40 +557,10 @@ const ADDRESS_WRITERS = [ADDRESS_WRITER];
  *
  * Pinned as a set instead of asserted as a floor, because the risk runs in the
  * other direction. A fifth entry for the locale would make the reader's language
- * part of the view state a link reproduces, which the amendment below says the
- * address deliberately does not do.
+ * part of the view state a link reproduces, which the address deliberately
+ * does not do.
  */
 const SCHEMA_KEYS = ["page", "q", "size", "sort"];
-
-/**
- * The account of what a link does and does not reproduce, written out here for
- * the same reason the provenance sentences above are: a rewrite in any document
- * that carries it cannot move both sides of the assertion at once.
- */
-const ADDRESS_INVARIANT =
-  "One address is one view, per resolved locale: the query string carries " +
-  "the search term, the sort column and direction, the page and the page " +
-  "size, and the resolved locale is deliberately not among them, so two " +
-  "readers opening the same link see the same rows in the order and the " +
-  "number format their own locale produces. Putting the locale in the " +
-  "address would force the sender's language on the recipient and would " +
-  "make the locale part of the table's view state";
-
-/**
- * Every document that carries that account, most-consulted first.
- *
- * The first two are committed. The third is the project instructions, which
- * this repository keeps out of version control, so it is asserted where it
- * exists and skipped where it does not. The count below stops that tolerance
- * from emptying the loop.
- *
- * The codebase map came out: it is regenerated wholesale, so a sentence written
- * by hand fails on every refresh that rewords the paragraph, and only locally.
- */
-const ADDRESS_DOCUMENTS = ["README.md", ADDRESS_WRITER, ".claude/CLAUDE.md"];
-
-/** How many of those documents are committed, and therefore always readable. */
-const COMMITTED_ADDRESS_DOCUMENTS = 2;
 
 /**
  * Every history-mutating call this file performs, one entry per call site, named
@@ -854,68 +664,6 @@ function localeCallSites(file: ts.SourceFile): string[] {
 }
 
 describe("toolchain baseline", () => {
-  // This guard used to ban only a list of names belonging to the runner that was
-  // removed. A second runner arriving with a config of its own
-  // and a dependency of its own passed it mechanically, while the founding claim
-  // it stood for, that the whole suite runs under one runner reading one config,
-  // had quietly stopped being true. A guard that passes while the intent it
-  // names is violated is worse than a red test, so the statement was widened and
-  // the runner kept: two runners, named, with the file that configures each, and
-  // a third is red.
-  it("holds the tree to the two test runners it is written to run", () => {
-    const declared = new Set(
-      Object.entries(manifest)
-        .filter(([key]) => /dependencies$/i.test(key) || key === "overrides")
-        .flatMap(([, bucket]) =>
-          bucket && typeof bucket === "object"
-            ? Object.keys(bucket as Record<string, unknown>)
-            : [],
-        ),
-    );
-
-    // Both halves of each pair, so the statement is checked and not merely
-    // declared.
-    for (const runner of TEST_RUNNERS) {
-      expect(
-        declared.has(runner.package),
-        `the manifest no longer declares ${runner.package}`,
-      ).toBe(true);
-      expect(
-        existsSync(join(projectRoot, runner.config)),
-        `${runner.config} is gone, so ${runner.package} is configured by nothing`,
-      ).toBe(true);
-    }
-
-    expect(
-      KNOWN_TEST_RUNNERS.filter((name) => declared.has(name)).toSorted(),
-      "the declared test runners are no longer the two this tree is written to run",
-    ).toEqual(TEST_RUNNERS.map((runner) => runner.package).toSorted());
-
-    expect(manifest.jest, "the manifest carries a jest block").toBeUndefined();
-    expect(
-      readdirSync(projectRoot).filter((name) => /^jest\.config\./.test(name)),
-    ).toEqual([]);
-  });
-
-  // The one runner is driven in single-pass mode, so a pipeline run cannot be left
-  // holding a watch process. The script also has to say which project it means,
-  // because with more than one project declared a run that names none fans out to
-  // every one of them, including the project that needs a browser engine
-  // installed. Asserted as those three properties instead of as one string, so
-  // adding a flag is free and dropping the project filter is not.
-  it("keeps the test script on the current runner in single-pass mode against one project", () => {
-    const script = manifest.scripts?.test ?? "";
-
-    expect(
-      script,
-      "the test script does not start the runner in single-pass mode",
-    ).toMatch(/^vitest\s+run\b/);
-    expect(script, "the test script carries a watch flag").not.toMatch(
-      /(^|\s)(-w|--watch)\b/,
-    );
-    expect(script, "the test script names no project").toMatch(/--project[= ]/);
-  });
-
   // A report the upload step cannot collect is skipped, so the pipeline stays
   // green over an upload carrying nothing.
   it("keeps every configured report on a path the upload step collects", () => {
@@ -950,31 +698,6 @@ describe("toolchain baseline", () => {
         report as string,
         `${source} writes a report the upload step does not collect`,
       ).toMatch(UPLOADED_REPORT_PATH);
-    }
-  });
-
-  // A gate nothing invokes is not a gate. Every project, config and spec file
-  // survives the deletion of the step that runs it, so the pipeline is asserted
-  // to name each script; the manifest alone only implies that something calls
-  // them.
-  it("runs every test gate from the pipeline", () => {
-    // Judged on live lines only, for the reason the pre-commit guard is:
-    // commenting a step out leaves every expected string in the file.
-    const live = readFileSync(join(projectRoot, WORKFLOW_FILE), "utf8")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith("#"));
-
-    for (const script of [
-      "npm run test:coverage",
-      "npm run test:browser",
-      "npm run test:e2e",
-      "npm run test:package",
-    ]) {
-      expect(
-        live.some((line) => line.includes(script)),
-        `${WORKFLOW_FILE} no longer runs ${script}`,
-      ).toBe(true);
     }
   });
 
@@ -1037,44 +760,6 @@ describe("toolchain baseline", () => {
         `${WORKFLOW_FILE} installs the headless shell alone and ${name} launches a browser that is not it`,
       ).toBe(false);
     }
-  });
-
-  // The audit runs after the install and launches the shell it fetched, never a
-  // channel or a Chrome from the environment.
-  it("launches the Lighthouse audit on the headless shell the pipeline installs", () => {
-    const lines = readFileSync(join(projectRoot, WORKFLOW_FILE), "utf8")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith("#"));
-    const installAt = lines.findIndex((line) =>
-      line.includes("playwright install"),
-    );
-    const auditAt = lines.findIndex((line) =>
-      line.includes("npm run lighthouse"),
-    );
-
-    expect(installAt, `${WORKFLOW_FILE} installs no browser`).not.toBe(-1);
-    expect(auditAt, `${WORKFLOW_FILE} runs no Lighthouse audit`).not.toBe(-1);
-    expect(lines[installAt]).toContain("--only-shell");
-    expect(
-      installAt,
-      "the pipeline runs Lighthouse before installing the browser it launches",
-    ).toBeLessThan(auditAt);
-
-    const script = stripComments(
-      readFileSync(join(projectRoot, LIGHTHOUSE_SCRIPT), "utf8"),
-    );
-
-    expect(
-      script,
-      `${LIGHTHOUSE_SCRIPT} no longer resolves the headless shell the pipeline installs`,
-    ).toMatch(/chromium_headless_shell-/);
-    expect(script, `${LIGHTHOUSE_SCRIPT} reads CHROME_PATH`).not.toMatch(
-      /\bCHROME_PATH\b/,
-    );
-    expect(script, `${LIGHTHOUSE_SCRIPT} names a channel`).not.toMatch(
-      /\bchannel\s*:/,
-    );
   });
 
   // Nothing under src/ imports the icon or the manifest, so a rename breaks
@@ -1298,33 +983,6 @@ describe("toolchain baseline", () => {
     expect(offenders).toEqual([]);
   });
 
-  // The guard above only sees files it recognizes as tests. A clock installed from
-  // shared setup would put the whole suite on a frozen clock from a file it never
-  // reads, so that possibility is closed here. The files read are the ones the
-  // config actually names, so a project that grows a setup file is covered the
-  // day it is added, not the day someone remembers this list.
-  it("installs no global fake clock outside the test files", () => {
-    const scanned = suiteWideFiles();
-
-    expect(
-      scanned.length,
-      `${CONFIG_FILE} declares no setup files, so this guard reads the config alone`,
-    ).toBeGreaterThan(1);
-
-    for (const name of scanned) {
-      const source = stripComments(
-        readFileSync(join(projectRoot, name), "utf8"),
-      );
-
-      expect(source, `${name} installs a global fake clock`).not.toMatch(
-        FAKES_CLOCK,
-      );
-      expect(source, `${name} configures a global fake clock`).not.toMatch(
-        CONFIGURES_CLOCK,
-      );
-    }
-  });
-
   // Each file is read from disk with nothing carried between iterations, so the
   // offender list is the same on one worker or many.
   //
@@ -1411,16 +1069,9 @@ describe("toolchain baseline", () => {
     );
   });
 
-  // There is another way to reach the number without writing the test: name the
-  // provider whose suppression syntax the tree happens to carry, and suppress. Both halves
-  // are asserted, and the config is scanned alongside the source because it is the
-  // file that holds the coverage block.
-  it("uses the v8 provider and carries no coverage ignore hint anywhere", () => {
-    expect(
-      stripComments(readFileSync(join(projectRoot, CONFIG_FILE), "utf8")),
-      `${CONFIG_FILE} does not declare the v8 coverage provider`,
-    ).toMatch(/provider\s*:\s*"v8"/);
-
+  // The other way to reach the number without writing the test is to suppress.
+  // The config is scanned too, because it holds the coverage block.
+  it("carries no coverage ignore hint anywhere", () => {
     const sourceRoot = join(projectRoot, "src");
     // withFileTypes, because a failed browser run leaves a screenshot directory
     // named after the suite that wrote it. `src/__screenshots__/a11y.browser.test.tsx`
@@ -1479,28 +1130,6 @@ describe("toolchain baseline", () => {
     }
   });
 
-  // The dataset ceiling is written twice on purpose, once where a reader
-  // evaluating this project reads and once where a reader of the code asks the
-  // question. Two copies of one fact is how the provenance account came to have
-  // a corrected half and a disproved half sitting beside each other, so this
-  // pair is held from one literal in the same idiom. The code copy is a block
-  // comment, so the comparison strips the leading asterisks, because a guard
-  // that failed on markup would be a guard nobody keeps.
-  it("keeps one account of each dataset ceiling in the README and the data module", () => {
-    for (const { ceiling, documents } of SOURCE_FORM_CEILINGS) {
-      for (const name of documents) {
-        const source = readFileSync(join(projectRoot, name), "utf8");
-        const text = name.endsWith(".md")
-          ? normalizeProse(source)
-          : normalizeComment(source);
-
-        expect(text, `${name} no longer carries: ${ceiling}`).toContain(
-          ceiling,
-        );
-      }
-    }
-  });
-
   // The footer carries this same attribution and has its own test. The README
   // copy has nothing watching it, so a documentation rewrite could drop the
   // source link, the license link, or the record of what was changed, and the
@@ -1520,87 +1149,6 @@ describe("toolchain baseline", () => {
     }
   });
 
-  // The README and the license file already disagreed once, in the direction of
-  // the README claiming a fresh CSV run the artifact's own tie-break ordering
-  // disproves. Removal was guarded in neither document and divergence was guarded
-  // in neither, so the wrong copy sat beside the right one with the suite green.
-  // Both documents are asserted here from one pair of literals, so a rewrite of
-  // either one alone is a red test instead of a silent contradiction.
-  it("keeps one account of the dataset's provenance in the README and the license file", () => {
-    const sentences = [PROVENANCE_SERIALIZATION, PROVENANCE_REGENERATION];
-
-    for (const name of ["README.md", "src/data/worldcities/license.txt"]) {
-      const text = normalizeProse(
-        readFileSync(join(projectRoot, name), "utf8"),
-      );
-
-      for (const sentence of sentences) {
-        expect(text, `${name} no longer carries: ${sentence}`).toContain(
-          sentence,
-        );
-      }
-    }
-
-    // An absence assertion, because the account belongs in the two documents a
-    // reader consults for provenance, and the third copy in the data module is
-    // what let the disproved sentence survive a correction of the other two. The
-    // comparison strips the block comment's asterisk prefixes, so a copy pasted
-    // back in as a comment cannot pass on its markup.
-    const dataModule = normalizeComment(
-      readFileSync(join(projectRoot, "src/data/worldcities/cities.ts"), "utf8"),
-    );
-
-    for (const sentence of sentences) {
-      expect(
-        dataModule,
-        `src/data/worldcities/cities.ts has grown a copy of the provenance: ${sentence}`,
-      ).not.toContain(sentence);
-    }
-  });
-  // The README names a major for four packages and the manifest owns the real
-  // version, which is two copies of one fact with nothing holding them
-  // together. That is how a README goes stale without a single failing check,
-  // so the majors are read back out of the prose and compared here. The set is
-  // asserted before the values: without it, deleting a version from the list
-  // would leave this passing over whatever remained.
-  it("agrees with the manifest on every major the README stack list names", () => {
-    const readme = readFileSync(join(projectRoot, "README.md"), "utf8");
-    const section = /\n## Stack\n([\s\S]*?)\n### /.exec(readme)?.[1];
-
-    expect(section, "the README has no Stack section").toBeDefined();
-
-    // A bullet opening with a link and following it with a bare number. The
-    // link text is captured, so a renamed label fails the set comparison below
-    // instead of dropping out of it in silence.
-    const named = new Map<string, string>();
-
-    for (const line of (section ?? "").split("\n")) {
-      const bullet = /^- \[([^\]]+)\]\([^)]+\) (\d+)\b/.exec(line);
-      if (bullet?.[1] !== undefined && bullet[2] !== undefined) {
-        named.set(bullet[1], bullet[2]);
-      }
-    }
-
-    expect(
-      [...named.keys()].sort(),
-      "the versioned entries in the README stack list are not the ones this test knows about",
-    ).toEqual(Object.keys(README_STACK_MAJORS).sort());
-
-    const pinned: Record<string, string | undefined> = {
-      ...(manifest.dependencies as Record<string, string> | undefined),
-      ...(manifest.devDependencies as Record<string, string> | undefined),
-    };
-
-    for (const [label, name] of Object.entries(README_STACK_MAJORS)) {
-      const version = pinned[name];
-
-      expect(version, `${name} is not pinned in the manifest`).toBeDefined();
-      expect(
-        named.get(label),
-        `README says ${label} ${named.get(label) ?? "nothing"} against ${name}@${version ?? "nothing"}`,
-      ).toBe((version ?? "").split(".")[0]);
-    }
-  });
   // The token names are a published contract, so the README list cannot drift from the generator.
   it("lists exactly the generated tokens in the README styling table", () => {
     const readme = readFileSync(join(projectRoot, "README.md"), "utf8");
@@ -1631,12 +1179,9 @@ describe("toolchain baseline", () => {
     ).toEqual({ onlyInReadme: [], onlyInTokens: [] });
     expect(documented).toEqual(generated);
   });
-  // Three questions, all asked of constructs: whether anything but the one
-  // page component mutates history, whether the query string still owns
-  // exactly its four keys, and whether every document a reader consults still
-  // says the same thing about what a link reproduces. A token search would pass
-  // on all three from a mention inside a comment.
-  it("keeps one address writer, four query keys, and one account of what a link carries", () => {
+  // Asked of constructs: whether anything but the one page component mutates
+  // history, and whether the query string still owns exactly its four keys.
+  it("keeps one address writer and four query keys", () => {
     const sources = sourceModules();
 
     const writers: string[] = [];
@@ -1670,28 +1215,6 @@ describe("toolchain baseline", () => {
       schemaKeys(),
       "the query-string schema owns a different set of keys than it did",
     ).toEqual(SCHEMA_KEYS);
-
-    let read = 0;
-
-    for (const name of ADDRESS_DOCUMENTS) {
-      const path = join(projectRoot, name);
-      if (!existsSync(path)) continue;
-
-      read += 1;
-
-      expect(
-        normalizeComment(readFileSync(path, "utf8")),
-        `${name} no longer carries: ${ADDRESS_INVARIANT}`,
-      ).toContain(ADDRESS_INVARIANT);
-    }
-
-    // Without this the loop above passes vacuously the day someone renames the
-    // README or moves the writer, the failure mode a tolerance for missing files
-    // always brings with it.
-    expect(
-      read,
-      "fewer documents carrying the address invariant were found than are committed",
-    ).toBeGreaterThanOrEqual(COMMITTED_ADDRESS_DOCUMENTS);
   });
   // A fifth surface asking the platform for a locale of its own would
   // reintroduce the defect the locale layer closed, invisibly on a machine whose

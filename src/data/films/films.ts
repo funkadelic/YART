@@ -18,9 +18,6 @@ export { DATASET_ERROR_CODES, DatasetError } from "../loadEnvelope";
  * the French interface still reads the English genre name. Translating them
  * would need a translated label per property and a regenerated asset, which is
  * a data pipeline rather than an internationalization change.
- *
- * Stated here as well as in the README, and held together by a guard in
- * src/toolchain.test.ts so neither copy can be reworded on its own.
  */
 export interface Film {
   id: string;
