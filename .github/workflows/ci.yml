@@ -30,7 +30,8 @@ jobs:
     # run already checked, so it skips the browser sweeps and the uploads.
     env:
       HAS_CHROMATIC: ${{ secrets.CHROMATIC_PROJECT_TOKEN != '' }}
-      IS_RELEASE_PR: ${{ startsWith(github.head_ref, 'release-please--') }}
+      # Same-repo only, so a fork cannot skip the gates by naming its branch.
+      IS_RELEASE_PR: ${{ github.event.pull_request.head.repo.full_name == github.repository && startsWith(github.head_ref, 'release-please--') }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
