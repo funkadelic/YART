@@ -36,7 +36,7 @@ const SCRATCH_TSCONFIG = {
     lib: ["es2022", "dom"],
     outDir: "out",
   },
-  include: ["app.tsx", "styles.ts", "css.d.ts", "types.ts"],
+  include: ["app.tsx", "styles.ts", "css.d.ts", "types.ts", "readme-*.tsx"],
 };
 
 const APP = `import { renderToString } from "react-dom/server";
@@ -223,6 +223,19 @@ function assertArtifacts() {
   }
 }
 
+/** README examples that import the package, each typechecked as its own module. */
+function readmeSnippets() {
+  const readme = readFileSync(join(root, "README.md"), "utf8");
+  const snippets = [...readme.matchAll(/```tsx\n([\s\S]*?)```/g)]
+    .map((match) => match[1])
+    .filter((code) => code.includes('from "yet-another-react-table"'));
+  // A broken match would otherwise check nothing and pass.
+  if (snippets.length < 4) {
+    throw new Error(`found ${snippets.length} README snippets, expected 4+`);
+  }
+  return snippets;
+}
+
 /** Writes the scratch app's manifest, config and sources into dir. */
 function writeScratchApp(dir) {
   const files = {
@@ -233,6 +246,9 @@ function writeScratchApp(dir) {
     "app.tsx": APP,
     "types.ts": TYPES,
   };
+  readmeSnippets().forEach((code, index) => {
+    files[`readme-${index}.tsx`] = code;
+  });
   for (const [name, content] of Object.entries(files)) {
     writeFileSync(join(dir, name), content);
   }
