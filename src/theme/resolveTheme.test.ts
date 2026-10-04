@@ -39,18 +39,15 @@ describe("resolveTheme", () => {
 });
 
 describe("theme constants", () => {
-  // Both are duplicated by hand inside the inline script in index.html. The
-  // structural guard in tokens.test.ts imports these and looks for them there,
-  // so a rename here fails loudly instead of stranding every stored choice.
+  // The boot script reads both through BOOT_SETTINGS, so a rename here changes
+  // it too; pinned so a rename cannot strand every stored choice silently.
   it("keeps the storage key and the media query as plain literals", () => {
     expect(THEME_STORAGE_KEY).toBe("yart-theme");
     expect(PREFERS_DARK_QUERY).toBe("(prefers-color-scheme: dark)");
   });
 
-  // The vocabulary the hook's stored-choice check and the parity guard both
-  // read. Pinned here so adding a fourth state, or dropping one, has to be a
-  // deliberate edit. The inline script accepts exactly the non-default members
-  // of this tuple and the guard holds it to that.
+  // Pinned so adding or dropping a state is a deliberate edit. The boot script
+  // accepts the non-default members, through BOOT_SETTINGS.
   it("keeps the three states and their order", () => {
     expect(THEME_CHOICES).toEqual(["light", "dark", "system"]);
   });

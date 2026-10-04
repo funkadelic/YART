@@ -87,9 +87,8 @@ describe("the closed sets", () => {
     expect(NEGOTIABLE_CATALOG_IDS).toEqual(["en", "es", "fr"]);
   });
 
-  // Duplicated by hand inside the inline script in index.html. The parity guard
-  // in toolchain.test.ts reads both, so a rename here fails loudly instead of
-  // stranding every stored choice.
+  // The boot script reads it through BOOT_SETTINGS, so a rename here changes it
+  // too; pinned so a rename cannot strand every stored choice silently.
   it("keeps the storage key as a plain literal", () => {
     expect(LOCALE_STORAGE_KEY).toBe("yart-locale");
   });

@@ -21,11 +21,9 @@ import { expect, test } from "@playwright/test";
  * Both stamps are proved in this one spec, because they are one mechanism: the
  * same script, aborted the same way, in one reload.
  *
- * The resolve rules are written twice, once in that script and once in a module
- * each, and the parity guard in the jsdom suite holds the copies together. This
- * spec would be the first thing to notice a drift the guard let through, which
- * is a consequence of the construction and deliberately not a second assertion
- * here.
+ * The resolve rules are written once in a resolver module each and once in
+ * src/bootDocument.ts, whose unit tests hold them together. This spec proves the
+ * injected script runs before any module.
  */
 
 // The engine fetches the real multi-megabyte dataset asset over the preview
@@ -33,8 +31,8 @@ import { expect, test } from "@playwright/test";
 // a flake allowance.
 const DATASET_READY_TIMEOUT_MS = 20_000;
 
-// The storage key the blocking script spells out by hand and the theme module
-// declares as a constant. Restated here, per the convention that a constant the
+// The storage key the boot script reads from the theme module, which declares
+// it as a constant. Restated here, per the convention that a constant the
 // subject also defines is restated in the test, so this file cannot pass for
 // whatever value the subject happens to hold.
 const THEME_STORAGE_KEY = "yart-theme";
