@@ -1,0 +1,21 @@
+.github/workflows/ci.yml
+  s_369291ba83c7bf::t_3e86c8b7c980d4 33-34
+.github/workflows/codspeed.yml
+  s_369291ba83c7bf::t_b4e8d1a127ad89 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "415deed80bf890ab1127ba812fa6f0c6bd2d5bad",
+  "prompts": {},
+  "sessions": {
+    "s_369291ba83c7bf": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d9edbb91-3dcd-4752-98a9-58e406846090",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
