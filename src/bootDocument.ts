@@ -55,7 +55,7 @@ export function bootDocument(settings: BootSettings): void {
       theme = "light";
     }
   }
-  root.setAttribute("data-theme", theme);
+  root.dataset.theme = theme;
   // The stylesheet's color-scheme has not arrived yet.
   root.style.colorScheme = theme;
 
