@@ -1,0 +1,14 @@
+src/components/icons.tsx
+  h_705b7232b9f49b 71,81
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "aae2471438868aabbc32a256ede617544b91fbf1",
+  "prompts": {},
+  "humans": {
+    "h_705b7232b9f49b": {
+      "author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
