@@ -1,11 +1,11 @@
 import { useId } from "react";
-import {
-  MdFirstPage,
-  MdLastPage,
-  MdChevronLeft,
-  MdChevronRight,
-} from "react-icons/md";
 
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  FirstPageIcon,
+  LastPageIcon,
+} from "../icons.js";
 import { PAGE_SIZE_OPTIONS } from "./tableState.js";
 import styles from "./Pagination.module.scss";
 
@@ -114,7 +114,7 @@ export function Pagination({
             aria-label={labels.firstPage}
             className={styles.navButton}
           >
-            <MdFirstPage aria-hidden="true" />
+            <FirstPageIcon />
           </button>
 
           <button
@@ -125,7 +125,7 @@ export function Pagination({
             aria-label={labels.previousPage}
             className={styles.navButton}
           >
-            <MdChevronLeft aria-hidden="true" />
+            <ChevronLeftIcon />
           </button>
 
           {/* a11y: aria-atomic because React mutates only the page number
@@ -148,7 +148,7 @@ export function Pagination({
             aria-label={labels.nextPage}
             className={styles.navButton}
           >
-            <MdChevronRight aria-hidden="true" />
+            <ChevronRightIcon />
           </button>
 
           <button
@@ -159,7 +159,7 @@ export function Pagination({
             aria-label={labels.lastPage}
             className={styles.navButton}
           >
-            <MdLastPage aria-hidden="true" />
+            <LastPageIcon />
           </button>
         </nav>
       )}

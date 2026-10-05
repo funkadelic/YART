@@ -1,6 +1,6 @@
 # 12. The table is published as an npm package
 
-Status: accepted
+Status: accepted, superseded in part by [16](0016-icons-drawn-in-the-repo.md)
 Date recorded: 2026-10-02
 
 ## Context

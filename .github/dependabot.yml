@@ -2,9 +2,9 @@ version: 2
 
 updates:
   # Package manifest at the repository root. Every dev dependency is an exact pin, which
-  # "increase-if-necessary" rewrites in place. The two ranges are floors for consumers:
-  # the React peer, and react-icons, a caret so a host shares its own copy. A bump inside
-  # the caret moves only the lockfile, so the floor stays where it is.
+  # "increase-if-necessary" rewrites in place. The one range left is the React peer, a
+  # floor for consumers. A bump inside the caret moves only the lockfile, so the floor
+  # stays where it is.
   - package-ecosystem: npm
     directory: "/"
     schedule:
