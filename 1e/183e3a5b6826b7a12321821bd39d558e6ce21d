@@ -1,0 +1,33 @@
+README.md
+  s_f3f7af8c4bf72b::t_5e92121d89292e 714
+  s_f3f7af8c4bf72b::t_5f6a8027f1de4a 114
+docs/frontend-practices.md
+  s_f3f7af8c4bf72b::t_5e92121d89292e 10
+src/a11y.browser.test.tsx
+  s_f3f7af8c4bf72b::t_24ce5f9a4d871e 21,93,114-115,176
+  s_f3f7af8c4bf72b::t_a46d4bd49a7fbc 177
+  s_f3f7af8c4bf72b::t_5f6a8027f1de4a 76-78,119-135,196,223,378
+src/a11y.films.browser.test.tsx
+  s_f3f7af8c4bf72b::t_24ce5f9a4d871e 18
+  s_f3f7af8c4bf72b::t_5f6a8027f1de4a 140
+  s_f3f7af8c4bf72b::t_aa4a5be5ef5ae7 45-47
+src/toolchain.test.ts
+  s_f3f7af8c4bf72b::t_24ce5f9a4d871e 756
+  s_f3f7af8c4bf72b::t_5f6a8027f1de4a 760-761
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "1e183e3a5b6826b7a12321821bd39d558e6ce21d",
+  "prompts": {},
+  "sessions": {
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
