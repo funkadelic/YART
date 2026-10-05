@@ -1,0 +1,47 @@
+vite.lib.config.ts
+  s_f3f7af8c4bf72b::t_d035b503f4d371 24
+package-lock.json
+  s_f3f7af8c4bf72b::t_fbfc0abeb87f76 12303,23193-23194
+docs/adr/README.md
+  s_f3f7af8c4bf72b::t_e8106090121a7f 24
+docs/adr/0016-icons-drawn-in-the-repo.md
+  s_f3f7af8c4bf72b::t_e8106090121a7f 1-11,13-22
+  s_f3f7af8c4bf72b::t_cfa98253579851 12
+.github/dependabot.yml
+  s_f3f7af8c4bf72b::t_a952a7feaf8a3e 5-7
+src/components/icons.tsx
+  h_705b7232b9f49b 77,87
+  s_f3f7af8c4bf72b::t_cfa98253579851 7,23
+  s_f3f7af8c4bf72b::t_1387b90edd05a7 3-5,8-11
+docs/adr/0012-published-as-an-npm-package.md
+  s_f3f7af8c4bf72b::t_cfa98253579851 3
+src/components/DataTable/Pagination.tsx
+  s_f3f7af8c4bf72b::t_cfa98253579851 117,128,151,162
+src/components/SearchInput.tsx
+  s_f3f7af8c4bf72b::t_cfa98253579851 47
+src/components/icons.test.tsx
+  s_f3f7af8c4bf72b::t_cfa98253579851 38,41-42
+src/components/DataTable/TableHead.tsx
+  s_f3f7af8c4bf72b::t_bf46d74ac72486 64-65
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fb5f1ddde36ffd2a0a70d70d3e303db12de615ec",
+  "prompts": {},
+  "humans": {
+    "h_705b7232b9f49b": {
+      "author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  },
+  "sessions": {
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
