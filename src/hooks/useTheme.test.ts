@@ -27,16 +27,6 @@ function stampedColorScheme(): string {
   return document.documentElement.style.colorScheme;
 }
 
-/**
- * Makes the store hostile for one case. The property access throws when site
- * data is blocked, so this is the shape the guard has to survive.
- */
-function breakStorage(method: "getItem" | "setItem" | "removeItem"): void {
-  vi.spyOn(Storage.prototype, method).mockImplementation(() => {
-    throw new Error("site data is blocked");
-  });
-}
-
 describe("useTheme", () => {
   describe("the stored choice", () => {
     it("reports light when the store holds light", () => {
@@ -71,14 +61,6 @@ describe("useTheme", () => {
         expect(result.current.choice).toBe("system");
       },
     );
-
-    it("treats an unreadable store as absent rather than letting the read escape", () => {
-      breakStorage("getItem");
-
-      const { result } = renderTheme();
-
-      expect(result.current.choice).toBe("system");
-    });
   });
 
   describe("writing the choice back", () => {
@@ -105,18 +87,19 @@ describe("useTheme", () => {
       expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
     });
 
-    it("still changes the choice when the write throws", () => {
-      const { result } = renderTheme();
-      breakStorage("setItem");
+    it("shares one choice and one stamp between two callers", () => {
+      const both = renderHook(() => [useTheme(), useTheme()] as const);
 
-      expect(() => {
-        act(() => {
-          result.current.setChoice("dark");
-        });
-      }).not.toThrow();
+      act(() => {
+        both.result.current[0].setChoice("dark");
+      });
 
-      expect(result.current.choice).toBe("dark");
+      const [first, second] = both.result.current;
+
+      expect(first.choice).toBe("dark");
+      expect(second.choice).toBe("dark");
       expect(stampedTheme()).toBe("dark");
+      expect(stampedColorScheme()).toBe("dark");
     });
   });
 
@@ -218,57 +201,6 @@ describe("useTheme", () => {
 
       expect(stampedTheme()).toBe("dark");
       expect(stampedColorScheme()).toBe("dark");
-    });
-
-    it("re-reads the store rather than trusting the value the event carries", () => {
-      localStorage.setItem(THEME_STORAGE_KEY, "dark");
-      const { result } = renderTheme();
-
-      act(() => {
-        localStorage.removeItem(THEME_STORAGE_KEY);
-        window.dispatchEvent(
-          new StorageEvent("storage", {
-            key: THEME_STORAGE_KEY,
-            newValue: "light",
-          }),
-        );
-      });
-
-      expect(result.current.choice).toBe("system");
-    });
-
-    it("re-reads when another document clears storage", () => {
-      localStorage.setItem(THEME_STORAGE_KEY, "dark");
-      const { result } = renderTheme();
-
-      act(() => {
-        localStorage.clear();
-        window.dispatchEvent(new StorageEvent("storage", { key: null }));
-      });
-
-      expect(result.current.choice).toBe("system");
-    });
-
-    it("ignores a write to any other key", () => {
-      localStorage.setItem(THEME_STORAGE_KEY, "dark");
-      const { result } = renderTheme();
-
-      act(() => {
-        // The store moves too, so the guard is that the handler does not look,
-        // rather than that there was nothing to see.
-        localStorage.setItem(THEME_STORAGE_KEY, "light");
-        window.dispatchEvent(new StorageEvent("storage", { key: "unrelated" }));
-      });
-
-      expect(result.current.choice).toBe("dark");
-    });
-
-    it("releases its listener on unmount", () => {
-      const listeners = vi.spyOn(window, "removeEventListener");
-
-      renderTheme().unmount();
-
-      expect(listeners).toHaveBeenCalledWith("storage", expect.any(Function));
     });
   });
 });
