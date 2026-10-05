@@ -737,6 +737,20 @@ describe("toolchain baseline", () => {
     }
   });
 
+  // The browser sweeps mount into a harness document, and the application
+  // restamps documentElement.lang, so a shell that dropped its language or title
+  // would still sweep clean. Nothing else checks either fact.
+  it("keeps a non-empty lang and title in every shell", () => {
+    for (const shell of shells()) {
+      const html = readFileSync(join(projectRoot, shell), "utf8");
+      const lang = /<html[^>]*\slang="([^"]*)"/.exec(html)?.[1]?.trim() ?? "";
+      const title = /<title>([^<]*)<\/title>/.exec(html)?.[1]?.trim() ?? "";
+
+      expect(lang, `${shell} carries no lang on its html element`).not.toBe("");
+      expect(title, `${shell} carries no title`).not.toBe("");
+    }
+  });
+
   // A faked clock plus the user input library deadlocks unless the library is
   // told which clock to advance, and a file that never restores the real clock
   // leaks the fake one into whatever runs next. Both are asserted across the
