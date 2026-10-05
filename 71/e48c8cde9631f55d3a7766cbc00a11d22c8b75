@@ -1,0 +1,31 @@
+src/hooks/useLocale.test.ts
+  s_f3f7af8c4bf72b::t_b631aa01829f11 66
+src/theme/resolveTheme.test.ts
+  s_f3f7af8c4bf72b::t_b631aa01829f11 7,56-64
+  s_f3f7af8c4bf72b::t_dad634a2a6d0a4 65
+src/hooks/useTheme.test.ts
+  s_f3f7af8c4bf72b::t_b631aa01829f11 90-95,97,99-100,102
+src/theme/resolveTheme.ts
+  s_f3f7af8c4bf72b::t_b631aa01829f11 12-20
+src/features/Header/ThemeControl.test.tsx
+  s_f3f7af8c4bf72b::t_f78df6ccebbbac 179-180,182
+  s_f3f7af8c4bf72b::t_450846095fb398 184
+src/hooks/useTheme.ts
+  s_f3f7af8c4bf72b::t_b631aa01829f11 1,3,7,11,42-44,50,58,63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "71e48c8cde9631f55d3a7766cbc00a11d22c8b75",
+  "prompts": {},
+  "sessions": {
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
