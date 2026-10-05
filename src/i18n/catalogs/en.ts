@@ -49,19 +49,11 @@ export interface DomainCatalog {
 }
 
 const CITY_ERROR_TEXT: DatasetErrorText = {
-  notAnObject: () => "The city data could not be read.",
-  missingRows: () => "The city data is missing its rows array.",
-  columnOrder: () =>
-    "The city data has an unexpected column order and was not loaded.",
-  rowShape: (tag, at) =>
-    `City row ${numberFormatFor(tag).format(at)} does not have 7 fields and was not loaded.`,
-  rowFieldType: (tag, at) =>
-    `City row ${numberFormatFor(tag).format(at)} has a field of the wrong type and was not loaded.`,
   transport: () =>
     "The city data could not be downloaded. Check your connection and try again.",
   status: (tag, status) =>
     `The city data could not be downloaded (status ${numberFormatFor(tag).format(status)}).`,
-  notJson: () => "The city data was downloaded but could not be read as JSON.",
+  invalid: () => "The city data could not be read.",
   unexpected: () => "An unexpected error occurred.",
 };
 
@@ -71,19 +63,11 @@ const CITY_ERROR_TEXT: DatasetErrorText = {
  * gender and agreement break that in Spanish and French.
  */
 const FILM_ERROR_TEXT: DatasetErrorText = {
-  notAnObject: () => "The film data could not be read.",
-  missingRows: () => "The film data is missing its rows array.",
-  columnOrder: () =>
-    "The film data has an unexpected column order and was not loaded.",
-  rowShape: (tag, at) =>
-    `Film row ${numberFormatFor(tag).format(at)} does not have 7 fields and was not loaded.`,
-  rowFieldType: (tag, at) =>
-    `Film row ${numberFormatFor(tag).format(at)} has a field of the wrong type and was not loaded.`,
   transport: () =>
     "The film data could not be downloaded. Check your connection and try again.",
   status: (tag, status) =>
     `The film data could not be downloaded (status ${numberFormatFor(tag).format(status)}).`,
-  notJson: () => "The film data was downloaded but could not be read as JSON.",
+  invalid: () => "The film data could not be read.",
   unexpected: () => "An unexpected error occurred.",
 };
 

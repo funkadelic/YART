@@ -36,10 +36,10 @@ describe("datasetErrorText", () => {
   });
 
   it("reads the sentence out of the catalog it is given", () => {
-    const failure = new DatasetError("notAnObject", 0, "the English message");
+    const failure = new DatasetError("invalid", 0, "the English message");
 
     expect(datasetErrorText(failure, es.cities, "es-ES")).toBe(
-      es.cities.datasetError.notAnObject("es-ES", 0),
+      es.cities.datasetError.invalid("es-ES", 0),
     );
     expect(datasetErrorText(failure, es.cities, "es-ES")).not.toBe(
       datasetErrorText(failure, en.cities, "en-US"),

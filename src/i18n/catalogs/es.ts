@@ -23,41 +23,21 @@ const DIRECCION: Readonly<Record<SortedDirection, string>> = {
 
 /** Lo que se le dice a quien lee cuando los datos no se pueden cargar. */
 const ERROR_CIUDADES: DatasetErrorText = {
-  notAnObject: () => "No se pudieron leer los datos de las ciudades.",
-  missingRows: () =>
-    "A los datos de las ciudades les falta su matriz de filas.",
-  columnOrder: () =>
-    "Los datos de las ciudades tienen un orden de columnas inesperado y no se cargaron.",
-  rowShape: (tag, at) =>
-    `La fila ${numberFormatFor(tag).format(at)} de los datos de las ciudades no tiene 7 campos y no se cargó.`,
-  rowFieldType: (tag, at) =>
-    `La fila ${numberFormatFor(tag).format(at)} de los datos de las ciudades tiene un campo de tipo incorrecto y no se cargó.`,
   transport: () =>
     "No se pudieron descargar los datos de las ciudades. Comprueba tu conexión e inténtalo de nuevo.",
   status: (tag, status) =>
     `No se pudieron descargar los datos de las ciudades (estado ${numberFormatFor(tag).format(status)}).`,
-  notJson: () =>
-    "Los datos de las ciudades se descargaron, pero no se pudieron leer como JSON.",
+  invalid: () => "No se pudieron leer los datos de las ciudades.",
   unexpected: () => "Se produjo un error inesperado.",
 };
 
 /** Escritas enteras: el sustantivo decide el género y la concordancia. */
 const ERROR_PELICULAS: DatasetErrorText = {
-  notAnObject: () => "No se pudieron leer los datos de las películas.",
-  missingRows: () =>
-    "A los datos de las películas les falta su matriz de filas.",
-  columnOrder: () =>
-    "Los datos de las películas tienen un orden de columnas inesperado y no se cargaron.",
-  rowShape: (tag, at) =>
-    `La fila ${numberFormatFor(tag).format(at)} de los datos de las películas no tiene 7 campos y no se cargó.`,
-  rowFieldType: (tag, at) =>
-    `La fila ${numberFormatFor(tag).format(at)} de los datos de las películas tiene un campo de tipo incorrecto y no se cargó.`,
   transport: () =>
     "No se pudieron descargar los datos de las películas. Comprueba tu conexión e inténtalo de nuevo.",
   status: (tag, status) =>
     `No se pudieron descargar los datos de las películas (estado ${numberFormatFor(tag).format(status)}).`,
-  notJson: () =>
-    "Los datos de las películas se descargaron, pero no se pudieron leer como JSON.",
+  invalid: () => "No se pudieron leer los datos de las películas.",
   unexpected: () => "Se produjo un error inesperado.",
 };
 

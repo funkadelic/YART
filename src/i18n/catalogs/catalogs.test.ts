@@ -160,33 +160,34 @@ describe("the catalogs", () => {
     }
   });
 
-  // The three sentences that name a number are the ones a translation can
-  // quietly drop: the row failures and the status failure all read fluently
-  // without it, leaving no way to tell which row or which status failed.
-  it("weaves the detail into every dataset failure that names one", () => {
+  // A translation could drop the status number unnoticed, and the invalid
+  // sentence must not show a row number.
+  it("weaves the status into its sentence and no row index into the invalid one", () => {
     for (const id of CATALOG_IDS) {
       for (const domain of DOMAIN_IDS) {
         const { datasetError } = CATALOGS[id][domain];
 
-        for (const code of ["rowShape", "rowFieldType", "status"] as const) {
-          expect(
-            datasetError[code]("en-US", 404),
-            `the ${id} catalog, ${domain}, ${code}`,
-          ).toContain("404");
-        }
+        expect(
+          datasetError.status("en-US", 404),
+          `the ${id} catalog, ${domain}, status`,
+        ).toContain("404");
+        expect(
+          datasetError.invalid("en-US", 404),
+          `the ${id} catalog, ${domain}, invalid`,
+        ).not.toContain("404");
       }
     }
   });
 
   // The two domains report different failures for the same code. Collapsing the
-  // nine sentences into one set taking the noun as an argument would typecheck
+  // two sets into one taking the noun as an argument would typecheck
   // and would break on gender and agreement in Spanish and French, so this case
   // asserts the two sets are genuinely written out and not shared.
   it("names its own subject in each domain's failure sentences", () => {
     for (const id of CATALOG_IDS) {
       const sentences = new Set(
         DOMAIN_IDS.map((domain) =>
-          CATALOGS[id][domain].datasetError.notAnObject("en-US", 0),
+          CATALOGS[id][domain].datasetError.invalid("en-US", 0),
         ),
       );
 

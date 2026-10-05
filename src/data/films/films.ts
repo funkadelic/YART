@@ -59,7 +59,7 @@ function parseFilmRows(rows: unknown[]): Film[] {
   return rows.map((row, at) => {
     if (!Array.isArray(row) || row.length !== COLUMNS.length) {
       throw new DatasetError(
-        "rowShape",
+        "invalid",
         at,
         `Film row ${at} does not have ${COLUMNS.length} fields and was not loaded.`,
       );
@@ -78,7 +78,7 @@ function parseFilmRows(rows: unknown[]): Film[] {
       !isStringArray(countries)
     ) {
       throw new DatasetError(
-        "rowFieldType",
+        "invalid",
         at,
         `Film row ${at} has a field of the wrong type and was not loaded.`,
       );

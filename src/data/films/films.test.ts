@@ -112,7 +112,7 @@ describe("loadFilms row validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "Film row 3 does not have 7 fields and was not loaded.",
-      code: "rowShape",
+      code: "invalid",
     });
   });
 
@@ -122,7 +122,7 @@ describe("loadFilms row validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "Film row 2 does not have 7 fields and was not loaded.",
-      code: "rowShape",
+      code: "invalid",
     });
   });
 
@@ -132,7 +132,7 @@ describe("loadFilms row validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "Film row 4 does not have 7 fields and was not loaded.",
-      code: "rowShape",
+      code: "invalid",
     });
   });
 
@@ -142,7 +142,7 @@ describe("loadFilms row validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "Film row 5 has a field of the wrong type and was not loaded.",
-      code: "rowFieldType",
+      code: "invalid",
     });
   });
 
@@ -152,7 +152,7 @@ describe("loadFilms row validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "Film row 1 has a field of the wrong type and was not loaded.",
-      code: "rowFieldType",
+      code: "invalid",
     });
   });
 
@@ -162,7 +162,7 @@ describe("loadFilms row validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "Film row 6 has a field of the wrong type and was not loaded.",
-      code: "rowFieldType",
+      code: "invalid",
     });
   });
 
@@ -172,7 +172,7 @@ describe("loadFilms row validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "Film row 0 has a field of the wrong type and was not loaded.",
-      code: "rowFieldType",
+      code: "invalid",
     });
   });
 
@@ -182,7 +182,7 @@ describe("loadFilms row validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "Film row 2 has a field of the wrong type and was not loaded.",
-      code: "rowFieldType",
+      code: "invalid",
     });
   });
 
@@ -195,7 +195,7 @@ describe("loadFilms row validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "Film row 4 has a field of the wrong type and was not loaded.",
-      code: "rowFieldType",
+      code: "invalid",
     });
   });
 
@@ -207,7 +207,7 @@ describe("loadFilms row validation", () => {
 
     const error = await rejectionOf(films);
 
-    expect(error.code).toBe("rowShape");
+    expect(error.code).toBe("invalid");
     expect(error.detail).toBe(3);
   });
 });

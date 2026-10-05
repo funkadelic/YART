@@ -60,7 +60,7 @@ function parseCityRows(rows: unknown[]): IndexedCity[] {
   return rows.map((row, at) => {
     if (!Array.isArray(row) || row.length !== COLUMNS.length) {
       throw new DatasetError(
-        "rowShape",
+        "invalid",
         at,
         `City row ${at} does not have ${COLUMNS.length} fields and was not loaded.`,
       );
@@ -79,7 +79,7 @@ function parseCityRows(rows: unknown[]): IndexedCity[] {
       typeof capital !== "string"
     ) {
       throw new DatasetError(
-        "rowFieldType",
+        "invalid",
         at,
         `City row ${at} has a field of the wrong type and was not loaded.`,
       );

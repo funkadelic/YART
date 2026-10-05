@@ -23,39 +23,21 @@ const NARROW_NO_BREAK_SPACE = "\u202F";
 
 /** Ce qui est annoncé au lecteur quand les données ne peuvent pas être chargées. */
 const ERREUR_VILLES: DatasetErrorText = {
-  notAnObject: () => "Les données des villes n'ont pas pu être lues.",
-  missingRows: () => "Le tableau de lignes est absent des données des villes.",
-  columnOrder: () =>
-    "Les données des villes ont un ordre de colonnes inattendu et n'ont pas été chargées.",
-  rowShape: (tag, at) =>
-    `La ligne ${numberFormatFor(tag).format(at)} des données des villes n'a pas 7 champs et n'a pas été chargée.`,
-  rowFieldType: (tag, at) =>
-    `La ligne ${numberFormatFor(tag).format(at)} des données des villes a un champ de type incorrect et n'a pas été chargée.`,
   transport: () =>
     "Les données des villes n'ont pas pu être téléchargées. Vérifiez votre connexion et réessayez.",
   status: (tag, status) =>
     `Les données des villes n'ont pas pu être téléchargées (statut ${numberFormatFor(tag).format(status)}).`,
-  notJson: () =>
-    "Les données des villes ont été téléchargées, mais n'ont pas pu être lues au format JSON.",
+  invalid: () => "Les données des villes n'ont pas pu être lues.",
   unexpected: () => "Une erreur inattendue s'est produite.",
 };
 
 /** Écrites en entier : le nom décide du genre et de l'accord. */
 const ERREUR_FILMS: DatasetErrorText = {
-  notAnObject: () => "Les données des films n'ont pas pu être lues.",
-  missingRows: () => "Le tableau de lignes est absent des données des films.",
-  columnOrder: () =>
-    "Les données des films ont un ordre de colonnes inattendu et n'ont pas été chargées.",
-  rowShape: (tag, at) =>
-    `La ligne ${numberFormatFor(tag).format(at)} des données des films n'a pas 7 champs et n'a pas été chargée.`,
-  rowFieldType: (tag, at) =>
-    `La ligne ${numberFormatFor(tag).format(at)} des données des films a un champ de type incorrect et n'a pas été chargée.`,
   transport: () =>
     "Les données des films n'ont pas pu être téléchargées. Vérifiez votre connexion et réessayez.",
   status: (tag, status) =>
     `Les données des films n'ont pas pu être téléchargées (statut ${numberFormatFor(tag).format(status)}).`,
-  notJson: () =>
-    "Les données des films ont été téléchargées, mais n'ont pas pu être lues au format JSON.",
+  invalid: () => "Les données des films n'ont pas pu être lues.",
   unexpected: () => "Une erreur inattendue s'est produite.",
 };
 

@@ -33,14 +33,9 @@ function pseudoErrors(domain: DomainId): DatasetErrorText {
   const base = en[domain].datasetError;
 
   return {
-    notAnObject: (tag, detail) => pseudoize(base.notAnObject(tag, detail)),
-    missingRows: (tag, detail) => pseudoize(base.missingRows(tag, detail)),
-    columnOrder: (tag, detail) => pseudoize(base.columnOrder(tag, detail)),
-    rowShape: (tag, detail) => pseudoize(base.rowShape(tag, detail)),
-    rowFieldType: (tag, detail) => pseudoize(base.rowFieldType(tag, detail)),
     transport: (tag, detail) => pseudoize(base.transport(tag, detail)),
     status: (tag, detail) => pseudoize(base.status(tag, detail)),
-    notJson: (tag, detail) => pseudoize(base.notJson(tag, detail)),
+    invalid: (tag, detail) => pseudoize(base.invalid(tag, detail)),
     unexpected: (tag, detail) => pseudoize(base.unexpected(tag, detail)),
   };
 }

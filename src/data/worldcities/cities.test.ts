@@ -124,7 +124,7 @@ describe("loadCities row validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "City row 3 does not have 7 fields and was not loaded.",
-      code: "rowShape",
+      code: "invalid",
     });
   });
 
@@ -134,7 +134,7 @@ describe("loadCities row validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "City row 2 does not have 7 fields and was not loaded.",
-      code: "rowShape",
+      code: "invalid",
     });
   });
 
@@ -144,7 +144,7 @@ describe("loadCities row validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "City row 4 does not have 7 fields and was not loaded.",
-      code: "rowShape",
+      code: "invalid",
     });
   });
 
@@ -166,7 +166,7 @@ describe("loadCities row validation", () => {
 
       expect(await rejection(payload)).toEqual({
         message: "City row 2 has a field of the wrong type and was not loaded.",
-        code: "rowFieldType",
+        code: "invalid",
       });
     },
   );
@@ -179,7 +179,7 @@ describe("loadCities row validation", () => {
 
     const error = await rejectionOf(cities);
 
-    expect(error.code).toBe("rowShape");
+    expect(error.code).toBe("invalid");
     expect(error.detail).toBe(3);
   });
 });
