@@ -1,0 +1,45 @@
+src/store/createChoiceStore.test.ts
+  s_f3f7af8c4bf72b::t_0c51c647e90e01 251
+  s_f3f7af8c4bf72b::t_20dbe7fe083c0d 1-2,4-16,18-31,33-250,252-271
+  s_f3f7af8c4bf72b::t_24e55c5aedb351 32
+  s_f3f7af8c4bf72b::t_dead5ff24de05d 3,17
+src/store/createChoiceStore.ts
+  s_f3f7af8c4bf72b::t_6c70debb1ee39a 1-58,60-84,86-87,89-98,101-106
+  s_f3f7af8c4bf72b::t_dfe5ed4bba3568 59
+  s_f3f7af8c4bf72b::t_dead5ff24de05d 85,88,99-100
+src/i18n/localeStore.ts
+  s_f3f7af8c4bf72b::t_801396e5e3ac3a 1,13-15,17-18,20-21,25,34-35
+src/hooks/useLocale.test.ts
+  s_f3f7af8c4bf72b::t_b631aa01829f11 66
+src/theme/resolveTheme.test.ts
+  s_f3f7af8c4bf72b::t_b631aa01829f11 7,56-64
+  s_f3f7af8c4bf72b::t_dad634a2a6d0a4 65
+src/hooks/useTheme.test.ts
+  s_f3f7af8c4bf72b::t_b631aa01829f11 90-95,97,99-100,102
+src/theme/resolveTheme.ts
+  s_f3f7af8c4bf72b::t_b631aa01829f11 12-20
+src/features/Header/ThemeControl.test.tsx
+  s_f3f7af8c4bf72b::t_f78df6ccebbbac 179-180,182
+  s_f3f7af8c4bf72b::t_450846095fb398 184
+src/hooks/useTheme.ts
+  s_f3f7af8c4bf72b::t_b631aa01829f11 1,3,7,11,42,50,58,63
+  s_f3f7af8c4bf72b::t_c3dfe37672ac00 43-44
+src/bootDocument.ts
+  s_f3f7af8c4bf72b::t_dead5ff24de05d 13,89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "39ff40be16767e7a5f72f33619e36464f9286f2c",
+  "prompts": {},
+  "sessions": {
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
