@@ -5,7 +5,8 @@ import { cityRowId } from "../features/cities/cityColumns";
 import { CITY_FIXTURE } from "../test/cityFixture";
 import { required } from "../test/required";
 import { collatorFor } from "../i18n/format";
-import { compareIdentities } from "./DataTable/sortRows";
+import { columns } from "./DataTable/column";
+import { rowComparator } from "./DataTable/sortRows";
 import { compareValues } from "./compareRows";
 import type { SortDirection } from "./DataTable/tableState";
 
@@ -62,19 +63,13 @@ function rowWithCapital(id: number, capital: unknown): City {
   return { ...CITY_FIXTURE[0], id, capital } as City;
 }
 
-/**
- * The comparator no longer sees a row, so the identity tiebreak it used to
- * apply is applied here instead. Both halves are the shipping functions, since a
- * local restatement of them would pass while the product ordered rows
- * differently. Every expected order below is the order the application produces.
- */
+/** The shipping row comparator over the default column for a key. */
 function byColumn(column: keyof City, direction: SortDirection) {
-  return (a: City, b: City): number => {
-    const comparison = compareValues(a[column], b[column], direction, EN);
-    return comparison !== 0
-      ? comparison
-      : compareIdentities(cityRowId(a), cityRowId(b));
-  };
+  return rowComparator(
+    columns<City>(EN).key(column, { label: column }),
+    direction,
+    cityRowId,
+  );
 }
 
 function sortedIds(
@@ -333,8 +328,8 @@ describe("the city row identity", () => {
       expect(short).toBeLessThan(geonameId);
 
       expect(
-        compareIdentities(cityRowId(asRow(short)), cityRowId(asRow(geonameId))),
-      ).toBeLessThan(0);
+        sortedIds([asRow(geonameId), asRow(short)], "name", "asc"),
+      ).toEqual([short, geonameId]);
     }
   });
 
@@ -354,8 +349,8 @@ describe("the city row identity", () => {
 
     for (const short of inverts) {
       expect(
-        compareIdentities(cityRowId(asRow(short)), cityRowId(asRow(geonameId))),
-      ).toBeLessThan(0);
+        sortedIds([asRow(geonameId), asRow(short)], "name", "asc"),
+      ).toEqual([short, geonameId]);
     }
   });
 

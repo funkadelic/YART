@@ -30,7 +30,7 @@ export function rowComparator<T, Id extends string>(
 }
 
 /** An identity is not a visible value, so it is never flipped or collated. */
-export function compareIdentities(aId: string, bId: string): number {
+function compareIdentities(aId: string, bId: string): number {
   if (aId === bId) return 0;
   return aId < bId ? -1 : 1;
 }
