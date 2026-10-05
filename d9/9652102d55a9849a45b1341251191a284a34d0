@@ -1,0 +1,20 @@
+src/a11y.films.browser.test.tsx
+  s_f3f7af8c4bf72b::t_5f6a8027f1de4a 140
+  s_f3f7af8c4bf72b::t_aa4a5be5ef5ae7 45-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d99652102d55a9849a45b1341251191a284a34d0",
+  "prompts": {},
+  "sessions": {
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
