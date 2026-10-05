@@ -1,0 +1,27 @@
+src/components/icons.tsx
+  s_f3f7af8c4bf72b::t_2f9e47252c9450 1-70,72-80,82-89
+src/components/SearchInput.tsx
+  s_f3f7af8c4bf72b::t_3b113022e81a90 3,47
+src/components/icons.test.tsx
+  s_f3f7af8c4bf72b::t_865b22fee78190 1-47
+src/components/DataTable/TableHead.tsx
+  s_f3f7af8c4bf72b::t_685ebb3c6f635d 1,65,68
+src/components/DataTable/Pagination.tsx
+  s_f3f7af8c4bf72b::t_685ebb3c6f635d 3-8,117,128,151,162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "18acb6641a7ac3343aa045f0e5343f14a3fc495c",
+  "prompts": {},
+  "sessions": {
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
