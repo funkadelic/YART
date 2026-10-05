@@ -7,7 +7,7 @@ The per-decision records are in [decision records](adr/README.md).
 ## Already in place
 
 - 100% coverage as a hard gate, plus mutation testing run by hand to check the tests assert something.
-- Accessibility checked twice: axe under jsdom and axe in a real browser, since contrast needs a layout engine.
+- Accessibility checked with axe in a real browser, since contrast needs a layout engine.
 - Four locales including a right-to-left pseudo-locale, with every rendered string arriving as a prop and no physical inline-axis property in any stylesheet.
 - An end-to-end suite against a production build, with visual regression snapshots.
 - Design tokens generated from a single source, with the generated stylesheet committed and guarded against drift.

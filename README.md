@@ -111,7 +111,7 @@ A React and TypeScript single-page app for browsing large datasets in the browse
 - The theme control is three native radios, so the arrow keys move between them and the whole group is a single tab stop
 - Every foreground and background pair is checked against the WCAG contrast ratio in both themes, computed from the shipped stylesheet rather than from a copy of it
 
-Every push sweeps the running app for violations of a set of automated rules and fails on any of them, once against a simulated DOM and once in a real browser across both themes, a paged table and a right-to-left reading direction. Contrast is the reason the second run exists: measuring it needs a layout engine, which the simulated DOM does not have. Automated rules cannot establish conformance, so the sweeps catch regressions rather than prove the list above.
+CI sweeps the running app in a real browser on code changes, failing on any violation of a set of automated rules in the loading, failed, empty, sorted and paged views, both themes, and a right-to-left reading direction. It runs in a real browser because measuring contrast needs a layout engine. Automated rules cannot establish conformance, so the sweep catches regressions rather than proving the list above.
 
 ### Internationalization
 
@@ -710,7 +710,7 @@ Codecov also tracks bundle size. After each build, its standalone analyzer uploa
 
 `npm run test:e2e` serves a production build rather than making one, so run `npm run build` first. Without a build it stops in well under a second and names the command to run.
 
-Both are optional for ordinary development. `npm test` runs the same accessibility checks as `npm run test:browser` against a simulated DOM and needs nothing extra.
+Both are optional for ordinary development. `npm test` needs nothing extra, and the accessibility sweep runs only under `npm run test:browser`.
 
 The three suites CI runs each write a JUnit report into `junit/`, which is gitignored. Nothing local reads them; they exist for the upload.
 
