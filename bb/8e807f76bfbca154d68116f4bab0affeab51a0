@@ -1,0 +1,24 @@
+src/store/createChoiceStore.test.ts
+  s_f3f7af8c4bf72b::t_0c51c647e90e01 251
+  s_f3f7af8c4bf72b::t_20dbe7fe083c0d 1-250,252-271
+src/store/createChoiceStore.ts
+  s_f3f7af8c4bf72b::t_6c70debb1ee39a 1-104
+src/i18n/localeStore.ts
+  s_f3f7af8c4bf72b::t_801396e5e3ac3a 1,13-15,17-18,20-21,25,34-35
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "bb8e807f76bfbca154d68116f4bab0affeab51a0",
+  "prompts": {},
+  "sessions": {
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
