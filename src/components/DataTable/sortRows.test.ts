@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { collatorFor } from "../../i18n/format";
 import { columns } from "./column";
-import { compareIdentities, sortRows } from "./sortRows";
+import { rowComparator, sortRows } from "./sortRows";
 
 /**
  * A row type this module could plausibly be handed and the application never
@@ -117,6 +117,33 @@ describe("sortRows", () => {
     ]);
   });
 
+  // getRowId must be injective, so this arm runs only for a broken one.
+  // Returning equal keeps the input order.
+  it("keeps arrival order for rows that share a column value and an identity", () => {
+    const light = part("a", "north", 1);
+    const heavy = part("a", "north", 2);
+
+    expect(sortRows([light, heavy], REGION, "asc", partId)).toEqual([
+      light,
+      heavy,
+    ]);
+    expect(sortRows([heavy, light], REGION, "asc", partId)).toEqual([
+      heavy,
+      light,
+    ]);
+  });
+
+  // A sort cannot see this: a comparator that answers 1 for equal ids also
+  // keeps arrival order, so the result is asserted directly.
+  it("reports rows sharing a column value and an identity as equal", () => {
+    const light = part("a", "north", 1);
+    const heavy = part("a", "north", 2);
+    const compare = rowComparator(REGION, "asc", partId);
+
+    expect(compare(light, heavy)).toBe(0);
+    expect(compare(heavy, light)).toBe(0);
+  });
+
   it("produces the same order whichever order the rows arrive in", () => {
     // The set a search returns arrives in a different order every time, so an
     // ordering that depended on arrival would reshuffle rows the user did not
@@ -198,20 +225,5 @@ describe("sortRows", () => {
       "a",
       "b",
     ]);
-  });
-});
-
-describe("compareIdentities", () => {
-  it("orders two identities the way their text orders", () => {
-    expect(compareIdentities("a", "b")).toBe(-1);
-    expect(compareIdentities("b", "a")).toBe(1);
-  });
-
-  // The caller owes the table an injective identity, so this arm only ever
-  // answers a broken one. It reports equal, which leaves the surrounding sort's
-  // order untouched; picking a winner would invent an order from rows it cannot
-  // tell apart.
-  it("reports two equal identities as equal", () => {
-    expect(compareIdentities("a", "a")).toBe(0);
   });
 });

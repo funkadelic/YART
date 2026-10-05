@@ -399,7 +399,7 @@ const ATTRIBUTION_MODIFICATIONS =
 
 /**
  * A literal expression's value, read from the tree as written. Anything else
- * throws, so a computed schema key fails here instead of being skipped.
+ * throws, so a computed URL key fails here instead of being skipped.
  */
 function literalValue(node: ts.Node, file: ts.SourceFile): unknown {
   if (
@@ -480,7 +480,7 @@ function moduleSource(path: string): ts.SourceFile {
 // The one address writer, and the module that owns which keys the address may
 // carry.
 const ADDRESS_WRITER = "src/features/DatasetPage/DatasetPage.tsx";
-const SCHEMA_MODULE = "src/components/DataTable/tableStateUrl.ts";
+const URL_KEYS_MODULE = "src/components/DataTable/tableStateUrl.ts";
 
 /**
  * Every module allowed to write the address. One module writes it, and each
@@ -497,7 +497,7 @@ const ADDRESS_WRITERS = [ADDRESS_WRITER];
  * part of the view state a link reproduces, which the address deliberately
  * does not do.
  */
-const SCHEMA_KEYS = ["page", "q", "size", "sort"];
+const OWNED_URL_KEYS = ["page", "q", "size", "sort"];
 
 /**
  * Every history-mutating call this file performs, one entry per call site, named
@@ -516,42 +516,28 @@ function historyMutations(file: ts.SourceFile): string[] {
 }
 
 /**
- * The keys the query-string schema declares, sorted, read out of the schema's own
- * property names.
+ * The keys the address owns, sorted, read from the URL_KEYS literal.
  *
- * Read as names rather than through literalValue over the whole array, because
- * each entry also carries a parse and a serialize function and a literal
- * evaluator would refuse the array outright.
+ * A bare string literal that bypasses the constant is not caught here and is
+ * left to review and the URL suites.
  */
-function schemaKeys(): string[] {
-  const file = moduleSource(SCHEMA_MODULE);
-  const entries = collect(file, (node) =>
+function urlKeys(): string[] {
+  const file = moduleSource(URL_KEYS_MODULE);
+  const keys = collect(file, (node) =>
     ts.isVariableDeclaration(node) &&
     ts.isIdentifier(node.name) &&
-    node.name.text === "PARAM_SCHEMA" &&
-    node.initializer &&
-    ts.isArrayLiteralExpression(node.initializer)
-      ? node.initializer.elements
+    node.name.text === "URL_KEYS" &&
+    node.initializer
+      ? node.initializer
       : undefined,
   ).at(-1);
 
-  return required(entries, `PARAM_SCHEMA in ${SCHEMA_MODULE}`)
-    .map((entry) => {
-      const key = ts.isObjectLiteralExpression(entry)
-        ? entry.properties.find(
-            (property): property is ts.PropertyAssignment =>
-              ts.isPropertyAssignment(property) &&
-              ts.isIdentifier(property.name) &&
-              property.name.text === "key",
-          )
-        : undefined;
-
-      return literalValue(
-        required(key?.initializer, `a schema entry's key in ${SCHEMA_MODULE}`),
-        file,
-      ) as string;
-    })
-    .toSorted();
+  return Object.values(
+    literalValue(
+      required(keys, `URL_KEYS in ${URL_KEYS_MODULE}`),
+      file,
+    ) as Record<string, string>,
+  ).toSorted();
 }
 
 /** The one module allowed to ask the platform for a locale. */
@@ -1025,9 +1011,9 @@ describe("toolchain baseline", () => {
     ).toEqual([]);
 
     expect(
-      schemaKeys(),
-      "the query-string schema owns a different set of keys than it did",
-    ).toEqual(SCHEMA_KEYS);
+      urlKeys(),
+      "the address owns a different set of keys than it did",
+    ).toEqual(OWNED_URL_KEYS);
   });
   // A fifth surface asking the platform for a locale of its own would
   // reintroduce the defect the locale layer closed, invisibly on a machine whose

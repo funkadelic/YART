@@ -259,11 +259,11 @@ describe("serializeTableState", () => {
     });
   });
 
-  // Canonical order is the schema table's own order, which makes two
+  // Canonical order is q, sort, page, size, which makes two
   // equivalent views produce one string. An order that followed the incoming
   // query would make the output a function of the input and there would be no
   // canonical form to compare against.
-  it("writes the owned keys in the schema's order whatever order they arrived in", () => {
+  it("writes the owned keys in the canonical order whatever order they arrived in", () => {
     expect(
       serializeTableState(
         stateWith({

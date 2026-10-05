@@ -7,86 +7,71 @@ import {
 /** One key carries column and direction, so the invalid pair cannot occur. */
 const SORT_DESCENDING_PREFIX = "-";
 
-/** Parsing returns a partial; serializing returns null for a default. */
-interface UrlParamEntry {
-  readonly key: string;
-  readonly parse: <Id extends string>(
-    raw: string,
-    validColumnIds: readonly Id[],
-  ) => Partial<TableState<Id>> | undefined;
-  readonly serialize: <Id extends string>(
-    state: TableState<Id>,
-  ) => string | null;
+/**
+ * The only keys the address owns. Every other key is carried through a write.
+ */
+const URL_KEYS = {
+  query: "q",
+  sort: "sort",
+  page: "page",
+  size: "size",
+} as const;
+
+const OWNED_KEYS: readonly string[] = Object.values(URL_KEYS);
+
+/** Trimmed as the commit trims, so a padded link seeds the settled term. */
+function parseQuery<Id extends string>(
+  raw: string | null,
+): Partial<TableState<Id>> {
+  return raw === null ? {} : { query: raw.trim() };
 }
 
-/** The parameters this application owns, in the canonical write order. */
-const PARAM_SCHEMA: readonly UrlParamEntry[] = [
-  {
-    key: "q",
-    // A term reaches a controlled value and a substring match, never a lookup.
-    // Trimmed as the commit trims, so a padded link seeds the settled term.
-    parse: (raw) => ({ query: raw.trim() }),
-    // Trimmed on the way out too, so one view cannot have two addresses
-    // whatever term the state was handed.
-    serialize: (state) => {
-      const term = state.query.trim();
-      return term === DEFAULT_TABLE_STATE.query ? null : term;
-    },
-  },
-  {
-    key: "sort",
-    // Located with find, so the result arrives already typed as a caller's id.
-    // The whole token is tried before the prefix is stripped, because an id may
-    // begin with it, and stripping first would leave such an id unreachable
-    // ascending.
-    parse: (raw, validColumnIds) => {
-      const ascending = validColumnIds.find((candidate) => candidate === raw);
-      if (ascending !== undefined) {
-        return { sortColumnId: ascending, sortDirection: "asc" };
-      }
+/**
+ * Tries the whole token before the prefix, because an id may begin with it and
+ * stripping first would leave such an id unreachable ascending.
+ */
+function parseSort<Id extends string>(
+  raw: string | null,
+  validColumnIds: readonly Id[],
+): Partial<TableState<Id>> {
+  if (raw === null) return {};
 
-      if (!raw.startsWith(SORT_DESCENDING_PREFIX)) return undefined;
+  const ascending = validColumnIds.find((candidate) => candidate === raw);
+  if (ascending !== undefined) {
+    return { sortColumnId: ascending, sortDirection: "asc" };
+  }
 
-      const id = raw.slice(SORT_DESCENDING_PREFIX.length);
-      const sortColumnId = validColumnIds.find((candidate) => candidate === id);
-      if (sortColumnId === undefined) return undefined;
+  if (!raw.startsWith(SORT_DESCENDING_PREFIX)) return {};
 
-      return { sortColumnId, sortDirection: "desc" };
-    },
-    serialize: (state) => {
-      if (state.sortColumnId === null) return null;
+  const id = raw.slice(SORT_DESCENDING_PREFIX.length);
+  const descending = validColumnIds.find((candidate) => candidate === id);
+  return descending === undefined
+    ? {}
+    : { sortColumnId: descending, sortDirection: "desc" };
+}
 
-      const prefix =
-        state.sortDirection === "desc" ? SORT_DESCENDING_PREFIX : "";
-      return prefix + state.sortColumnId;
-    },
-  },
-  {
-    key: "page",
-    // Coerced whole, because the radix parser reads exponent notation as a
-    // single digit. Any positive integer, with no upper bound; the read-side
-    // clamp bounds it.
-    parse: (raw) => {
-      const page = Number(raw);
-      return Number.isInteger(page) && page > 0 ? { page } : undefined;
-    },
-    serialize: (state) =>
-      state.page === DEFAULT_TABLE_STATE.page ? null : String(state.page),
-  },
-  {
-    key: "size",
-    // Only a size the table offers, because the select cannot represent one
-    // that is not among its options. Membership already implies a whole number.
-    parse: (raw) => {
-      const pageSize = Number(raw);
-      return PAGE_SIZE_OPTIONS.includes(pageSize) ? { pageSize } : undefined;
-    },
-    serialize: (state) =>
-      state.pageSize === DEFAULT_TABLE_STATE.pageSize
-        ? null
-        : String(state.pageSize),
-  },
-];
+/**
+ * Coerced whole, because the radix parser reads exponent notation as one
+ * digit. Any positive integer; the read-side clamp bounds it.
+ */
+function parsePage<Id extends string>(
+  raw: string | null,
+): Partial<TableState<Id>> {
+  if (raw === null) return {};
+
+  const page = Number(raw);
+  return Number.isInteger(page) && page > 0 ? { page } : {};
+}
+
+/** Only a size the table offers, since the select cannot show any other. */
+function parsePageSize<Id extends string>(
+  raw: string | null,
+): Partial<TableState<Id>> {
+  if (raw === null) return {};
+
+  const pageSize = Number(raw);
+  return PAGE_SIZE_OPTIONS.includes(pageSize) ? { pageSize } : {};
+}
 
 /**
  * Reads whatever of the view state a query string carries. Total by
@@ -97,22 +82,15 @@ export function parseTableState<Id extends string>(
   search: string,
   validColumnIds: readonly Id[],
 ): Partial<TableState<Id>> {
+  // A repeated key reads as its first occurrence.
   const params = new URLSearchParams(search);
-  const restored: Partial<TableState<Id>> = {};
 
-  for (const entry of PARAM_SCHEMA) {
-    // The first occurrence of a repeated key; the extras are dropped by the
-    // write that follows, with no rule of their own.
-    const raw = params.get(entry.key);
-    if (raw === null) continue;
-
-    const parsed = entry.parse(raw, validColumnIds);
-    if (parsed !== undefined) {
-      Object.assign(restored, parsed);
-    }
-  }
-
-  return restored;
+  return {
+    ...parseQuery<Id>(params.get(URL_KEYS.query)),
+    ...parseSort(params.get(URL_KEYS.sort), validColumnIds),
+    ...parsePage<Id>(params.get(URL_KEYS.page)),
+    ...parsePageSize<Id>(params.get(URL_KEYS.size)),
+  };
 }
 
 /**
@@ -124,22 +102,29 @@ export function serializeTableState<Id extends string>(
   state: TableState<Id>,
   search: string,
 ): string {
-  const incoming = new URLSearchParams(search);
   const next = new URLSearchParams();
 
-  for (const entry of PARAM_SCHEMA) {
-    const value = entry.serialize(state);
-    if (value !== null) {
-      next.set(entry.key, value);
-    }
+  // Trimmed on the way out too, so one view cannot have two addresses.
+  const term = state.query.trim();
+  if (term !== DEFAULT_TABLE_STATE.query) next.set(URL_KEYS.query, term);
+
+  if (state.sortColumnId !== null) {
+    const prefix = state.sortDirection === "desc" ? SORT_DESCENDING_PREFIX : "";
+    next.set(URL_KEYS.sort, prefix + state.sortColumnId);
   }
 
-  for (const [key, value] of incoming) {
+  if (state.page !== DEFAULT_TABLE_STATE.page) {
+    next.set(URL_KEYS.page, String(state.page));
+  }
+
+  if (state.pageSize !== DEFAULT_TABLE_STATE.pageSize) {
+    next.set(URL_KEYS.size, String(state.pageSize));
+  }
+
+  for (const [key, value] of new URLSearchParams(search)) {
     // Ownership is decided by comparing key strings, never by looking the
     // incoming key up in an object.
-    if (!PARAM_SCHEMA.some((entry) => entry.key === key)) {
-      next.append(key, value);
-    }
+    if (!OWNED_KEYS.includes(key)) next.append(key, value);
   }
 
   const query = next.toString();

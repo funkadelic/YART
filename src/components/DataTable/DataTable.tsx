@@ -1,11 +1,11 @@
-import { useEffect, useEffectEvent, type ReactNode } from "react";
+import { useEffect, useEffectEvent, useMemo, type ReactNode } from "react";
 import type { Column } from "./column.js";
 import type { TableState, SortDirection } from "./tableState.js";
 import { TableHead } from "./TableHead.js";
 import { TableBody } from "./TableBody.js";
 import { Pagination, type PaginationLabels } from "./Pagination.js";
 import { useSortedRows } from "../../hooks/useSortedRows.js";
-import { usePaginatedRows } from "../../hooks/usePaginatedRows.js";
+import { paginate } from "../paginate.js";
 import styles from "./DataTable.module.scss";
 
 export type { PaginationLabels };
@@ -181,10 +181,10 @@ export function DataTable<T, Id extends string>({
     getRowId,
   );
 
-  const { paginatedData, totalPages, effectivePage } = usePaginatedRows(
-    sortedRows,
-    state.page,
-    state.pageSize,
+  // The clamped page is for reading, never stored.
+  const { paginatedData, totalPages, effectivePage } = useMemo(
+    () => paginate(sortedRows, state.page, state.pageSize),
+    [sortedRows, state.page, state.pageSize],
   );
 
   // An effect event, so an inline callback is called when the sort settles and
