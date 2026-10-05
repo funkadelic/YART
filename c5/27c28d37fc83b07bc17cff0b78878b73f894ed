@@ -1,0 +1,21 @@
+src/toolchain.test.ts
+  s_f3f7af8c4bf72b::t_5810c0a3f49f1b 519,521-522,526,529-531,535-540
+src/components/DataTable/tableStateUrl.ts
+  s_f3f7af8c4bf72b::t_4e047c5aae17cd 10-50,53-74,85,88-93,107-121,124,127
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "c527c28d37fc83b07bc17cff0b78878b73f894ed",
+  "prompts": {},
+  "sessions": {
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
