@@ -117,7 +117,7 @@ jobs:
         run: npm run test:package
 
       # The browser download is the most expensive thing here, so it sits behind
-      # every cheap gate. The jsdom half of the accessibility gate ran in Test.
+      # every cheap gate, and the accessibility sweep runs only in this browser.
       - name: Install Chromium
         if: env.HEAVY_CHECKS == 'true'
         run: npx playwright install --with-deps --only-shell chromium

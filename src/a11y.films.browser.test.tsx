@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import axe from "axe-core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { DatasetPage } from "./features/DatasetPage";
 import { FILM_PAGE } from "./features/films/filmPage";
@@ -13,11 +13,9 @@ import { describeViolations, incompleteRuleIds } from "./test/axeSweep";
 import "yet-another-react-table/styles.css";
 import "./index.css";
 
-// The rules the engine could not decide, asserted by set equality as the jsdom
-// sweep asserts its own. Empty here, and that is why this file sits beside that
-// one: a real engine has a layout engine and a canvas, so the contrast rule and
-// the two page-level rules actually run. A rule turning up undecided in a real
-// engine is news, and news belongs in a red run.
+// The rules the engine could not decide, asserted by set equality. Empty,
+// because a real engine has a layout engine and a canvas, so the contrast rule
+// and the two page-level rules run. An undecided rule fails the run.
 const EXPECTED_INCOMPLETE: readonly string[] = Object.freeze([]);
 
 /**
@@ -25,7 +23,14 @@ const EXPECTED_INCOMPLETE: readonly string[] = Object.freeze([]);
  * by hand, so it can disagree with what actually ran; a derived list could
  * not.
  */
-const SWEPT_STATES = Object.freeze(["light", "dark", "paged", "rtl"]);
+const SWEPT_STATES = Object.freeze([
+  "error",
+  "light",
+  "dark",
+  "paged",
+  "empty",
+  "rtl",
+]);
 
 /**
  * The one catalog that ships reading right to left. The films page carries
@@ -36,6 +41,9 @@ const RTL_CATALOG_ID = "ar-XB";
 
 /** What actually ran, recorded as it runs, so a dropped state goes red. */
 const sweptStates: string[] = [];
+
+/** Above the 20 s table wait, so that wait fails with its own message. */
+const WALK_TIMEOUT = 60_000;
 
 /**
  * Runs the rule engine over whatever is currently on screen and holds both
@@ -65,46 +73,73 @@ async function sweep(state: string): Promise<void> {
 }
 
 describe("films accessibility in a real engine", () => {
-  // Four states off one mount. Every transition goes through the control a
+  // Six states off one mount. Every transition goes through the control a
   // reader would press, so a control that has stopped working fails the sweep
   // instead of the sweep quietly visiting a state no reader can reach.
-  it("reports no violation in either theme, on a page past the first, or reading right to left", async () => {
-    const user = userEvent.setup();
+  it(
+    "reports no violation after a failed load, in either theme, on a page past the first, emptied, or reading right to left",
+    { timeout: WALK_TIMEOUT },
+    async () => {
+      const user = userEvent.setup();
 
-    render(<DatasetPage config={FILM_PAGE} />);
+      // The first request fails so the error view can be swept. The
+      // once-implementation is spent by that call, so the retry below reaches the
+      // real asset.
+      vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response("not found", { status: 404 }),
+      );
 
-    // The engine fetches the real dataset asset across the dev server, parses
-    // and indexes it. The jsdom suite pays none of that, because it runs
-    // against a fixture.
-    await screen.findByRole("table", {}, { timeout: 20_000 });
+      render(<DatasetPage config={FILM_PAGE} />);
 
-    // The first state is chosen, never inherited. Left on the default, the
-    // theme resolves against the engine's own preference, which would sweep the
-    // dark palette twice on a machine that prefers dark and never sweep light.
-    await user.click(screen.getByRole("radio", { name: "Light" }));
-    await screen.findByRole("radio", { name: "Light", checked: true });
-    await sweep("light");
+      // The first state is chosen, never inherited. Left on the default, the
+      // theme resolves against the engine's own preference, which would sweep the
+      // dark palette twice on a machine that prefers dark and never sweep light.
+      await user.click(screen.getByRole("radio", { name: "Light" }));
+      await screen.findByRole("radio", { name: "Light", checked: true });
 
-    await user.click(screen.getByRole("radio", { name: "Dark" }));
-    await screen.findByRole("radio", { name: "Dark", checked: true });
-    await sweep("dark");
+      await screen.findByText(
+        "Error: The film data could not be downloaded (status 404).",
+      );
+      await sweep("error");
 
-    await user.click(screen.getByRole("button", { name: "Go to next page" }));
-    await screen.findByText(/^Page 2 of /);
-    await sweep("paged");
+      await user.click(screen.getByRole("button", { name: "Try again" }));
 
-    // The picker is operated instead of the attribute being set, so the state
-    // swept is one a reader can actually reach. Found by role alone, because
-    // its own accessible name follows the language it is about to change.
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Language" }),
-      RTL_CATALOG_ID,
-    );
-    await waitFor(() => {
-      expect(document.documentElement.dir).toBe("rtl");
-    });
-    await sweep("rtl");
+      // The retry fetches the real dataset asset across the dev server, parses
+      // and indexes it.
+      await screen.findByRole("table", {}, { timeout: 20_000 });
+      await sweep("light");
 
-    expect(sweptStates).toEqual(SWEPT_STATES);
-  });
+      await user.click(screen.getByRole("radio", { name: "Dark" }));
+      await screen.findByRole("radio", { name: "Dark", checked: true });
+      await sweep("dark");
+
+      await user.click(screen.getByRole("button", { name: "Go to next page" }));
+      await screen.findByText(/^Page 2 of /);
+      await sweep("paged");
+
+      const searchBox = screen.getByRole("textbox", { name: "Search" });
+
+      await user.type(searchBox, "no film is called this");
+      await screen.findByText("No films found");
+      await sweep("empty");
+
+      // Cleared so the rtl sweep sees a populated table, as the other states do.
+      await user.clear(searchBox);
+      await screen.findByRole("table");
+
+      // The picker is operated instead of the attribute being set, so the state
+      // swept is one a reader can actually reach. Found by role alone, because
+      // its own accessible name follows the language it is about to change.
+      await user.selectOptions(
+        screen.getByRole("combobox", { name: "Language" }),
+        RTL_CATALOG_ID,
+      );
+      await waitFor(() => {
+        expect(document.documentElement.dir).toBe("rtl");
+      });
+      await sweep("rtl");
+
+      expect(sweptStates).toEqual(SWEPT_STATES);
+    },
+  );
 });

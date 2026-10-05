@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { page } from "vitest/browser";
 import axe from "axe-core";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { CITY_PAGE } from "./features/cities/cityPage";
 import { DatasetPage } from "./features/DatasetPage";
@@ -15,19 +15,26 @@ import { required } from "./test/required";
 import "yet-another-react-table/styles.css";
 import "./index.css";
 
-// The rules the engine could not decide, asserted by set equality as the jsdom
-// sweep asserts its own. Empty here, because a real engine has a layout engine
-// and a canvas, so it can sample the rendered color pair behind an element and
-// the contrast rule actually runs instead of filing itself as undecided. That
-// gap is why this file exists beside the jsdom one, and a rule turning up
-// undecided in a real engine is news that belongs in a red run.
+// The rules the engine could not decide, asserted by set equality. Empty,
+// because a real engine has a layout engine and a canvas, so it can sample the
+// rendered color pair behind an element and the contrast rule and the page-level
+// rules run. An undecided rule fails the run.
 const EXPECTED_INCOMPLETE: readonly string[] = Object.freeze([]);
 
 /**
  * Every state the app is swept in, in the order the sweeps run. Written out by
  * hand, so it can disagree with what actually ran.
  */
-const SWEPT_STATES = Object.freeze(["light", "dark", "paged", "rtl"]);
+const SWEPT_STATES = Object.freeze([
+  "loading",
+  "error",
+  "light",
+  "dark",
+  "sorted",
+  "paged",
+  "empty",
+  "rtl",
+]);
 
 /**
  * The one catalog that ships reading right to left. It is a pseudo-locale and
@@ -66,6 +73,9 @@ const MIRRORED = "matrix(-1, 0, 0, 1, 0, 0)";
 const NARROW_VIEWPORT = Object.freeze({ width: 480, height: 900 });
 const DESKTOP_VIEWPORT = Object.freeze({ width: 1280, height: 900 });
 
+/** Above the 20 s table wait, so that wait fails with its own message. */
+const WALK_TIMEOUT = 60_000;
+
 /**
  * What actually ran, recorded as it runs. A state quietly dropped from the walk
  * below leaves this short of the list above and the closing assertion goes red.
@@ -78,15 +88,13 @@ const sweptStates: string[] = [];
  * them. The state name rides along as the assertion message, so a failure says
  * which of the swept states broke.
  *
- * The context is the document, for the reason the jsdom sweep widens its own:
- * nine rules match the html element and a body context
- * reports them neither as violations nor as undecided. Here the page really is
- * the page, so the page-level rules read what a reader would load.
+ * The context is the document: nine rules match the html element, and a body
+ * context reports them neither as violations nor as undecided. Here the page
+ * is the real page, so the page-level rules read what a reader would load.
  *
- * resultTypes is passed for the same reason the jsdom sweep passes it: without
- * it the engine builds a full node list for the thirty-odd rules that pass on
- * every sweep, and nothing reads it. It still reports which rules passed, and
- * the first assertion below reads that.
+ * resultTypes is passed because without it the engine builds a full node list
+ * for the thirty-odd rules that pass on every sweep, and nothing reads it. It
+ * still reports which rules passed, and the first assertion below reads that.
  */
 async function sweep(state: string): Promise<void> {
   const results = await axe.run(document, {
@@ -103,205 +111,276 @@ async function sweep(state: string): Promise<void> {
   expect(describeViolations(results), state).toEqual([]);
   expect(incompleteRuleIds(results), state).toEqual(EXPECTED_INCOMPLETE);
 
-  // Recorded after the assertions, for the reason the jsdom sweep records it
-  // there: a state that failed its sweep is not a state that was swept clean.
+  // Recorded after the assertions, so a state that failed its sweep never counts
+  // as swept clean.
   sweptStates.push(state);
 }
 
+/**
+ * Waits for the table to stop re-sorting and for the fade back to full opacity to
+ * finish. The contrast rule reads the interpolated opacity, so a sweep that starts
+ * mid-fade measures a dimmed table.
+ */
+async function settled(): Promise<void> {
+  const container = required(
+    screen.getByRole("table").parentElement ?? undefined,
+    "the table's scroll container",
+  );
+
+  await waitFor(() => {
+    expect(container.getAttribute("aria-busy")).toBe("false");
+  });
+  await Promise.all(container.getAnimations().map((a) => a.finished));
+}
+
 describe("accessibility in a real engine", () => {
-  // Four states off one mount. Every transition goes through the control a
+  // Eight states off one mount. Every transition goes through the control a
   // reader would press, so a control that has stopped working fails the sweep
   // instead of the sweep quietly visiting a state no reader can reach.
-  it("reports no violation in either theme, on a page past the first, or reading right to left", async () => {
-    const user = userEvent.setup();
+  it(
+    "reports no violation while loading, after a failed load, in either theme, sorted, paged, emptied, or reading right to left",
+    { timeout: WALK_TIMEOUT },
+    async () => {
+      const user = userEvent.setup();
 
-    render(<DatasetPage config={CITY_PAGE} />);
+      // The first request is held and then failed, so the loading and error views
+      // are on screen long enough to sweep. The once-implementation is spent by
+      // that call, so the retry below reaches the real asset.
+      let releaseRequest = () => {};
 
-    // The one generous wait in the file, and deliberate. The engine fetches
-    // the real multi-megabyte dataset asset across the dev server, parses and
-    // indexes it. The jsdom suite pays none of that, because it runs against a
-    // fixture.
-    await screen.findByRole("table", {}, { timeout: 20_000 });
-
-    // The first state is chosen explicitly. Left on the default, the theme
-    // resolves against the engine's own preference, which would sweep the
-    // dark palette twice on a machine that prefers dark and never sweep light.
-    await user.click(screen.getByRole("radio", { name: "Light" }));
-    await screen.findByRole("radio", { name: "Light", checked: true });
-    await sweep("light");
-
-    await user.click(screen.getByRole("radio", { name: "Dark" }));
-    await screen.findByRole("radio", { name: "Dark", checked: true });
-    await sweep("dark");
-
-    await user.click(screen.getByRole("button", { name: "Go to next page" }));
-    await screen.findByText(/^Page 2 of /);
-    await sweep("paged");
-
-    // Operating the picker, so the state swept is one a reader can actually
-    // reach. Found by role alone, because its own accessible name follows the
-    // language it is about to change.
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: "Language" }),
-      RTL_CATALOG_ID,
-    );
-    await waitFor(() => {
-      expect(document.documentElement.dir).toBe("rtl");
-    });
-    await sweep("rtl");
-
-    // Two of the six rewritten declarations, read back as the engine resolved
-    // them. These are the assertions jsdom cannot make: it has no layout engine,
-    // so it resolves a logical property to nothing at all and a direction to
-    // nothing either. Reverting either declaration turns this red.
-    const searchIcon = required(
-      screen.getByRole("textbox").previousElementSibling ?? undefined,
-      "the search icon beside the search box",
-    );
-
-    // Under this direction the reading start is the right-hand side, so the
-    // inline-start inset resolves onto the right edge, and so does the wide half
-    // of the padding that reserves room for the icon. The two were rewritten as
-    // a pair and are asserted as one, because either alone leaves the icon
-    // sitting over the text.
-    expect(getComputedStyle(searchIcon).right).toBe(SEARCH_ICON_INSET);
-
-    const searchPadding = getComputedStyle(screen.getByRole("textbox"));
-
-    expect(searchPadding.paddingRight).toBe(SEARCH_RESERVED_INSET);
-    expect(searchPadding.paddingLeft).toBe(SEARCH_PLAIN_INSET);
-
-    // The number column, the last of the five. Its cells carry the alignment
-    // and its neighbors do not, so a class on the wrong cell fails here.
-    const bodyCells = within(
-      required(screen.getAllByRole("row")[1], "the first data row"),
-    ).getAllByRole("cell");
-
-    expect(
-      getComputedStyle(required(bodyCells[4], "the population cell")).textAlign,
-    ).toBe("end");
-    expect(
-      getComputedStyle(required(bodyCells[0], "the first column's cell"))
-        .textAlign,
-    ).toBe("start");
-
-    // The header control shrinks to its content, so only the auto margin
-    // carries it to that edge. Under this direction it resolves onto the right.
-    const sortControl = getComputedStyle(
-      within(
-        required(
-          screen.getAllByRole("columnheader")[4],
-          "the population header cell",
-        ),
-      ).getByRole("button"),
-    );
-
-    expect(sortControl.marginLeft).toBe("0px");
-    expect(Number.parseFloat(sortControl.marginRight)).toBeGreaterThan(0);
-
-    // The remaining two of the six, on the header's segmented control. Its
-    // automatic margin resolves onto the reading-end side, so the control still
-    // pins to the trailing edge. The reset on the reading-start-most label keeps
-    // the separator hairlines between the labels instead of doubling one against
-    // the outer edge.
-    const themeControl = screen.getByRole("radiogroup");
-    const themeMargins = getComputedStyle(themeControl);
-
-    expect(themeMargins.marginLeft).toBe("0px");
-    expect(Number.parseFloat(themeMargins.marginRight)).toBeGreaterThan(0);
-
-    const themeLabels = within(themeControl)
-      .getAllByRole("radio")
-      .map((input, index) =>
-        required(
-          input.nextElementSibling ?? undefined,
-          `the label beside theme option ${String(index)}`,
-        ),
+      vi.spyOn(globalThis, "fetch").mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            releaseRequest = () => {
+              resolve(new Response("not found", { status: 404 }));
+            };
+          }),
       );
 
-    expect(themeLabels).toHaveLength(3);
+      render(<DatasetPage config={CITY_PAGE} />);
 
-    themeLabels.forEach((label, index) => {
-      const hairlines = getComputedStyle(label);
+      // The first state is chosen explicitly. Left on the default, the theme
+      // resolves against the engine's own preference, which would sweep the
+      // dark palette twice on a machine that prefers dark and never sweep light.
+      await user.click(screen.getByRole("radio", { name: "Light" }));
+      await screen.findByRole("radio", { name: "Light", checked: true });
 
-      expect(hairlines.borderLeftWidth, String(index)).toBe("0px");
-      expect(hairlines.borderRightWidth, String(index)).toBe(
-        index === 0 ? "0px" : "1px",
+      screen.getByText("Downloading the city data...");
+      await sweep("loading");
+
+      releaseRequest();
+      await screen.findByText(
+        "Error: The city data could not be downloaded (status 404).",
       );
-    });
+      await sweep("error");
 
-    // The four page controls read first, previous, next, last from the reading
-    // start, which under this direction runs right to left across the row. Their
-    // document order is that order, so their resolved left edges must descend.
-    // Named, because the header holds a second navigation landmark. Matched
-    // loosely, because this run reads the pseudo-locale.
-    const controls = within(
-      screen.getByRole("navigation", { name: /pagination/ }),
-    ).getAllByRole("button");
+      await user.click(screen.getByRole("button", { name: "Try again" }));
 
-    expect(controls).toHaveLength(4);
+      // The file's only long wait, because the retry fetches the real
+      // multi-megabyte dataset asset across the dev server, parses and
+      // indexes it.
+      await screen.findByRole("table", {}, { timeout: 20_000 });
+      await sweep("light");
 
-    const edges = controls.map(
-      (control) => control.getBoundingClientRect().left,
-    );
+      await user.click(screen.getByRole("radio", { name: "Dark" }));
+      await screen.findByRole("radio", { name: "Dark", checked: true });
+      await sweep("dark");
 
-    expect(edges).toEqual([...edges].toSorted((a, b) => b - a));
+      // The cold sort of the whole dataset runs across frames behind aria-busy,
+      // so the sweep waits for the settled order and not the one being replaced.
+      await user.click(screen.getByRole("button", { name: "City" }));
+      await waitFor(() => {
+        expect(
+          screen
+            .getByRole("columnheader", { name: /^City/ })
+            .getAttribute("aria-sort"),
+        ).toBe("ascending");
+      });
+      await settled();
+      await sweep("sorted");
 
-    // Flex reverses position only. The glyphs are mirrored by the stylesheet,
-    // and without that rule they would silently point the wrong way.
-    for (const control of controls) {
-      const glyph = required(
-        control.querySelector("svg") ?? undefined,
-        "the page control's glyph",
+      await user.click(screen.getByRole("button", { name: "Go to next page" }));
+      await screen.findByText(/^Page 2 of /);
+      await sweep("paged");
+
+      // The box is cleared afterwards so the layout checks below have rows to read.
+      const searchBox = screen.getByRole("textbox", { name: "Search" });
+
+      await user.type(searchBox, "no city is called this");
+      await screen.findByText("No cities found");
+      await sweep("empty");
+
+      await user.clear(searchBox);
+      // Past the debounce, the restored rows still take the City sort, which ran
+      // past 600 ms on hosted runners.
+      await screen.findByRole("table", {}, { timeout: 20_000 });
+
+      // Operating the picker, so the state swept is one a reader can actually
+      // reach. Found by role alone, because its own accessible name follows the
+      // language it is about to change.
+      await user.selectOptions(
+        screen.getByRole("combobox", { name: "Language" }),
+        RTL_CATALOG_ID,
+      );
+      await waitFor(() => {
+        expect(document.documentElement.dir).toBe("rtl");
+      });
+      await settled();
+      await sweep("rtl");
+
+      // Two of the six rewritten declarations, read back as the engine resolved
+      // them. Only a layout engine resolves a logical property and a direction to
+      // a physical side. Reverting either declaration turns this red.
+      const searchIcon = required(
+        screen.getByRole("textbox").previousElementSibling ?? undefined,
+        "the search icon beside the search box",
       );
 
-      expect(getComputedStyle(glyph).transform).toBe(MIRRORED);
-    }
+      // Under this direction the reading start is the right-hand side, so the
+      // inline-start inset resolves onto the right edge, and so does the wide half
+      // of the padding that reserves room for the icon. The two were rewritten as
+      // a pair and are asserted as one, because either alone leaves the icon
+      // sitting over the text.
+      expect(getComputedStyle(searchIcon).right).toBe(SEARCH_ICON_INSET);
 
-    // The scroll container only exists below 768px, and the project runs at a
-    // desktop size on purpose, so the viewport is narrowed for this one check
-    // and put back before the assertion that closes the file.
-    await page.viewport(NARROW_VIEWPORT.width, NARROW_VIEWPORT.height);
+      const searchPadding = getComputedStyle(screen.getByRole("textbox"));
 
-    const scroller = required(
-      screen.getByRole("table").parentElement ?? undefined,
-      "the table's scroll container",
-    );
+      expect(searchPadding.paddingRight).toBe(SEARCH_RESERVED_INSET);
+      expect(searchPadding.paddingLeft).toBe(SEARCH_PLAIN_INSET);
 
-    await waitFor(() => {
-      expect(getComputedStyle(scroller).overflowX).toBe("auto");
-    });
+      // The number column, the last of the five. Its cells carry the alignment
+      // and its neighbors do not, so a class on the wrong cell fails here.
+      const bodyCells = within(
+        required(screen.getAllByRole("row")[1], "the first data row"),
+      ).getAllByRole("cell");
 
-    expect(scroller.scrollWidth).toBeGreaterThan(scroller.clientWidth);
+      expect(
+        getComputedStyle(required(bodyCells[4], "the population cell"))
+          .textAlign,
+      ).toBe("end");
+      expect(
+        getComputedStyle(required(bodyCells[0], "the first column's cell"))
+          .textAlign,
+      ).toBe("start");
 
-    // This asserts reachability, because under this direction the scroll offset
-    // runs negative in a standards-compliant engine, nothing in this tree reads
-    // one, and a test that started would be the first. The first column reads at
-    // the start edge and is on screen; the last is the one the container exists
-    // to reach, so it lies off the visible box while still being laid out.
-    const narrowCells = within(
-      required(screen.getAllByRole("row")[1], "the first data row"),
-    ).getAllByRole("cell");
-    const scrollerBox = scroller.getBoundingClientRect();
-    const firstBox = required(
-      narrowCells[0],
-      "the first column's cell",
-    ).getBoundingClientRect();
-    const lastBox = required(
-      narrowCells.at(-1),
-      "the last column's cell",
-    ).getBoundingClientRect();
+      // The header control shrinks to its content, so only the auto margin
+      // carries it to that edge. Under this direction it resolves onto the right.
+      const sortControl = getComputedStyle(
+        within(
+          required(
+            screen.getAllByRole("columnheader")[4],
+            "the population header cell",
+          ),
+        ).getByRole("button"),
+      );
 
-    for (const box of [firstBox, lastBox]) {
-      expect(box.width).toBeGreaterThan(0);
-      expect(box.height).toBeGreaterThan(0);
-    }
+      expect(sortControl.marginLeft).toBe("0px");
+      expect(Number.parseFloat(sortControl.marginRight)).toBeGreaterThan(0);
 
-    expect(firstBox.right).toBeLessThanOrEqual(Math.ceil(scrollerBox.right));
-    expect(lastBox.left).toBeLessThan(scrollerBox.left);
+      // The remaining two of the six, on the header's segmented control. Its
+      // automatic margin resolves onto the reading-end side, so the control still
+      // pins to the trailing edge. The reset on the reading-start-most label keeps
+      // the separator hairlines between the labels instead of doubling one against
+      // the outer edge.
+      const themeControl = screen.getByRole("radiogroup");
+      const themeMargins = getComputedStyle(themeControl);
 
-    await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height);
+      expect(themeMargins.marginLeft).toBe("0px");
+      expect(Number.parseFloat(themeMargins.marginRight)).toBeGreaterThan(0);
 
-    expect(sweptStates).toEqual(SWEPT_STATES);
-  });
+      const themeLabels = within(themeControl)
+        .getAllByRole("radio")
+        .map((input, index) =>
+          required(
+            input.nextElementSibling ?? undefined,
+            `the label beside theme option ${String(index)}`,
+          ),
+        );
+
+      expect(themeLabels).toHaveLength(3);
+
+      themeLabels.forEach((label, index) => {
+        const hairlines = getComputedStyle(label);
+
+        expect(hairlines.borderLeftWidth, String(index)).toBe("0px");
+        expect(hairlines.borderRightWidth, String(index)).toBe(
+          index === 0 ? "0px" : "1px",
+        );
+      });
+
+      // The four page controls read first, previous, next, last from the reading
+      // start, which under this direction runs right to left across the row. Their
+      // document order is that order, so their resolved left edges must descend.
+      // Named, because the header holds a second navigation landmark. Matched
+      // loosely, because this run reads the pseudo-locale.
+      const controls = within(
+        screen.getByRole("navigation", { name: /pagination/ }),
+      ).getAllByRole("button");
+
+      expect(controls).toHaveLength(4);
+
+      const edges = controls.map(
+        (control) => control.getBoundingClientRect().left,
+      );
+
+      expect(edges).toEqual([...edges].toSorted((a, b) => b - a));
+
+      // Flex reverses position only. The glyphs are mirrored by the stylesheet,
+      // and without that rule they would silently point the wrong way.
+      for (const control of controls) {
+        const glyph = required(
+          control.querySelector("svg") ?? undefined,
+          "the page control's glyph",
+        );
+
+        expect(getComputedStyle(glyph).transform).toBe(MIRRORED);
+      }
+
+      // The scroll container only exists below 768px, and the project runs at a
+      // desktop size on purpose, so the viewport is narrowed for this one check
+      // and put back before the assertion that closes the file.
+      await page.viewport(NARROW_VIEWPORT.width, NARROW_VIEWPORT.height);
+
+      const scroller = required(
+        screen.getByRole("table").parentElement ?? undefined,
+        "the table's scroll container",
+      );
+
+      await waitFor(() => {
+        expect(getComputedStyle(scroller).overflowX).toBe("auto");
+      });
+
+      expect(scroller.scrollWidth).toBeGreaterThan(scroller.clientWidth);
+
+      // This asserts reachability, because under this direction the scroll offset
+      // runs negative in a standards-compliant engine, nothing in this tree reads
+      // one, and a test that started would be the first. The first column reads at
+      // the start edge and is on screen; the last is the one the container exists
+      // to reach, so it lies off the visible box while still being laid out.
+      const narrowCells = within(
+        required(screen.getAllByRole("row")[1], "the first data row"),
+      ).getAllByRole("cell");
+      const scrollerBox = scroller.getBoundingClientRect();
+      const firstBox = required(
+        narrowCells[0],
+        "the first column's cell",
+      ).getBoundingClientRect();
+      const lastBox = required(
+        narrowCells.at(-1),
+        "the last column's cell",
+      ).getBoundingClientRect();
+
+      for (const box of [firstBox, lastBox]) {
+        expect(box.width).toBeGreaterThan(0);
+        expect(box.height).toBeGreaterThan(0);
+      }
+
+      expect(firstBox.right).toBeLessThanOrEqual(Math.ceil(scrollerBox.right));
+      expect(lastBox.left).toBeLessThan(scrollerBox.left);
+
+      await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height);
+
+      expect(sweptStates).toEqual(SWEPT_STATES);
+    },
+  );
 });
