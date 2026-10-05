@@ -1,0 +1,28 @@
+src/components/DataTable/sortRows.test.ts
+  s_f3f7af8c4bf72b::t_4930e5c86e95bc 136-146
+  s_0b22370ed959fe::t_1fccf45274de8d 5
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "771b57eb1a216aea1bbd0a81e1a6cd3d82204f5c",
+  "prompts": {},
+  "sessions": {
+    "s_0b22370ed959fe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a28ca6df047b94a19",
+        "model": "unknown"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    },
+    "s_f3f7af8c4bf72b": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "6bfff08d-271d-4413-aaac-d4a0dde42eb8",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
