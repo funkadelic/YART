@@ -25,7 +25,11 @@ const PREFERENCES = [
 const { tag } = resolveLocale("en", []);
 const labels = buildTableLabels(en, "cities", tag);
 
-const failure = new DatasetError("rowShape", 41_237, "City row 41237");
+const failure = new DatasetError(
+  "status",
+  503,
+  "Dataset request failed with status 503",
+);
 
 const bench = withCodSpeed(new Bench());
 

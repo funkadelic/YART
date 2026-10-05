@@ -88,7 +88,7 @@ describe("DatasetPage requests", () => {
 
   it("renders the sentence the failure's code names, not the failure's own message", async () => {
     const failure = new DatasetError(
-      "notJson",
+      "invalid",
       0,
       "the developer-facing text",
       { cause: new Error("Unexpected token < in JSON at position 0") },
@@ -97,7 +97,7 @@ describe("DatasetPage requests", () => {
 
     expect(
       await screen.findByText(
-        `Error: ${en.cities.datasetError.notJson("en-US", 0)}`,
+        `Error: ${en.cities.datasetError.invalid("en-US", 0)}`,
       ),
     ).toBeInTheDocument();
     // The developer-facing message and the preserved cause both stay off the
@@ -456,7 +456,7 @@ describe("DatasetPage requests", () => {
 describe("DatasetPage requests on the films page", () => {
   it("renders the film sentence the failure's code names, not the failure's own message", async () => {
     const failure = new DatasetError(
-      "notJson",
+      "invalid",
       0,
       "the developer-facing text",
       { cause: new Error("Unexpected token < in JSON at position 0") },
@@ -467,7 +467,7 @@ describe("DatasetPage requests on the films page", () => {
 
     expect(
       await screen.findByText(
-        `Error: ${en.films.datasetError.notJson("en-US", 0)}`,
+        `Error: ${en.films.datasetError.invalid("en-US", 0)}`,
       ),
     ).toBeInTheDocument();
     // The other page's wording for the same code stays off the screen too.

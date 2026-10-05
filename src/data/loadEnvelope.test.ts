@@ -116,14 +116,14 @@ describe("envelope validation", () => {
   it("rejects a payload that is not an object", async () => {
     expect(await rejection("the widget data, honestly")).toEqual({
       message: "The widget data could not be read.",
-      code: "notAnObject",
+      code: "invalid",
     });
   });
 
   it("rejects a null payload", async () => {
     expect(await rejection(null)).toEqual({
       message: "The widget data could not be read.",
-      code: "notAnObject",
+      code: "invalid",
     });
   });
 
@@ -133,7 +133,7 @@ describe("envelope validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "The widget data is missing its rows array.",
-      code: "missingRows",
+      code: "invalid",
     });
   });
 
@@ -143,7 +143,7 @@ describe("envelope validation", () => {
 
     expect(await rejection(payload)).toEqual({
       message: "The widget data is missing its rows array.",
-      code: "missingRows",
+      code: "invalid",
     });
   });
 
@@ -154,7 +154,7 @@ describe("envelope validation", () => {
     expect(await rejection(payload)).toEqual({
       message:
         "The widget data has an unexpected column order and was not loaded.",
-      code: "columnOrder",
+      code: "invalid",
     });
   });
 
@@ -166,7 +166,7 @@ describe("envelope validation", () => {
     expect(await rejection(payload)).toEqual({
       message:
         "The widget data has an unexpected column order and was not loaded.",
-      code: "columnOrder",
+      code: "invalid",
     });
   });
 
@@ -180,7 +180,7 @@ describe("envelope validation", () => {
     expect(await rejection(payload)).toEqual({
       message:
         "The widget data has an unexpected column order and was not loaded.",
-      code: "columnOrder",
+      code: "invalid",
     });
   });
 
@@ -191,7 +191,7 @@ describe("envelope validation", () => {
     expect(await rejection(payload)).toEqual({
       message:
         "The widget data has an unexpected column order and was not loaded.",
-      code: "columnOrder",
+      code: "invalid",
     });
   });
 
@@ -324,7 +324,7 @@ describe("transport", () => {
     expect(error.message).toBe(
       "The widget data was downloaded but could not be read as JSON.",
     );
-    expect(error.code).toBe("notJson");
+    expect(error.code).toBe("invalid");
     expect(error.message).not.toContain("Unexpected token");
     expect(error.cause).toBeInstanceOf(Error);
   });

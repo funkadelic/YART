@@ -186,7 +186,7 @@ describe("ErrorBoundary mounted in the layout", () => {
           ...CITY_PAGE,
           search: () =>
             Promise.reject(
-              new DatasetError("notAnObject", 0, "developer-facing text"),
+              new DatasetError("invalid", 0, "developer-facing text"),
             ),
         }}
       />,

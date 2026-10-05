@@ -1,25 +1,23 @@
 /**
  * The ways loading can fail. Codes, because the messages below are English.
- * Six are thrown here, two by each dataset's own row check, and "unexpected" is
- * the page's fallback for a rejection that carries no Error. A tuple, so the catalog
- * test can walk the set.
+ * The loader and the dataset row checks throw transport, status and invalid;
+ * unexpected is the page's fallback for a rejection that carries no Error.
+ * A tuple, so the catalog test can walk the set.
  */
 export const DATASET_ERROR_CODES = [
-  "notAnObject",
-  "missingRows",
-  "columnOrder",
-  "rowShape",
-  "rowFieldType",
   "transport",
   "status",
-  "notJson",
+  "invalid",
   "unexpected",
 ] as const;
 
 /** Which failure a dataset error is. */
 export type DatasetErrorCode = (typeof DATASET_ERROR_CODES)[number];
 
-/** A dataset failure and its code. The message never reaches the screen. */
+/**
+ * A dataset failure and its code. The detail is the HTTP status or the failing
+ * row index, else 0. The message never reaches the screen.
+ */
 export class DatasetError extends Error {
   constructor(
     readonly code: DatasetErrorCode,
@@ -81,7 +79,7 @@ export function createEnvelopeLoader<Row>({
   function parseEnvelope(payload: unknown): Row[] {
     if (typeof payload !== "object" || payload === null) {
       throw new DatasetError(
-        "notAnObject",
+        "invalid",
         0,
         `The ${dataset} data could not be read.`,
       );
@@ -94,7 +92,7 @@ export function createEnvelopeLoader<Row>({
 
     if (!Array.isArray(rows)) {
       throw new DatasetError(
-        "missingRows",
+        "invalid",
         0,
         `The ${dataset} data is missing its rows array.`,
       );
@@ -106,7 +104,7 @@ export function createEnvelopeLoader<Row>({
       declared.some((column, at) => column !== columns[at])
     ) {
       throw new DatasetError(
-        "columnOrder",
+        "invalid",
         0,
         `The ${dataset} data has an unexpected column order and was not loaded.`,
       );
@@ -145,7 +143,7 @@ export function createEnvelopeLoader<Row>({
             throw transportError(dataset, reason);
           }
           throw new DatasetError(
-            "notJson",
+            "invalid",
             0,
             `The ${dataset} data was downloaded but could not be read as JSON.`,
             { cause: reason },
