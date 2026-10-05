@@ -1,0 +1,19 @@
+src/components/DataTable/tableStateUrl.test.ts
+  s_0b22370ed959fe::t_75ed6679582356 262,266
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "98c9925044a11266c70f2195da01b263fbf405e9",
+  "prompts": {},
+  "sessions": {
+    "s_0b22370ed959fe": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "agent-a28ca6df047b94a19",
+        "model": "unknown"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
