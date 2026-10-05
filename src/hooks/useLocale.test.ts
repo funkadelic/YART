@@ -63,10 +63,7 @@ describe("useLocale", () => {
       expect(result.current.choice).toBe("ar-XB");
     });
 
-    // The theme hook beside this one is single instance by construction, and its
-    // own documentation says a second caller would race the first. This hook
-    // makes the opposite claim, so the case asserts it: both callers read one
-    // store, so both write the same pair.
+    // Both callers read one store, so both write the same pair.
     it("agrees with a second caller in the same tree", () => {
       const both = renderHook(() => [useLocale(), useLocale()] as const);
 

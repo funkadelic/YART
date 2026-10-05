@@ -176,11 +176,13 @@ describe("ThemeControl", () => {
 
     await user.click(within(second).getByRole("radio", { name: "Dark" }));
 
+    // Both controls read one store, so both show Dark. With a shared radio
+    // group name the browser would have unchecked the first control's radio.
     expect(within(second).getByRole("radio", { name: "Dark" })).toBeChecked();
+    expect(within(first).getByRole("radio", { name: "Dark" })).toBeChecked();
     expect(
-      within(first).getByRole("radio", { name: "Dark" }),
+      within(first).getByRole("radio", { name: "System" }),
     ).not.toBeChecked();
-    expect(within(first).getByRole("radio", { name: "System" })).toBeChecked();
   });
 
   it("is mounted in the header, so the page it themes is the page it sits on", () => {

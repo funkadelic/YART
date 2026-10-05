@@ -9,6 +9,15 @@ export type ThemeChoice = (typeof THEME_CHOICES)[number];
 
 export type ResolvedTheme = "light" | "dark";
 
+/** The words that are stored. The default, system, is the key being absent. */
+export function isExplicitTheme(
+  value: unknown,
+): value is Exclude<ThemeChoice, "system"> {
+  return (
+    value !== "system" && (THEME_CHOICES as readonly unknown[]).includes(value)
+  );
+}
+
 /** The storage key. The boot script reads it through src/bootDocument.ts. */
 export const THEME_STORAGE_KEY = "yart-theme";
 

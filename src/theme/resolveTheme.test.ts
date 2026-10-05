@@ -4,6 +4,7 @@ import {
   PREFERS_DARK_QUERY,
   THEME_CHOICES,
   THEME_STORAGE_KEY,
+  isExplicitTheme,
   resolveTheme,
   type ThemeChoice,
 } from "./resolveTheme";
@@ -50,5 +51,15 @@ describe("theme constants", () => {
   // accepts the non-default members, through BOOT_SETTINGS.
   it("keeps the three states and their order", () => {
     expect(THEME_CHOICES).toEqual(["light", "dark", "system"]);
+  });
+});
+
+describe("isExplicitTheme", () => {
+  it.each(["light", "dark"])("accepts %o", (value) => {
+    expect(isExplicitTheme(value)).toBe(true);
+  });
+
+  it.each(["system", "blue", "", "DARK", null, 1])("rejects %o", (value) => {
+    expect(isExplicitTheme(value)).toBe(false);
   });
 });

@@ -10,6 +10,7 @@ import {
   type ResolvedLocale,
 } from "./i18n/resolveLocale.ts";
 import {
+  isExplicitTheme,
   PREFERS_DARK_QUERY,
   THEME_CHOICES,
   THEME_STORAGE_KEY,
@@ -85,7 +86,7 @@ export function bootDocument(settings: BootSettings): void {
 export const BOOT_SETTINGS: BootSettings = {
   themeKey: THEME_STORAGE_KEY,
   darkQuery: PREFERS_DARK_QUERY,
-  themes: THEME_CHOICES.filter((choice) => choice !== "system"),
+  themes: THEME_CHOICES.filter(isExplicitTheme),
   localeKey: LOCALE_STORAGE_KEY,
   negotiable: NEGOTIABLE_CATALOG_IDS,
   locales: Object.fromEntries(
