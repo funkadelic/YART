@@ -1,0 +1,19 @@
+bench/sortRows.bench.ts
+  s_57ee2543e593fc::t_7501d6f62f29d5 17,46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "014c2c2f3441d5ae73132c781101c81ac75461c6",
+  "prompts": {},
+  "sessions": {
+    "s_57ee2543e593fc": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3165b722-f119-40b3-aae8-704491965761",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
