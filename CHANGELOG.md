@@ -2,6 +2,10 @@
 
 ## [0.1.1](https://github.com/funkadelic/YART/compare/v0.1.0...v0.1.1) (2026-10-05)
 
+### What's new
+
+* The package now installs with no dependencies of its own. The sort and pagination icons are drawn inline, so `react-icons` is no longer pulled in, and React is the only peer.
+
 
 ### Changed
 
