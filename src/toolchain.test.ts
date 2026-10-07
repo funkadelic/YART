@@ -737,6 +737,38 @@ describe("toolchain baseline", () => {
     }
   });
 
+  // A web manifest and a theme-color meta cannot read a custom property, so the
+  // brand hex is copied into each; this holds every copy to the token.
+  it("keeps the manifest and shell theme colors on the brand token", () => {
+    const tokens = JSON.parse(
+      readFileSync(join(projectRoot, "tokens", "base.tokens.json"), "utf8"),
+    ) as {
+      color: { brand: { $value: string } };
+      primitive: Record<string, { $value: { hex: string } } | undefined>;
+    };
+    const webManifest = JSON.parse(
+      readFileSync(join(projectRoot, "public", "manifest.json"), "utf8"),
+    ) as { theme_color?: string };
+    const primitive = /^\{primitive\.(.+)\}$/.exec(
+      tokens.color.brand.$value,
+    )?.[1];
+    const brand = tokens.primitive[primitive ?? ""]?.$value.hex.toLowerCase();
+
+    expect(brand, "color.brand resolves to no primitive hex").toMatch(/^#/);
+    expect(webManifest.theme_color?.toLowerCase()).toBe(brand);
+
+    for (const shell of shells()) {
+      const html = readFileSync(join(projectRoot, shell), "utf8");
+
+      const meta = /<meta[^>]*\bname="theme-color"[^>]*>/.exec(html)?.[0];
+
+      expect(
+        /\bcontent="([^"]*)"/.exec(meta ?? "")?.[1]?.toLowerCase(),
+        `${shell} theme-color`,
+      ).toBe(brand);
+    }
+  });
+
   // The browser sweeps mount into a harness document, and the application
   // restamps documentElement.lang, so a shell that dropped its language or title
   // would still sweep clean. Nothing else checks either fact.
