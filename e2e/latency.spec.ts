@@ -32,9 +32,6 @@ const FULL_CAPTION = `City data with ${GROUPED_TOTAL} entries, currently not sor
 /** The caption once City is sorted ascending. */
 const SORTED_CAPTION = `City data with ${GROUPED_TOTAL} entries, currently sorted by City ascending`;
 
-// Mirrors the container's search debounce.
-const SEARCH_DEBOUNCE_MS = 150;
-
 /** A term matching enough rows to filter and page, as the url-state spec uses. */
 const SEARCH_TERM = "san";
 const MATCHING_ROWS = 1701;
@@ -70,6 +67,12 @@ const BUDGET_MS = {
   typingSlowBlocking: 50,
   // Debounce plus 3x the 33 ms of work in a 183 ms baseline.
   typingSlowSettled: 250,
+  // Baseline 24 ms; 3x is under the 200 ms floor.
+  typingFastKey: 200,
+  // Baseline 0 ms, no long frame while typing; the 50 ms minimum applies.
+  typingFastBlocking: 50,
+  // Debounce plus 3x the 33 ms of work in a 183 ms baseline.
+  typingFastSettled: 250,
 };
 
 interface EventSample {
@@ -533,41 +536,67 @@ test("searching the whole dataset", async ({ page }, testInfo) => {
     keystrokes,
   );
   report(testInfo, "searchResults", results, resultFrames);
-  expect(Math.min(...results)).toBeGreaterThanOrEqual(SEARCH_DEBOUNCE_MS);
-});
-
-test("typing a search term at 200 ms a key", async ({ page }, testInfo) => {
-  const table = page.getByRole("table");
-  const searchBox = page.getByRole("textbox", { name: "Search" });
-  const runs: Typing[] = [];
-
-  for (let run = 0; run < REPEATS; run++) {
-    runs.push(await measureTyping(page, 200));
-    await searchBox.fill("");
-    await expect(table).toHaveAccessibleName(FULL_CAPTION);
+  // A result arrives a frame or more after the input, so a zero means a dead probe.
+  for (const ms of results) {
+    expect(
+      ms,
+      "the poll recorded nothing for a search over the whole dataset",
+    ).toBeGreaterThan(0);
   }
-
-  const frames = runs.map((run) => run.frame);
-  const cadenceMs = runs.flatMap((run) => run.cadenceMs);
-  report(
-    testInfo,
-    "typingSlowKey",
-    runs.map((run) => run.keyMs),
-    frames,
-    cadenceMs,
-  );
-  report(
-    testInfo,
-    "typingSlowBlocking",
-    runs.map((run) => run.blockingMs),
-    frames,
-    cadenceMs,
-  );
-  report(
-    testInfo,
-    "typingSlowSettled",
-    runs.map((run) => run.settledMs),
-    frames,
-    cadenceMs,
-  );
 });
+
+/** Typing cadences either side of the search debounce, with the metrics each one reports. */
+const CADENCES = [
+  {
+    delayMs: 50,
+    key: "typingFastKey",
+    blocking: "typingFastBlocking",
+    settled: "typingFastSettled",
+  },
+  {
+    delayMs: 200,
+    key: "typingSlowKey",
+    blocking: "typingSlowBlocking",
+    settled: "typingSlowSettled",
+  },
+] as const;
+
+for (const cadence of CADENCES) {
+  test(`typing a search term at ${cadence.delayMs} ms a key`, async ({
+    page,
+  }, testInfo) => {
+    const table = page.getByRole("table");
+    const searchBox = page.getByRole("textbox", { name: "Search" });
+    const runs: Typing[] = [];
+
+    for (let run = 0; run < REPEATS; run++) {
+      runs.push(await measureTyping(page, cadence.delayMs));
+      await searchBox.fill("");
+      await expect(table).toHaveAccessibleName(FULL_CAPTION);
+    }
+
+    const frames = runs.map((run) => run.frame);
+    const cadenceMs = runs.flatMap((run) => run.cadenceMs);
+    report(
+      testInfo,
+      cadence.key,
+      runs.map((run) => run.keyMs),
+      frames,
+      cadenceMs,
+    );
+    report(
+      testInfo,
+      cadence.blocking,
+      runs.map((run) => run.blockingMs),
+      frames,
+      cadenceMs,
+    );
+    report(
+      testInfo,
+      cadence.settled,
+      runs.map((run) => run.settledMs),
+      frames,
+      cadenceMs,
+    );
+  });
+}
