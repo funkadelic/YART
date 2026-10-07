@@ -760,10 +760,10 @@ describe("toolchain baseline", () => {
     for (const shell of shells()) {
       const html = readFileSync(join(projectRoot, shell), "utf8");
 
+      const meta = /<meta[^>]*\bname="theme-color"[^>]*>/.exec(html)?.[0];
+
       expect(
-        /<meta name="theme-color" content="([^"]*)"/
-          .exec(html)?.[1]
-          ?.toLowerCase(),
+        /\bcontent="([^"]*)"/.exec(meta ?? "")?.[1]?.toLowerCase(),
         `${shell} theme-color`,
       ).toBe(brand);
     }
