@@ -1,0 +1,26 @@
+docs/adr/0017-search-keeps-its-debounce.md
+  s_94a18f5066781a::t_b1913bf64e70dd 14,29
+  s_94a18f5066781a::t_34242bfc7e7d21 1-9,11-13,15-24,26-28,30-38,40-41
+  s_94a18f5066781a::t_3cc527ef5c8176 10,25,39
+README.md
+  s_94a18f5066781a::t_4052fdd40ac332 599
+  s_94a18f5066781a::t_b1913bf64e70dd 600
+docs/adr/README.md
+  s_94a18f5066781a::t_b1913bf64e70dd 25
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "79b90f19021724f8b917dd8bc3486b51b6baa524",
+  "prompts": {},
+  "sessions": {
+    "s_94a18f5066781a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d663d7bf-d444-4a03-bc4c-ab00fa4979d1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
