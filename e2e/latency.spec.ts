@@ -43,7 +43,8 @@ const SEARCH_CAPTION = `City data with ${new Intl.NumberFormat(RESOLVED_TAG).for
 /**
  * Median budgets in ms. Event durations take 3x a local baseline rounded up to
  * 50, floored at the INP "good" boundary (200); time to a settled result
- * (searchResults, sortSettled) takes the 3x rule without the floor.
+ * (searchResults, sortSettled) takes the 3x rule without the floor; a blocking
+ * total takes 3x rounded up to 50, at least 50, without the floor.
  */
 const BUDGET_MS = {
   // Samples measured 16 to 40 ms; the first asc and desc clicks are cold, painting
@@ -63,6 +64,12 @@ const BUDGET_MS = {
   // Debounce plus 3x the 23 ms of work in a 173 ms baseline; the wall-clock
   // debounce is not scaled.
   searchResults: 250,
+  // Baseline 24 ms; 3x is under the 200 ms floor.
+  typingSlowKey: 200,
+  // Baseline 0 ms, no long frame while typing; the 50 ms minimum applies.
+  typingSlowBlocking: 50,
+  // Debounce plus 3x the 33 ms of work in a 183 ms baseline.
+  typingSlowSettled: 250,
 };
 
 interface EventSample {
@@ -207,12 +214,80 @@ async function measure(page: Page, act: () => Promise<void>): Promise<Sample> {
   };
 }
 
+interface Typing {
+  keyMs: number;
+  blockingMs: number;
+  settledMs: number;
+  cadenceMs: number[];
+  frame: Omit<Sample, "eventMs">;
+}
+
+/** Types the search term with real keys and measures the window from the first keydown to the settled results. */
+async function measureTyping(page: Page, delayMs: number): Promise<Typing> {
+  await collect(page, false);
+  // Armed before typing, because at a slow cadence the results can settle before the last key is released.
+  await page.evaluate((caption) => {
+    const keydowns: number[] = [];
+    const onKeydown = (event: KeyboardEvent) => keydowns.push(event.timeStamp);
+    window.addEventListener("keydown", onKeydown, { capture: true });
+    const settled = new Promise((resolve) => {
+      const poll = () => {
+        if (
+          document.querySelector("caption")?.textContent === caption &&
+          !document.querySelector('[aria-busy="true"]')
+        ) {
+          window.removeEventListener("keydown", onKeydown, { capture: true });
+          resolve({
+            settledMs: Math.round(performance.now() - (keydowns.at(-1) ?? 0)),
+            cadenceMs: keydowns
+              .slice(1)
+              .map((at, index) => Math.round(at - (keydowns[index] ?? 0))),
+          });
+        } else {
+          requestAnimationFrame(poll);
+        }
+      };
+      poll();
+    });
+    Reflect.set(window, "typingSettled", settled);
+  }, SEARCH_CAPTION);
+  await page
+    .getByRole("textbox", { name: "Search" })
+    .pressSequentially(SEARCH_TERM, { delay: delayMs });
+  const { settledMs, cadenceMs } = await page.evaluate(
+    () =>
+      Reflect.get(window, "typingSettled") as Promise<
+        Pick<Typing, "settledMs" | "cadenceMs">
+      >,
+  );
+  const { events, frames } = await collect(page, false);
+  const longest = frames.reduce<FrameSample | null>(
+    (worst, frame) =>
+      !worst || frame.duration > worst.duration ? frame : worst,
+    null,
+  );
+  return {
+    keyMs: Math.max(0, ...events.map((entry) => entry.duration)),
+    blockingMs: Math.round(
+      frames.reduce((total, frame) => total + frame.blockingDuration, 0),
+    ),
+    settledMs,
+    cadenceMs,
+    frame: {
+      frameMs: longest ? longest.duration : null,
+      frameBlockingMs: longest ? longest.blockingDuration : null,
+      frameInvoker: longest ? longest.invoker : null,
+    },
+  };
+}
+
 /** Prints one JSON line, attaches it to the report, then gates the median on its budget. */
 function report(
   testInfo: TestInfo,
   metric: keyof typeof BUDGET_MS,
   samples: number[],
   frames: Omit<Sample, "eventMs">[],
+  cadenceMs?: number[],
 ): void {
   const budget = BUDGET_MS[metric];
   const result = {
@@ -225,6 +300,8 @@ function report(
       frameBlockingMs,
       frameInvoker,
     })),
+    // Observed keydown-to-keydown intervals, since the typing delay only sets them roughly.
+    ...(cadenceMs ? { cadenceMs } : {}),
   };
   const line = JSON.stringify(result);
   testInfo.annotations.push({ type: "latency", description: line });
@@ -457,4 +534,40 @@ test("searching the whole dataset", async ({ page }, testInfo) => {
   );
   report(testInfo, "searchResults", results, resultFrames);
   expect(Math.min(...results)).toBeGreaterThanOrEqual(SEARCH_DEBOUNCE_MS);
+});
+
+test("typing a search term at 200 ms a key", async ({ page }, testInfo) => {
+  const table = page.getByRole("table");
+  const searchBox = page.getByRole("textbox", { name: "Search" });
+  const runs: Typing[] = [];
+
+  for (let run = 0; run < REPEATS; run++) {
+    runs.push(await measureTyping(page, 200));
+    await searchBox.fill("");
+    await expect(table).toHaveAccessibleName(FULL_CAPTION);
+  }
+
+  const frames = runs.map((run) => run.frame);
+  const cadenceMs = runs.flatMap((run) => run.cadenceMs);
+  report(
+    testInfo,
+    "typingSlowKey",
+    runs.map((run) => run.keyMs),
+    frames,
+    cadenceMs,
+  );
+  report(
+    testInfo,
+    "typingSlowBlocking",
+    runs.map((run) => run.blockingMs),
+    frames,
+    cadenceMs,
+  );
+  report(
+    testInfo,
+    "typingSlowSettled",
+    runs.map((run) => run.settledMs),
+    frames,
+    cadenceMs,
+  );
 });
