@@ -38,7 +38,7 @@ jobs:
           # leaves it none, so every line looks new.
           fetch-depth: 0
 
-      # Turns off the browser sweeps, Lighthouse, the uploads and Chromatic when
+      # Turns off the browser suites, Lighthouse, the uploads and Chromatic when
       # nothing they check changed: a release PR, or a PR touching only Markdown
       # and docs/. Lighthouse, the bundle stats and Chromatic also skip when every
       # change is on a path known not to reach the built page or Chromatic's specs.
@@ -128,7 +128,7 @@ jobs:
 
       # After the sweep, which leaves both things this needs in place: the browser
       # binary and the build. Before the scan, so a broken flow reports as itself.
-      - name: End-to-end sweep
+      - name: End-to-end tests
         if: env.HEAVY_CHECKS == 'true'
         run: npm run test:e2e
 
@@ -143,8 +143,8 @@ jobs:
           retention-days: 7
 
       # Advisory: a slow score or a failed audit never fails the job. Reuses the
-      # build and the headless shell the sweeps above already have in place.
-      - name: Lighthouse
+      # build and the headless shell the suites above already have in place.
+      - name: Lighthouse (advisory)
         if: env.UI_CHECKS == 'true'
         run: npm run lighthouse
         continue-on-error: true
@@ -220,7 +220,7 @@ jobs:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
 
-      # After the sweeps, so a failing test reports as itself rather than as an
+      # After the browser suites, so a failing test reports as itself, not as an
       # absent coverage report. Skipped for the updater, whose empty token would
       # fail the job; a version bump touches no source for the scan to read.
       - name: SonarQube scan
@@ -241,7 +241,7 @@ jobs:
       # Last, because every step above carries no status function and so inherits
       # success(): a Chromatic failure placed earlier would skip the two uploads,
       # the scan and the Pages artifact. It reads the archives the end-to-end
-      # sweep already wrote, so it rebuilds and re-runs nothing.
+      # tests already wrote, so it rebuilds and re-runs nothing.
       #
       # Exits once the build is uploaded rather than waiting out the capture, so
       # a slow queue cannot spend the job's budget. The accept gate is
@@ -271,7 +271,7 @@ jobs:
   # later runs. A job of its own so the write token never meets `npm ci`. Skipped
   # for forks and the updater, whose tokens are read-only.
   report:
-    name: Report
+    name: Lighthouse report
     needs: verify
     if: >-
       github.event_name == 'pull_request'
