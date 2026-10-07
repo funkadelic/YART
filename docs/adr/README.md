@@ -22,5 +22,6 @@ Most of these were made during the build and written down on 2026-09-15, so the 
 | [14](0014-prefixed-layered-tokens.md)           | The shipped tokens are prefixed with yart and their defaults are layered               |
 | [15](0015-one-boot-script-injected-at-build.md) | One boot script, injected into every shell                                             |
 | [16](0016-icons-drawn-in-the-repo.md)           | The icons are drawn in the repo instead of taken from an icon library                  |
+| [17](0017-search-keeps-its-debounce.md)         | The search keeps its debounce                                                          |
 
 [Front-end practices](../frontend-practices.md) is the survey these sit under: what the repo already does, what it has just adopted, and what it weighed and skipped.
