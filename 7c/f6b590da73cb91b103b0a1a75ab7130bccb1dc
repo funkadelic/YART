@@ -1,0 +1,20 @@
+e2e/latency.spec.ts
+  s_94a18f5066781a::t_197543f0e2f1eb 539-545,548-576,578-602
+  s_94a18f5066781a::t_b6ce6652332565 70-75
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7cf6b590da73cb91b103b0a1a75ab7130bccb1dc",
+  "prompts": {},
+  "sessions": {
+    "s_94a18f5066781a": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "d663d7bf-d444-4a03-bc4c-ab00fa4979d1",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Norman Yee <155019+funkadelic@users.noreply.github.com>"
+    }
+  }
+}
