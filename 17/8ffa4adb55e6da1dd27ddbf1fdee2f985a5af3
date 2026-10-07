@@ -1,0 +1,20 @@
+src/toolchain.test.ts
+  s_5d2d7d091f4970::t_3cd474934b4571 745-748,752-758
+  s_5d2d7d091f4970::t_fd51aff23f782e 740-744,749-751,759-760
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "178ffa4adb55e6da1dd27ddbf1fdee2f985a5af3",
+  "prompts": {},
+  "sessions": {
+    "s_5d2d7d091f4970": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "416bfc45-4809-4134-b386-db7869c10216",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": null
+    }
+  }
+}
