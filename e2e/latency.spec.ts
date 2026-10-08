@@ -198,22 +198,29 @@ function collect(page: Page, untilEvent: boolean): Promise<Drained> {
   );
 }
 
-/** Measures one real interaction; `act` performs it and waits for its visible outcome. */
-async function measure(page: Page, act: () => Promise<void>): Promise<Sample> {
-  // Lets a prior interaction's late entries land, then discards them.
-  await collect(page, false);
-  await act();
-  const { events, frames } = await collect(page, true);
+/** The longest long-animation frame, projected to the fields a sample reports. */
+function longestFrame(frames: FrameSample[]): Omit<Sample, "eventMs"> {
   const longest = frames.reduce<FrameSample | null>(
     (worst, frame) =>
       !worst || frame.duration > worst.duration ? frame : worst,
     null,
   );
   return {
-    eventMs: Math.max(0, ...events.map((entry) => entry.duration)),
     frameMs: longest ? longest.duration : null,
     frameBlockingMs: longest ? longest.blockingDuration : null,
     frameInvoker: longest ? longest.invoker : null,
+  };
+}
+
+/** Measures one real interaction; `act` performs it and waits for its visible outcome. */
+async function measure(page: Page, act: () => Promise<void>): Promise<Sample> {
+  // Lets a prior interaction's late entries land, then discards them.
+  await collect(page, false);
+  await act();
+  const { events, frames } = await collect(page, true);
+  return {
+    eventMs: Math.max(0, ...events.map((entry) => entry.duration)),
+    ...longestFrame(frames),
   };
 }
 
@@ -225,7 +232,7 @@ interface Typing {
   frame: Omit<Sample, "eventMs">;
 }
 
-/** Types the search term with real keys and measures the window from the first keydown to the settled results. */
+/** Types the search term with real keys and measures the window from the last keydown to the settled results. */
 async function measureTyping(page: Page, delayMs: number): Promise<Typing> {
   await collect(page, false);
   // Armed before typing, because at a slow cadence the results can settle before the last key is released.
@@ -264,11 +271,6 @@ async function measureTyping(page: Page, delayMs: number): Promise<Typing> {
       >,
   );
   const { events, frames } = await collect(page, false);
-  const longest = frames.reduce<FrameSample | null>(
-    (worst, frame) =>
-      !worst || frame.duration > worst.duration ? frame : worst,
-    null,
-  );
   return {
     keyMs: Math.max(0, ...events.map((entry) => entry.duration)),
     blockingMs: Math.round(
@@ -276,11 +278,7 @@ async function measureTyping(page: Page, delayMs: number): Promise<Typing> {
     ),
     settledMs,
     cadenceMs,
-    frame: {
-      frameMs: longest ? longest.duration : null,
-      frameBlockingMs: longest ? longest.blockingDuration : null,
-      frameInvoker: longest ? longest.invoker : null,
-    },
+    frame: longestFrame(frames),
   };
 }
 
