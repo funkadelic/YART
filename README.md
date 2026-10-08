@@ -596,6 +596,8 @@ const { schedule, cancel } = useDebouncedCallback(
 
 Cancelling covers a back navigation that lands inside the window. Without it, the term the reader typed a moment ago lands on top of the view they navigated back to.
 
+Running the commit and its result as React transitions was measured against this delay, and came out slower on two of eight timings. [Decision record 17](docs/adr/0017-search-keeps-its-debounce.md) has the numbers.
+
 ### Why the comparator takes the direction
 
 The shared comparator takes the direction rather than being flipped by its caller, which is what lets blanks sort last in both directions. Negating a direction-free comparator instead puts every blank first on descending, and on real data that is a first page of empty cells.
