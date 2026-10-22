@@ -49,11 +49,11 @@ updates:
         update-types:
           - minor
           - patch
-    # Both entries below are held on purpose, so neither is reproposed every week. The
+    # The entries below are held on purpose, so none is reproposed every week. The
     # first is a decision: TypeScript 7 is the native port compiler, far too large to
-    # ride in on a dependency sweep and be read as a routine version bump. The second
-    # is a wait, for the reason written beside it. Minor and patch updates to both
-    # still arrive as normal.
+    # ride in on a dependency sweep and be read as a routine version bump. The others
+    # are waits, for the reasons written beside them. Minor and patch updates to all
+    # of them still arrive as normal.
     ignore:
       - dependency-name: typescript
         update-types:
@@ -66,6 +66,11 @@ updates:
       # eslint-plugin-react publishes a release that accepts eslint 10, and expect
       # @eslint/js to move to 10.x in the same change.
       - dependency-name: eslint
+        update-types:
+          - version-update:semver-major
+      # @types/node majors track Node majors. Hold it to the Node in .nvmrc, so an API
+      # from a newer Node cannot typecheck here. Bump both together.
+      - dependency-name: "@types/node"
         update-types:
           - version-update:semver-major
 
