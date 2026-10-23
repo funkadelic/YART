@@ -651,15 +651,7 @@ The pipeline sends two reports to [Codecov](https://codecov.io/gh/funkadelic/YAR
 
 ### Mutation testing
 
-[StrykerJS](https://stryker-mutator.io) is configured for mutation testing, run by hand as `npm run test:mutation`. Its runner support stops at Vitest 4.1, so install the older runner first and put the tree back afterward. Run all three:
-
-```bash
-npm i -D --no-save --legacy-peer-deps vitest@4
-npm run test:mutation
-npm ci
-```
-
-A run takes about ten minutes and writes `reports/mutation/mutation.html`, which is gitignored.
+[StrykerJS](https://stryker-mutator.io) is configured for mutation testing, run by hand as `npm run test:mutation`. A run takes about ten minutes and writes `reports/mutation/mutation.html`, which is gitignored.
 
 ### Visual regression tests
 
