@@ -225,7 +225,7 @@ jobs:
       # fail the job; a version bump touches no source for the scan to read.
       - name: SonarQube scan
         if: github.actor != 'dependabot[bot]' && env.HEAVY_CHECKS == 'true'
-        uses: SonarSource/sonarqube-scan-action@d209202bc7d53ff1cc128f7f907dac145c9d6ae9 # v8.3.0
+        uses: SonarSource/sonarqube-scan-action@4d1dc0c91ee400dcf8a6dddf2f705ac36542e304 # v8.4.0
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
@@ -258,7 +258,7 @@ jobs:
         if: env.HAS_CHROMATIC == 'true' && env.UI_CHECKS == 'true'
         env:
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-        uses: chromaui/action@5bcadb5104b09e360e210c54f95a7437c2d82bab # v18.13.3
+        uses: chromaui/action@f305ef908327aee3b80b0e6b3bbb60a742eaa049 # v18.13.6
         with:
           playwright: true
           exitOnceUploaded: true
