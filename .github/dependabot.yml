@@ -30,7 +30,9 @@ updates:
     #
     # Two exceptions: the test runner and stylelint. Each has companion packages that
     # peer on one major of it, so a major proposed for one of them alone cannot
-    # install. Listed first, because a dependency lands in the first group it matches.
+    # install. Stylelint takes every update type, because a companion can add support
+    # for a new major in a minor. Listed first, because a dependency lands in the
+    # first group it matches.
     groups:
       vitest:
         patterns:
@@ -42,8 +44,6 @@ updates:
         patterns:
           - stylelint
           - "stylelint-*"
-        update-types:
-          - major
       prod-dependencies:
         dependency-type: production
         update-types:
