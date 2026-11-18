@@ -28,15 +28,20 @@ updates:
     # still arrive, one pull request each, so one can be judged and merged without
     # waiting on another.
     #
-    # The one exception is the test runner. Its packages are released together and
-    # each peers on the runner at an exact version, so a major proposed for one of
-    # them alone cannot install either. Listed first, because a dependency lands in
-    # the first group it matches.
+    # Two exceptions: the test runner and stylelint. Each has companion packages that
+    # peer on one major of it, so a major proposed for one of them alone cannot
+    # install. Listed first, because a dependency lands in the first group it matches.
     groups:
       vitest:
         patterns:
           - vitest
           - "@vitest/*"
+        update-types:
+          - major
+      stylelint:
+        patterns:
+          - stylelint
+          - "stylelint-*"
         update-types:
           - major
       prod-dependencies:
