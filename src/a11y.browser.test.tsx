@@ -141,11 +141,11 @@ async function settled(): Promise<void> {
 }
 
 describe("accessibility in a real engine", () => {
-  // Eight states off one mount. Every transition goes through the control a
+  // Nine states off one mount. Every transition goes through the control a
   // reader would press, so a control that has stopped working fails the sweep
   // instead of the sweep quietly visiting a state no reader can reach.
   it(
-    "reports no violation while loading, after a failed load, in either theme, sorted, paged, emptied, or reading right to left",
+    "reports no violation while loading, after a failed load, in either theme, sorted, paged, emptied, reading right to left, or on a narrow screen",
     { timeout: WALK_TIMEOUT },
     async () => {
       const user = userEvent.setup();

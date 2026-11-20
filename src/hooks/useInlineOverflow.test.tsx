@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { resize } from "../test/resizeObserverStub";
@@ -75,12 +75,40 @@ describe("useInlineOverflow", () => {
     expect(scroller).toHaveAttribute("data-scrolls", "true");
   });
 
-  it("starts a remounted scroller false", () => {
-    const { rerender } = render(<Probe key="first" />);
-    layout(screen.getByTestId("scroller"), screen.getByTestId("scroller"));
+  it("drops a stop kept for focus once focus leaves", () => {
+    render(<Probe />);
+    const scroller = screen.getByTestId("scroller");
+    scroller.tabIndex = 0;
+    layout(scroller, scroller);
+    scroller.focus();
+    layout(scroller, scroller, { scroll: 400 });
 
-    rerender(<Probe key="second" />);
-    expect(screen.getByTestId("scroller")).toHaveAttribute(
+    act(() => {
+      scroller.blur();
+    });
+    expect(scroller).toHaveAttribute("data-scrolls", "false");
+  });
+
+  it("starts a replacement scroller false without remounting the owner", () => {
+    /** One owner whose scroller element is swapped, as a load swaps the table. */
+    function Swapper({ which }: { which: "first" | "second" }) {
+      const [ref, scrolls] = useInlineOverflow();
+      return (
+        <div
+          key={which}
+          ref={ref}
+          data-testid={which}
+          data-scrolls={String(scrolls)}
+        />
+      );
+    }
+    const { rerender } = render(<Swapper which="first" />);
+    const first = screen.getByTestId("first");
+    layout(first, first);
+    expect(first).toHaveAttribute("data-scrolls", "true");
+
+    rerender(<Swapper which="second" />);
+    expect(screen.getByTestId("second")).toHaveAttribute(
       "data-scrolls",
       "false",
     );

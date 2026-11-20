@@ -23,15 +23,19 @@ export function useInlineOverflow(): readonly [
   useEffect(() => {
     // Null while nothing scrollable is mounted, such as during a load.
     if (!node || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => {
-      // Kept while focused, so losing the tab stop never drops focus to the body.
+    // Kept while focused, so losing the tab stop never drops focus to the body;
+    // measured again on blur so a stop kept that way then goes.
+    const measure = () => {
       const keep = scrollsInline(node) || document.activeElement === node;
       setScrolling(keep ? node : null);
-    });
+    };
+    const observer = new ResizeObserver(measure);
     observer.observe(node);
     for (const child of node.children) observer.observe(child);
+    node.addEventListener("focusout", measure);
     return () => {
       observer.disconnect();
+      node.removeEventListener("focusout", measure);
     };
   }, [node]);
 
