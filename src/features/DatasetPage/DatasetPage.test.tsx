@@ -7,7 +7,7 @@ import { DatasetError } from "../../data/loadEnvelope";
 import { SYNC_SORT_ROWS } from "../../hooks/useSortedRows";
 import { en } from "../../i18n/catalogs/en";
 import { fr } from "../../i18n/catalogs/fr";
-import { numberFormatFor } from "../../i18n/format";
+import { collatorFor, numberFormatFor } from "../../i18n/format";
 import { setLocaleChoice } from "../../i18n/localeStore";
 import { required } from "../../test/required";
 import { buildCityColumns, cityRowId } from "../cities/cityColumns";
@@ -810,7 +810,7 @@ describe("DatasetPage", () => {
   describe("Sorting with Pagination", () => {
     const largeMockData = Array.from({ length: 25 }, (_, i) => ({
       id: i + 1,
-      name: `City ${String.fromCharCode(90 - (i % 26))}${i + 1}`, // Z25, Y24, etc.
+      name: `City ${String.fromCharCode(90 - (i % 26))}${i + 1}`, // Z1, Y2, etc.
       nameAscii: `City ${String.fromCharCode(90 - (i % 26))}${i + 1}`,
       country: `Country ${i + 1}`,
       countryIso3: `C${i.toString().padStart(2, "0")}`,
@@ -864,7 +864,9 @@ describe("DatasetPage", () => {
       ).textContent;
 
       // Page 2 first city should be alphabetically after page 1 first city
-      expect(firstCityPage1.localeCompare(firstCityPage2)).toBeLessThan(0);
+      expect(
+        collatorFor("en-US").compare(firstCityPage1, firstCityPage2),
+      ).toBeLessThan(0);
     });
   });
 

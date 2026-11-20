@@ -66,6 +66,16 @@ describe("buildFilmColumns", () => {
   });
 });
 
+describe("the title column", () => {
+  it("sorts a digit run by its value", () => {
+    const title = column("title");
+    const second = film({ title: "Part 2" });
+    const tenth = film({ title: "Part 10" });
+
+    expect(title.compare(second, tenth, "asc")).toBeLessThan(0);
+  });
+});
+
 describe("the multi-valued cells", () => {
   it("joins the values through the catalog rather than a separator of its own", () => {
     const values = ["France", "Italy", "Spain"];
