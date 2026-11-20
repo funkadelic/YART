@@ -41,6 +41,7 @@ src/data/worldcities/worldcities.csv
 # that run rather than of this tree.
 src/__screenshots__/
 /.vitest-attachments/
+/.vitest/
 
 # What the end-to-end runner writes. The traces and screenshots under
 # test-results/ come from failures alone and are evidence of that run rather
