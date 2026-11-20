@@ -2,6 +2,12 @@
 
 ## [0.1.3](https://github.com/funkadelic/YART/compare/v0.1.2...v0.1.3) (2026-11-20)
 
+### What's new
+
+* Screen readers now hear a sort state only on the sorted column. Unsorted headers no longer announce "none".
+* On narrow screens, where the table scrolls sideways, keyboard users can tab to it and scroll it with the arrow keys. Tests running in jsdom, which has no `ResizeObserver`, need no stub.
+* The demo sorts numbers inside titles and names by value, so "Part 2" comes before "Part 10". To get the same order in your own table, pass `{ numeric: true }` to the collator you give `columns()`.
+
 
 ### Fixed
 
