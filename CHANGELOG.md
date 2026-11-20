@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.3](https://github.com/funkadelic/YART/compare/v0.1.2...v0.1.3) (2026-11-20)
+
+
+### Fixed
+
+* announce only the sorted column and let keyboard users scroll a wide table ([#165](https://github.com/funkadelic/YART/issues/165)) ([edd9777](https://github.com/funkadelic/YART/commit/edd9777be9b192eadb30e3fccbc4b6e483b497b3))
+* sort numbers inside text by value ([#166](https://github.com/funkadelic/YART/issues/166)) ([be6249e](https://github.com/funkadelic/YART/commit/be6249e37178a2e7bcd495527391eeda54ceefbf))
+
+
+### Changed
+
+* sort copies with toSorted ([#167](https://github.com/funkadelic/YART/issues/167)) ([52cce0d](https://github.com/funkadelic/YART/commit/52cce0db16cb6cbc4710cef7d11de7a4af081f0d))
+
 ## [0.1.2](https://github.com/funkadelic/YART/compare/v0.1.1...v0.1.2) (2026-10-28)
 
 
