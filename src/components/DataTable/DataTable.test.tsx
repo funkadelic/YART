@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 
 import { collatorFor } from "../../i18n/format";
+import { resize } from "../../test/resizeObserverStub";
 import { columns } from "./column";
 import { DataTable, type DataTableLabels } from "./DataTable";
 import { DEFAULT_TABLE_STATE } from "./tableState";
@@ -94,6 +95,43 @@ describe("DataTable", () => {
     expect(
       screen.queryByRole("button", { name: "Try again" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("is a named tab stop only while the table scrolls sideways", () => {
+    render(
+      <DataTable
+        {...baseProps}
+        rows={[{ sku: "A-1", qty: 3 }]}
+        loading={false}
+        datasetReady
+        errorMessage={null}
+      />,
+    );
+    const table = screen.getByRole("table");
+    const scroller = table.parentElement!;
+    scroller.style.overflowX = "auto";
+    const setScrollWidth = (value: number) => {
+      Object.defineProperty(scroller, "scrollWidth", {
+        value,
+        configurable: true,
+      });
+      Object.defineProperty(scroller, "clientWidth", {
+        value: 400,
+        configurable: true,
+      });
+      resize(table);
+    };
+
+    setScrollWidth(900);
+    const region = screen.getByRole("region", {
+      name: "Parts, 1 entries, unsorted",
+    });
+    expect(region).toBe(scroller);
+    expect(region).toHaveAttribute("tabindex", "0");
+
+    setScrollWidth(400);
+    expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    expect(scroller).not.toHaveAttribute("tabindex");
   });
 
   it("reports each settled sort once, even through an inline callback", () => {

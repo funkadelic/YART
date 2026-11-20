@@ -11,13 +11,13 @@ interface TableHeadProps<T, Id extends string> {
   readonly onSortChange: (columnId: Id) => void;
 }
 
-/** An inactive column reports "none", so the attribute is always present. */
+/** Only the sorted column carries the attribute; an inactive one omits it. */
 function ariaSort(
   direction: SortDirection | null,
-): "ascending" | "descending" | "none" {
+): "ascending" | "descending" | undefined {
   if (direction === "asc") return "ascending";
   if (direction === "desc") return "descending";
-  return "none";
+  return undefined;
 }
 
 /** The header row. The width is applied as a style object. */

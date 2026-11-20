@@ -448,7 +448,7 @@ describe("DatasetPage", () => {
 
       // Third activation: no sort
       await user.click(citySortButton);
-      expect(cityHeader).toHaveAttribute("aria-sort", "none");
+      expect(cityHeader).not.toHaveAttribute("aria-sort");
     });
 
     it("shows sort icons only for active column", async () => {
@@ -465,7 +465,7 @@ describe("DatasetPage", () => {
       const countryHeader = screen.getByRole("columnheader", {
         name: /^Country$/,
       });
-      expect(countryHeader).toHaveAttribute("aria-sort", "none");
+      expect(countryHeader).not.toHaveAttribute("aria-sort");
     });
 
     it("draws one glyph, on the sorted column and only while sorted", async () => {
@@ -504,7 +504,7 @@ describe("DatasetPage", () => {
 
       // Should have sort on country column, not city
       expect(countryHeader).toHaveAttribute("aria-sort", "ascending");
-      expect(cityHeader).toHaveAttribute("aria-sort", "none");
+      expect(cityHeader).not.toHaveAttribute("aria-sort");
     });
   });
 
@@ -873,7 +873,7 @@ describe("DatasetPage", () => {
       await renderPage();
 
       const cityHeader = screen.getByRole("columnheader", { name: /City/ });
-      expect(cityHeader).toHaveAttribute("aria-sort", "none");
+      expect(cityHeader).not.toHaveAttribute("aria-sort");
     });
 
     it("updates ARIA sort attributes when sorting", async () => {

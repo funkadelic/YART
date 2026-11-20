@@ -6,6 +6,7 @@ import { afterEach, beforeEach, vi } from "vitest";
 import { CITY_FIXTURE_ENVELOPE } from "./src/test/cityFixture";
 import { stubDatasetFetch } from "./src/test/fetchStub";
 import { installMatchMediaStub } from "./src/test/matchMediaStub";
+import { installResizeObserverStub } from "./src/test/resizeObserverStub";
 
 // The DOM environment supplies no fetch, so the global is Node's own
 // implementation, which requires an absolute URL and rejects the root-relative
@@ -17,6 +18,7 @@ import { installMatchMediaStub } from "./src/test/matchMediaStub";
 beforeEach(() => {
   stubDatasetFetch(CITY_FIXTURE_ENVELOPE);
   installMatchMediaStub();
+  installResizeObserverStub();
 });
 
 // Teardown is one hook rather than two, and it unmounts before it resets.

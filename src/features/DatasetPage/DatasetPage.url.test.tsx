@@ -390,7 +390,7 @@ describe("DatasetPage and the address", () => {
       expect(screen.getByText("City 11")).toBeInTheDocument();
       expect(
         screen.getByRole("columnheader", { name: /City/ }),
-      ).toHaveAttribute("aria-sort", "none");
+      ).not.toHaveAttribute("aria-sort");
       expect(
         screen.queryByText(/could not be displayed/),
       ).not.toBeInTheDocument();
