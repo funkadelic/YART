@@ -121,7 +121,7 @@ CI sweeps the running app in a real browser on code changes, failing on any viol
 - A language picker in the header, offering the machine's own preference first and then each catalog named in its own language, so a reader who cannot read the interface in front of them can still find their own
 - Every reader-facing string comes from a catalog, the failure messages and the licence attribution included. One key union is derived from the base catalog, so a missing or misspelled key fails the type check rather than rendering at runtime
 - The document's language and direction follow the resolved locale, and both are stamped before the first paint, so no wrong-language and no wrong-direction frame is ever shown
-- Collation and number formatting follow it too: the city name column sorts by the reader's own language rules and the population column is grouped the way that language groups digits
+- Collation and number formatting follow it too: the city name column sorts by the reader's own language rules, with numbers inside names sorted by value, and the population column is grouped the way that language groups digits
 - Direction-dependent geometry is written on the inline axis, so one stylesheet serves both directions
 
 #### What stays in the source language

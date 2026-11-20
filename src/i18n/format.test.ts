@@ -7,6 +7,7 @@ import {
   pluralRulesFor,
   selectPlural,
 } from "./format";
+import { CATALOG_IDS } from "./resolveLocale";
 
 /**
  * Two tags whose collation genuinely disagrees, and one that agrees with the
@@ -36,6 +37,10 @@ const MANY = ["Drama", "Comedy", "Western"];
 describe("collatorFor", () => {
   it("hands back the identical instance for a repeated tag", () => {
     expect(collatorFor("en-US")).toBe(collatorFor("en-US"));
+  });
+
+  it.each(CATALOG_IDS)("compares digit runs by value for %s", (tag) => {
+    expect(collatorFor(tag).resolvedOptions().numeric).toBe(true);
   });
 
   it("hands back a different instance for a different tag", () => {

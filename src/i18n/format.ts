@@ -28,9 +28,18 @@ function cached<T>(
   return found;
 }
 
-/** The collator every text comparison in the tree orders with. */
+/**
+ * The collator every text comparison in the tree orders with. Digit runs
+ * compare by value, so "Part 2" sorts before "Part 10".
+ */
 export function collatorFor(tag: string): Intl.Collator {
-  return cached(collators, tag, (forTag) => new Intl.Collator(forTag));
+  // ponytail: a comma, sign or decimal point ends a digit run, so "10,000"
+  // sorts as 10 and "1.5" before "1.10"; parse the number out if a column needs it.
+  return cached(
+    collators,
+    tag,
+    (forTag) => new Intl.Collator(forTag, { numeric: true }),
+  );
 }
 
 /** The formatter every count a reader sees is grouped by. */

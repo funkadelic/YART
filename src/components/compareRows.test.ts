@@ -291,11 +291,8 @@ describe("compareValues", () => {
     ).toBe(-Math.sign(spanish));
   });
 
-  // Naming the base tag where the collator previously named nothing moves no
-  // row. The runner's own default resolves to the base tag, so the two answers
-  // agree here; on a machine where they did not, this suite would have been
-  // reporting a different order all along.
-  it("agrees in sign with the locale-less comparison it replaces", () => {
+  // The cached collator orders exactly as a fresh en-US numeric comparison does.
+  it("agrees in sign with an en-US numeric comparison", () => {
     for (const left of COLLATION_SAMPLE) {
       for (const right of COLLATION_SAMPLE) {
         if (left === right) continue;
@@ -303,10 +300,14 @@ describe("compareValues", () => {
         const comparison = compareValues(left, right, "asc", EN);
 
         expect(Math.sign(comparison)).toBe(
-          Math.sign(left.localeCompare(right)),
+          Math.sign(left.localeCompare(right, "en-US", { numeric: true })),
         );
       }
     }
+  });
+
+  it("orders digit runs by value, not by their first digit", () => {
+    expect(compareValues("Part 2", "Part 10", "asc", EN)).toBeLessThan(0);
   });
 });
 
