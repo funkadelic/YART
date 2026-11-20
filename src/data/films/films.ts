@@ -91,9 +91,9 @@ function parseFilmRows(rows: unknown[]): Film[] {
       title,
       year,
       runtime,
-      directors: [...directors].sort(byCodeUnit),
-      genres: [...genres].sort(byCodeUnit),
-      countries: [...countries].sort(byCodeUnit),
+      directors: directors.toSorted(byCodeUnit),
+      genres: genres.toSorted(byCodeUnit),
+      countries: countries.toSorted(byCodeUnit),
     };
   });
 }

@@ -12,7 +12,7 @@ export function sortRows<T, Id extends string>(
 
   // The resolved collection is module-cached and shared, so it is treated as
   // immutable and the sort runs over a copy.
-  return [...rows].sort(rowComparator(column, direction, getRowId));
+  return rows.toSorted(rowComparator(column, direction, getRowId));
 }
 
 /** The column's comparison, then the identity tiebreak: a strict total order. */
