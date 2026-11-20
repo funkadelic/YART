@@ -34,7 +34,7 @@ function cached<T>(
  */
 export function collatorFor(tag: string): Intl.Collator {
   // ponytail: a comma, sign or decimal point ends a digit run, so "10,000"
-  // sorts as 10 and "1.5" after "1.10"; parse the number out if a column needs it.
+  // sorts as 10 and "1.5" before "1.10"; parse the number out if a column needs it.
   return cached(
     collators,
     tag,

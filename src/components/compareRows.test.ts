@@ -291,9 +291,8 @@ describe("compareValues", () => {
     ).toBe(-Math.sign(spanish));
   });
 
-  // The named tag orders exactly as the runner's default locale does under the
-  // same numeric option, so naming it changes nothing beyond that option.
-  it("agrees in sign with the default locale's numeric comparison", () => {
+  // The cached collator orders exactly as a fresh en-US numeric comparison does.
+  it("agrees in sign with an en-US numeric comparison", () => {
     for (const left of COLLATION_SAMPLE) {
       for (const right of COLLATION_SAMPLE) {
         if (left === right) continue;
@@ -301,7 +300,7 @@ describe("compareValues", () => {
         const comparison = compareValues(left, right, "asc", EN);
 
         expect(Math.sign(comparison)).toBe(
-          Math.sign(left.localeCompare(right, undefined, { numeric: true })),
+          Math.sign(left.localeCompare(right, "en-US", { numeric: true })),
         );
       }
     }
