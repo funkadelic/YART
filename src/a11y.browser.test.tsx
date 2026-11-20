@@ -34,6 +34,7 @@ const SWEPT_STATES = Object.freeze([
   "paged",
   "empty",
   "rtl",
+  "narrow",
 ]);
 
 /**
@@ -96,9 +97,15 @@ const sweptStates: string[] = [];
  * for the thirty-odd rules that pass on every sweep, and nothing reads it. It
  * still reports which rules passed, and the first assertion below reads that.
  */
-async function sweep(state: string): Promise<void> {
+async function sweep(
+  state: string,
+  skippedRules: readonly string[] = [],
+): Promise<void> {
   const results = await axe.run(document, {
     resultTypes: ["violations", "incomplete"],
+    rules: Object.fromEntries(
+      skippedRules.map((rule) => [rule, { enabled: false }]),
+    ),
   });
 
   // Both assertions below compare against an empty set in this file, so a sweep
@@ -352,6 +359,22 @@ describe("accessibility in a real engine", () => {
 
       expect(scroller.scrollWidth).toBeGreaterThan(scroller.clientWidth);
 
+      // Overflowing, the scroller is a named tab stop, and the rule engine
+      // checks it as the landmark it now is.
+      const region = await screen.findByRole("region", {
+        name: required(
+          screen.getByRole("table").querySelector("caption")?.textContent ??
+            undefined,
+          "the table's caption",
+        ),
+      });
+      expect(region).toBe(scroller);
+      expect(region).toHaveAttribute("tabindex", "0");
+      // Contrast is skipped here: cells cut by the scroller's edge leave the
+      // engine no background to sample, and the desktop sweeps decide the same
+      // color pairs.
+      await sweep("narrow", ["color-contrast"]);
+
       // This asserts reachability, because under this direction the scroll offset
       // runs negative in a standards-compliant engine, nothing in this tree reads
       // one, and a test that started would be the first. The first column reads at
@@ -379,6 +402,12 @@ describe("accessibility in a real engine", () => {
       expect(lastBox.left).toBeLessThan(scrollerBox.left);
 
       await page.viewport(DESKTOP_VIEWPORT.width, DESKTOP_VIEWPORT.height);
+
+      // Back at desktop width nothing scrolls, so the tab stop is gone.
+      await waitFor(() => {
+        expect(scroller).not.toHaveAttribute("tabindex");
+      });
+      expect(screen.queryByRole("region")).not.toBeInTheDocument();
 
       expect(sweptStates).toEqual(SWEPT_STATES);
     },

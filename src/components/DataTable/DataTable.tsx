@@ -1,9 +1,16 @@
-import { useEffect, useEffectEvent, useMemo, type ReactNode } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useMemo,
+  type ReactNode,
+} from "react";
 import type { Column } from "./column.js";
 import type { TableState, SortDirection } from "./tableState.js";
 import { TableHead } from "./TableHead.js";
 import { TableBody } from "./TableBody.js";
 import { Pagination, type PaginationLabels } from "./Pagination.js";
+import { useInlineOverflow } from "../../hooks/useInlineOverflow.js";
 import { useSortedRows } from "../../hooks/useSortedRows.js";
 import { paginate } from "../paginate.js";
 import styles from "./DataTable.module.scss";
@@ -207,6 +214,15 @@ export function DataTable<T, Id extends string>({
   const activeLabel =
     columns.find((column) => column.id === state.sortColumnId)?.label ?? "";
 
+  const captionId = useId();
+  const [scrollerRef, scrollsInline] = useInlineOverflow();
+  // a11y: a named tab stop only while the table scrolls sideways. The sort
+  // buttons inside reach only the header row; the region announces the scroll
+  // area and lets arrow keys move the body, with no empty stop elsewhere.
+  const scrollRegion = scrollsInline
+    ? ({ role: "region", "aria-labelledby": captionId, tabIndex: 0 } as const)
+    : undefined;
+
   // The four views the table can show. The order is the precedence: a failure
   // outranks a pending load, and both outrank a result.
   let body: ReactNode;
@@ -227,12 +243,14 @@ export function DataTable<T, Id extends string>({
         <div
           className={`${styles.tableContainer} ${busy ? styles.refreshing : ""}`}
           aria-busy={busy}
+          ref={scrollerRef}
+          {...scrollRegion}
         >
           <table
             className={styles.table}
             aria-rowcount={sortedRows.length + HEADER_ROW_COUNT}
           >
-            <caption className={styles.srOnly}>
+            <caption id={captionId} className={styles.srOnly}>
               {labels.caption(
                 sortedRows.length,
                 sortSummary(labels, state.sortDirection, activeLabel),
