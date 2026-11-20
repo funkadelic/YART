@@ -107,11 +107,11 @@ A React and TypeScript single-page app for browsing large datasets in the browse
 - Live regions announce sort changes and result counts
 - Each row reports its position in the whole result set rather than its position on the page
 - Under forced colors the borders, the focus ring and the chosen theme segment are repainted from the reader's own palette
-- The table scrolls horizontally on narrow viewports instead of overflowing
+- The table scrolls horizontally on narrow viewports instead of overflowing, and becomes a named tab stop there so keyboard users can scroll it
 - The theme control is three native radios, so the arrow keys move between them and the whole group is a single tab stop
 - Every foreground and background pair is checked against the WCAG contrast ratio in both themes, computed from the shipped stylesheet rather than from a copy of it
 
-CI sweeps the running app in a real browser on code changes, failing on any violation of a set of automated rules in the loading, failed, empty, sorted and paged views, both themes, and a right-to-left reading direction. It runs in a real browser because measuring contrast needs a layout engine. Automated rules cannot establish conformance, so the sweep catches regressions rather than proving the list above.
+CI sweeps the running app in a real browser on code changes, failing on any violation of a set of automated rules in the loading, failed, empty, sorted and paged views, both themes, a right-to-left reading direction, and a narrow screen. It runs in a real browser because measuring contrast needs a layout engine. Automated rules cannot establish conformance, so the sweep catches regressions rather than proving the list above.
 
 ### Internationalization
 
