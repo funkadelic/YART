@@ -73,7 +73,7 @@ jobs:
       # install, so a known advisory stops the job while the change is in review.
       - name: Dependency review
         if: github.event_name == 'pull_request'
-        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
         with:
           fail-on-severity: high
 
@@ -258,7 +258,7 @@ jobs:
         if: env.HAS_CHROMATIC == 'true' && env.UI_CHECKS == 'true'
         env:
           CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
-        uses: chromaui/action@2b75e3340bcec86b4ae38c6a10f14831114e8137 # v18.14.3
+        uses: chromaui/action@9cb4d65a86fe1c4c67a76a8d90f35a51a118e55f # v18.15.1
         with:
           playwright: true
           exitOnceUploaded: true
