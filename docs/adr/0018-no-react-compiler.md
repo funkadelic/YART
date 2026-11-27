@@ -29,7 +29,7 @@ At its default panic threshold the compiler also skips, silently, the component 
 
 Bundle, from `dist/assets/*.js`: 259,853 bytes raw and 80,635 gzip -9 off, 268,001 and 83,751 on, so +8,148 raw (+3.1%) and +3,116 gzipped (+3.9%). `lib/index.js` is 18,697 bytes either way, because the library build does not carry the plugin.
 
-Re-renders of `TableBody` while typing "san" into the search, counted in a test that stubs the search to return the same rows: 3 off and 0 on, and 6 off against 0 on once the debounce commits. The stub is the compiler's best case, and fewer re-renders are the only thing it gains.
+Re-renders of `TableBody` while typing "san" into the search, counted in a test that stubs the search to return the same rows: 3 off and 0 on, and 6 off against 0 on once the debounce commits. The stub is the compiler's best case, and fewer re-renders are the only gain the spike measured.
 
 Meeting the gate with coverage-ignore hints, or with tests that execute the generated cache branches, would make the 100% figure stop measuring our code, so neither is used.
 
