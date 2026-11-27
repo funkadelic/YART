@@ -199,19 +199,8 @@ export default defineConfig({
   // evidence it is not needed is the whole suite staying green across the bump,
   // coverage included.
 
-  // The plugin is taken at 6.x and taken bare. Its three peers other than the
-  // bundler are every one of them optional, so none of them is installed by
-  // taking it: oxc-transform-react is the Rust port of React Compiler, reached
-  // through the compiler option, and @rolldown/plugin-babel together with
-  // babel-plugin-react-compiler is the Babel route to the same adoption through
-  // the exported reactCompilerPreset. So what is declined here is an
-  // experimental compiler. The JSX transform is Oxc's, arrives with the plugin
-  // itself and needs no peer at all, which is also why this major drops the
-  // refresh runtime out of the tree instead of adding to it. Babel is still
-  // installed, at @babel/core, but it arrives through the lint plugin's
-  // dependency edge and not through this one, and was here before this bump as
-  // well. Adopting the compiler is a change of its own with
-  // its own gate run, so the option stays unset and the peers stay uninstalled.
+  // React Compiler is not enabled: docs/adr/0018-no-react-compiler.md holds the
+  // spike numbers and the work to revisit it.
   plugins: [
     react(),
     bootDocumentScript(),
