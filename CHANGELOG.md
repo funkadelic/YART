@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/funkadelic/YART/compare/v0.1.3...v0.1.4) (2026-11-27)
+
+
+### Documentation
+
+* record declining React Compiler for the demo app ([#173](https://github.com/funkadelic/YART/issues/173)) ([3974167](https://github.com/funkadelic/YART/commit/39741678fa570896258cc1996e063115566882a9))
+
 ## [0.1.3](https://github.com/funkadelic/YART/compare/v0.1.2...v0.1.3) (2026-11-20)
 
 ### What's new
